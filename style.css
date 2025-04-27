@@ -78,3 +78,14 @@ section {
 
 .social-links a:hover {
     color: #
+/* Social media icons */
+.social-icon {
+    vertical-align: middle;
+    width: 24px;
+    height: 24px;
+    transition: transform 0.3s ease;
+}
+
+.social-icon:hover {
+    transform: scale(1.2);
+}
