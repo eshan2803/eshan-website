@@ -177,3 +177,13 @@ footer {
         margin-bottom: 1.5rem;
     }
 }
+.mission-section, .publications-section, .patents-section {
+    margin-top: 4rem;
+}
+
+.mission-section h2, .publications-section h2, .patents-section h2 {
+    margin-bottom: 1rem;
+    font-size: 1.8rem;
+    text-align: center;
+    color: #2e7d32;
+}
