@@ -40,14 +40,16 @@ nav a:hover {
 
 /* Main content area styling */
 main {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.85); /* More transparent */
     margin: 3rem auto;
     padding: 2rem;
     border-radius: 12px;
     max-width: 900px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     animation: fadeIn 1s ease forwards;
+    backdrop-filter: blur(4px); /* Optional: nice blur effect behind transparent areas */
 }
+
 
 @keyframes fadeIn {
     from {opacity: 0; transform: translateY(20px);}
