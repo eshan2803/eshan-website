@@ -137,3 +137,36 @@ footer {
     transform: scale(1.05);
     color: white;
 }
+
+.about-grid {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: nowrap; /* NEW: no wrapping unless forced */
+    margin-top: 2rem;
+}
+
+.about-photo img {
+    width: 180px;
+    height: 180px;
+    object-fit: cover;
+    border-radius: 50%;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.about-text {
+    flex: 1;
+    min-width: 300px;
+}
+
+@media (max-width: 768px) {
+    .about-grid {
+        flex-direction: column;
+        text-align: center;
+        flex-wrap: wrap; /* Allow wrapping on small screens */
+    }
+    .about-photo img {
+        margin-bottom: 1.5rem;
+    }
+}
