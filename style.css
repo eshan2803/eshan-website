@@ -153,7 +153,14 @@ footer {
     object-fit: cover;
     border-radius: 50%;
     box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
 }
+
+.about-photo img:hover {
+    transform: scale(1.08);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+}
+
 
 .about-text {
     flex: 1;
