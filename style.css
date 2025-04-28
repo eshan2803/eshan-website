@@ -211,3 +211,33 @@ footer {
     width: 50%;
     margin: 1rem auto 0;
 }
+.mission-quote {
+    margin-top: 3rem;
+    text-align: center;
+    font-style: italic;
+    color: #555;
+}
+
+.mission-quote blockquote {
+    font-size: 1.4rem;
+    line-height: 1.6;
+    quotes: "“" "”" "‘" "’";
+}
+
+.mission-quote blockquote::before {
+    content: open-quote;
+    font-size: 2rem;
+    vertical-align: top;
+}
+
+.mission-quote blockquote::after {
+    content: close-quote;
+    font-size: 2rem;
+    vertical-align: bottom;
+}
+
+.quote-author {
+    margin-top: 0.5rem;
+    font-weight: bold;
+    color: #2e7d32;
+}
