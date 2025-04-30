@@ -9,10 +9,21 @@
   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 </head>
 <body>
-  <header>
+<header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem;">
+  <div>
     <h1>Dr. Eshan Singh</h1>
     <p>Energy & Decarbonization</p>
-  </header>
+  </div>
+  <div class="header-animation">
+    <lottie-player 
+      src="assets/wind-turbine.json"
+      background="transparent"
+      speed="1"
+      style="width: 100px; height: 100px;"
+      loop autoplay>
+    </lottie-player>
+  </div>
+</header>
 
   <nav>
     <a href="index.html">Home</a>
@@ -28,17 +39,6 @@
         <p class="tagline">From deep science to real-world impact</p>
         <p class="subtext">I work at the intersection of innovation, policy, and pragmatic engineering to accelerate scalable decarbonization.</p>
         <a class="button" href="contact.html">Start a Conversation</a>
-      </div>
-      <div class="hero-animation">
-        <lottie-player 
-  src="assets/wind-turbine.json"
-  background="transparent"
-  speed="1"
-  style="width: 300px; height: 300px;"
-  loop
-  autoplay>
-</lottie-player>
-
       </div>
     </div>
   </section>
