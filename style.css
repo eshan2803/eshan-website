@@ -15,6 +15,8 @@ h1, h2, h3 {
 }
 
 .container {
+  position: relative;
+  z-index: 1;
   max-width: 960px;
   margin: auto;
   padding: 2rem;
@@ -180,6 +182,8 @@ footer {
 }
 
 .card {
+  position: relative;
+  z-index: 2;
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
