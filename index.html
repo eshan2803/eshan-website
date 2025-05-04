@@ -7,139 +7,118 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/locomotive-scroll@4.1.4/dist/locomotive-scroll.min.css">
-  <style>
-    html, body {
-      height: 100%;
-      overflow: hidden;
-    }
-    [data-scroll-container] {
-      height: 100%;
-    }
-    .scroll-section {
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 2rem;
-      font-weight: bold;
-      color: white;
-      background: #2e7d32;
-    }
-  </style>
 </head>
 <body>
-  <div data-scroll-container>
-    <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem;">
-      <div>
-        <h1>Dr. Eshan Singh</h1>
-        <p>Energy & Decarbonization</p>
-      </div>
-      <div class="header-animation">
-        <canvas id="three-canvas" width="150" height="150" style="display: block;"></canvas>
-      </div>
-    </header>
-
-    <nav>
-      <a href="index.html">Home</a>
-      <a href="energy.html">Energy Decarbonization</a>
-      <a href="personal.html">Personal Musings</a>
-      <a href="contact.html">Contact</a>
-    </nav>
-
-    <section class="scroll-section" data-scroll data-scroll-speed="1">
-      Driving the Future of Clean Energy
-    </section>
-    <section class="scroll-section" data-scroll data-scroll-speed="2" style="background:#388e3c">
-      From Deep Science to Real-World Impact
-    </section>
-    <section class="scroll-section" data-scroll data-scroll-speed="1.5" style="background:#1b5e20">
-      Pragmatic Engineering for Scalable Decarbonization
-    </section>
-
-    <main class="container">
-      <section class="about-section" data-aos="fade-up">
-        <div class="about-grid">
-          <div class="about-photo">
-            <img src="assets/eshan-headshot.jpg" alt="Dr. Eshan Singh Headshot">
-          </div>
-          <div class="about-text">
-            <h2>Hello!</h2>
-            <p>I'm Dr. Eshan Singh — an energy and decarbonization expert with over a decade of experience working at the intersection of technology, industry, and research. I have led cross-disciplinary projects in carbon capture, hydrogen integration, renewable energy systems, and sustainable transportation across organizations like Pacific Gas & Electric, Meta Platforms, and Sandia National Laboratories.</p>
-            <p>With a Ph.D. in Mechanical Engineering and a portfolio spanning peer-reviewed publications, patents, and invited talks worldwide, I am passionate about driving innovative, scalable pathways toward a carbon-neutral future. Through this platform, I share insights on clean energy technologies, sustainability strategies, and the future of climate innovation.</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="mission-section" data-aos="fade-up">
-        <h2>Mission Statement</h2>
-        <p>My mission is to contribute meaningfully and realistically to the energy transition in our collective fight against climate change. I focus my efforts on addressing the major sources of emissions — tackling the critical sectors that have the greatest impact, rather than peripheral challenges. I believe that for innovation to matter, it must be realistic: technologies must have a credible path to deployment within our lifetimes, not decades into the future. To this end, I use lifecycle and techno-economic modeling to rigorously assess which solutions have true potential, and I regularly share these insights through my publications and thought leadership. My work is grounded in the belief that meaningful, near-term progress is possible when science, innovation, and pragmatism come together.</p>
-      </section>
-
-      <section class="mission-quote" data-aos="zoom-in">
-        <blockquote>
-          Innovation must not only be bold, but realistic — focused on solving the problems that matter most, within the time that matters most.
-        </blockquote>
-        <p class="quote-author">— Dr. Eshan Singh</p>
-      </section>
-
-      <section class="publications-section" data-aos="fade-up">
-        <h2>Selected Publications</h2>
-        <p>I have published more than 50 articles in peer-reviewed journals that have been cited more than 1000 times by researchers globally. My publications cover various topics relevant to clean energy, and a full list is available on my <a href="https://scholar.google.com/citations?user=VhYa_v4AAAAJ&hl=en" target="_blank">Google Scholar page</a>.</p>
-        <ul>
-          <li><a href="https://www.sciencedirect.com/science/article/abs/pii/S0010218016300591" target="_blank">Singh, E., et al. "Compositional effects on the ignition of FACE gasolines." Combustion and Flame (2016)</a></li>
-          <li><a href="https://pubs.acs.org/doi/abs/10.1021/acs.energyfuels.6b02659" target="_blank">Singh, E., et al. "Chemical Kinetic Insights into the Octane Number and Octane Sensitivity of Gasoline Surrogate Mixtures." Energy & Fuels (2017)</a></li>
-          <li><a href="https://www.sciencedirect.com/science/article/abs/pii/S0016236118317058" target="_blank">Singh, E., et al. "Dual-fuel operation of gasoline and natural gas in a turbocharged engine." Fuel (2019)</a></li>
-          <li><a href="https://www.sciencedirect.com/science/article/pii/S2666691X2200046X" target="_blank">Singh, E., et al. "Review of life cycle assessments (LCA) for mobility powertrains." Transportation Engineering (2022)</a></li>
-          <li><a href="https://www.sciencedirect.com/science/article/abs/pii/B9780323884570000059" target="_blank">Singh, E., et al. "Using deep learning to diagnose preignition in turbocharged spark-ignited engines." Artificial Intelligence and Data Driven Optimization of Internal Combustion Engines (2022)</a></li>
-        </ul>
-      </section>
-
-      <section class="patents-section" data-aos="fade-up">
-        <h2>Patents</h2>
-        <ul>
-          <li><a href="https://patents.google.com/patent/US11708805B2/en" target="_blank">US Patent 11,708,805 — Engine and power cycles fueled by performic acid or formic acid</a></li>
-          <li><a href="https://patents.google.com/patent/US11473550B2/en" target="_blank">US Patent 11,473,550 — Internal combustion engines having super knock mitigation controls and methods for their operation</a></li>
-          <li><a href="https://patents.google.com/patent/US11236698B2/en" target="_blank">US Patent 11,236,698 — Internal combustion engines having pre-ignition mitigation controls and methods for their operation</a></li>
-        </ul>
-      </section>
-
-      <section data-aos="fade-up">
-        <h3>Explore:</h3>
-        <ul>
-          <li><a href="energy.html">Energy Decarbonization Articles</a></li>
-          <li><a href="personal.html">Personal Musings</a></li>
-          <li><a href="contact.html">Contact</a></li>
-        </ul>
-      </section>
-    </main>
-
-    <footer>
-      <p>&copy; 2025 Eshan & Associates LLC. All rights reserved.</p>
-      <div class="social-links">
-        <a href="https://www.linkedin.com/in/eshan-singh-188b1554/" target="_blank">
-          <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn">
-        </a>
-        <a href="mailto:hello@eshansingh.xyz">
-          <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/732/732200.png" alt="Email">
-        </a>
-        <a href="https://scholar.google.com/citations?user=VhYa_v4AAAAJ&hl=en" target="_blank">
-          <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" alt="Google Scholar">
-        </a>
-      </div>
-    </footer>
+<header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem;">
+  <div>
+    <h1>Dr. Eshan Singh</h1>
+    <p>Energy & Decarbonization</p>
   </div>
+  <div class="header-animation">
+    <lottie-player 
+      src="assets/wind-turbine.json"
+      background="transparent"
+      speed="1"
+      style="width: 150px; height: 150px;"
+      loop autoplay>
+    </lottie-player>
+  </div>
+</header>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r148/three.min.js"></script>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="energy.html">Energy Decarbonization</a>
+    <a href="personal.html">Personal Musings</a>
+    <a href="contact.html">Contact</a>
+  </nav>
+
+  <section class="hero" data-aos="fade-up">
+    <div class="container hero-layout">
+      <div class="hero-text">
+        <h1>Driving the Future of Clean Energy</h1>
+        <p class="tagline">From deep science to real-world impact</p>
+        <p class="subtext">I work at the intersection of innovation, policy, and pragmatic engineering to accelerate scalable decarbonization.</p>
+        <div style="text-align: center;">
+          <a class="button" href="contact.html">Start a Conversation</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="container">
+    <section class="about-section" data-aos="fade-up">
+      <div class="about-grid">
+        <div class="about-photo">
+          <img src="assets/eshan-headshot.jpg" alt="Dr. Eshan Singh Headshot">
+        </div>
+        <div class="about-text">
+          <h2>Hello!</h2>
+          <p>I'm Dr. Eshan Singh — an energy and decarbonization expert with over a decade of experience working at the intersection of technology, industry, and research. I have led cross-disciplinary projects in carbon capture, hydrogen integration, renewable energy systems, and sustainable transportation across organizations like Pacific Gas & Electric, Meta Platforms, and Sandia National Laboratories.</p>
+          <p>With a Ph.D. in Mechanical Engineering and a portfolio spanning peer-reviewed publications, patents, and invited talks worldwide, I am passionate about driving innovative, scalable pathways toward a carbon-neutral future. Through this platform, I share insights on clean energy technologies, sustainability strategies, and the future of climate innovation.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="mission-section" data-aos="fade-up">
+      <h2>Mission Statement</h2>
+      <p>My mission is to contribute meaningfully and realistically to the energy transition in our collective fight against climate change. I focus my efforts on addressing the major sources of emissions — tackling the critical sectors that have the greatest impact, rather than peripheral challenges. I believe that for innovation to matter, it must be realistic: technologies must have a credible path to deployment within our lifetimes, not decades into the future. To this end, I use lifecycle and techno-economic modeling to rigorously assess which solutions have true potential, and I regularly share these insights through my publications and thought leadership. My work is grounded in the belief that meaningful, near-term progress is possible when science, innovation, and pragmatism come together.</p>
+    </section>
+
+    <section class="mission-quote" data-aos="zoom-in">
+      <blockquote>
+        Innovation must not only be bold, but realistic — focused on solving the problems that matter most, within the time that matters most.
+      </blockquote>
+      <p class="quote-author">— Dr. Eshan Singh</p>
+    </section>
+
+    <section class="publications-section" data-aos="fade-up">
+      <h2>Selected Publications</h2>
+      <p>I have published more than 50 articles in peer-reviewed journals that have been cited more than 1000 times by researchers globally. My publications cover various topics relevant to clean energy, and a full list is available on my <a href="https://scholar.google.com/citations?user=VhYa_v4AAAAJ&hl=en" target="_blank">Google Scholar page</a>.</p>
+      <ul>
+        <li><a href="https://www.sciencedirect.com/science/article/abs/pii/S0010218016300591" target="_blank">Singh, E., et al. "Compositional effects on the ignition of FACE gasolines." Combustion and Flame (2016)</a></li>
+        <li><a href="https://pubs.acs.org/doi/abs/10.1021/acs.energyfuels.6b02659" target="_blank">Singh, E., et al. "Chemical Kinetic Insights into the Octane Number and Octane Sensitivity of Gasoline Surrogate Mixtures." Energy & Fuels (2017)</a></li>
+        <li><a href="https://www.sciencedirect.com/science/article/abs/pii/S0016236118317058" target="_blank">Singh, E., et al. "Dual-fuel operation of gasoline and natural gas in a turbocharged engine." Fuel (2019)</a></li>
+        <li><a href="https://www.sciencedirect.com/science/article/pii/S2666691X2200046X" target="_blank">Singh, E., et al. "Review of life cycle assessments (LCA) for mobility powertrains." Transportation Engineering (2022)</a></li>
+        <li><a href="https://www.sciencedirect.com/science/article/abs/pii/B9780323884570000059" target="_blank">Singh, E., et al. "Using deep learning to diagnose preignition in turbocharged spark-ignited engines." Artificial Intelligence and Data Driven Optimization of Internal Combustion Engines (2022)</a></li>
+      </ul>
+    </section>
+
+    <section class="patents-section" data-aos="fade-up">
+      <h2>Patents</h2>
+      <ul>
+        <li><a href="https://patents.google.com/patent/US11708805B2/en" target="_blank">US Patent 11,708,805 — Engine and power cycles fueled by performic acid or formic acid</a></li>
+        <li><a href="https://patents.google.com/patent/US11473550B2/en" target="_blank">US Patent 11,473,550 — Internal combustion engines having super knock mitigation controls and methods for their operation</a></li>
+        <li><a href="https://patents.google.com/patent/US11236698B2/en" target="_blank">US Patent 11,236,698 — Internal combustion engines having pre-ignition mitigation controls and methods for their operation</a></li>
+      </ul>
+    </section>
+
+    <section data-aos="fade-up">
+      <h3>Explore:</h3>
+      <ul>
+        <li><a href="energy.html">Energy Decarbonization Articles</a></li>
+        <li><a href="personal.html">Personal Musings</a></li>
+        <li><a href="contact.html">Contact</a></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Eshan & Associates LLC. All rights reserved.</p>
+    <div class="social-links">
+      <a href="https://www.linkedin.com/in/eshan-singh-188b1554/" target="_blank">
+        <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn">
+      </a>
+      <a href="mailto:hello@eshansingh.xyz">
+        <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/732/732200.png" alt="Email">
+      </a>
+      <a href="https://scholar.google.com/citations?user=VhYa_v4AAAAJ&hl=en" target="_blank">
+        <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" alt="Google Scholar">
+      </a>
+    </div>
+  </footer>
+
   <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@4.1.4/dist/locomotive-scroll.min.js"></script>
-  <script>
-    AOS.init();
-    const scroll = new LocomotiveScroll({
-      el: document.querySelector("[data-scroll-container]"),
-      smooth: true
-    });
-  </script>
+  <script>AOS.init();</script>
 </body>
 </html>
