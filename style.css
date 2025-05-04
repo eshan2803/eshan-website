@@ -10,7 +10,7 @@ body {
 }
 
 h1, h2, h3, .quote-author {
-  background: linear-gradient(to right, #2e7d32, #0288d1); /* green to blue */
+  background: linear-gradient(90deg, #2e7d32 0%, #0288d1 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -84,7 +84,7 @@ nav {
   display: flex;
   justify-content: center;
   gap: 2rem;
-  background-color: rgba(27, 94, 32, 0.9);
+  background: linear-gradient(90deg, #2e7d32, #0288d1); /* green to blue */
   padding: 1rem 0;
 }
 
