@@ -55,5 +55,24 @@
   <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
   <script>AOS.init();</script>
+<script>
+  // Apply fade-in on page load
+  document.body.classList.add('fade-in');
+
+  // Add fade-out on link click
+  document.querySelectorAll('a[href]').forEach(link => {
+    const href = link.getAttribute('href');
+    if (!href.startsWith('#') && !href.startsWith('mailto:') && !href.startsWith('http')) {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.body.classList.remove('fade-in');
+        document.body.classList.add('fade-out');
+        setTimeout(() => {
+          window.location = href;
+        }, 300);
+      });
+    }
+  });
+</script>
 </body>
 </html>
