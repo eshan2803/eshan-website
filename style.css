@@ -295,6 +295,19 @@ footer {
   color: #2e7d32;
 }
 
+.publications-section a,
+.patents-section a {
+  color: #000;
+  text-decoration: none;
+  font-weight: normal;
+}
+
+.publications-section a:hover,
+.patents-section a:hover {
+  text-decoration: underline;
+  color: #2e7d32; /* Optional: slight visual on hover */
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
   .hero {
