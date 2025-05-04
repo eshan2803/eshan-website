@@ -85,12 +85,17 @@ header h1 {
 
 /* ===== Navigation ===== */
 nav {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: linear-gradient(90deg, #2e7d32, #0288d1); /* maintain gradient */
+  padding: 1rem 0;
   display: flex;
   justify-content: center;
   gap: 2rem;
-  background: linear-gradient(90deg, #2e7d32, #0288d1); /* green to blue */
-  padding: 1rem 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
 
 nav a {
   color: white;
