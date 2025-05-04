@@ -153,13 +153,14 @@ section {
 
 /* ===== Footer ===== */
 footer {
-  background-color: rgba(27, 94, 32, 0.9);
+  background: linear-gradient(90deg, #2e7d32, #0288d1); /* green to blue */
   color: white;
   text-align: center;
   padding: 1rem;
   font-size: 0.9rem;
   margin-top: 3rem;
 }
+
 
 .social-links {
   margin-top: 10px;
