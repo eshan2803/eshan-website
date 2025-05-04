@@ -9,10 +9,14 @@ body {
   color: #333;
 }
 
-h1, h2, h3 {
-  color: #2e7d32;
-  margin-bottom: 0.5rem;
+h1, h2, h3, .quote-author {
+  background: linear-gradient(to right, #2e7d32, #0288d1); /* green to blue */
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
 }
+
 
 .container {
   position: relative;
