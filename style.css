@@ -336,3 +336,11 @@ footer {
     margin-bottom: 1.5rem;
   }
 }
+body.fade-out {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+body.fade-in {
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
