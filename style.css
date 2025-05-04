@@ -172,6 +172,7 @@ footer {
   margin: 0 10px;
   vertical-align: middle;
   transition: transform 0.3s;
+  filter: brightness(1.5); /* Increase brightness */
 }
 
 .social-icon:hover {
