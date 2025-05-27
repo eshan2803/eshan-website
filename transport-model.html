@@ -111,10 +111,29 @@ header.header {
   text-decoration: none;
   font-weight: 600;
   font-size: 1rem;
-  transition: color 0.3s ease, border-bottom 0.3s ease;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+nav a::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  bottom: -2px;
+  left: 0;
+  background-color: white;
+  transform: scaleX(0);
+  transform-origin: bottom right;
+  transition: transform 0.25s ease-out;
+}
+
+nav a:hover::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
 }
     nav a:hover {
-  text-decoration: underline;
+  text-decoration: none;
 }
     main.container { max-width: 960px; margin: auto; padding: 2rem; background: white; border-radius: 0.5rem; }
     .input-group { margin-bottom: 1.5rem; }
@@ -132,7 +151,7 @@ header.header {
 <body>
   <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem;">
   <div>
-    <h1>Dr. Eshan Singh</h1>
+    <h1 style="font-size: 2.5rem; line-height: 1.2; font-weight: 600;">Dr. Eshan Singh</h1>
   </div>
   <div class="header-animation">
     <lottie-player 
