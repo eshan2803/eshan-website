@@ -252,7 +252,8 @@ nav a:hover::after {
       document.getElementById('bogRecirculationDetails').classList.remove('hidden');
     });
   </script>
-<script>
+
+  <script>
     // --- UI Element Event Listeners ---
     document.getElementById('bogExpel').addEventListener('change', () => {
       document.getElementById('bogRecirculationDetails').classList.add('hidden');
@@ -270,7 +271,7 @@ nav a:hover::after {
 
     // --- Main Calculation Handler ---
     async function handleCalculation(e) {
-      e.preventDefault(); // Prevent form from submitting the traditional way
+      e.preventDefault();
       const calculateButton = this.querySelector('button[type="submit"]');
       const statusMessagesDiv = document.getElementById('statusMessages');
       const outputsDiv = document.getElementById('outputs');
@@ -280,15 +281,12 @@ nav a:hover::after {
         statusMessagesDiv.innerHTML += `<p>> ${message}</p>`;
         statusMessagesDiv.scrollTop = statusMessagesDiv.scrollHeight;
       }
-      function clearStatus() {
-        statusMessagesDiv.innerHTML = '';
-      }
+      function clearStatus() { statusMessagesDiv.innerHTML = ''; }
       function showModal(message) {
         document.getElementById('modalMessageText').textContent = message;
         document.getElementById('messageModal').style.display = "block";
       }
       document.getElementById('modalCloseButton').onclick = () => { document.getElementById('messageModal').style.display = "none"; };
-
 
       clearStatus();
       logStatus("Collecting user inputs...");
@@ -296,27 +294,25 @@ nav a:hover::after {
       calculateButton.textContent = 'Calculating...';
       outputsDiv.classList.add('hidden');
 
-      // 1. Gather all inputs into a single object
-// Find this part in your transport-model.html script...
-    const userInputs = {
-      start: document.getElementById('startLocation').value, // CHANGED FROM startLocation
-      end: document.getElementById('endLocation').value,     // CHANGED FROM endLocation
-      fuel_type: parseInt(document.getElementById('fuelType').value),
-      recirculation_BOG: document.querySelector('input[name="bogTreatment"]:checked').value,
-      BOG_recirculation_truck: parseFloat(document.getElementById('bogRecirculationTruck').value),
-      BOG_recirculation_truck_apply: document.getElementById('bogRecirculationTruckApply').value,
-      BOG_recirculation_storage: parseFloat(document.getElementById('bogRecirculationStorage').value),
-      BOG_recirculation_storage_apply: document.getElementById('bogRecirculationStorageApply').value,
-      BOG_recirculation_mati_trans: parseFloat(document.getElementById('bogRecirculationMaritime').value),
-      BOG_recirculation_mati_trans_apply: document.getElementById('bogRecirculationMaritimeApply').value,
-      storage_time: parseFloat(document.getElementById('storageTime').value),
-      LH2_plant_capacity: parseFloat(document.getElementById('lh2PlantCapacity').value),
-      ship_tank_volume: parseFloat(document.getElementById('shipTankVolume').value),
-      ship_tank_shape: document.getElementById('shipTankShape').value,
-    };
+      const userInputs = {
+        start: document.getElementById('startLocation').value,
+        end: document.getElementById('endLocation').value,
+        fuel_type: parseInt(document.getElementById('fuelType').value),
+        recirculation_BOG: document.querySelector('input[name="bogTreatment"]:checked').value,
+        BOG_recirculation_truck: parseFloat(document.getElementById('bogRecirculationTruck').value),
+        BOG_recirculation_truck_apply: document.getElementById('bogRecirculationTruckApply').value,
+        BOG_recirculation_storage: parseFloat(document.getElementById('bogRecirculationStorage').value),
+        BOG_recirculation_storage_apply: document.getElementById('bogRecirculationStorageApply').value,
+        BOG_recirculation_mati_trans: parseFloat(document.getElementById('bogRecirculationMaritime').value),
+        BOG_recirculation_mati_trans_apply: document.getElementById('bogRecirculationMaritimeApply').value,
+        storage_time: parseFloat(document.getElementById('storageTime').value),
+        LH2_plant_capacity: parseFloat(document.getElementById('lh2PlantCapacity').value),
+        ship_tank_volume: parseFloat(document.getElementById('shipTankVolume').value),
+        ship_tank_shape: parseInt(document.getElementById('shipTankShape').value),
+      };
+
       try {
-        // 2. Send inputs to the Python backend
-        logStatus("Sending data to the Python server for calculation... (This may take a moment)");
+        logStatus("Sending data to the Python server for calculation... (This may take up to a minute)");
         const response = await fetch(`${BACKEND_URL}/calculate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -330,19 +326,20 @@ nav a:hover::after {
           throw new Error(results.message);
         }
 
-        // 3. Display results received from the backend
         logStatus("Calculation complete. Rendering results...");
+        
+        // ** THIS IS THE NEW, CRITICAL PART **
         displayMap(results.map_data);
         displayTables(results.table_data);
+        completeResultsForCsv = results.csv_data; // Store data for CSV download
+        // ** END OF NEW PART **
 
-        // Store data for CSV download
-        completeResultsForCsv = results.csv_data;
         outputsDiv.classList.remove('hidden');
 
       } catch (error) {
         logStatus(`Error: ${error.message}`);
         console.error("Calculation error:", error);
-        showModal(`An error occurred: ${error.message}. Make sure the Python backend server is running and check its console for errors.`);
+        showModal(`An error occurred: ${error.message}. Check the backend terminal for details.`);
       } finally {
         calculateButton.disabled = false;
         calculateButton.textContent = 'Calculate';
@@ -351,11 +348,8 @@ nav a:hover::after {
 
     // --- UI Display Functions ---
     function displayMap(mapData) {
-        if (map) map.remove();
-
-        const midLat = (mapData.coor_start.lat + mapData.coor_end.lat) / 2;
-        const midLng = (mapData.coor_start.lng + mapData.coor_end.lng) / 2;
-        map = L.map('map').setView([midLat, midLng], 3);
+        if (map) { map.remove(); }
+        map = L.map('map').setView([20, 0], 2); // Default view
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
         L.marker([mapData.coor_start.lat, mapData.coor_start.lng]).addTo(map).bindPopup('Start Location');
@@ -363,9 +357,9 @@ nav a:hover::after {
         L.marker([mapData.start_port.lat, mapData.start_port.lng], {icon: L.icon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41]})}).addTo(map).bindPopup(`Origin Port: ${mapData.start_port.name}`);
         L.marker([mapData.end_port.lat, mapData.end_port.lng], {icon: L.icon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41]})}).addTo(map).bindPopup(`Destination Port: ${mapData.end_port.name}`);
 
-        L.polyline(mapData.road_route_start_coords, { color: 'blue', weight: 3 }).addTo(map);
-        L.polyline(mapData.road_route_end_coords, { color: 'blue', weight: 3 }).addTo(map);
-        L.polyline(mapData.sea_route_coords, { color: 'green', weight: 3 }).addTo(map);
+        if (mapData.road_route_start_coords) L.polyline(mapData.road_route_start_coords, { color: 'blue', weight: 3 }).addTo(map);
+        if (mapData.road_route_end_coords) L.polyline(mapData.road_route_end_coords, { color: 'blue', weight: 3 }).addTo(map);
+        if (mapData.sea_route_coords) L.polyline(mapData.sea_route_coords, { color: 'green', weight: 3 }).addTo(map);
 
         const bounds = L.latLngBounds([
             [mapData.coor_start.lat, mapData.coor_start.lng],
@@ -396,7 +390,7 @@ nav a:hover::after {
         }
         let csvContent = "data:text/csv;charset=utf-8,";
         completeResultsForCsv.forEach(rowArray => {
-            let row = rowArray.join(",");
+            let row = rowArray.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","); // Escape quotes
             csvContent += row + "\r\n";
         });
         const encodedUri = encodeURI(csvContent);
