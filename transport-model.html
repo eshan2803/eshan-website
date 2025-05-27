@@ -70,7 +70,29 @@
 </script>
   <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
   <style>
-    body { font-family: 'Inter', sans-serif; margin: 0; background: #f5f5f4; }
+    body {
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  background: #f5f5f4;
+}
+
+header.header {
+  background-color: #e7f0eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+}
+
+.header-left h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.header-left p {
+  margin: 0.25rem 0 0;
+  color: #4b5563;
+}
     header { background-color: #e7f0eb; text-align: center; padding: 1rem 0; }
     header h1 { margin: 0; font-size: 1.75rem; }
     header p { margin: 0.25rem 0 0; color: #4b5563; }
@@ -106,21 +128,21 @@
   </style>
 </head>
 <body>
-  <header>
-  <div class="header-container" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background-color: #e7f0eb;">
+  <header class="header">
+  <div class="header-left">
     <div>
-      <h1 style="font-size: 2rem; margin: 0;">Dr. Eshan Singh</h1>
-      <p style="margin: 0.25rem 0 0; color: #4b5563;">Energy & Decarbonization</p>
+      <h1>Dr. Eshan Singh</h1>
+      <p>Energy & Decarbonization</p>
     </div>
-    <div class="header-animation">
-      <lottie-player 
-        src="assets/wind-turbine.json"
-        background="transparent"
-        speed="1"
-        style="width: 120px; height: 120px;"
-        loop autoplay>
-      </lottie-player>
-    </div>
+  </div>
+  <div class="header-right">
+    <lottie-player 
+      src="assets/wind-turbine.json"
+      background="transparent"
+      speed="1"
+      style="width: 120px; height: 120px;"
+      loop autoplay>
+    </lottie-player>
   </div>
 </header>
 
