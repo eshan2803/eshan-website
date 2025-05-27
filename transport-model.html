@@ -14,8 +14,20 @@
     header { background-color: #e7f0eb; text-align: center; padding: 1rem 0; }
     header h1 { margin: 0; font-size: 1.75rem; }
     header p { margin: 0.25rem 0 0; color: #4b5563; }
-    nav { background: white; padding: 1rem 2rem; display: flex; justify-content: center; gap: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    nav a { font-weight: 600; color: #333; text-decoration: none; }
+    nav {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  background-color: rgba(56, 142, 60, 0.9);
+  padding: 1rem 0;
+}
+    nav a {
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: color 0.3s ease, border-bottom 0.3s ease;
+}
     nav a:hover { text-decoration: underline; }
     main.container { max-width: 960px; margin: auto; padding: 2rem; background: white; border-radius: 0.5rem; }
     .input-group { margin-bottom: 1.5rem; }
@@ -32,9 +44,20 @@
 </head>
 <body>
   <header>
+  <div class="header-container">
     <h1>Dr. Eshan Singh</h1>
     <p>Energy & Decarbonization</p>
-  </header>
+  </div>
+  <div class="header-animation">
+    <lottie-player 
+      src="assets/wind-turbine.json"
+      background="transparent"
+      speed="1"
+      style="width: 100px; height: 100px; margin-top: 1rem;"
+      loop autoplay>
+    </lottie-player>
+  </div>
+</header>
 
   <nav>
     <a href="index.html">Home</a>
@@ -67,11 +90,13 @@
         <div class="input-group">
           <label>Boil-off Gas (BOG) Treatment</label>
           <div class="input-inline">
-            <input type="radio" id="bogExpel" name="bogTreatment" value="1" checked>
-            <label for="bogExpel">Expel</label>
-            <input type="radio" id="bogRecirculation" name="bogTreatment" value="2">
-            <label for="bogRecirculation">Recirculation</label>
-          </div>
+  <label style="display: flex; align-items: center; gap: 0.5rem;">
+    <input type="radio" id="bogExpel" name="bogTreatment" value="1" checked> Expel
+  </label>
+  <label style="display: flex; align-items: center; gap: 0.5rem;">
+    <input type="radio" id="bogRecirculation" name="bogTreatment" value="2"> Recirculation
+  </label>
+</div>
         </div>
 
         <div id="bogRecirculationDetails" class="hidden">
