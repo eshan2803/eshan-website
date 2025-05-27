@@ -7,7 +7,67 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">document.getElementById('lcaForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const statusMessagesDiv = document.getElementById('statusMessages');
+  const outputsDiv = document.getElementById('outputs');
+  const downloadCsvButton = document.getElementById('downloadCsvButton');
+
+  function logStatus(message) {
+    const p = document.createElement('p');
+    p.textContent = `> ${message}`;
+    statusMessagesDiv.appendChild(p);
+    statusMessagesDiv.scrollTop = statusMessagesDiv.scrollHeight;
+  }
+
+  function clearStatus() {
+    statusMessagesDiv.innerHTML = '';
+  }
+
+  clearStatus();
+  logStatus("Collecting user inputs...");
+
+  const userInputs = {
+    startLocation: document.getElementById('startLocation').value,
+    endLocation: document.getElementById('endLocation').value,
+    fuelType: parseInt(document.getElementById('fuelType').value),
+    recirculationBOG: document.querySelector('input[name="bogTreatment"]:checked').value,
+    bogRecirculationTruck: parseFloat(document.getElementById('bogRecirculationTruck').value),
+    bogRecirculationTruckApply: document.getElementById('bogRecirculationTruckApply').value,
+    bogRecirculationStorage: parseFloat(document.getElementById('bogRecirculationStorage').value),
+    bogRecirculationStorageApply: document.getElementById('bogRecirculationStorageApply').value,
+    bogRecirculationMaritime: parseFloat(document.getElementById('bogRecirculationMaritime').value),
+    bogRecirculationMaritimeApply: document.getElementById('bogRecirculationMaritimeApply').value,
+    storageTime: parseFloat(document.getElementById('storageTime').value),
+    lh2PlantCapacity: parseFloat(document.getElementById('lh2PlantCapacity').value),
+    shipTankVolume: parseFloat(document.getElementById('shipTankVolume').value),
+    shipTankShape: document.getElementById('shipTankShape').value,
+  };
+
+  try {
+    logStatus("Sending data to the Python server for calculation...");
+    const response = await fetch('http://127.0.0.1:5000/calculate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userInputs)
+    });
+
+    logStatus("Waiting for response from the server...");
+    const results = await response.json();
+
+    if (results.status === 'error') {
+      throw new Error(results.message);
+    }
+
+    logStatus("Calculation complete. Displaying results...");
+    // TODO: display results here
+    outputsDiv.classList.remove('hidden');
+  } catch (error) {
+    logStatus(`Error: ${error.message}`);
+    console.error("Calculation error:", error);
+  }
+});
+</script>
   <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
   <style>
     body { font-family: 'Inter', sans-serif; margin: 0; background: #f5f5f4; }
@@ -28,7 +88,10 @@
   font-size: 1rem;
   transition: color 0.3s ease, border-bottom 0.3s ease;
 }
-    nav a:hover { text-decoration: underline; }
+    nav a:hover {
+  text-decoration: underline;
+  border-bottom: none;
+}
     main.container { max-width: 960px; margin: auto; padding: 2rem; background: white; border-radius: 0.5rem; }
     .input-group { margin-bottom: 1.5rem; }
     .input-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
@@ -44,18 +107,20 @@
 </head>
 <body>
   <header>
-  <div class="header-container">
-    <h1>Dr. Eshan Singh</h1>
-    <p>Energy & Decarbonization</p>
-  </div>
-  <div class="header-animation">
-    <lottie-player 
-      src="assets/wind-turbine.json"
-      background="transparent"
-      speed="1"
-      style="width: 100px; height: 100px; margin-top: 1rem;"
-      loop autoplay>
-    </lottie-player>
+  <div class="header-container" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background-color: #e7f0eb;">
+    <div>
+      <h1 style="font-size: 2rem; margin: 0;">Dr. Eshan Singh</h1>
+      <p style="margin: 0.25rem 0 0; color: #4b5563;">Energy & Decarbonization</p>
+    </div>
+    <div class="header-animation">
+      <lottie-player 
+        src="assets/wind-turbine.json"
+        background="transparent"
+        speed="1"
+        style="width: 120px; height: 120px;"
+        loop autoplay>
+      </lottie-player>
+    </div>
   </div>
 </header>
 
@@ -99,11 +164,38 @@
 </div>
         </div>
 
-        <div id="bogRecirculationDetails" class="hidden">
-          <div class="input-group">
-            <label for="bogRecirculationTruck">In-land Transport Recirculation (%)</label>
-            <input type="number" id="bogRecirculationTruck" value="80">
-          </div>
+        <div id="bogRecirculationDetails" class="hidden input-group" style="border: 1px solid #ccc; padding: 1rem; border-radius: 4px;">
+  <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">BOG Recirculation Details:</h3>
+  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+    <div>
+      <label for="bogRecirculationTruck">In-land Transport Recirculation (%)</label>
+      <input type="number" id="bogRecirculationTruck" value="80">
+      <label for="bogRecirculationTruckApply">Use of BOG (In-land)</label>
+      <select id="bogRecirculationTruckApply">
+        <option value="1">Re-liquified</option>
+        <option value="2">Used as another energy source</option>
+      </select>
+    </div>
+    <div>
+      <label for="bogRecirculationStorage">Storage Recirculation (%)</label>
+      <input type="number" id="bogRecirculationStorage" value="80">
+      <label for="bogRecirculationStorageApply">Use of BOG (Storage)</label>
+      <select id="bogRecirculationStorageApply">
+        <option value="1">Re-liquified</option>
+        <option value="2">Used as another energy source</option>
+      </select>
+    </div>
+    <div>
+      <label for="bogRecirculationMaritime">Maritime Transport Recirculation (%)</label>
+      <input type="number" id="bogRecirculationMaritime" value="80">
+      <label for="bogRecirculationMaritimeApply">Use of BOG (Maritime)</label>
+      <select id="bogRecirculationMaritimeApply">
+        <option value="1">Re-liquified</option>
+        <option value="2">Used as another energy source</option>
+      </select>
+    </div>
+  </div>
+</div>
           <div class="input-group">
             <label for="bogRecirculationStorage">Storage Recirculation (%)</label>
             <input type="number" id="bogRecirculationStorage" value="80">
@@ -144,8 +236,29 @@
         <div id="map" style="height: 400px;"></div>
         <div id="outputTables"></div>
       </div>
-    </section>
-  </main>
+    <div id="statusMessages" class="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700 min-h-[50px]">Waiting for input...</div>
+<div id="outputs" class="hidden">
+  <h2 class="text-xl font-semibold mb-4 text-gray-700">Results</h2>
+  <div id="map" class="mb-6 shadow-md" style="height: 400px;"></div>
+  <h3 class="text-lg font-semibold mb-3 text-gray-600">Summary Metrics (per kg chemical):</h3>
+  <div id="summaryTableContainer" class="table-container mb-6 shadow-md"><table id="summaryTable"></table></div>
+  <h3 class="text-lg font-semibold mb-3 text-gray-600">Summary Metrics (per MJ):</h3>
+  <div id="summaryTableContainer2" class="table-container mb-6 shadow-md"><table id="summaryTable2"></table></div>
+  <h3 class="text-lg font-semibold mb-3 text-gray-600">Detailed Process Breakdown:</h3>
+  <div id="detailedTableContainer" class="table-container mb-6 shadow-md"><table id="detailedTable"></table></div>
+  <div class="text-center mt-6">
+    <button id="downloadCsvButton" class="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out">Download Results (CSV)</button>
+  </div>
+</div>
+
+<div id="messageModal" class="modal">
+  <div class="modal-content">
+    <p id="modalMessageText"></p>
+    <button id="modalCloseButton" class="modal-close-button">OK</button>
+  </div>
+</div>
+</section>
+</main>
 
   <footer>
     <p>&copy; 2025 Eshan & Associates LLC. All rights reserved.</p>
