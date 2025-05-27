@@ -10,47 +10,40 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
   <style>
-    body { font-family: 'Inter', sans-serif; }
-    nav a { margin-right: 1rem; font-weight: 600; color: #333; text-decoration: none; }
+    body { font-family: 'Inter', sans-serif; margin: 0; background: #f5f5f4; }
+    header { background-color: #e7f0eb; text-align: center; padding: 1rem 0; }
+    header h1 { margin: 0; font-size: 1.75rem; }
+    header p { margin: 0.25rem 0 0; color: #4b5563; }
+    nav { background: white; padding: 1rem 2rem; display: flex; justify-content: center; gap: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    nav a { font-weight: 600; color: #333; text-decoration: none; }
     nav a:hover { text-decoration: underline; }
+    main.container { max-width: 960px; margin: auto; padding: 2rem; background: white; border-radius: 0.5rem; }
     .input-group { margin-bottom: 1.5rem; }
     .input-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
     .input-group input, .input-group select { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
-    footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; text-align: center; font-size: 0.875rem; color: #6b7280; }
-    .social-links a { margin: 0 0.5rem; }
-    .social-icon { width: 20px; height: 20px; }
+    .input-inline { display: flex; align-items: center; gap: 0.5rem; }
     .button { background: #007BFF; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-weight: 600; }
     .button:hover { background: #0056b3; }
     .hidden { display: none; }
+    footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; text-align: center; font-size: 0.875rem; color: #6b7280; }
+    .social-links a { margin: 0 0.5rem; }
+    .social-icon { width: 20px; height: 20px; }
   </style>
 </head>
 <body>
-  <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: white;">
-    <div>
-      <h1 class="text-xl font-bold">Dr. Eshan Singh</h1>
-      <p class="text-sm text-gray-600">Energy & Decarbonization</p>
-    </div>
-    <div class="header-animation">
-      <lottie-player 
-        src="assets/wind-turbine.json"
-        background="transparent"
-        speed="1"
-        style="width: 100px; height: 100px;"
-        loop autoplay>
-      </lottie-player>
-    </div>
+  <header>
+    <h1>Dr. Eshan Singh</h1>
+    <p>Energy & Decarbonization</p>
   </header>
 
-  <nav class="bg-white py-2 px-4 shadow-sm">
-    <div class="max-w-screen-lg mx-auto">
-      <a href="index.html">Home</a>
-      <a href="energy.html">Energy Decarbonization</a>
-      <a href="personal.html">Personal Musings</a>
-      <a href="contact.html">Contact</a>
-    </div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="energy.html">Energy Decarbonization</a>
+    <a href="personal.html">Personal Musings</a>
+    <a href="contact.html">Contact</a>
   </nav>
 
-  <main class="container" style="max-width: 960px; margin: auto; padding: 2rem;">
+  <main class="container">
     <section>
       <h2>Commodity Transport Model</h2>
       <p>This tool allows you to calculate the energy usage, carbon footprint, and cost of transporting commodities across different global trade routes.</p>
@@ -73,10 +66,12 @@
         </div>
         <div class="input-group">
           <label>Boil-off Gas (BOG) Treatment</label>
-          <input type="radio" id="bogExpel" name="bogTreatment" value="1" checked>
-          <label for="bogExpel">Expel</label>
-          <input type="radio" id="bogRecirculation" name="bogTreatment" value="2">
-          <label for="bogRecirculation">Recirculation</label>
+          <div class="input-inline">
+            <input type="radio" id="bogExpel" name="bogTreatment" value="1" checked>
+            <label for="bogExpel">Expel</label>
+            <input type="radio" id="bogRecirculation" name="bogTreatment" value="2">
+            <label for="bogRecirculation">Recirculation</label>
+          </div>
         </div>
 
         <div id="bogRecirculationDetails" class="hidden">
@@ -88,4 +83,67 @@
             <label for="bogRecirculationStorage">Storage Recirculation (%)</label>
             <input type="number" id="bogRecirculationStorage" value="80">
           </div>
-          <div class="input
+          <div class="input-group">
+            <label for="bogRecirculationMaritime">Maritime Transport Recirculation (%)</label>
+            <input type="number" id="bogRecirculationMaritime" value="80">
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label for="storageTime">Storage Time at Port (days)</label>
+          <input type="number" id="storageTime" value="3">
+        </div>
+        <div class="input-group">
+          <label for="lh2PlantCapacity">LH2 Plant Capacity (kg/hr)</label>
+          <input type="number" id="lh2PlantCapacity" value="1000">
+        </div>
+        <div class="input-group">
+          <label for="shipTankVolume">Ship Tank Volume (m³)</label>
+          <input type="number" id="shipTankVolume" value="70000">
+        </div>
+        <div class="input-group">
+          <label for="shipTankShape">Ship Tank Shape</label>
+          <select id="shipTankShape">
+            <option value="1">Capsule</option>
+            <option value="2">Spherical</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <button type="submit" class="button">Calculate</button>
+        </div>
+      </form>
+
+      <div id="results" class="hidden" style="margin-top: 2rem;">
+        <h3>Results</h3>
+        <div id="map" style="height: 400px;"></div>
+        <div id="outputTables"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Eshan & Associates LLC. All rights reserved.</p>
+    <div class="social-links">
+      <a href="https://www.linkedin.com/in/eshan-singh-188b1554/" target="_blank">
+        <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn">
+      </a>
+      <a href="mailto:hello@eshansingh.xyz">
+        <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/732/732200.png" alt="Email">
+      </a>
+      <a href="https://scholar.google.com/citations?user=VhYa_v4AAAAJ&hl=en" target="_blank">
+        <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" alt="Google Scholar">
+      </a>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('bogExpel').addEventListener('change', () => {
+      document.getElementById('bogRecirculationDetails').classList.add('hidden');
+    });
+    document.getElementById('bogRecirculation').addEventListener('change', () => {
+      document.getElementById('bogRecirculationDetails').classList.remove('hidden');
+    });
+  </script>
+</body>
+</html>
