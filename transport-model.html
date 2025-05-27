@@ -7,67 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">document.getElementById('lcaForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  const statusMessagesDiv = document.getElementById('statusMessages');
-  const outputsDiv = document.getElementById('outputs');
-  const downloadCsvButton = document.getElementById('downloadCsvButton');
-
-  function logStatus(message) {
-    const p = document.createElement('p');
-    p.textContent = `> ${message}`;
-    statusMessagesDiv.appendChild(p);
-    statusMessagesDiv.scrollTop = statusMessagesDiv.scrollHeight;
-  }
-
-  function clearStatus() {
-    statusMessagesDiv.innerHTML = '';
-  }
-
-  clearStatus();
-  logStatus("Collecting user inputs...");
-
-  const userInputs = {
-    startLocation: document.getElementById('startLocation').value,
-    endLocation: document.getElementById('endLocation').value,
-    fuelType: parseInt(document.getElementById('fuelType').value),
-    recirculationBOG: document.querySelector('input[name="bogTreatment"]:checked').value,
-    bogRecirculationTruck: parseFloat(document.getElementById('bogRecirculationTruck').value),
-    bogRecirculationTruckApply: document.getElementById('bogRecirculationTruckApply').value,
-    bogRecirculationStorage: parseFloat(document.getElementById('bogRecirculationStorage').value),
-    bogRecirculationStorageApply: document.getElementById('bogRecirculationStorageApply').value,
-    bogRecirculationMaritime: parseFloat(document.getElementById('bogRecirculationMaritime').value),
-    bogRecirculationMaritimeApply: document.getElementById('bogRecirculationMaritimeApply').value,
-    storageTime: parseFloat(document.getElementById('storageTime').value),
-    lh2PlantCapacity: parseFloat(document.getElementById('lh2PlantCapacity').value),
-    shipTankVolume: parseFloat(document.getElementById('shipTankVolume').value),
-    shipTankShape: document.getElementById('shipTankShape').value,
-  };
-
-  try {
-    logStatus("Sending data to the Python server for calculation...");
-    const response = await fetch('http://127.0.0.1:5000/calculate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userInputs)
-    });
-
-    logStatus("Waiting for response from the server...");
-    const results = await response.json();
-
-    if (results.status === 'error') {
-      throw new Error(results.message);
-    }
-
-    logStatus("Calculation complete. Displaying results...");
-    // TODO: display results here
-    outputsDiv.classList.remove('hidden');
-  } catch (error) {
-    logStatus(`Error: ${error.message}`);
-    console.error("Calculation error:", error);
-  }
-});
-</script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
   <style>
 body {
@@ -312,5 +252,67 @@ nav a:hover::after {
       document.getElementById('bogRecirculationDetails').classList.remove('hidden');
     });
   </script>
+<script>
+document.getElementById('lcaForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const statusMessagesDiv = document.getElementById('statusMessages');
+  const outputsDiv = document.getElementById('outputs');
+  const downloadCsvButton = document.getElementById('downloadCsvButton');
+
+  function logStatus(message) {
+    const p = document.createElement('p');
+    p.textContent = `> ${message}`;
+    statusMessagesDiv.appendChild(p);
+    statusMessagesDiv.scrollTop = statusMessagesDiv.scrollHeight;
+  }
+
+  function clearStatus() {
+    statusMessagesDiv.innerHTML = '';
+  }
+
+  clearStatus();
+  logStatus("Collecting user inputs...");
+
+  const userInputs = {
+    startLocation: document.getElementById('startLocation').value,
+    endLocation: document.getElementById('endLocation').value,
+    fuelType: parseInt(document.getElementById('fuelType').value),
+    recirculationBOG: document.querySelector('input[name="bogTreatment"]:checked').value,
+    bogRecirculationTruck: parseFloat(document.getElementById('bogRecirculationTruck').value),
+    bogRecirculationTruckApply: document.getElementById('bogRecirculationTruckApply').value,
+    bogRecirculationStorage: parseFloat(document.getElementById('bogRecirculationStorage').value),
+    bogRecirculationStorageApply: document.getElementById('bogRecirculationStorageApply').value,
+    bogRecirculationMaritime: parseFloat(document.getElementById('bogRecirculationMaritime').value),
+    bogRecirculationMaritimeApply: document.getElementById('bogRecirculationMaritimeApply').value,
+    storageTime: parseFloat(document.getElementById('storageTime').value),
+    lh2PlantCapacity: parseFloat(document.getElementById('lh2PlantCapacity').value),
+    shipTankVolume: parseFloat(document.getElementById('shipTankVolume').value),
+    shipTankShape: document.getElementById('shipTankShape').value,
+  };
+
+  try {
+    logStatus("Sending data to the Python server for calculation...");
+    const response = await fetch('http://127.0.0.1:5000/calculate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userInputs)
+    });
+
+    logStatus("Waiting for response from the server...");
+    const results = await response.json();
+
+    if (results.status === 'error') {
+      throw new Error(results.message);
+    }
+
+    logStatus("Calculation complete. Displaying results...");
+    // TODO: display results here
+    outputsDiv.classList.remove('hidden');
+  } catch (error) {
+    logStatus(`Error: ${error.message}`);
+    console.error("Calculation error:", error);
+  }
+});
+</script>
 </body>
 </html>
