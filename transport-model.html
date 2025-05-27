@@ -253,66 +253,158 @@ nav a:hover::after {
     });
   </script>
 <script>
-document.getElementById('lcaForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  const statusMessagesDiv = document.getElementById('statusMessages');
-  const outputsDiv = document.getElementById('outputs');
-  const downloadCsvButton = document.getElementById('downloadCsvButton');
-
-  function logStatus(message) {
-    const p = document.createElement('p');
-    p.textContent = `> ${message}`;
-    statusMessagesDiv.appendChild(p);
-    statusMessagesDiv.scrollTop = statusMessagesDiv.scrollHeight;
-  }
-
-  function clearStatus() {
-    statusMessagesDiv.innerHTML = '';
-  }
-
-  clearStatus();
-  logStatus("Collecting user inputs...");
-
-  const userInputs = {
-    startLocation: document.getElementById('startLocation').value,
-    endLocation: document.getElementById('endLocation').value,
-    fuelType: parseInt(document.getElementById('fuelType').value),
-    recirculationBOG: document.querySelector('input[name="bogTreatment"]:checked').value,
-    bogRecirculationTruck: parseFloat(document.getElementById('bogRecirculationTruck').value),
-    bogRecirculationTruckApply: document.getElementById('bogRecirculationTruckApply').value,
-    bogRecirculationStorage: parseFloat(document.getElementById('bogRecirculationStorage').value),
-    bogRecirculationStorageApply: document.getElementById('bogRecirculationStorageApply').value,
-    bogRecirculationMaritime: parseFloat(document.getElementById('bogRecirculationMaritime').value),
-    bogRecirculationMaritimeApply: document.getElementById('bogRecirculationMaritimeApply').value,
-    storageTime: parseFloat(document.getElementById('storageTime').value),
-    lh2PlantCapacity: parseFloat(document.getElementById('lh2PlantCapacity').value),
-    shipTankVolume: parseFloat(document.getElementById('shipTankVolume').value),
-    shipTankShape: document.getElementById('shipTankShape').value,
-  };
-
-  try {
-    logStatus("Sending data to the Python server for calculation...");
-    const response = await fetch('http://127.0.0.1:5000/calculate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userInputs)
+    // --- UI Element Event Listeners ---
+    document.getElementById('bogExpel').addEventListener('change', () => {
+      document.getElementById('bogRecirculationDetails').classList.add('hidden');
     });
+    document.getElementById('bogRecirculation').addEventListener('change', () => {
+      document.getElementById('bogRecirculationDetails').classList.remove('hidden');
+    });
+    document.getElementById('lcaForm').addEventListener('submit', handleCalculation);
+    document.getElementById('downloadCsvButton').addEventListener('click', downloadCSV);
 
-    logStatus("Waiting for response from the server...");
-    const results = await response.json();
+    // --- Globals ---
+    const BACKEND_URL = "http://127.0.0.1:5000"; // URL of the running Python Flask server
+    let map; // Leaflet map instance
+    let completeResultsForCsv = []; // To store data for CSV download
 
-    if (results.status === 'error') {
-      throw new Error(results.message);
+    // --- Main Calculation Handler ---
+    async function handleCalculation(e) {
+      e.preventDefault(); // Prevent form from submitting the traditional way
+      const calculateButton = this.querySelector('button[type="submit"]');
+      const statusMessagesDiv = document.getElementById('statusMessages');
+      const outputsDiv = document.getElementById('outputs');
+
+      // --- Helper functions for UI feedback ---
+      function logStatus(message) {
+        statusMessagesDiv.innerHTML += `<p>> ${message}</p>`;
+        statusMessagesDiv.scrollTop = statusMessagesDiv.scrollHeight;
+      }
+      function clearStatus() {
+        statusMessagesDiv.innerHTML = '';
+      }
+      function showModal(message) {
+        document.getElementById('modalMessageText').textContent = message;
+        document.getElementById('messageModal').style.display = "block";
+      }
+      document.getElementById('modalCloseButton').onclick = () => { document.getElementById('messageModal').style.display = "none"; };
+
+
+      clearStatus();
+      logStatus("Collecting user inputs...");
+      calculateButton.disabled = true;
+      calculateButton.textContent = 'Calculating...';
+      outputsDiv.classList.add('hidden');
+
+      // 1. Gather all inputs into a single object
+      const userInputs = {
+        start: document.getElementById('startLocation').value,
+        end: document.getElementById('endLocation').value,
+        fuel_type: parseInt(document.getElementById('fuelType').value),
+        recirculation_BOG: document.querySelector('input[name="bogTreatment"]:checked').value,
+        BOG_recirculation_truck: parseFloat(document.getElementById('bogRecirculationTruck').value),
+        BOG_recirculation_truck_apply: document.getElementById('bogRecirculationTruckApply').value,
+        BOG_recirculation_storage: parseFloat(document.getElementById('bogRecirculationStorage').value),
+        BOG_recirculation_storage_apply: document.getElementById('bogRecirculationStorageApply').value,
+        BOG_recirculation_mati_trans: parseFloat(document.getElementById('bogRecirculationMaritime').value),
+        BOG_recirculation_mati_trans_apply: document.getElementById('bogRecirculationMaritimeApply').value,
+        storage_time: parseFloat(document.getElementById('storageTime').value),
+        LH2_plant_capacity: parseFloat(document.getElementById('lh2PlantCapacity').value),
+        ship_tank_volume: parseFloat(document.getElementById('shipTankVolume').value),
+        ship_tank_shape: document.getElementById('shipTankShape').value,
+      };
+
+      try {
+        // 2. Send inputs to the Python backend
+        logStatus("Sending data to the Python server for calculation... (This may take a moment)");
+        const response = await fetch(`${BACKEND_URL}/calculate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(userInputs)
+        });
+
+        logStatus("Waiting for response from the server...");
+        const results = await response.json();
+
+        if (results.status === 'error') {
+          throw new Error(results.message);
+        }
+
+        // 3. Display results received from the backend
+        logStatus("Calculation complete. Rendering results...");
+        displayMap(results.map_data);
+        displayTables(results.table_data);
+
+        // Store data for CSV download
+        completeResultsForCsv = results.csv_data;
+        outputsDiv.classList.remove('hidden');
+
+      } catch (error) {
+        logStatus(`Error: ${error.message}`);
+        console.error("Calculation error:", error);
+        showModal(`An error occurred: ${error.message}. Make sure the Python backend server is running and check its console for errors.`);
+      } finally {
+        calculateButton.disabled = false;
+        calculateButton.textContent = 'Calculate';
+      }
     }
 
-    logStatus("Calculation complete. Displaying results...");
-    // TODO: display results here
-    outputsDiv.classList.remove('hidden');
-  } catch (error) {
-    logStatus(`Error: ${error.message}`);
-    console.error("Calculation error:", error);
-  }
-});
+    // --- UI Display Functions ---
+    function displayMap(mapData) {
+        if (map) map.remove();
+
+        const midLat = (mapData.coor_start.lat + mapData.coor_end.lat) / 2;
+        const midLng = (mapData.coor_start.lng + mapData.coor_end.lng) / 2;
+        map = L.map('map').setView([midLat, midLng], 3);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        L.marker([mapData.coor_start.lat, mapData.coor_start.lng]).addTo(map).bindPopup('Start Location');
+        L.marker([mapData.coor_end.lat, mapData.coor_end.lng]).addTo(map).bindPopup('End Location');
+        L.marker([mapData.start_port.lat, mapData.start_port.lng], {icon: L.icon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41]})}).addTo(map).bindPopup(`Origin Port: ${mapData.start_port.name}`);
+        L.marker([mapData.end_port.lat, mapData.end_port.lng], {icon: L.icon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41]})}).addTo(map).bindPopup(`Destination Port: ${mapData.end_port.name}`);
+
+        L.polyline(mapData.road_route_start_coords, { color: 'blue', weight: 3 }).addTo(map);
+        L.polyline(mapData.road_route_end_coords, { color: 'blue', weight: 3 }).addTo(map);
+        L.polyline(mapData.sea_route_coords, { color: 'green', weight: 3 }).addTo(map);
+
+        const bounds = L.latLngBounds([
+            [mapData.coor_start.lat, mapData.coor_start.lng],
+            [mapData.coor_end.lat, mapData.coor_end.lng]
+        ]);
+        if (bounds.isValid()) map.fitBounds(bounds.pad(0.1));
+    }
+
+    function createTableHtml(headers, dataArray) {
+        let html = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+        dataArray.forEach(row => {
+            html += '<tr>' + row.map(cell => `<td>${cell}</td>`).join('') + '</tr>';
+        });
+        html += '</tbody>';
+        return html;
+    }
+
+    function displayTables(tableData) {
+        document.getElementById('detailedTable').innerHTML = createTableHtml(tableData.detailed_headers, tableData.detailed_data);
+        document.getElementById('summaryTable').innerHTML = createTableHtml(tableData.summary1_headers, tableData.summary1_data);
+        document.getElementById('summaryTable2').innerHTML = createTableHtml(tableData.summary2_headers, tableData.summary2_data);
+    }
+
+    function downloadCSV() {
+        if (completeResultsForCsv.length === 0) {
+            showModal("No data available to download.");
+            return;
+        }
+        let csvContent = "data:text/csv;charset=utf-8,";
+        completeResultsForCsv.forEach(rowArray => {
+            let row = rowArray.join(",");
+            csvContent += row + "\r\n";
+        });
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "lca_results.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 </script>
-</body>
-</html>
