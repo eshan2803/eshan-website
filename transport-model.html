@@ -297,23 +297,23 @@ nav a:hover::after {
       outputsDiv.classList.add('hidden');
 
       // 1. Gather all inputs into a single object
-      const userInputs = {
-        start: document.getElementById('startLocation').value,
-        end: document.getElementById('endLocation').value,
-        fuel_type: parseInt(document.getElementById('fuelType').value),
-        recirculation_BOG: document.querySelector('input[name="bogTreatment"]:checked').value,
-        BOG_recirculation_truck: parseFloat(document.getElementById('bogRecirculationTruck').value),
-        BOG_recirculation_truck_apply: document.getElementById('bogRecirculationTruckApply').value,
-        BOG_recirculation_storage: parseFloat(document.getElementById('bogRecirculationStorage').value),
-        BOG_recirculation_storage_apply: document.getElementById('bogRecirculationStorageApply').value,
-        BOG_recirculation_mati_trans: parseFloat(document.getElementById('bogRecirculationMaritime').value),
-        BOG_recirculation_mati_trans_apply: document.getElementById('bogRecirculationMaritimeApply').value,
-        storage_time: parseFloat(document.getElementById('storageTime').value),
-        LH2_plant_capacity: parseFloat(document.getElementById('lh2PlantCapacity').value),
-        ship_tank_volume: parseFloat(document.getElementById('shipTankVolume').value),
-        ship_tank_shape: document.getElementById('shipTankShape').value,
-      };
-
+// Find this part in your transport-model.html script...
+    const userInputs = {
+      start: document.getElementById('startLocation').value, // CHANGED FROM startLocation
+      end: document.getElementById('endLocation').value,     // CHANGED FROM endLocation
+      fuel_type: parseInt(document.getElementById('fuelType').value),
+      recirculation_BOG: document.querySelector('input[name="bogTreatment"]:checked').value,
+      BOG_recirculation_truck: parseFloat(document.getElementById('bogRecirculationTruck').value),
+      BOG_recirculation_truck_apply: document.getElementById('bogRecirculationTruckApply').value,
+      BOG_recirculation_storage: parseFloat(document.getElementById('bogRecirculationStorage').value),
+      BOG_recirculation_storage_apply: document.getElementById('bogRecirculationStorageApply').value,
+      BOG_recirculation_mati_trans: parseFloat(document.getElementById('bogRecirculationMaritime').value),
+      BOG_recirculation_mati_trans_apply: document.getElementById('bogRecirculationMaritimeApply').value,
+      storage_time: parseFloat(document.getElementById('storageTime').value),
+      LH2_plant_capacity: parseFloat(document.getElementById('lh2PlantCapacity').value),
+      ship_tank_volume: parseFloat(document.getElementById('shipTankVolume').value),
+      ship_tank_shape: document.getElementById('shipTankShape').value,
+    };
       try {
         // 2. Send inputs to the Python backend
         logStatus("Sending data to the Python server for calculation... (This may take a moment)");
