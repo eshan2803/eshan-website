@@ -6,20 +6,25 @@
   <title>Commodity Transport Model | Eshan Singh</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
   <style>
     body { font-family: 'Inter', sans-serif; }
     nav a { margin-right: 1rem; font-weight: 600; color: #333; text-decoration: none; }
     nav a:hover { text-decoration: underline; }
+    .input-group { margin-bottom: 1.5rem; }
+    .input-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
+    .input-group input, .input-group select { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
     footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; text-align: center; font-size: 0.875rem; color: #6b7280; }
     .social-links a { margin: 0 0.5rem; }
     .social-icon { width: 20px; height: 20px; }
+    .button { background: #007BFF; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-weight: 600; }
+    .button:hover { background: #0056b3; }
+    .hidden { display: none; }
   </style>
 </head>
-<body class="bg-gray-100">
+<body>
   <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: white;">
     <div>
       <h1 class="text-xl font-bold">Dr. Eshan Singh</h1>
@@ -45,138 +50,42 @@
     </div>
   </nav>
 
-  <main class="container my-6">
-    <div class="container mx-auto bg-white p-6 md:p-8 rounded-lg shadow-xl">
-      <h1 class="text-2xl md:text-3xl font-bold mb-6 text-center text-gray-700">LCA Pathway Analysis</h1>
-      <!-- BEGIN LCA TOOL CONTENT -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div class="input-group">
-            <label for="startLocation">Start Location (e.g., city, state, country):</label>
-            <input type="text" id="startLocation" value="Los Angeles, CA">
-          </div>
-          <div class="input-group">
-            <label for="endLocation">End Location (e.g., city, state, country):</label>
-            <input type="text" id="endLocation" value="Rotterdam, Netherlands">
-          </div>
-          <div class="input-group">
-            <label for="fuelType">Fuel Type:</label>
-            <select id="fuelType">
-              <option value="0">Hydrogen</option>
-              <option value="1">Ammonia</option>
-              <option value="2">Methanol</option>
-            </select>
-          </div>
-          <div class="input-group">
-            <label>Boil-off Gas (BOG) Treatment:</label>
-            <div>
-              <input type="radio" id="bogExpel" name="bogTreatment" value="1" checked>
-              <label for="bogExpel" class="mr-2">Expel</label>
-              <input type="radio" id="bogRecirculation" name="bogTreatment" value="2">
-              <label for="bogRecirculation">Recirculation</label>
-            </div>
-          </div>
+  <main class="container" style="max-width: 960px; margin: auto; padding: 2rem;">
+    <section>
+      <h2>Commodity Transport Model</h2>
+      <p>This tool allows you to calculate the energy usage, carbon footprint, and cost of transporting commodities across different global trade routes.</p>
+      <form id="lcaForm">
+        <div class="input-group">
+          <label for="startLocation">Start Location</label>
+          <input type="text" id="startLocation" value="Los Angeles, CA">
+        </div>
+        <div class="input-group">
+          <label for="endLocation">End Location</label>
+          <input type="text" id="endLocation" value="Rotterdam, Netherlands">
+        </div>
+        <div class="input-group">
+          <label for="fuelType">Fuel Type</label>
+          <select id="fuelType">
+            <option value="0">Hydrogen</option>
+            <option value="1">Ammonia</option>
+            <option value="2">Methanol</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Boil-off Gas (BOG) Treatment</label>
+          <input type="radio" id="bogExpel" name="bogTreatment" value="1" checked>
+          <label for="bogExpel">Expel</label>
+          <input type="radio" id="bogRecirculation" name="bogTreatment" value="2">
+          <label for="bogRecirculation">Recirculation</label>
         </div>
 
-        <div id="bogRecirculationDetails" class="hidden mb-6 p-4 border border-gray-200 rounded-md">
-          <h3 class="text-lg font-semibold mb-3 text-gray-600">BOG Recirculation Details:</h3>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label for="bogRecirculationTruck" class="text-sm">In-land Transport Recirculation (%):</label>
-              <input type="number" id="bogRecirculationTruck" value="80" min="0" max="100" class="mt-1">
-              <label class="text-sm mt-1 block">Use of BOG (In-land):</label>
-              <select id="bogRecirculationTruckApply" class="mt-1">
-                <option value="1">Re-liquified</option>
-                <option value="2">Used as another energy source</option>
-              </select>
-            </div>
-            <div>
-              <label for="bogRecirculationStorage" class="text-sm">Storage Recirculation (%):</label>
-              <input type="number" id="bogRecirculationStorage" value="80" min="0" max="100" class="mt-1">
-              <label class="text-sm mt-1 block">Use of BOG (Storage):</label>
-              <select id="bogRecirculationStorageApply" class="mt-1">
-                <option value="1">Re-liquified</option>
-                <option value="2">Used as another energy source</option>
-              </select>
-            </div>
-            <div>
-              <label for="bogRecirculationMaritime" class="text-sm">Maritime Transport Recirculation (%):</label>
-              <input type="number" id="bogRecirculationMaritime" value="80" min="0" max="100" class="mt-1">
-              <label class="text-sm mt-1 block">Use of BOG (Maritime):</label>
-              <select id="bogRecirculationMaritimeApply" class="mt-1">
-                <option value="1">Re-liquified</option>
-                <option value="2">Used as another energy source</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div id="bogRecirculationDetails" class="hidden">
           <div class="input-group">
-            <label for="storageTime">Storage Time at Port (days):</label>
-            <input type="number" id="storageTime" value="3">
+            <label for="bogRecirculationTruck">In-land Transport Recirculation (%)</label>
+            <input type="number" id="bogRecirculationTruck" value="80">
           </div>
           <div class="input-group">
-            <label for="lh2PlantCapacity">LH2 Plant Capacity (kg/hr):</label>
-            <input type="number" id="lh2PlantCapacity" value="1000">
+            <label for="bogRecirculationStorage">Storage Recirculation (%)</label>
+            <input type="number" id="bogRecirculationStorage" value="80">
           </div>
-          <div class="input-group">
-            <label for="shipTankVolume">Ship Tank Volume (m³):</label>
-            <input type="number" id="shipTankVolume" value="70000">
-          </div>
-          <div class="input-group">
-            <label for="shipTankShape">Ship Tank Shape:</label>
-            <select id="shipTankShape">
-              <option value="1">Capsule</option>
-              <option value="2">Spherical</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="text-center mb-8">
-          <button id="calculateButton" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out">
-            Calculate LCA
-          </button>
-        </div>
-
-        <div id="statusMessages" class="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700 min-h-[50px]">Waiting for input...</div>
-        <div id="outputs" class="hidden">
-          <h2 class="text-xl font-semibold mb-4 text-gray-700">Results</h2>
-          <div id="map" class="mb-6 shadow-md" style="height: 400px;"></div>
-          <h3 class="text-lg font-semibold mb-3 text-gray-600">Summary Metrics (per kg chemical):</h3>
-          <div id="summaryTableContainer" class="table-container mb-6 shadow-md"><table id="summaryTable"></table></div>
-          <h3 class="text-lg font-semibold mb-3 text-gray-600">Summary Metrics (per MJ):</h3>
-          <div id="summaryTableContainer2" class="table-container mb-6 shadow-md"><table id="summaryTable2"></table></div>
-          <h3 class="text-lg font-semibold mb-3 text-gray-600">Detailed Process Breakdown:</h3>
-          <div id="detailedTableContainer" class="table-container mb-6 shadow-md"><table id="detailedTable"></table></div>
-          <div class="text-center mt-6">
-            <button id="downloadCsvButton" class="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out">Download Results (CSV)</button>
-          </div>
-        </div>
-
-        <div id="messageModal" class="modal">
-          <div class="modal-content">
-            <p id="modalMessageText"></p>
-            <button id="modalCloseButton" class="modal-close-button">OK</button>
-          </div>
-        </div>
-      <!-- END LCA TOOL CONTENT -->
-    </div>
-  </main>
-
-  <footer>
-    <p>&copy; 2025 Eshan & Associates LLC. All rights reserved.</p>
-    <div class="social-links mt-2">
-      <a href="https://www.linkedin.com/in/eshan-singh-188b1554/" target="_blank">
-        <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn">
-      </a>
-      <a href="mailto:hello@eshansingh.xyz">
-        <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/732/732200.png" alt="Email">
-      </a>
-      <a href="https://scholar.google.com/citations?user=VhYa_v4AAAAJ&hl=en" target="_blank">
-        <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" alt="Google Scholar">
-      </a>
-    </div>
-  </footer>
-  <script src="frontend.js"></script> <!-- assumes your JS logic is modularized in external file -->
-</body>
-</html>
+          <div class="input
