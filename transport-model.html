@@ -202,7 +202,6 @@ nav a:hover::after {
 
       <div id="results" class="hidden" style="margin-top: 2rem;">
         <h3>Results</h3>
-        <div id="map" style="height: 400px;"></div>
         <div id="outputTables"></div>
       </div>
     <div id="statusMessages" class="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700 min-h-[50px]">Waiting for input...</div>
@@ -254,6 +253,7 @@ nav a:hover::after {
   </script>
 
   <script>
+    console.log("Main script block started!");
     // --- UI Element Event Listeners ---
     document.getElementById('bogExpel').addEventListener('change', () => {
       document.getElementById('bogRecirculationDetails').classList.add('hidden');
@@ -271,6 +271,7 @@ nav a:hover::after {
 
     // --- Main Calculation Handler ---
     async function handleCalculation(e) {
+      console.log("handleCalculation function started!");
       e.preventDefault();
       const calculateButton = this.querySelector('button[type="submit"]');
       const statusMessagesDiv = document.getElementById('statusMessages');
@@ -321,13 +322,14 @@ nav a:hover::after {
 
         logStatus("Waiting for response from the server...");
         const results = await response.json();
-
+        console.log("Full server response:", JSON.stringify(results, null, 2));
+        console.log("Map data being sent to displayMap:", results.map_data);
         if (results.status === 'error') {
           throw new Error(results.message);
         }
 
         logStatus("Calculation complete. Rendering results...");
-        
+        console.log("Data for map IS being passed to displayMap now.");
         // ** THIS IS THE NEW, CRITICAL PART **
         displayMap(results.map_data);
         displayTables(results.table_data);
@@ -348,24 +350,100 @@ nav a:hover::after {
 
     // --- UI Display Functions ---
     function displayMap(mapData) {
-        if (map) { map.remove(); }
-        map = L.map('map').setView([20, 0], 2); // Default view
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        console.log("displayMap called with data:", mapData);
+        if (map) { // 'map' is your global Leaflet instance
+            map.remove();
+            console.log("Previous map instance removed.");
+        }
 
-        L.marker([mapData.coor_start.lat, mapData.coor_start.lng]).addTo(map).bindPopup('Start Location');
-        L.marker([mapData.coor_end.lat, mapData.coor_end.lng]).addTo(map).bindPopup('End Location');
-        L.marker([mapData.start_port.lat, mapData.start_port.lng], {icon: L.icon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41]})}).addTo(map).bindPopup(`Origin Port: ${mapData.start_port.name}`);
-        L.marker([mapData.end_port.lat, mapData.end_port.lng], {icon: L.icon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41]})}).addTo(map).bindPopup(`Destination Port: ${mapData.end_port.name}`);
+        if (!mapData || !mapData.coor_start || typeof mapData.coor_start.lat !== 'number' || typeof mapData.coor_start.lng !== 'number') {
+            console.error("Map data or coor_start is invalid or missing. Cannot render map.", mapData);
+            document.getElementById('map').innerHTML = '<p style="padding:20px; text-align:center;">Map data is unavailable or start coordinates are missing.</p>';
+            return;
+        }
 
-        if (mapData.road_route_start_coords) L.polyline(mapData.road_route_start_coords, { color: 'blue', weight: 3 }).addTo(map);
-        if (mapData.road_route_end_coords) L.polyline(mapData.road_route_end_coords, { color: 'blue', weight: 3 }).addTo(map);
-        if (mapData.sea_route_coords) L.polyline(mapData.sea_route_coords, { color: 'green', weight: 3 }).addTo(map);
+        try {
+            let initialLat = mapData.coor_start.lat;
+            let initialLng = mapData.coor_start.lng;
+            let initialZoom = 6;
 
-        const bounds = L.latLngBounds([
-            [mapData.coor_start.lat, mapData.coor_start.lng],
-            [mapData.coor_end.lat, mapData.coor_end.lng]
-        ]);
-        if (bounds.isValid()) map.fitBounds(bounds.pad(0.1));
+            if (mapData.coor_end && typeof mapData.coor_end.lat === 'number' && typeof mapData.coor_end.lng === 'number') {
+                initialLat = (mapData.coor_start.lat + mapData.coor_end.lat) / 2;
+                initialLng = (mapData.coor_start.lng + mapData.coor_end.lng) / 2;
+                initialZoom = 3;
+            }
+            
+            map = L.map('map').setView([initialLat, initialLng], initialZoom);
+            
+            // *** ADD THIS LINE ***
+            map.invalidateSize(); 
+            console.log("Leaflet map instance created and size invalidated.");
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            console.log("Tile layer added.");
+
+            const bounds = L.latLngBounds();
+
+            function addMarkerToMap(coords, name, iconUrl) {
+                if (coords && typeof coords.lat === 'number' && typeof coords.lng === 'number') {
+                    let markerOptions = {};
+                    if (iconUrl) {
+                        markerOptions.icon = L.icon({
+                            iconUrl: iconUrl,
+                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+                        });
+                    }
+                    L.marker([coords.lat, coords.lng], markerOptions).addTo(map).bindPopup(name);
+                    bounds.extend([coords.lat, coords.lng]);
+                    // console.log("Marker added for:", name); // Already confirmed this works
+                } else {
+                    console.warn("Invalid or missing coordinates for marker:", name, coords);
+                }
+            }
+
+            addMarkerToMap(mapData.coor_start, 'Start Location');
+            addMarkerToMap(mapData.coor_end, 'End Location');
+            addMarkerToMap(mapData.start_port, `Origin Port: ${mapData.start_port ? mapData.start_port.name : 'N/A'}`, 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png');
+            addMarkerToMap(mapData.end_port, `Destination Port: ${mapData.end_port ? mapData.end_port.name : 'N/A'}`, 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png');
+
+            function addPolylineToMap(coordsArray, color) {
+                if (coordsArray && Array.isArray(coordsArray) && coordsArray.length > 0) {
+                    const validCoords = coordsArray.filter(p => Array.isArray(p) && p.length === 2 && typeof p[0] === 'number' && typeof p[1] === 'number');
+                    if (validCoords.length > 0) {
+                        L.polyline(validCoords, { color: color, weight: 3 }).addTo(map);
+                        validCoords.forEach(p => bounds.extend(p));
+                        // console.log(`Polyline added with color ${color}. Points: ${validCoords.length}`); // Already confirmed
+                    } else {
+                        console.warn(`Polyline with color ${color} had no valid coordinates.`);
+                    }
+                } else {
+                    console.warn(`No data or empty array for polyline with color ${color}.`);
+                }
+            }
+            
+            addPolylineToMap(mapData.road_route_start_coords, 'blue');
+            addPolylineToMap(mapData.road_route_end_coords, 'blue');
+            addPolylineToMap(mapData.sea_route_coords, 'green');
+            
+            if (bounds.isValid()) {
+                // *** ADD THIS LOG ***
+                console.log("Fitting map to valid bounds. MinLat:", bounds.getSouthWest().lat, "MinLng:", bounds.getSouthWest().lng, "MaxLat:", bounds.getNorthEast().lat, "MaxLng:", bounds.getNorthEast().lng);
+                map.fitBounds(bounds.pad(0.1)); 
+                console.log("Map bounds fitted.");
+            } else if (mapData.coor_start && typeof mapData.coor_start.lat === 'number') {
+                map.setView([mapData.coor_start.lat, mapData.coor_start.lng], 6);
+                console.log("Map view set to start coordinate as bounds were invalid.");
+            } else {
+                console.warn("No valid bounds to fit map.");
+            }
+
+        } catch (e) {
+            console.error("Error occurred within displayMap function:", e);
+            document.getElementById('map').innerHTML = `<p style="padding:20px; text-align:center;">An error occurred while rendering the map.</p>`;
+        }
     }
 
     function createTableHtml(headers, dataArray) {
