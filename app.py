@@ -141,18 +141,44 @@ def run_lca_model(inputs):
         if response.status_code == 200: return float(response.json()['carbonIntensity'])
         return 200.0
 
+    # This is inside the run_lca_model function
     def openai_get_electricity_price(coords_str):
-        from openai import OpenAI
+        from openai import OpenAI # Make sure OpenAI is imported
         client = OpenAI(api_key=api_key_openAI)
-        response = client.chat.completions.create(
-            model="gpt-4o", response_format={"type": "json_object"},
-            messages=[
-                {"role": "system", "content": "Retrieve the latest average commercial electricity price in USD/MJ for the given coordinates and return in JSON format."},
-                {"role": "user", "content": f'Given coordinates {coords_str}, return JSON: {{"average_price_mj": PRICE_IN_USD_PER_MJ}}'}
-            ]
-        )
-        result = json.loads(response.choices[0].message.content)
-        return None, None, float(result.get("average_price_mj"))
+        
+        # Default price in case OpenAI fails or doesn't return the value
+        default_price_mj = 0.03 # Example: approx $0.108/kWh, same as your previous fallback
+
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o", # Or your preferred model
+                response_format={"type": "json_object"},
+                messages=[
+                    {"role": "system", "content": "Retrieve the latest average commercial electricity price in USD/MJ for the given coordinates and return in JSON format. If the price is unknown for the location, return null for average_price_mj."},
+                    {"role": "user", "content": f'Given coordinates {coords_str}, return JSON: {{"average_price_mj": PRICE_IN_USD_PER_MJ_OR_NULL}}'}
+                ]
+            )
+            result = json.loads(response.choices[0].message.content)
+            price_mj_value = result.get("average_price_mj")
+
+            if price_mj_value is not None:
+                try:
+                    # Attempt to convert to float if it's not None
+                    return None, None, float(price_mj_value)
+                except (ValueError, TypeError):
+                    # If conversion fails (e.g., it's a string like "N/A")
+                    app.logger.warning(f"Could not convert OpenAI price '{price_mj_value}' to float for coords {coords_str}. Using default.")
+                    return None, None, default_price_mj
+            else:
+                # If average_price_mj is None (or missing) in the response
+                app.logger.warning(f"OpenAI did not return 'average_price_mj' for coords {coords_str}. Using default.")
+                return None, None, default_price_mj
+
+        except Exception as e:
+            # Catch any other errors during API call or parsing
+            app.logger.error(f"Error in openai_get_electricity_price for coords {coords_str}: {e}")
+            return None, None, default_price_mj
+
     # =================================================================
     # END OF HELPER FUNCTIONS
     # =================================================================
