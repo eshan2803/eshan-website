@@ -253,7 +253,7 @@ def run_lca_model(inputs):
     diesel_density = 3.22; diesel_engine_eff = 0.4; heavy_fuel_density = 3.6; propul_eff = 0.55; marine_shipping_price=610
     NH3_ship_cosumption = (18.8*682*4170)/20000
     # Need to check the numbers below for accuracy
-    mass_conversion_to_H2 = [0, 0.176, 0.1875] # NH3, CH3OH
+    mass_conversion_to_H2 = [1, 0.176, 0.1875] # NH3, CH3OH
     eff_energy_chem_to_H2 = [0, 0.7, 0.75]
     energy_chem_to_H2 = [0, 9.3, 5.3]
     PH2_storage_V = 150.0 
