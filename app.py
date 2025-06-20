@@ -1812,7 +1812,12 @@ def run_lca_model(inputs):
         
         # target_weight is accessible from the enclosing run_lca_model scope
         return abs(X - target_weight)
-        
+
+    def constraint(A):
+        """Ensures the optimized weight is not less than the target weight."""
+        return A[0] - target_weight # This must be >= 0
+    con = {'type': 'ineq', 'fun': constraint}
+
     # This is the target_weight for the optimization
     target_weight = ship_tank_volume * liquid_chem_density[fuel_type] * 0.98 * ship_number_of_tanks
 
@@ -1875,12 +1880,12 @@ def run_lca_model(inputs):
     initial_guess = [target_weight / 0.9] # Initial guess assuming ~10% loss
     
     # Call minimize, passing the new args_for_optimizer_tuple
-    result = minimize(optimization_chem_weight, 
-                      initial_guess, 
-                      args=(args_for_optimizer_tuple,), # Note the comma to make it a tuple of one tuple
-                      method='L-BFGS-B', 
-                      bounds=[(0, None)])
-    chem_weight = result.x[0]
+    result = minimize(optimization_chem_weight,
+                      initial_guess,
+                      args=(args_for_optimizer_tuple,),
+                      method='SLSQP',  # CHANGED from 'L-BFGS-B' to support constraints
+                      bounds=[(0, None)],
+                      constraints=[con]) # ADDED constraints argument
     
     # --- 6. Final Calculation ---
 
