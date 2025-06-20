@@ -2186,7 +2186,13 @@ def run_lca_model(inputs):
         ["Energy consumed (MJ_in/MJ_out)", f"{total_results[1]/final_energy_output:.4f}" if final_energy_output > 0 else "N/A"],
         ["Emission (kg CO2/MJ)", f"{total_results[2]/final_energy_output:.4f}" if final_energy_output > 0 else "N/A"]
     ]
-    
+    assumed_prices_data = [
+        [f"Electricity Price at {start}", f"{start_electricity_price:.4f} $/MJ"],
+        [f"Electricity Price at {end}", f"{end_electricity_price:.4f} $/MJ"],
+        [f"Diesel Price at {start}", f"{diesel_price_start:.2f} $/gal"],
+        [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"]
+    ]
+
     csv_data = [["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)"]] + data
 
     # --- 8. Package Final JSON Response ---
@@ -2206,6 +2212,7 @@ def run_lca_model(inputs):
             "detailed_data": detailed_data_formatted,
             "summary1_headers": ["Metric", "Value"], "summary1_data": summary1_data,
             "summary2_headers": ["Per Energy Output", "Value"], "summary2_data": summary2_data,
+            "assumed_prices_headers": ["Assumed Price", "Value"], "assumed_prices_data": assumed_prices_data
         },
         "csv_data": csv_data
     }
