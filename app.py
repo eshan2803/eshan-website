@@ -1883,9 +1883,17 @@ def run_lca_model(inputs):
     result = minimize(optimization_chem_weight,
                       initial_guess,
                       args=(args_for_optimizer_tuple,),
-                      method='SLSQP',  # CHANGED from 'L-BFGS-B' to support constraints
+                      method='SLSQP',
                       bounds=[(0, None)],
-                      constraints=[con]) # ADDED constraints argument
+                      constraints=[con])
+                      
+    # --- ADD THIS CHECK ---
+    if result.success:
+        chem_weight = result.x[0]
+    else:
+        # If the optimization fails, raise an exception with the optimizer's message.
+        # This will be caught by the main try...except block and returned as a JSON error.
+        raise Exception(f"Optimization failed: {result.message}")
     
     # --- 6. Final Calculation ---
 
