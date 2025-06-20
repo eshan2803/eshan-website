@@ -141,7 +141,31 @@ def run_lca_model(inputs):
         if response.status_code == 200: return float(response.json()['carbonIntensity'])
         return 200.0
 
-    # This is inside the run_lca_model function
+    def get_country_from_coords(lat, lon):
+        url = (
+            f"https://maps.googleapis.com/maps/api/geocode/json?"
+            f"latlng={lat},{lon}&key={api_key_google}"
+        )
+        response = requests.get(url)
+        if response.status_code != 200:
+            raise Exception("Google Maps API error")
+
+        data = response.json()
+        if data['status'] != 'OK':
+            raise Exception(f"Geocoding error: {data['status']}")
+
+        for component in data['results'][0]['address_components']:
+            if 'country' in component['types']:
+                return component['long_name']
+        return None
+
+    def get_diesel_price(lat, lon):
+        country = get_country_from_coords(lat, lon)
+        diesel_price = diesel_price_country.get(country)
+        if diesel_price is None:
+            return 4  # Default value if country not found or price missing
+        return diesel_price
+
     def openai_get_electricity_price(coords_str):
         from openai import OpenAI # Make sure OpenAI is imported
         client = OpenAI(api_key=api_key_openAI)
@@ -216,6 +240,10 @@ def run_lca_model(inputs):
     road_route_start_coords = extract_route_coor((coor_start_lat, coor_start_lng), (start_port_lat, start_port_lng))
     road_route_end_coords = extract_route_coor((end_port_lat, end_port_lng), (coor_end_lat, end_port_lng))
 
+    diesel_price_country = {"Venezuela": 0.016, "Iran": 0.022, "Libya": 0.104, "Algeria": 0.834, "Turkmenistan": 1.082, "Egypt": 1.181, "Angola": 1.238, "Kuwait": 1.419, "Saudi Arabia": 1.675, "Ecuador": 1.798, "Bahrain": 1.807, "Qatar": 2.027, "Bolivia": 2.038, "Kazakhstan": 2.145, "Nigeria": 2.222, "Azerbaijan": 2.227, "Syria": 2.389, "Trinidad & Tobago": 2.46, "Malaysia": 2.47, "Sudan": 2.482, "UAE": 2.525, "Oman": 2.54, "Vietnam": 2.553, "Colombia": 2.553, "Bhutan": 2.58, "Lebanon": 2.673, "Tunisia": 2.797, "Burma": 2.907, "Panama": 2.917, "Puerto Rico": 2.949, "Belarus": 3.006, "Guyana": 3.044, "Honduras": 3.059, "Indonesia": 3.07, "Afghanistan": 3.101, "Taiwan": 3.128, "Bangladesh": 3.158, "Laos": 3.185, "Kyrgyzstan": 3.189, "Ethiopia": 3.228, "Paraguay": 3.278, "El Salvador": 3.3, "Cambodia": 3.304, "Curacao": 3.379, "Russia": 3.404, "Pakistan": 3.405, "Maldives": 3.408, "Guatemala": 3.412, "China": 3.442, "USA": 3.452, "United States": 3.452, "Jordan": 3.47, "Philippines": 3.502, "Zambia": 3.54, "Liberia": 3.546, "Uzbekistan": 3.59, "Peru": 3.648, "Fiji": 3.677, "Thailand": 3.703, "Dom. Rep.": 3.751, "Gabon": 3.78, "Chile": 3.839, "DR Congo": 3.882, "Georgia": 3.91, "Canada": 3.934, "Nepal": 3.947, "Aruba": 3.951, "Brazil": 3.977, "Grenada": 3.978, "Australia": 3.988, "India": 3.998, "Cape Verde": 4.032, "Tanzania": 4.036, "Costa Rica": 4.051, "Moldova": 4.071, "Sri Lanka": 4.108, "Japan": 4.143, "Cuba": 4.147, "Lesotho": 4.194, "Botswana": 4.212, "Mongolia": 4.229, "Argentina": 4.24, "Madagascar": 4.246, "Uruguay": 4.268, "New Zealand": 4.271, "South Korea": 4.31, "Suriname": 4.315, "Namibia": 4.357, "Jamaica": 4.389, "Rwanda": 4.404, "Burkina Faso": 4.438, "Nicaragua": 4.444, "Turkey": 4.462, "South Africa": 4.473, "Swaziland": 4.523, "N. Maced.": 4.548, "Togo": 4.569, "Dominica": 4.58, "Ivory Coast": 4.602, "Morocco": 4.633, "Haiti": 4.734, "Benin": 4.734, "Mali": 4.767, "Uganda": 4.788, "Kenya": 4.793, "Ghana": 4.801, "Armenia": 4.832, "Bahamas": 4.869, "Mauritius": 4.912, "Bosnia & Herz.": 4.917, "Ukraine": 4.94, "Senegal": 4.964, "Burundi": 4.989, "Cayman Islands": 5.023, "Mexico": 5.056, "Saint Lucia": 5.084, "Seychelles": 5.094, "Andorra": 5.105, "Mozambique": 5.141, "Malta": 5.208, "Guinea": 5.239, "Sierra Leone": 5.271, "Bulgaria": 5.328, "Cameroon": 5.444, "Montenegro": 5.509, "Belize": 5.606, "Czech Republic": 5.631, "Zimbabwe": 5.754, "Poland": 5.789, "Spain": 5.817, "Luxembourg": 5.871, "Estonia": 5.914, "Malawi": 5.966, "Mayotte": 5.983, "Cyprus": 6.0, "Slovakia": 6.039, "Romania": 6.058, "Lithuania": 6.09, "Croatia": 6.142, "Latvia": 6.159, "Slovenia": 6.168, "Hungary": 6.195, "Sweden": 6.266, "Austria": 6.314, "San Marino": 6.318, "Greece": 6.344, "Barbados": 6.374, "Portugal": 6.512, "Germany": 6.615, "Monaco": 6.624, "France": 6.655, "Belgium": 6.787, "Serbia": 6.866, "Italy": 6.892, "Netherlands": 6.912, "Finland": 7.011, "Norway": 7.026, "UK": 7.067, "Ireland": 7.114, "Wallis and Futuna": 7.114, "Singapore": 7.195, "Israel": 7.538, "Albania": 7.597, "Denmark": 7.649, "Switzerland": 8.213, "C. Afr. Rep.": 8.218, "Liechtenstein": 8.36, "Iceland": 9.437, "Hong Kong": 12.666};
+    diesel_price_start = get_diesel_price(coor_start_lat, coor_start_lng)
+    diesel_price_end = get_diesel_price(end_port_lat, end_port_lng)
+
     # --- 3. Parameters (Copied from LCA_WebApp.py) ---
     ship_number_of_tanks = 4
     if ship_tank_shape == 1:
@@ -230,7 +258,7 @@ def run_lca_model(inputs):
     HHV_chem = [142, 22.5, 22.7]; LHV_chem = [120, 18.6, 19.9]; boiling_point_chem = [20, 239.66, 337.7];
     latent_H_chem = [449.6/1000, 1.37, 1.1]; specific_heat_chem = [14.3/1000, 4.7/1000, 2.5/1000];
     HHV_heavy_fuel = 40; HHV_diesel = 45.6; liquid_chem_density = [71, 682, 805];
-    diesel_price = 4.5; CO2e_diesel = 10.21; CO2e_heavy_fuel = 11.27; GWP_chem = [33, 0, 0];
+    CO2e_diesel = 10.21; CO2e_heavy_fuel = 11.27; GWP_chem = [33, 0, 0];
     fuel_cell_eff = 0.65; road_delivery_ener = [0.0455/500, 0.022/500, 0.022/500];
     BOR_land_storage = [0.0032, 0.0001, 0.0000032]; BOR_loading = [0.0086, 0.00022, 0.0001667];
     BOR_truck_trans = [0.005, 0.00024, 0.000005]; BOR_ship_trans = [0.00326, 0.00024, 0.000005];
@@ -401,7 +429,7 @@ def run_lca_model(inputs):
         # into the tuple when this function is called.
 
         road_delivery_ener_arg, HHV_chem_arg, chem_in_truck_weight_arg, distance_A_to_port_arg, \
-        HHV_diesel_arg, diesel_density_arg, diesel_price_arg, truck_tank_radius_arg, \
+        HHV_diesel_arg, diesel_density_arg, diesel_price_start_arg, truck_tank_radius_arg, \
         truck_tank_length_arg, truck_tank_metal_thickness_arg, metal_thermal_conduct_arg, \
         truck_tank_insulator_thickness_arg, insulator_thermal_conduct_arg, OHTC_ship_arg, \
         start_local_temperature_arg, COP_refrig_arg, EIM_refrig_eff_arg, duration_A_to_port_arg, \
@@ -415,7 +443,7 @@ def run_lca_model(inputs):
         number_of_trucks = A / chem_in_truck_weight_arg[B_fuel_type] # Local variable
         truck_energy_consumed = road_delivery_ener_arg[B_fuel_type] * HHV_chem_arg[B_fuel_type]
         trans_energy_required = truck_energy_consumed * distance_A_to_port_arg * A
-        diesel_money = trans_energy_required / HHV_diesel_arg / diesel_density_arg * diesel_price_arg
+        diesel_money = trans_energy_required / HHV_diesel_arg / diesel_density_arg * diesel_price_start_arg
         
         storage_area_truck = 2 * np.pi * truck_tank_radius_arg * truck_tank_length_arg
         if B_fuel_type == 0:
@@ -431,7 +459,7 @@ def run_lca_model(inputs):
         local_BOR_truck_trans = dBOR_dT_arg[B_fuel_type] * (start_local_temperature_arg - 25) + BOR_truck_trans_arg[B_fuel_type]
         current_BOG_loss = A * local_BOR_truck_trans / (24 * 60) * duration_A_to_port_arg # Renamed to avoid conflict in recirculation
 
-        refrig_money = (refrig_ener_consumed / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / diesel_density_arg * diesel_price_arg
+        refrig_money = (refrig_ener_consumed / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / diesel_density_arg * diesel_price_start_arg
         money = diesel_money + refrig_money
         total_energy = trans_energy_required + refrig_ener_consumed
         
@@ -455,7 +483,7 @@ def run_lca_model(inputs):
                 
                 total_energy += reliq_ener_consumed # Add energy for re-liquefaction
                 
-                reliq_money = (reliq_ener_consumed / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / diesel_density_arg * diesel_price_arg
+                reliq_money = (reliq_ener_consumed / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / diesel_density_arg * diesel_price_start_arg
                 money += reliq_money # Add cost for re-liquefaction
                 
                 A_after_loss += usable_BOG # Add back re-liquefied BOG
@@ -471,7 +499,7 @@ def run_lca_model(inputs):
                 
                 # Energy saved from refrigeration, capped at refrig_ener_consumed
                 energy_saved_from_refrig = min(usable_ener, refrig_ener_consumed)
-                money_saved_from_refrig = (energy_saved_from_refrig / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / diesel_density_arg * diesel_price_arg
+                money_saved_from_refrig = (energy_saved_from_refrig / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / diesel_density_arg * diesel_price_start_arg
                 
                 total_energy = trans_energy_required + (refrig_ener_consumed - energy_saved_from_refrig)
                 money = diesel_money + (refrig_money - money_saved_from_refrig)
@@ -949,7 +977,7 @@ def run_lca_model(inputs):
         # The order of variables here MUST EXACTLY MATCH the order they are packed.
 
         road_delivery_ener_arg, HHV_chem_arg, chem_in_truck_weight_arg, distance_port_to_B_arg, \
-        HHV_diesel_arg, diesel_density_arg, diesel_price_arg, truck_tank_radius_arg, \
+        HHV_diesel_arg, diesel_density_arg, diesel_price_end_arg, truck_tank_radius_arg, \
         truck_tank_length_arg, truck_tank_metal_thickness_arg, metal_thermal_conduct_arg, \
         truck_tank_insulator_thickness_arg, insulator_thermal_conduct_arg, OHTC_ship_arg, \
         end_local_temperature_arg, COP_refrig_arg, EIM_refrig_eff_arg, duration_port_to_B_arg, \
@@ -963,7 +991,7 @@ def run_lca_model(inputs):
         number_of_trucks = A / chem_in_truck_weight_arg[B_fuel_type] # Local variable
         truck_energy_consumed = road_delivery_ener_arg[B_fuel_type] * HHV_chem_arg[B_fuel_type]
         trans_energy_required = truck_energy_consumed * distance_port_to_B_arg * A # Using distance_port_to_B
-        diesel_money = trans_energy_required / HHV_diesel_arg / diesel_density_arg * diesel_price_arg
+        diesel_money = trans_energy_required / HHV_diesel_arg / diesel_density_arg * diesel_price_end_arg
         
         storage_area_truck = 2 * np.pi * truck_tank_radius_arg * truck_tank_length_arg
         
@@ -986,7 +1014,7 @@ def run_lca_model(inputs):
         current_BOG_loss = A * local_BOR_truck_trans_val / (24 * 60) * duration_port_to_B_arg # Using duration_port_to_B
 
         refrig_money = (refrig_ener_consumed / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / \
-                       diesel_density_arg * diesel_price_arg
+                       diesel_density_arg * diesel_price_end_arg
         money = diesel_money + refrig_money
         total_energy_consumed = trans_energy_required + refrig_ener_consumed
         
@@ -1007,7 +1035,7 @@ def run_lca_model(inputs):
                 
                 total_energy_consumed += reliq_ener_consumed
                 reliq_money = (reliq_ener_consumed / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / \
-                              diesel_density_arg * diesel_price_arg
+                              diesel_density_arg * diesel_price_end_arg
                 money = diesel_money + reliq_money + refrig_money
                 
                 A_after_loss += usable_BOG
@@ -1022,7 +1050,7 @@ def run_lca_model(inputs):
                 
                 energy_saved_from_refrig = min(usable_ener, refrig_ener_consumed)
                 money_saved_from_refrig = (energy_saved_from_refrig / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / \
-                                          diesel_density_arg * diesel_price_arg
+                                          diesel_density_arg * diesel_price_end_arg
                 
                 total_energy_consumed = trans_energy_required + (refrig_ener_consumed - energy_saved_from_refrig)
                 money = diesel_money + (refrig_money - money_saved_from_refrig)
@@ -1627,7 +1655,6 @@ def run_lca_model(inputs):
     # --- 5. Optimization ---
     target_weight = ship_tank_volume * liquid_chem_density[fuel_type] * 0.98 * ship_number_of_tanks  # kg, ref [3] section 2.1:  the filling limit is defined as 98% for ships cargo tank.
     
-# This definition goes inside run_lca_model
     def optimization_chem_weight(A_initial_guess, args_for_optimizer_tuple):
         # Unpack the main arguments bundle passed from minimize
         user_define_params, \
@@ -1654,7 +1681,7 @@ def run_lca_model(inputs):
          truck_tank_insulator_thickness_opt, insulator_thermal_conduct_opt,
          OHTC_ship_opt, duration_A_to_port_opt, BOR_truck_trans_opt,
          HHV_diesel_opt, diesel_engine_eff_opt, EIM_truck_eff_opt,
-         diesel_density_opt, diesel_price_opt, CO2e_diesel_opt,
+         diesel_density_opt, diesel_price_start_opt, diesel_price_end_opt, CO2e_diesel_opt,
          BOG_recirculation_truck_opt, # This is the BOG_recirculation_truck_percentage
          fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem_opt,
          storage_time_opt, liquid_chem_density_opt, storage_volume_opt,
@@ -1695,7 +1722,7 @@ def run_lca_model(inputs):
                 process_args_for_current_func = (
                     road_delivery_ener_opt, HHV_chem_opt, chem_in_truck_weight_opt, 
                     distance_A_to_port_opt, HHV_diesel_opt, diesel_density_opt, 
-                    diesel_price_opt, truck_tank_radius_opt, truck_tank_length_opt, 
+                    diesel_price_start_opt, truck_tank_radius_opt, truck_tank_length_opt, 
                     truck_tank_metal_thickness_opt, metal_thermal_conduct_opt, 
                     truck_tank_insulator_thickness_opt, insulator_thermal_conduct_opt, 
                     OHTC_ship_opt, start_local_temperature_opt, COP_refrig_opt, 
@@ -1811,7 +1838,7 @@ def run_lca_model(inputs):
         OHTC_ship, # Or a truck-specific OHTC if defined
         duration_A_to_port, BOR_truck_trans,
         HHV_diesel, diesel_engine_eff, EIM_truck_eff,
-        diesel_density, diesel_price, CO2e_diesel,
+        diesel_density, diesel_price_start, diesel_price_end, CO2e_diesel,
         BOG_recirculation_truck, # This is the percentage from inputs
 
         # Parameters for BOG recirculation (if used in first 7 funcs)
@@ -1908,7 +1935,7 @@ def run_lca_model(inputs):
                 process_args_for_this_call_tc = (
                     road_delivery_ener, HHV_chem, chem_in_truck_weight, 
                     distance_A_to_port, HHV_diesel, diesel_density, 
-                    diesel_price, truck_tank_radius, truck_tank_length, 
+                    diesel_price_start, truck_tank_radius, truck_tank_length, 
                     truck_tank_metal_thickness, metal_thermal_conduct, 
                     truck_tank_insulator_thickness, insulator_thermal_conduct, 
                     OHTC_ship, start_local_temperature, COP_refrig, 
@@ -2024,7 +2051,7 @@ def run_lca_model(inputs):
                 process_args_for_this_call_tc = (
                     road_delivery_ener, HHV_chem, chem_in_truck_weight, 
                     distance_port_to_B, HHV_diesel, diesel_density, 
-                    diesel_price, truck_tank_radius, truck_tank_length, 
+                    diesel_price_end, truck_tank_radius, truck_tank_length, 
                     truck_tank_metal_thickness, metal_thermal_conduct, 
                     truck_tank_insulator_thickness, insulator_thermal_conduct, 
                     OHTC_ship, # Or specific truck OHTC
