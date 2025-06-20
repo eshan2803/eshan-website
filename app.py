@@ -2187,8 +2187,8 @@ def run_lca_model(inputs):
         ["Emission (kg CO2/MJ)", f"{total_results[2]/final_energy_output:.4f}" if final_energy_output > 0 else "N/A"]
     ]
     assumed_prices_data = [
-        [f"Electricity Price at {start}", f"{start_electricity_price:.4f} $/MJ"],
-        [f"Electricity Price at {end}", f"{end_electricity_price:.4f} $/MJ"],
+        [f"Electricity Price at {start}", f"{start_electricity_price[2]:.4f} $/MJ"],
+        [f"Electricity Price at {end}", f"{end_electricity_price[2]:.4f} $/MJ"],
         [f"Diesel Price at {start}", f"{diesel_price_start:.2f} $/gal"],
         [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"]
     ]
