@@ -308,6 +308,7 @@ def run_lca_model(inputs):
     numbers_of_PH2_storage = 50.0
     ship_engine_eff = 0.6
     PH2_pressure = 800
+    truck_economy = [13.84, 10.14, 9.66]  # mi/gal Grok Analysis
     # --- 4. Process Functions (Copied from LCA_WebApp.py) ---
     #placeholder functions need to be filled in. 
     def PH2_pressure_fnc(density): return density * 1.2 # Simplified placeholder
@@ -439,7 +440,7 @@ def run_lca_model(inputs):
         # The order of variables here MUST EXACTLY MATCH the order they are packed
         # into the tuple when this function is called.
 
-        road_delivery_ener_arg, HHV_chem_arg, chem_in_truck_weight_arg, distance_A_to_port_arg, \
+        road_delivery_ener_arg, HHV_chem_arg, chem_in_truck_weight_arg, truck_economy_arg, distance_A_to_port_arg, \
         HHV_diesel_arg, diesel_density_arg, diesel_price_start_arg, truck_tank_radius_arg, \
         truck_tank_length_arg, truck_tank_metal_thickness_arg, metal_thermal_conduct_arg, \
         truck_tank_insulator_thickness_arg, insulator_thermal_conduct_arg, OHTC_ship_arg, \
@@ -453,7 +454,8 @@ def run_lca_model(inputs):
         # Original logic of the function, using the unpacked '_arg' variables
         number_of_trucks = A / chem_in_truck_weight_arg[B_fuel_type] # Local variable
         truck_energy_consumed = road_delivery_ener_arg[B_fuel_type] * HHV_chem_arg[B_fuel_type]
-        trans_energy_required = truck_energy_consumed * distance_A_to_port_arg * A
+        #trans_energy_required = truck_energy_consumed * distance_A_to_port_arg * A
+        trans_energy_required = number_of_trucks * distance_A_to_port_arg * HHV_diesel_arg * diesel_density_arg / truck_economy_arg[B_fuel_type]
         diesel_money = trans_energy_required / HHV_diesel_arg / diesel_density_arg * diesel_price_start_arg
         
         storage_area_truck = 2 * np.pi * truck_tank_radius_arg * truck_tank_length_arg
@@ -987,7 +989,7 @@ def run_lca_model(inputs):
         # Unpack the specific arguments this function needs from the passed-in tuple.
         # The order of variables here MUST EXACTLY MATCH the order they are packed.
 
-        road_delivery_ener_arg, HHV_chem_arg, chem_in_truck_weight_arg, distance_port_to_B_arg, \
+        road_delivery_ener_arg, HHV_chem_arg, chem_in_truck_weight_arg, truck_economy_arg, distance_port_to_B_arg, \
         HHV_diesel_arg, diesel_density_arg, diesel_price_end_arg, truck_tank_radius_arg, \
         truck_tank_length_arg, truck_tank_metal_thickness_arg, metal_thermal_conduct_arg, \
         truck_tank_insulator_thickness_arg, insulator_thermal_conduct_arg, OHTC_ship_arg, \
@@ -1001,7 +1003,8 @@ def run_lca_model(inputs):
         # Original logic of the function, using the unpacked '_arg' variables
         number_of_trucks = A / chem_in_truck_weight_arg[B_fuel_type] # Local variable
         truck_energy_consumed = road_delivery_ener_arg[B_fuel_type] * HHV_chem_arg[B_fuel_type]
-        trans_energy_required = truck_energy_consumed * distance_port_to_B_arg * A # Using distance_port_to_B
+        #trans_energy_required = truck_energy_consumed * distance_port_to_B_arg * A # Using distance_port_to_B
+        trans_energy_required = number_of_trucks * distance_A_to_port_arg * HHV_diesel_arg * diesel_density_arg / truck_economy_arg[B_fuel_type]
         diesel_money = trans_energy_required / HHV_diesel_arg / diesel_density_arg * diesel_price_end_arg
         
         storage_area_truck = 2 * np.pi * truck_tank_radius_arg * truck_tank_length_arg
@@ -1687,7 +1690,7 @@ def run_lca_model(inputs):
          ss_therm_cond_opt, pipe_length_opt, pipe_inner_D_opt, pipe_thick_opt,
          COP_refrig_opt, EIM_refrig_eff_opt,
          road_delivery_ener_opt, HHV_chem_opt, distance_A_to_port_opt,
-         chem_in_truck_weight_opt, truck_tank_radius_opt, truck_tank_length_opt,
+         chem_in_truck_weight_opt, truck_economy_opt, truck_tank_radius_opt, truck_tank_length_opt,
          truck_tank_metal_thickness_opt, metal_thermal_conduct_opt,
          truck_tank_insulator_thickness_opt, insulator_thermal_conduct_opt,
          OHTC_ship_opt, duration_A_to_port_opt, BOR_truck_trans_opt,
@@ -1731,7 +1734,7 @@ def run_lca_model(inputs):
             
             elif func_to_call.__name__ == "site_A_to_port_A":
                 process_args_for_current_func = (
-                    road_delivery_ener_opt, HHV_chem_opt, chem_in_truck_weight_opt, 
+                    road_delivery_ener_opt, HHV_chem_opt, chem_in_truck_weight_opt, truck_economy_opt,
                     distance_A_to_port_opt, HHV_diesel_opt, diesel_density_opt, 
                     diesel_price_start_opt, truck_tank_radius_opt, truck_tank_length_opt, 
                     truck_tank_metal_thickness_opt, metal_thermal_conduct_opt, 
@@ -1848,7 +1851,7 @@ def run_lca_model(inputs):
 
         # Parameters for site_A_to_port_A (truck transport)
         road_delivery_ener, HHV_chem, distance_A_to_port,
-        chem_in_truck_weight, truck_tank_radius, truck_tank_length,
+        chem_in_truck_weight, truck_economy, truck_tank_radius, truck_tank_length,
         truck_tank_metal_thickness, metal_thermal_conduct,
         truck_tank_insulator_thickness, insulator_thermal_conduct,
         OHTC_ship, # Or a truck-specific OHTC if defined
@@ -1957,7 +1960,7 @@ def run_lca_model(inputs):
             
             elif func_to_call.__name__ == "site_A_to_port_A":
                 process_args_for_this_call_tc = (
-                    road_delivery_ener, HHV_chem, chem_in_truck_weight, 
+                    road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy_opt,
                     distance_A_to_port, HHV_diesel, diesel_density, 
                     diesel_price_start, truck_tank_radius, truck_tank_length, 
                     truck_tank_metal_thickness, metal_thermal_conduct, 
@@ -2073,7 +2076,7 @@ def run_lca_model(inputs):
 
             elif func_to_call.__name__ == "port_B_to_site_B":
                 process_args_for_this_call_tc = (
-                    road_delivery_ener, HHV_chem, chem_in_truck_weight, 
+                    road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy_opt,
                     distance_port_to_B, HHV_diesel, diesel_density, 
                     diesel_price_end, truck_tank_radius, truck_tank_length, 
                     truck_tank_metal_thickness, metal_thermal_conduct, 
