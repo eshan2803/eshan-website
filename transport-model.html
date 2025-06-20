@@ -212,6 +212,8 @@ nav a:hover::after {
   <div id="summaryTableContainer" class="table-container mb-6 shadow-md"><table id="summaryTable"></table></div>
   <h3 class="text-lg font-semibold mb-3 text-gray-600">Summary Metrics (per MJ):</h3>
   <div id="summaryTableContainer2" class="table-container mb-6 shadow-md"><table id="summaryTable2"></table></div>
+  <h3 class="text-lg font-semibold mb-3 text-gray-600">Assumed Prices:</h3>
+  <div id="summaryTableContainer" class="table-container mb-6 shadow-md"><table id="assumptionTable"></table></div>
   <h3 class="text-lg font-semibold mb-3 text-gray-600">Detailed Process Breakdown:</h3>
   <div id="detailedTableContainer" class="table-container mb-6 shadow-md"><table id="detailedTable"></table></div>
   <div class="text-center mt-6">
@@ -465,6 +467,7 @@ nav a:hover::after {
         document.getElementById('detailedTable').innerHTML = createTableHtml(tableData.detailed_headers, tableData.detailed_data);
         document.getElementById('summaryTable').innerHTML = createTableHtml(tableData.summary1_headers, tableData.summary1_data);
         document.getElementById('summaryTable2').innerHTML = createTableHtml(tableData.summary2_headers, tableData.summary2_data);
+        document.getElementById('assumptionTable').innerHTML = createTableHtml(tableData.assumed_prices_headers, tableData.assumed_prices_data);
     }
 
     function downloadCSV() {
