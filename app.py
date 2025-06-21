@@ -2189,7 +2189,38 @@ def run_lca_model(inputs):
         data_after_main_seq[-1][2] = final_results_after_main_seq[1]
         data_after_main_seq[-1][3] = final_results_after_main_seq[2]
         data_after_main_seq[-1][4] = final_results_after_main_seq[3]
+
+    # --- START: NEW CODE BLOCK TO ADD COLUMNS ---
+
+    # Get the final total values that will be used as the denominators
+    final_chem_kg_denominator = final_results_after_main_seq[3]
+    total_energy_mj_denominator = final_results_after_main_seq[1]
+
+    # Create a new list to hold the data with the extra columns
+    data_with_new_columns = []
+
+    # Loop through each row of the results
+    for row in data_after_main_seq:
+        # The cost is the second item (index 1) in each row
+        current_cost = float(row[1])
+
+        # Calculate "Cost per kg" for the current row
+        # Handle division by zero if the final weight is 0
+        cost_per_kg = current_cost / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+
+        # Calculate "Cost per MJ" for the current row
+        # Handle division by zero if total energy is 0
+        cost_per_mj = current_cost / total_energy_mj_denominator if total_energy_mj_denominator > 0 else 0
         
+        # Create a new row by taking the original row and appending the two new values
+        new_row_with_additions = list(row) + [cost_per_kg, cost_per_mj]
+        data_with_new_columns.append(new_row_with_additions)
+
+    # Replace the original data list with our new one that includes the new columns
+    data_after_main_seq = data_with_new_columns
+    
+    # --- END: NEW CODE BLOCK ---
+
     total_results = final_results_after_main_seq
     data = data_after_main_seq
     
@@ -2220,7 +2251,7 @@ def run_lca_model(inputs):
         [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"]
     ]
 
-    csv_data = [["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)"]] + data
+    csv_data = [["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost per kg ($/kg)", "Cost per MJ ($/MJ)"]] + data
 
     # --- 8. Package Final JSON Response ---
     response = {
@@ -2235,7 +2266,7 @@ def run_lca_model(inputs):
             "sea_route_coords": searoute_coor
         },
         "table_data": {
-            "detailed_headers": ["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)"],
+            "detailed_headers": ["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost per kg ($/kg)", "Cost per MJ ($/MJ)"],
             "detailed_data": detailed_data_formatted,
             "summary1_headers": ["Metric", "Value"], "summary1_data": summary1_data,
             "summary2_headers": ["Per Energy Output", "Value"], "summary2_data": summary2_data,
