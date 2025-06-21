@@ -2306,7 +2306,7 @@ def run_lca_model(inputs):
         [f"Electricity Price at {start}", f"{start_electricity_price[2]:.4f} $/MJ"],
         [f"Electricity Price at {end}", f"{end_electricity_price[2]:.4f} $/MJ"],
         [f"Diesel Price at {start}", f"{diesel_price_start:.2f} $/gal"],
-        [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"]
+        [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"], # <--- ADD COMMA HERE
         [f"Marine Fuel Price at {marine_fuel_port_name}", f"{marine_shipping_price_start:.2f} $/ton"]
     ]
 
