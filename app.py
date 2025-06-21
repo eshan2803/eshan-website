@@ -213,7 +213,62 @@ def run_lca_model(inputs):
         except Exception as e:
             app.logger.error(f"Error in openai_get_electricity_price for coords {coords_str}: {e}")
             return None, None, default_price_mj
+
+    def openai_get_vlsfo_price(port_coords_tuple, port_name_str):
+        """
+        Uses the OpenAI API to get the latest VLSFO bunker price for a given port.
+        """
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key_openAI)
         
+        default_price_usd_per_mt = 650.0
+
+        try:
+            prompt_content = f"""
+            Given the port named '{port_name_str}' at coordinates {port_coords_tuple}, 
+            provide the latest available price for VLSFO (Very Low Sulphur Fuel Oil) bunker fuel at this specific port or the nearest major bunkering hub.
+            
+            Return the data in the following JSON format:
+            {{
+                "port_name": "PORT_NAME_HERE",
+                "vlsfo_price_usd_per_mt": LATEST_PRICE_IN_USD_PER_METRIC_TON
+            }}
+            """
+
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                response_format={"type": "json_object"},
+                messages=[
+                    {"role": "system", "content": "You are a maritime fuel market data expert. Your task is to provide the latest VLSFO bunker fuel prices for major world ports in JSON format."},
+                    {"role": "user", "content": prompt_content}
+                ]
+            )
+            
+            output = response.choices[0].message.content
+
+            try:
+                result = json.loads(output)
+                price = result.get("vlsfo_price_usd_per_mt")
+                port = result.get("port_name")
+
+                if price is not None and port is not None:
+                    try:
+                        return port, float(price)
+                    except (ValueError, TypeError):
+                        app.logger.warning(f"Warning: Could not convert VLSFO price '{price}' to float. Using default.")
+                        return port_name_str, default_price_usd_per_mt
+                else:
+                    app.logger.warning(f"Warning: OpenAI response did not contain price or port name for {port_name_str}. Using default.")
+                    return port_name_str, default_price_usd_per_mt
+
+            except json.JSONDecodeError:
+                app.logger.warning(f"Warning: Failed to parse JSON from OpenAI for VLSFO price. Using default.")
+                return port_name_str, default_price_usd_per_mt
+
+        except Exception as e:
+            app.logger.error(f"An error occurred during the OpenAI VLSFO price call: {e}. Using default.")
+            return port_name_str, default_price_usd_per_mt
+            
     # =================================================================
     # END OF HELPER FUNCTIONS
     # =================================================================
@@ -254,6 +309,11 @@ def run_lca_model(inputs):
     diesel_price_country = {"Venezuela": 0.016, "Iran": 0.022, "Libya": 0.104, "Algeria": 0.834, "Turkmenistan": 1.082, "Egypt": 1.181, "Angola": 1.238, "Kuwait": 1.419, "Saudi Arabia": 1.675, "Ecuador": 1.798, "Bahrain": 1.807, "Qatar": 2.027, "Bolivia": 2.038, "Kazakhstan": 2.145, "Nigeria": 2.222, "Azerbaijan": 2.227, "Syria": 2.389, "Trinidad & Tobago": 2.46, "Malaysia": 2.47, "Sudan": 2.482, "UAE": 2.525, "Oman": 2.54, "Vietnam": 2.553, "Colombia": 2.553, "Bhutan": 2.58, "Lebanon": 2.673, "Tunisia": 2.797, "Burma": 2.907, "Panama": 2.917, "Puerto Rico": 2.949, "Belarus": 3.006, "Guyana": 3.044, "Honduras": 3.059, "Indonesia": 3.07, "Afghanistan": 3.101, "Taiwan": 3.128, "Bangladesh": 3.158, "Laos": 3.185, "Kyrgyzstan": 3.189, "Ethiopia": 3.228, "Paraguay": 3.278, "El Salvador": 3.3, "Cambodia": 3.304, "Curacao": 3.379, "Russia": 3.404, "Pakistan": 3.405, "Maldives": 3.408, "Guatemala": 3.412, "China": 3.442, "USA": 3.452, "United States": 3.452, "Jordan": 3.47, "Philippines": 3.502, "Zambia": 3.54, "Liberia": 3.546, "Uzbekistan": 3.59, "Peru": 3.648, "Fiji": 3.677, "Thailand": 3.703, "Dom. Rep.": 3.751, "Gabon": 3.78, "Chile": 3.839, "DR Congo": 3.882, "Georgia": 3.91, "Canada": 3.934, "Nepal": 3.947, "Aruba": 3.951, "Brazil": 3.977, "Grenada": 3.978, "Australia": 3.988, "India": 3.998, "Cape Verde": 4.032, "Tanzania": 4.036, "Costa Rica": 4.051, "Moldova": 4.071, "Sri Lanka": 4.108, "Japan": 4.143, "Cuba": 4.147, "Lesotho": 4.194, "Botswana": 4.212, "Mongolia": 4.229, "Argentina": 4.24, "Madagascar": 4.246, "Uruguay": 4.268, "New Zealand": 4.271, "South Korea": 4.31, "Suriname": 4.315, "Namibia": 4.357, "Jamaica": 4.389, "Rwanda": 4.404, "Burkina Faso": 4.438, "Nicaragua": 4.444, "Turkey": 4.462, "South Africa": 4.473, "Swaziland": 4.523, "N. Maced.": 4.548, "Togo": 4.569, "Dominica": 4.58, "Ivory Coast": 4.602, "Morocco": 4.633, "Haiti": 4.734, "Benin": 4.734, "Mali": 4.767, "Uganda": 4.788, "Kenya": 4.793, "Ghana": 4.801, "Armenia": 4.832, "Bahamas": 4.869, "Mauritius": 4.912, "Bosnia & Herz.": 4.917, "Ukraine": 4.94, "Senegal": 4.964, "Burundi": 4.989, "Cayman Islands": 5.023, "Mexico": 5.056, "Saint Lucia": 5.084, "Seychelles": 5.094, "Andorra": 5.105, "Mozambique": 5.141, "Malta": 5.208, "Guinea": 5.239, "Sierra Leone": 5.271, "Bulgaria": 5.328, "Cameroon": 5.444, "Montenegro": 5.509, "Belize": 5.606, "Czech Republic": 5.631, "Zimbabwe": 5.754, "Poland": 5.789, "Spain": 5.817, "Luxembourg": 5.871, "Estonia": 5.914, "Malawi": 5.966, "Mayotte": 5.983, "Cyprus": 6.0, "Slovakia": 6.039, "Romania": 6.058, "Lithuania": 6.09, "Croatia": 6.142, "Latvia": 6.159, "Slovenia": 6.168, "Hungary": 6.195, "Sweden": 6.266, "Austria": 6.314, "San Marino": 6.318, "Greece": 6.344, "Barbados": 6.374, "Portugal": 6.512, "Germany": 6.615, "Monaco": 6.624, "France": 6.655, "Belgium": 6.787, "Serbia": 6.866, "Italy": 6.892, "Netherlands": 6.912, "Finland": 7.011, "Norway": 7.026, "UK": 7.067, "Ireland": 7.114, "Wallis and Futuna": 7.114, "Singapore": 7.195, "Israel": 7.538, "Albania": 7.597, "Denmark": 7.649, "Switzerland": 8.213, "C. Afr. Rep.": 8.218, "Liechtenstein": 8.36, "Iceland": 9.437, "Hong Kong": 12.666};
     diesel_price_start = get_diesel_price(coor_start_lat, coor_start_lng)
     diesel_price_end = get_diesel_price(end_port_lat, end_port_lng)
+    diesel_price_start = get_diesel_price(coor_start_lat, coor_start_lng)
+    diesel_price_end = get_diesel_price(end_port_lat, end_port_lng)
+
+    # Get dynamic marine fuel price from the starting port
+    marine_fuel_port_name, marine_shipping_price_start = openai_get_vlsfo_price((start_port_lat, start_port_lng), start_port_name)
 
     # --- 3. Parameters (Copied from LCA_WebApp.py) ---
     ship_number_of_tanks = 4
@@ -289,7 +349,7 @@ def run_lca_model(inputs):
     COP_reliq = [0.036, 1.636, 2]; COP_liq = [0.131, 1.714, 2]; COP_refrig = [0.131, 1.714, 2];
     dBOR_dT = [(0.02538-0.02283)/(45-15)/4, (0.000406-0.0006122)/(45-15)/4, 0];
     EIM_liquefication=100; EIM_cryo_pump=100; EIM_truck_eff=100; EIM_ship_eff=100; EIM_refrig_eff=100; EIM_fuel_cell=100;
-    diesel_density = 3.22; diesel_engine_eff = 0.4; heavy_fuel_density = 3.6; propul_eff = 0.55; marine_shipping_price=610
+    diesel_density = 3.22; diesel_engine_eff = 0.4; heavy_fuel_density = 3.6; propul_eff = 0.55;
     NH3_ship_cosumption = (18.8*682*4170)/20000
     # Need to check the numbers below for accuracy
     mass_conversion_to_H2 = [1, 0.176, 0.1875] # NH3, CH3OH
@@ -2030,7 +2090,7 @@ def run_lca_model(inputs):
                     storage_area, # This is the calculated ship storage area
                     ship_number_of_tanks, COP_refrig, EIM_refrig_eff, 
                     port_to_port_duration, ship_engine_eff, HHV_heavy_fuel, 
-                    propul_eff, EIM_ship_eff, marine_shipping_price, 
+                    propul_eff, EIM_ship_eff, marine_shipping_price_start, 
                     ship_fuel_consumption, port_to_port_dis, dBOR_dT, 
                     BOR_ship_trans, heavy_fuel_density, CO2e_heavy_fuel, 
                     GWP_chem, NH3_ship_cosumption, # Corrected variable name here from your params
@@ -2249,6 +2309,7 @@ def run_lca_model(inputs):
         [f"Electricity Price at {end}", f"{end_electricity_price[2]:.4f} $/MJ"],
         [f"Diesel Price at {start}", f"{diesel_price_start:.2f} $/gal"],
         [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"]
+        [f"Marine Fuel Price at {marine_fuel_port_name}", f"{marine_shipping_price_start:.2f} $/ton"]
     ]
 
     csv_data = [["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost per kg ($/kg)", "Cost per MJ ($/MJ)"]] + data
