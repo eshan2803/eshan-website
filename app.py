@@ -1004,7 +1004,7 @@ def run_lca_model(inputs):
         number_of_trucks = A / chem_in_truck_weight_arg[B_fuel_type] # Local variable
         truck_energy_consumed = road_delivery_ener_arg[B_fuel_type] * HHV_chem_arg[B_fuel_type]
         #trans_energy_required = truck_energy_consumed * distance_port_to_B_arg * A # Using distance_port_to_B
-        trans_energy_required = number_of_trucks * distance_A_to_port_arg * HHV_diesel_arg * diesel_density_arg / truck_economy_arg[B_fuel_type]
+        trans_energy_required = number_of_trucks * distance_port_to_B_arg * HHV_diesel_arg * diesel_density_arg / truck_economy_arg[B_fuel_type]
         diesel_money = trans_energy_required / HHV_diesel_arg / diesel_density_arg * diesel_price_end_arg
         
         storage_area_truck = 2 * np.pi * truck_tank_radius_arg * truck_tank_length_arg
@@ -1903,7 +1903,7 @@ def run_lca_model(inputs):
 # This definition is inside run_lca_model
     def total_chem(A_optimized_chem_weight, B_fuel_type_tc, C_recirculation_BOG_tc, 
                    D_truck_apply_tc, E_storage_apply_tc, F_maritime_apply_tc):
-        
+        truck_economy_opt = truck_economy  # truck_economy is defined in run_lca_model and visible here
         # Full list of 15 process functions for the main chemical pathway
         # Ensure PH2-specific functions are NOT in this list unless it's a hybrid pathway
         # where some PH2 steps are mixed with the main chemical steps.
@@ -1960,7 +1960,7 @@ def run_lca_model(inputs):
             
             elif func_to_call.__name__ == "site_A_to_port_A":
                 process_args_for_this_call_tc = (
-                    road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy_opt,
+                    road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy,
                     distance_A_to_port, HHV_diesel, diesel_density, 
                     diesel_price_start, truck_tank_radius, truck_tank_length, 
                     truck_tank_metal_thickness, metal_thermal_conduct, 
@@ -2076,7 +2076,7 @@ def run_lca_model(inputs):
 
             elif func_to_call.__name__ == "port_B_to_site_B":
                 process_args_for_this_call_tc = (
-                    road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy_opt,
+                    road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy,
                     distance_port_to_B, HHV_diesel, diesel_density, 
                     diesel_price_end, truck_tank_radius, truck_tank_length, 
                     truck_tank_metal_thickness, metal_thermal_conduct, 
