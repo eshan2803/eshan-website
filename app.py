@@ -2194,7 +2194,7 @@ def run_lca_model(inputs):
 
     # Get the final total values that will be used as the denominators
     final_chem_kg_denominator = final_results_after_main_seq[3]
-    total_energy_mj_denominator = final_results_after_main_seq[1]
+    total_energy_mj_denominator = final_weight * HHV_chem[fuel_type]
 
     # Create a new list to hold the data with the extra columns
     data_with_new_columns = []
