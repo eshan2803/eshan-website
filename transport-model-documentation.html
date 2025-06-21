@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transport Model Documentation | Eshan Singh</title>
+  <link rel="icon" type="image/png" href="assets/fevicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <style>
+    /* Add specific styles for documentation page if needed */
+    .documentation-content h3 {
+      font-size: 1.5rem;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      border-bottom: 2px solid #2e7d32;
+      padding-bottom: 0.5rem;
+    }
+    .documentation-content h4 {
+      font-size: 1.2rem;
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+      color: #1b5e20;
+    }
+    .documentation-content p, .documentation-content li {
+      line-height: 1.6;
+      text-align: justify;
+    }
+    .documentation-content ul {
+      list-style-type: disc;
+      padding-left: 20px;
+    }
+    .documentation-content strong {
+       color: #333;
+    }
+  </style>
+</head>
+<body class="fade-in">
+  <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem;">
+    <div>
+      <h1 style="font-size: 3rem; font-weight: 600; margin: 0;">Dr. Eshan Singh</h1>
+    </div>
+    <div class="header-animation">
+      <lottie-player
+        src="assets/wind-turbine.json"
+        background="transparent"
+        speed="1"
+        style="width: 150px; height: 150px;"
+        loop autoplay>
+      </lottie-player>
+    </div>
+  </header>
+
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="energy.html">Energy Decarbonization</a>
+    <a href="personal.html">Personal Musings</a>
+    <a href="contact.html">Contact</a>
+  </nav>
+
+  <main class="container" style="background: rgba(255,255,255,0.92); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 2rem 3rem; margin-top: 2rem;">
+    <section class="documentation-content" data-aos="fade-up">
+      <h2 style="text-align: center; font-size: 2.5rem; margin-bottom: 2rem;">Commodity Transport Model: Documentation</h2>
+
+      <h3>1. Introduction</h3>
+      <p>
+        The global transition towards a sustainable energy future necessitates the development of robust supply chains for low-carbon energy carriers. As renewable energy generation becomes more widespread but remains geographically constrained, the ability to transport energy efficiently across continents is paramount. Among the leading candidates for large-scale energy transport are hydrogen, ammonia, and methanol. Each presents a unique set of advantages and challenges, making a comparative analysis of their transportation pathways essential for strategic decision-making in policy and industry.
+      </p>
+      <p>
+        Liquid hydrogen (LH2) offers high gravimetric energy density but requires cryogenic conditions (20K or -253°C), leading to significant energy penalties for liquefaction and challenges in managing boil-off gas (BOG) during transport and storage. Ammonia (NH3) can be liquefied at a much more manageable -33°C, positioning it as a strong candidate for a hydrogen carrier, though its toxicity requires stringent safety protocols. Methanol (CH3OH), a liquid at ambient conditions, is the easiest to handle but has a lower energy density and a carbon atom in its structure, which must be sourced from non-fossil origins (e.g., direct air capture) to be considered a net-zero fuel.
+      </p>
+      <p>
+        Evaluating the viability of these pathways requires a comprehensive Life Cycle Assessment (LCA) that goes beyond simple energy content comparisons. An LCA must account for energy losses, financial costs, and greenhouse gas emissions at every stage of the supply chain—from initial processing to final delivery. This model provides a detailed "well-to-wake" analysis of the transportation leg of the energy supply chain, offering a dynamic tool to compare these three commodities on a consistent basis. By integrating real-world geographic data, live energy pricing, and detailed thermodynamic calculations, this tool aims to provide a realistic assessment of the cost, energy consumption, and environmental impact associated with moving clean energy across the globe.
+      </p>
+
+      <h3>2. Methodology</h3>
+      <p>
+        The model is architected as a sequential, process-based simulation. It evaluates the entire transportation supply chain, broken down into 15 distinct stages, from the initial loading of the commodity at the production site to its final unloading at the end-use location. The core of the model is built in Python, leveraging the Flask framework for the web interface and the SciPy library for numerical optimization.
+      </p>
+
+      <h4>2.1. System Boundaries and Optimization</h4>
+      <p>
+        The analysis begins post-production of the chemical commodity and ends prior to its final use. The central computational challenge is to determine the initial quantity of a commodity required to meet a specific target weight at the destination, accounting for all losses incurred during transit. This is solved using an optimization routine:
+      </p>
+      <ul>
+        <li>
+          <strong>Objective Function:</strong> The model employs the <code>scipy.optimize.minimize</code> function (using the 'SLSQP' method) to find the initial mass of the chemical (`chem_weight`).
+        </li>
+        <li>
+          <strong>Target:</strong> The optimizer's goal is to minimize the absolute difference between the simulated final delivered mass and the target mass required to fill the designated ship tanks (98% of total volume).
+        </li>
+        <li>
+          <strong>Constraints:</strong> The optimization is constrained to ensure the initial weight is sufficient to cover all subsequent losses, preventing a negative result.
+        </li>
+      </ul>
+
+      <h4>2.2. Modeled Supply Chain Stages</h4>
+      <p>The model simulates the following 15 sequential process steps:</p>
+      <ol>
+        <li><strong>Site A - Chemical Production:</strong> A placeholder step representing the starting point of the chemical.</li>
+        <li><strong>Site A - Chemical Liquefaction:</strong> Energy-intensive cooling to bring the commodity to a liquid state.</li>
+        <li><strong>Site A - Loading to Truck:</strong> Transfer from storage to inland transport vehicles.</li>
+        <li><strong>Site A to Port A:</strong> Inland truck transport from the production site to the port of origin.</li>
+        <li><strong>Port A - Unloading to Storage:</strong> Transfer from trucks to port-side storage tanks.</li>
+        <li><strong>Port A - Storage:</strong> Temporal storage at the port of origin.</li>
+        <li><strong>Port A - Loading to Ship:</strong> Transfer from port storage to the marine vessel.</li>
+        <li><strong>Port A to Port B:</strong> Maritime transport across the designated sea route.</li>
+        <li><strong>Port B - Unloading from Ship:</strong> Transfer from the ship to the destination port's storage tanks.</li>
+        <li><strong>Port B - Storage:</strong> Temporal storage at the port of destination.</li>
+        <li><strong>Port B - Unloading from Storage:</strong> Transfer from port storage to trucks for final delivery.</li>
+        <li><strong>Port B to Site B:</strong> Inland truck transport from the destination port to the end-use site.</li>
+        <li><strong>Site B - Unloading from Truck:</strong> Transfer from trucks into final storage at the end-use site.</li>
+        <li><strong>Site B - Storage:</strong> Final storage before end-use.</li>
+        <li><strong>Site B - Unloading:</strong> Final pumping step to the point of use.</li>
+      </ol>
+
+      <h4>2.3. Core Calculation Framework</h4>
+      <p>For each of the 15 stages, the model calculates the associated costs, energy consumption, greenhouse gas emissions, and mass losses.</p>
+      
+      <h5>2.3.1. Energy Consumption</h5>
+      <ul>
+        <li><strong>Liquefaction & Refrigeration:</strong> For liquid hydrogen, a curve-fit function (`liquification_data_fitting`) derived from literature is used to determine the energy required based on plant capacity. For ammonia and other chemicals, the energy is calculated based on thermodynamic principles (specific heat, latent heat) and the Coefficient of Performance (COP) of the refrigeration cycle.</li>
+        <li><strong>Pumping:</strong> Pumping power is calculated based on the fluid density, flow rate, and pump head, adjusted for pump efficiency.</li>
+        <li><strong>Inland Transport (Truck):</strong> The energy for truck propulsion is calculated based on the number of trucks required, the distance traveled, and the fuel economy (km/gal) of the trucks. This allows for differentiated fuel consumption based on vehicle weight and type. Energy for on-board refrigeration during transit is calculated separately based on heat ingress into the tanker.</li>
+        <li><strong>Maritime Transport:</strong> Energy consumption is based on the ship's fuel consumption rate (metric tons of fuel per mile), the total distance of the sea route, and the heating value of the heavy fuel oil used.</li>
+      </ul>
+
+      <h5>2.3.2. Boil-Off Gas (BOG) and Mass Loss</h5>
+      <ul>
+        <li>BOG is a critical factor, especially for LH2. The model calculates the Boil-Off Rate (BOR) for each storage and transport step.</li>
+        <li>The base BOR is adjusted based on the ambient temperature of the location (retrieved via API), using a temperature-dependent factor (`dBOR_dT`).</li>
+        <li>The total mass loss in each stage is a function of the adjusted BOR and the duration of that stage.</li>
+      </ul>
+
+      <h5>2.3.3. Greenhouse Gas Emissions (CO2-equivalent)</h5>
+      <ul>
+        <li><strong>Indirect Emissions:</strong> These are calculated from energy consumption. The model fetches real-time carbon intensity (gCO2eq/kWh) of the electricity grid at the start and end locations using the Electricity Map API. For transport fuels like diesel, standard emission factors from the EPA are used.</li>
+        <li><strong>Direct Emissions:</strong> These result from fugitive emissions, primarily the BOG that is vented to the atmosphere. The mass of the vented gas is multiplied by its Global Warming Potential (GWP) to determine its CO2-equivalent impact. The model uses a GWP of 33 for hydrogen.</li>
+      </ul>
+      
+      <h5>2.3.4. Cost Calculation</h5>
+      <ul>
+          <li>Costs are calculated based on the energy consumed and the price of that energy.</li>
+          <li>Electricity prices are retrieved dynamically for the start and end locations using the OpenAI API to parse regional pricing data.</li>
+          <li>Diesel fuel prices are determined based on the country of operation from a regularly updated internal database.</li>
+          <li>Maritime transport costs are based on a market price for heavy fuel oil ($/metric ton).</li>
+      </ul>
+
+      <h5>2.3.5. BOG Recirculation Module</h5>
+      <p>The model includes an advanced module to assess the impact of BOG management strategies. Users can choose to vent the BOG or to recirculate it. If recirculation is selected, two options are modeled:</p>
+      <ol>
+          <li><strong>Re-liquefaction:</strong> The model calculates the additional energy and cost required to compress and cool the BOG back into its liquid state, which is then added back to the cargo, preserving mass.</li>
+          <li><strong>Use as an Energy Source:</strong> The model calculates the energy that can be generated from the BOG (e.g., in a fuel cell) and uses this energy to offset other energy demands in that stage, such as refrigeration, thereby reducing the overall energy consumption and cost.</li>
+      </ol>
+
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Eshan & Associates LLC. All rights reserved.</p>
+    <div class="social-links">
+      <a href="https://www.linkedin.com/in/eshan-singh-188b1554/" target="_blank">
+        <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn">
+      </a>
+      <a href="mailto:hello@eshansingh.xyz">
+        <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/732/732200.png" alt="Email">
+      </a>
+      <a href="https://scholar.google.com/citations?user=VhYa_v4AAAAJ&hl=en" target="_blank">
+        <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" alt="Google Scholar">
+      </a>
+    </div>
+  </footer>
+
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script>AOS.init();</script>
+</body>
+</html>
