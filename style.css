@@ -117,6 +117,13 @@ nav a:hover {
 }
 
 /* ===== Buttons ===== */
+.button.secondary-button {
+  background-color: #6c757d; /* A neutral, secondary grey */
+}
+
+.button.secondary-button:hover {
+  background-color: #5a6268; /* A darker grey for hover */
+}
 .button {
   background-color: #4caf50;
   color: white;
@@ -354,11 +361,4 @@ body.fade-out {
 body.fade-in {
   opacity: 1;
   transition: opacity 0.4s ease;
-}
-.button.secondary-button {
-  background-color: #6c757d; /* A neutral, secondary grey */
-}
-
-.button.secondary-button:hover {
-  background-color: #5a6268; /* A darker grey for hover */
 }
