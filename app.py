@@ -1728,7 +1728,7 @@ def run_lca_model(inputs):
         return money, ener_consumed, G_emission, A, BOG_loss
 
     # --- 5. Optimization ---
-    target_weight = ship_tank_volume * liquid_chem_density[fuel_type] * 0.98 * ship_number_of_tanks  # kg, ref [3] section 2.1:  the filling limit is defined as 98% for ships cargo tank.
+    target_weight = total_ship_volume * liquid_chem_density[fuel_type] * 0.98  # kg, ref [3] section 2.1:  the filling limit is defined as 98% for ships cargo tank.
     
     def optimization_chem_weight(A_initial_guess, args_for_optimizer_tuple):
         # Unpack the main arguments bundle passed from minimize
