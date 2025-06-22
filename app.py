@@ -2292,7 +2292,11 @@ def run_lca_model(inputs):
     chem_CO2e = total_results[2]/final_weight if final_weight > 0 else 0
     final_energy_output = final_weight * HHV_chem[fuel_type]
 
-    detailed_data_formatted = [[row[0]] + [f"{float(num):.2e}" for num in row[1:]] for row in data]
+    # ADD THIS LINE to filter the data before it's displayed
+    data_for_display = [row for row in data if row[0] != 'site_A_chem_production']
+
+    # UPDATE THIS LINE to use the new filtered list
+    detailed_data_formatted = [[row[0]] + [f"{float(num):.2e}" for num in row[1:]] for row in data_for_display]
 
     summary1_data = [
         ["Cost ($/kg chemical)", f"{chem_cost:.2f}"],
