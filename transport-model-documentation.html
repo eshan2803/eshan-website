@@ -196,6 +196,55 @@
       </section>
   </main>
 
+  <h3>3. Model Parameters and Assumptions</h3>
+      <p>
+        The following section details the constant physical and economic parameters used within the model's calculations. These values are derived from literature, standard engineering principles, and public databases to provide a realistic baseline for the analysis.
+      </p>
+      
+      <h4>3.1. Fuel-Specific Parameters</h4>
+      <p>These parameters vary depending on the chemical being transported.</p>
+      <div style="overflow-x: auto;">
+        <table class="parameter-table" style="width:100%; border-collapse: collapse; margin-top: 1rem;">
+          <thead>
+            <tr style="background-color: #2e7d32; color: white;">
+              <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Parameter</th>
+              <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Hydrogen</th>
+              <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Ammonia</th>
+              <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Methanol</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="padding: 8px; border: 1px solid #ddd;">Higher Heating Value (MJ/kg)</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">142</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">22.5</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">22.7</td></tr>
+            <tr style="background-color: #f2f2f2;"><td style="padding: 8px; border: 1px solid #ddd;">Lower Heating Value (MJ/kg)</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">120</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">18.6</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">19.9</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #ddd;">Liquid Density (kg/m³)</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">71</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">682</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">805</td></tr>
+            <tr style="background-color: #f2f2f2;"><td style="padding: 8px; border: 1px solid #ddd;">Boiling Point (K)</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">20</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">239.7</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">337.7</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #ddd;">Latent Heat of Vaporization (MJ/kg)</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">0.45</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">1.37</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">1.1</td></tr>
+            <tr style="background-color: #f2f2f2;"><td style="padding: 8px; border: 1px solid #ddd;">Global Warming Potential (100-yr)</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">33</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">0</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">0</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #ddd;">Truck Fuel Economy (miles/gallon)</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">13.84</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">10.14</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">9.66</td></tr>
+            <tr style="background-color: #f2f2f2;"><td style="padding: 8px; border: 1px solid #ddd;">Boil-off Rate - Land Storage (% mass/day)</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">0.32%</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">0.01%</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">0.00032%</td></tr>
+             <tr><td style="padding: 8px; border: 1px solid #ddd;">Boil-off Rate - Maritime Transport (% mass/day)</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">0.326%</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">0.024%</td><td style="padding: 8px; border: 1px solid #ddd; text-align: center;">0.00005%</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>3.2. General Transport and System Parameters</h4>
+      <p>These parameters are generally fixed for a given process, regardless of the chemical used.</p>
+      <ul>
+          <li><strong>Diesel Higher Heating Value:</strong> 45.6 MJ/kg</li>
+          <li><strong>Heavy Fuel Oil Higher Heating Value:</strong> 40 MJ/kg</li>
+          <li><strong>Diesel CO2 Equivalent Emissions:</strong> 10.21 kg CO₂e per gallon</li>
+          <li><strong>Heavy Fuel Oil CO2 Equivalent Emissions:</strong> 11.27 kg CO₂e per gallon</li>
+          <li><strong>Diesel Engine Efficiency:</strong> 40%</li>
+          <li><strong>Ship Propulsion Efficiency:</strong> 55%</li>
+          <li><strong>Fuel Cell Efficiency (for BOG use):</strong> 65%</li>
+          <li><strong>Truck Tanker Volume:</strong> 50 m³</li>
+          <li><strong>Cryogenic Pump Head:</strong> 110 m</li>
+          <li><strong>Number of Cryogenic Pumps per Stage:</strong> 10</li>
+          <li><strong>Assumed Pipe Length for Pumping Calculations:</strong> 1000 m</li>
+          <li><strong>Gas Pipeline Diameter:</strong> 0.5 m</li>
+          <li><strong>Pressurized Gas Storage Pressure:</strong> 800 bar</li>
+      </ul>
+
   <footer>
     <p>&copy; 2025 Eshan & Associates LLC. All rights reserved.</p>
     <div class="social-links">
