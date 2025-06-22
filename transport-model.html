@@ -199,7 +199,16 @@ nav a:hover::after {
             <option value="2">Spherical</option>
           </select>
         </div>
-
+        <div class="input-group">
+          <label for="shipNumberOfTanks">Number of Ship Tanks</label>
+          <select id="shipNumberOfTanks">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4" selected>4</option> <option value="5">5</option>
+          </select>
+        </div>
+        
         <div class="input-group">
           <button type="submit" class="button">Calculate</button>
         </div>
@@ -323,6 +332,7 @@ nav a:hover::after {
         LH2_plant_capacity: parseFloat(document.getElementById('lh2PlantCapacity').value),
         ship_tank_volume: parseFloat(document.getElementById('shipTankVolume').value),
         ship_tank_shape: parseInt(document.getElementById('shipTankShape').value),
+        ship_number_of_tanks: parseInt(document.getElementById('shipNumberOfTanks').value),
       };
 
       try {
