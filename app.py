@@ -1883,7 +1883,7 @@ def run_lca_model(inputs):
     con = {'type': 'ineq', 'fun': constraint}
 
     # This is the target_weight for the optimization
-    target_weight = ship_tank_volume * liquid_chem_density[fuel_type] * 0.98 * ship_number_of_tanks
+    target_weight = total_ship_volume * liquid_chem_density[fuel_type] * 0.98
 
     # List of the first 7 process function objects for optimization
     process_funcs_for_optimization = [
