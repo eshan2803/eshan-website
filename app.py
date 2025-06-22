@@ -1342,7 +1342,7 @@ def run_lca_model(inputs):
             # A remains A (no change in amount or type)
         else:
             # Convert chemical (NH3 or CH3OH) to H2 weight
-            convert_to_H2_weight = A * mass_conversion_to_H2_arg[B_fuel_type] * eff_energy_chem_to_H2_arg[B_fuel_type]
+            convert_to_H2_weight = A * mass_conversion_to_H2_arg[B_fuel_type]
             
             convert_energy = energy_chem_to_H2_arg[B_fuel_type] * A / eff_energy_chem_to_H2_arg[B_fuel_type]  # Total energy for conversion
             
