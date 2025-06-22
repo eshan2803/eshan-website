@@ -175,6 +175,7 @@ def run_lca_model(inputs):
             response = client.chat.completions.create(
                 model="gpt-4o",
                 response_format={"type": "json_object"},
+                temperature = 0,
                 messages=[
                     {"role": "system", "content": "Retrieve the latest average electricity price for the given coordinates, preferring commercial rates. Convert kWh to MJ and return in JSON format."},
                     {"role": "user", "content": f"""Given coordinates {coords_str}, return the electricity pricing information in JSON format:
@@ -238,6 +239,7 @@ def run_lca_model(inputs):
             response = client.chat.completions.create(
                 model="gpt-4o",
                 response_format={"type": "json_object"},
+                temperature = 0,
                 messages=[
                     {"role": "system", "content": "You are a maritime fuel market data expert. Your task is to provide the latest VLSFO bunker fuel prices for major world ports in JSON format."},
                     {"role": "user", "content": prompt_content}
