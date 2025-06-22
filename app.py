@@ -50,8 +50,9 @@ def run_lca_model(inputs):
     BOG_recirculation_mati_trans_apply = inputs['BOG_recirculation_mati_trans_apply']
     storage_time = inputs['storage_time']
     LH2_plant_capacity = inputs['LH2_plant_capacity']
-    ship_tank_volume = inputs['ship_tank_volume']
+    total_ship_volume = inputs['total_ship_volume']
     ship_tank_shape = inputs['ship_tank_shape']
+    ship_number_of_tanks = inputs['ship_number_of_tanks']
     
     # This mirrors the user_define list from your script
     user_define = [0, fuel_type, int(recirculation_BOG), int(BOG_recirculation_truck_apply), int(BOG_recirculation_storage_apply), int(BOG_recirculation_mati_trans_apply)]
@@ -316,13 +317,13 @@ def run_lca_model(inputs):
     marine_fuel_port_name, marine_shipping_price_start = openai_get_vlsfo_price((start_port_lat, start_port_lng), start_port_name)
 
     # --- 3. Parameters (Copied from LCA_WebApp.py) ---
-    ship_number_of_tanks = 4
+    volume_per_tank = total_ship_volume / ship_number_of_tanks
     if ship_tank_shape == 1:
-        ship_tank_radius = np.cbrt(ship_tank_volume/(34/3*np.pi))
+        ship_tank_radius = np.cbrt(volume_per_tank/(34/3*np.pi)) # Use volume_per_tank
         ship_tank_height = 10*ship_tank_radius
         storage_area = 2*np.pi*(ship_tank_radius*ship_tank_height) + 4*np.pi*ship_tank_radius**2
     else:
-        ship_tank_radius = np.cbrt(ship_tank_volume/(4/3*np.pi))
+        ship_tank_radius = np.cbrt(volume_per_tank/(4/3*np.pi)) # Use volume_per_tank
         storage_area = 4*np.pi*ship_tank_radius**2
 
     # ALL Parameters from your script are here
