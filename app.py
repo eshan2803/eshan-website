@@ -350,7 +350,8 @@ def run_lca_model(inputs):
     COP_cooldown = [0.131, 1.714, 2]; COP_liq = [0.131, 1.714, 2]; COP_refrig = [0.036, 1.636, 2];
     dBOR_dT = [(0.02538-0.02283)/(45-15)/4, (0.000406-0.0006122)/(45-15)/4, 0];
     EIM_liquefication=100; EIM_cryo_pump=100; EIM_truck_eff=100; EIM_ship_eff=100; EIM_refrig_eff=100; EIM_fuel_cell=100;
-    diesel_density = 3.22; diesel_engine_eff = 0.4; heavy_fuel_density = 3.6; propul_eff = 0.55;
+    diesel_density = 3.22; #kg per gal
+    diesel_engine_eff = 0.4; heavy_fuel_density = 3.6; propul_eff = 0.55;
     NH3_ship_cosumption = (18.8*682*4170)/20000
     # Need to check the numbers below for accuracy
     mass_conversion_to_H2 = [1, 0.176, 0.1875] # NH3, CH3OH
@@ -734,7 +735,7 @@ def run_lca_model(inputs):
         # Unpack all necessary arguments
         (V_flowrate_arg, number_of_cryo_pump_load_ship_port_A_arg, dBOR_dT_arg, 
          start_local_temperature_arg, BOR_loading_arg, liquid_chem_density_arg, head_pump_arg, 
-         pump_power_factor_arg, ss_therm_cond_arg, pipe_length_arg, pipe_inner_D_arg, 
+         pump_power_factor_arg, EIM_cryo_pump_arg, ss_therm_cond_arg, pipe_length_arg, pipe_inner_D_arg, 
          pipe_thick_arg, boiling_point_chem_arg, EIM_refrig_eff_arg, start_electricity_price_tuple_arg, 
          CO2e_start_arg, GWP_chem_list_arg, calculated_storage_area_arg, ship_tank_metal_thick_arg, 
          ship_tank_insulation_thick_arg, ship_tank_metal_density_arg, ship_tank_insulation_density_arg, 
@@ -745,8 +746,8 @@ def run_lca_model(inputs):
         duration = A / (V_flowrate_arg[B_fuel_type]) / number_of_cryo_pump_load_ship_port_A_arg
         local_BOR_loading_val = dBOR_dT_arg[B_fuel_type] * (start_local_temperature_arg - 25) + BOR_loading_arg[B_fuel_type]
         BOG_loss = local_BOR_loading_val * (1 / 24) * duration * A
-        
-        pumping_power = liquid_chem_density_arg[B_fuel_type] * V_flowrate_arg[B_fuel_type] * (1 / 3600) * head_pump_arg * 9.8 / (367 * pump_power_factor_arg)
+        # Be sure to add EIM_cryo_pump_arg to the arguments tuple for this function
+        pumping_power = liquid_chem_density_arg[B_fuel_type] * V_flowrate_arg[B_fuel_type] * (1 / 3600) * head_pump_arg * 9.8 / (367 * pump_power_factor_arg) / (EIM_cryo_pump_arg / 100) 
         ener_consumed_pumping = pumping_power * duration * 3600 / 1000000
 
         # Pipe refrigeration calculation
@@ -1860,7 +1861,7 @@ def run_lca_model(inputs):
                 process_args_for_current_func = (
                     V_flowrate_opt, number_of_cryo_pump_load_ship_port_A_opt, dBOR_dT_opt,
                     start_local_temperature_opt, BOR_loading_opt, liquid_chem_density_opt, head_pump_opt,
-                    pump_power_factor_opt, ss_therm_cond_opt, pipe_length_opt, pipe_inner_D_opt,
+                    pump_power_factor_opt, EIM_cryo_pump_opt, ss_therm_cond_opt, pipe_length_opt, pipe_inner_D_opt,
                     pipe_thick_opt, boiling_point_chem_opt, EIM_refrig_eff_opt, start_electricity_price_opt,
                     CO2e_start_opt, GWP_chem_opt, storage_area, ship_tank_metal_thickness, 
                     ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density, 
@@ -2073,7 +2074,7 @@ def run_lca_model(inputs):
                 process_args_for_this_call_tc = (
                     V_flowrate, number_of_cryo_pump_load_ship_port_A, dBOR_dT,
                     start_local_temperature, BOR_loading, liquid_chem_density, head_pump,
-                    pump_power_factor, ss_therm_cond, pipe_length, pipe_inner_D,
+                    pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D,
                     pipe_thick, boiling_point_chem, EIM_refrig_eff, start_electricity_price,
                     CO2e_start, GWP_chem, storage_area, ship_tank_metal_thickness, 
                     ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density, 
