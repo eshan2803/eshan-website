@@ -51,6 +51,7 @@ def run_lca_model(inputs):
     # --- START: Corrected Python Lines ---
     storage_time_A = inputs['storage_time_A']
     storage_time_B = inputs['storage_time_B']
+    storage_time_C = inputs['storage_time_C']
     LH2_plant_capacity = inputs['LH2_plant_capacity']
     total_ship_volume = inputs['total_ship_volume']
     ship_tank_shape = inputs['ship_tank_shape']
@@ -1222,7 +1223,7 @@ def run_lca_model(inputs):
         # The order of variables here MUST EXACTLY MATCH the order they are packed.
 
         liquid_chem_density_arg, storage_volume_arg, dBOR_dT_arg, end_local_temperature_arg, \
-        BOR_land_storage_arg, storage_time_arg, storage_radius_arg, tank_metal_thickness_arg, \
+        BOR_land_storage_arg, storage_time_C_arg, storage_radius_arg, tank_metal_thickness_arg, \
         metal_thermal_conduct_arg, tank_insulator_thickness_arg, insulator_thermal_conduct_arg, \
         COP_refrig_arg, EIM_refrig_eff_arg, end_electricity_price_tuple_arg, CO2e_end_arg, \
         GWP_chem_list_arg, BOG_recirculation_storage_percentage_arg, \
@@ -2028,7 +2029,7 @@ def run_lca_model(inputs):
                 elif func_to_call.__name__ == "chem_site_B_unloading_from_truck":
                     process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_site_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
                 elif func_to_call.__name__ == "chem_storage_at_site_B":
-                    process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, end_local_temperature, BOR_land_storage, storage_time_B, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
+                    process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, end_local_temperature, BOR_land_storage, storage_time_C, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
                 elif func_to_call.__name__ == "chem_unloading_from_site_B":
                     process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_site_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
     
