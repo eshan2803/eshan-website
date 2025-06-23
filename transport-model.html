@@ -224,9 +224,9 @@ nav a:hover::after {
 <div id="outputs" class="hidden">
   <h2 class="text-xl font-semibold mb-4 text-gray-700">Results</h2>
   <div id="map" class="mb-6 shadow-md" style="height: 400px;"></div>
-  <h3 class="text-lg font-semibold mb-3 text-gray-600">Summary Metrics (per kg chemical):</h3>
+  <h3 class="text-lg font-semibold mb-3 text-gray-600"> (per kg chemical):</h3>
   <div id="summaryTableContainer" class="table-container mb-6 shadow-md"><table id="summaryTable"></table></div>
-  <h3 class="text-lg font-semibold mb-3 text-gray-600">Summary Metrics (per kJ):</h3>
+  <h3 class="text-lg font-semibold mb-3 text-gray-600">Summary Metrics (per GJ):</h3>
   <div id="summaryTableContainer2" class="table-container mb-6 shadow-md"><table id="summaryTable2"></table></div>
   <h3 class="text-lg font-semibold mb-3 text-gray-600">Assumed Prices:</h3>
   <div id="summaryTableContainer" class="table-container mb-6 shadow-md"><table id="assumptionTable"></table></div>
@@ -483,7 +483,7 @@ nav a:hover::after {
                         cellContent = cell;
                     } else if (index >= 6) { // "Per unit" columns (Cost/kg, Cost/kJ, etc.)
                         // General number format with 6 decimal places
-                        cellContent = Number(cell).toFixed(6); 
+                        cellContent = Number(cell).toFixed(2); 
                     } else { // Raw data columns (Cost, Energy, etc.)
                         // Scientific notation
                         cellContent = Number(cell).toExponential(2);
