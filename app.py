@@ -2259,19 +2259,23 @@ def run_lca_model(inputs):
 
     # Loop through each row of the results
     for row in data_after_main_seq:
-        # The cost is the second item (index 1) in each row
         current_cost = float(row[1])
-
-        # Calculate "Cost per kg" for the current row
-        # Handle division by zero if the final weight is 0
+        current_emission = float(row[3]) # eCO2 is the 4th item (index 3)
+    
+        # Calculate "Cost per kg"
         cost_per_kg = current_cost / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-
-        # Calculate "Cost per MJ" for the current row
-        # Handle division by zero if total energy is 0
-        cost_per_mj = current_cost / total_energy_mj_denominator if total_energy_mj_denominator > 0 else 0
         
-        # Create a new row by taking the original row and appending the two new values
-        new_row_with_additions = list(row) + [cost_per_kg, cost_per_mj]
+        # Calculate "Cost per kJ"
+        cost_per_kj = current_cost / final_energy_kj_denominator if final_energy_kj_denominator > 0 else 0
+    
+        # NEW: Calculate "eCO2 per kg"
+        emission_per_kg = current_emission / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+    
+        # NEW: Calculate "eCO2 per kJ"
+        emission_per_kj = current_emission / final_energy_kj_denominator if final_energy_kj_denominator > 0 else 0
+    
+        # Create a new row by taking the original row and appending the four new values
+        new_row_with_additions = list(row) + [cost_per_kg, cost_per_kj, emission_per_kg, emission_per_kj]
         data_with_new_columns.append(new_row_with_additions)
 
     # Replace the original data list with our new one that includes the new columns
@@ -2295,29 +2299,35 @@ def run_lca_model(inputs):
 
     # UPDATE THIS LINE to use the new filtered list
     detailed_data_formatted = [[row[0]] + [f"{float(num):.2e}" for num in row[1:]] for row in data_for_display]
-
     summary1_data = [
         ["Cost ($/kg chemical)", f"{chem_cost:.2f}"],
         ["Consumed Energy (MJ/kg chemical)", f"{chem_energy:.2f}"],
         ["Emission (kg CO2/kg chemical)", f"{chem_CO2e:.2f}"]
     ]
+    
+    # Update Summary 2 to be per kJ
+    final_energy_output_kj = final_energy_output_mj * 1000
     summary2_data = [
-        ["Cost ($/MJ)", f"{total_results[0]/final_energy_output:.4f}" if final_energy_output > 0 else "N/A"],
-        ["Energy consumed (MJ_in/MJ_out)", f"{total_results[1]/final_energy_output:.4f}" if final_energy_output > 0 else "N/A"],
-        ["Emission (kg CO2/MJ)", f"{total_results[2]/final_energy_output:.4f}" if final_energy_output > 0 else "N/A"]
+        ["Cost ($/kJ)", f"{total_results[0]/final_energy_output_kj:.6f}" if final_energy_output_kj > 0 else "N/A"],
+        ["Energy consumed (MJ_in/kJ_out)", f"{(total_results[1]*1000)/final_energy_output_kj:.6f}" if final_energy_output_kj > 0 else "N/A"],
+        ["Emission (kg CO2/kJ)", f"{total_results[2]/final_energy_output_kj:.6f}" if final_energy_output_kj > 0 else "N/A"]
     ]
     assumed_prices_data = [
         [f"Electricity Price at {start}", f"{start_electricity_price[2]:.4f} $/MJ"],
         [f"Electricity Price at {end}", f"{end_electricity_price[2]:.4f} $/MJ"],
         [f"Diesel Price at {start}", f"{diesel_price_start:.2f} $/gal"],
-        [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"], # <--- ADD COMMA HERE
+        [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"],
         [f"Marine Fuel Price at {marine_fuel_port_name}", f"{marine_shipping_price_start:.2f} $/ton"]
     ]
-
-    csv_data = [["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost per kg ($/kg)", "Cost per MJ ($/MJ)"]] + data
-
+    
+    # Update headers for the detailed table and CSV download
+    new_detailed_headers = ["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/kJ ($/kJ)", "eCO2/kg (kg/kg)", "eCO2/kJ (kg/kJ)"]
+    csv_data = [new_detailed_headers] + data_after_main_seq
+    
     # --- 8. Package Final JSON Response ---
+    # Update the detailed_headers key in the response
     response = {
+        # ... (status and map_data remain the same) ...
         "status": "success",
         "map_data": {
             "coor_start": {"lat": coor_start_lat, "lng": coor_start_lng},
@@ -2329,7 +2339,7 @@ def run_lca_model(inputs):
             "sea_route_coords": searoute_coor
         },
         "table_data": {
-            "detailed_headers": ["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost per kg ($/kg)", "Cost per MJ ($/MJ)"],
+            "detailed_headers": new_detailed_headers, # Use the new headers
             "detailed_data": detailed_data_formatted,
             "summary1_headers": ["Metric", "Value"], "summary1_data": summary1_data,
             "summary2_headers": ["Per Energy Output", "Value"], "summary2_data": summary2_data,
