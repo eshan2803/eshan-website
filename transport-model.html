@@ -226,7 +226,7 @@ nav a:hover::after {
   <div id="map" class="mb-6 shadow-md" style="height: 400px;"></div>
   <h3 class="text-lg font-semibold mb-3 text-gray-600">Summary Metrics (per kg chemical):</h3>
   <div id="summaryTableContainer" class="table-container mb-6 shadow-md"><table id="summaryTable"></table></div>
-  <h3 class="text-lg font-semibold mb-3 text-gray-600">Summary Metrics (per MJ):</h3>
+  <h3 class="text-lg font-semibold mb-3 text-gray-600">Summary Metrics (per kJ):</h3>
   <div id="summaryTableContainer2" class="table-container mb-6 shadow-md"><table id="summaryTable2"></table></div>
   <h3 class="text-lg font-semibold mb-3 text-gray-600">Assumed Prices:</h3>
   <div id="summaryTableContainer" class="table-container mb-6 shadow-md"><table id="assumptionTable"></table></div>
@@ -471,17 +471,37 @@ nav a:hover::after {
         }
     }
 
-    function createTableHtml(headers, dataArray) {
+    function createTableHtml(headers, dataArray, isDetailed = false) {
         let html = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
         dataArray.forEach(row => {
-            html += '<tr>' + row.map(cell => `<td>${cell}</td>`).join('') + '</tr>';
+            html += '<tr>';
+            row.forEach((cell, index) => {
+                let cellContent = cell;
+                // Apply special formatting only for the detailed table
+                if (isDetailed) {
+                    if (index === 0) { // First column (Function Name)
+                        cellContent = cell;
+                    } else if (index >= 6) { // "Per unit" columns (Cost/kg, Cost/kJ, etc.)
+                        // General number format with 6 decimal places
+                        cellContent = Number(cell).toFixed(6); 
+                    } else { // Raw data columns (Cost, Energy, etc.)
+                        // Scientific notation
+                        cellContent = Number(cell).toExponential(2);
+                    }
+                }
+                html += `<td>${cellContent}</td>`;
+            });
+            html += '</tr>';
         });
         html += '</tbody>';
         return html;
     }
-
+    
     function displayTables(tableData) {
-        document.getElementById('detailedTable').innerHTML = createTableHtml(tableData.detailed_headers, tableData.detailed_data);
+        // Pass 'true' to createTableHtml for the detailed table to trigger special formatting
+        document.getElementById('detailedTable').innerHTML = createTableHtml(tableData.detailed_headers, tableData.detailed_data, true);
+        
+        // For other tables, no special formatting is needed
         document.getElementById('summaryTable').innerHTML = createTableHtml(tableData.summary1_headers, tableData.summary1_data);
         document.getElementById('summaryTable2').innerHTML = createTableHtml(tableData.summary2_headers, tableData.summary2_data);
         document.getElementById('assumptionTable').innerHTML = createTableHtml(tableData.assumed_prices_headers, tableData.assumed_prices_data);
