@@ -370,6 +370,21 @@ def run_lca_model(inputs):
     ship_engine_eff = 0.6
     PH2_pressure = 800
     truck_economy = [13.84, 10.14, 9.66]  # mi/gal Grok Analysis
+
+    # ADD THESE NEW PARAMETERS FOR TANK COOLDOWN
+    # Sourced from Table 2 in the provided study 
+    ship_tank_metal_specific_heat = 0.47 / 1000  # MJ/kg-K
+    ship_tank_insulation_specific_heat = 1.5 / 1000 # MJ/kg-K
+    ship_tank_metal_density = 7900  # kg/m^3
+    ship_tank_insulation_density = 100 # kg/m^3
+    
+    # Sourced from the study's text and Table 6 
+    ship_tank_metal_thickness = 0.05 # m
+    # Using onshore storage insulation thickness as a proxy from the study 
+    ship_tank_insulation_thickness = [0.66, 0.09, 0] # m (H2, NH3, Methanol)
+    
+    # Sourced from Table 6 for the "Cooldown" scenario 
+    COP_cooldown = [0.131, 1.714, 0] # (H2, NH3, Methanol)
     # --- 4. Process Functions (Copied from LCA_WebApp.py) ---
     #placeholder functions need to be filled in. 
     def PH2_pressure_fnc(density): return density * 1.2 # Simplified placeholder
