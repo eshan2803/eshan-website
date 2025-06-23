@@ -2137,16 +2137,26 @@ def run_lca_model(inputs):
     csv_data = [new_detailed_headers] + data
     
     # --- 8. Package Final JSON Response ---
+    # --- 8. Package Final JSON Response ---
     response = {
-        # ... (status and map_data) ...
+        "status": "success",
+        "map_data": {
+            "coor_start": {"lat": coor_start_lat, "lng": coor_start_lng},
+            "coor_end": {"lat": coor_end_lat, "lng": coor_end_lng},
+            "start_port": {"lat": start_port_lat, "lng": start_port_lng, "name": start_port_name},
+            "end_port": {"lat": end_port_lat, "lng": end_port_lng, "name": end_port_name},
+            "road_route_start_coords": road_route_start_coords,
+            "road_route_end_coords": road_route_end_coords,
+            "sea_route_coords": searoute_coor
+        },
         "table_data": {
             "detailed_headers": new_detailed_headers,
-            "detailed_data": detailed_data_formatted, # This now uses the filtered list
+            "detailed_data": detailed_data_formatted,
             "summary1_headers": ["Metric", "Value"], "summary1_data": summary1_data,
             "summary2_headers": ["Per Energy Output", "Value"], "summary2_data": summary2_data,
             "assumed_prices_headers": ["Assumed Price", "Value"], "assumed_prices_data": assumed_prices_data
         },
-        "csv_data": csv_data # This remains unfiltered
+        "csv_data": csv_data
     }
     return response
 
