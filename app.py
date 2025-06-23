@@ -347,7 +347,7 @@ def run_lca_model(inputs):
     storage_volume = [5683, 50000000/liquid_chem_density[1], 50000000/liquid_chem_density[2]];
     storage_radius = [np.cbrt(3 * volume / (4 * np.pi)) for volume in storage_volume];
     ship_fuel_consumption = 0.23; OHTC_ship = [0.05, 0.22, 0.02];
-    COP_reliq = [0.036, 1.636, 2]; COP_liq = [0.131, 1.714, 2]; COP_refrig = [0.036, 1.636, 2];
+    COP_cooldown = [0.131, 1.714, 2]; COP_liq = [0.131, 1.714, 2]; COP_refrig = [0.036, 1.636, 2];
     dBOR_dT = [(0.02538-0.02283)/(45-15)/4, (0.000406-0.0006122)/(45-15)/4, 0];
     EIM_liquefication=100; EIM_cryo_pump=100; EIM_truck_eff=100; EIM_ship_eff=100; EIM_refrig_eff=100; EIM_fuel_cell=100;
     diesel_density = 3.22; diesel_engine_eff = 0.4; heavy_fuel_density = 3.6; propul_eff = 0.55;
@@ -715,53 +715,63 @@ def run_lca_model(inputs):
     
 # This definition goes inside run_lca_model
     def chem_loading_to_ship(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
-        # Unpack the specific arguments this function needs from the passed-in tuple.
-        # The order of variables here MUST EXACTLY MATCH the order they are packed.
+        # Unpack arguments
+        (V_flowrate_arg, number_of_cryo_pump_load_ship_port_A_arg, dBOR_dT_arg, 
+         start_local_temperature_arg, BOR_loading_arg, liquid_chem_density_arg, head_pump_arg, 
+         pump_power_factor_arg, ss_therm_cond_arg, pipe_length_arg, pipe_inner_D_arg, 
+         pipe_thick_arg, boiling_point_chem_arg, EIM_refrig_eff_arg, start_electricity_price_tuple_arg, 
+         CO2e_start_arg, GWP_chem_list_arg, calculated_storage_area_arg, ship_tank_metal_thick_arg, 
+         ship_tank_insulation_thick_arg, ship_tank_metal_density_arg, ship_tank_insulation_density_arg, 
+         ship_tank_metal_specific_heat_arg, ship_tank_insulation_specific_heat_arg, 
+         COP_cooldown_arg, ship_number_of_tanks_arg) = process_args_tuple
 
-        V_flowrate_arg, \
-        number_of_cryo_pump_load_ship_port_A_arg, \
-        dBOR_dT_arg, \
-        start_local_temperature_arg, \
-        BOR_loading_arg, \
-        liquid_chem_density_arg, \
-        head_pump_arg, \
-        pump_power_factor_arg, \
-        ss_therm_cond_arg, \
-        pipe_length_arg, \
-        pipe_inner_D_arg, \
-        pipe_thick_arg, \
-        COP_refrig_arg, \
-        EIM_refrig_eff_arg, \
-        start_electricity_price_tuple_arg, \
-        CO2e_start_arg, \
-        GWP_chem_list_arg = process_args_tuple
-        # Note: EIM_cryo_pump was not in the pumping_power formula for this specific function snippet.
-        # If it should be, add EIM_cryo_pump_arg here and to the packing stage.
-
-        # Original logic of the function, using the unpacked '_arg' variables
-        duration = A / (V_flowrate_arg[B_fuel_type]) / number_of_cryo_pump_load_ship_port_A_arg  # hr
-        
+        # --- Existing Calculations ---
+        duration = A / (V_flowrate_arg[B_fuel_type]) / number_of_cryo_pump_load_ship_port_A_arg
         local_BOR_loading_val = dBOR_dT_arg[B_fuel_type] * (start_local_temperature_arg - 25) + BOR_loading_arg[B_fuel_type]
-        BOG_loss = local_BOR_loading_val * (1 / 24) * duration * A  # kg
+        BOG_loss = local_BOR_loading_val * (1 / 24) * duration * A
         
-        # As per your snippet for this function, EIM_cryo_pump is not used here.
-        pumping_power = liquid_chem_density_arg[B_fuel_type] * V_flowrate_arg[B_fuel_type] * (1 / 3600) * \
-                        head_pump_arg * 9.8 / (367 * pump_power_factor_arg)  # W
-        
+        pumping_power = liquid_chem_density_arg[B_fuel_type] * V_flowrate_arg[B_fuel_type] * (1 / 3600) * head_pump_arg * 9.8 / (367 * pump_power_factor_arg)
+        ener_consumed_pumping = pumping_power * duration * 3600 / 1000000
+
         log_arg = (pipe_inner_D_arg + 2 * pipe_thick_arg) / pipe_inner_D_arg
-        if log_arg <= 0:
-            q_pipe = 0 
-        else:
-            q_pipe = 2 * np.pi * ss_therm_cond_arg * pipe_length_arg * \
-                     (start_local_temperature_arg - (-253)) / (2.3 * np.log10(log_arg))  # W
+        q_pipe = 0
+        if log_arg > 0:
+            q_pipe = 2 * np.pi * ss_therm_cond_arg * pipe_length_arg * (start_local_temperature_arg + 273.15 - boiling_point_chem_arg[B_fuel_type]) / (np.log(log_arg))
         
-        ener_consumed_refrig = (q_pipe / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * duration * 3600  # MJ
-        ener_consumed = pumping_power * duration * 3600 * 1 / 1000000 + ener_consumed_refrig  # MJ
+        cop_actual_pipe_refrig = calculate_actual_cop(B_fuel_type, start_local_temperature_arg, boiling_point_chem_arg)
+        ener_consumed_pipe_refrig = 0
+        if cop_actual_pipe_refrig > 0:
+            ener_consumed_pipe_refrig = (q_pipe / (cop_actual_pipe_refrig * (EIM_refrig_eff_arg / 100))) / 1000000 * duration * 3600
+
+        # --- NEW COOLDOWN CALCULATION ---
+        ener_consumed_cooldown = 0
+        # Cooldown is only needed for cryogenic fuels (H2, NH3)
+        if B_fuel_type in [0, 1]:
+            # Mass = Area * thickness * density. Total for all tanks on the ship.
+            mass_metal = calculated_storage_area_arg * ship_tank_metal_thick_arg * ship_tank_metal_density_arg * ship_number_of_tanks_arg
+            mass_insulation = calculated_storage_area_arg * ship_tank_insulation_thick_arg[B_fuel_type] * ship_tank_insulation_density_arg * ship_number_of_tanks_arg
+            
+            # Heat capacity of the tanks
+            H_tank_metal = ship_tank_metal_specific_heat_arg * mass_metal
+            H_tank_insulation = ship_tank_insulation_specific_heat_arg * mass_insulation
+            
+            # Temperature difference to cool down
+            delta_T = (start_local_temperature_arg + 273.15) - boiling_point_chem_arg[B_fuel_type]
+            
+            # Total heat to be removed from the tanks
+            Q_cooling = (H_tank_metal + H_tank_insulation) * delta_T
+            
+            # Energy consumed for cooldown, using the specific "Cooldown" COP
+            cooldown_cop = COP_cooldown_arg[B_fuel_type]
+            if cooldown_cop > 0:
+                ener_consumed_cooldown = Q_cooling / cooldown_cop
         
-        A_after_loss = A - BOG_loss # Net amount
+        # --- Final Totals for this step ---
+        ener_consumed = ener_consumed_pumping + ener_consumed_pipe_refrig + ener_consumed_cooldown
+        A_after_loss = A - BOG_loss
         
-        money = ener_consumed * start_electricity_price_tuple_arg[2]  # $
-        G_emission = ener_consumed * 0.2778 * CO2e_start_arg * 0.001 + BOG_loss * GWP_chem_list_arg[B_fuel_type]  # kgCO2
+        money = ener_consumed * start_electricity_price_tuple_arg[2]
+        G_emission = ener_consumed * 0.2778 * CO2e_start_arg * 0.001 + BOG_loss * GWP_chem_list_arg[B_fuel_type]
         
         return money, ener_consumed, G_emission, A_after_loss, BOG_loss
     
@@ -1837,28 +1847,16 @@ def run_lca_model(inputs):
 # This is inside the optimization_chem_weight function's loop
 
             elif func_to_call.__name__ == "chem_loading_to_ship":
-                # Pack exactly 17 arguments for chem_loading_to_ship
-                # in the order it expects to unpack them.
                 process_args_for_current_func = (
-                    V_flowrate_opt,                             # 1
-                    number_of_cryo_pump_load_ship_port_A_opt,   # 2
-                    dBOR_dT_opt,                                # 3
-                    start_local_temperature_opt,                # 4
-                    BOR_loading_opt,                            # 5
-                    liquid_chem_density_opt,                    # 6
-                    head_pump_opt,                              # 7
-                    pump_power_factor_opt,                      # 8
-                    # EIM_cryo_pump_opt is INTENTIONALLY OMITTED here to match 17 args
-                    ss_therm_cond_opt,                          # 9
-                    pipe_length_opt,                            # 10
-                    pipe_inner_D_opt,                           # 11
-                    pipe_thick_opt,                             # 12
-                    COP_refrig_opt,                             # 13
-                    EIM_refrig_eff_opt,                         # 14
-                    start_electricity_price_opt,                # 15 (this is the tuple)
-                    CO2e_start_opt,                             # 16
-                    GWP_chem_opt                                # 17 (this is the list)
-                )            
+                    V_flowrate_opt, number_of_cryo_pump_load_ship_port_A_opt, dBOR_dT_opt,
+                    start_local_temperature_opt, BOR_loading_opt, liquid_chem_density_opt, head_pump_opt,
+                    pump_power_factor_opt, ss_therm_cond_opt, pipe_length_opt, pipe_inner_D_opt,
+                    pipe_thick_opt, boiling_point_chem_opt, EIM_refrig_eff_opt, start_electricity_price_opt,
+                    CO2e_start_opt, GWP_chem_opt, storage_area, ship_tank_metal_thickness, 
+                    ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density, 
+                    ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat, 
+                    COP_cooldown, ship_number_of_tanks
+                )
             # Call the current process function with its tailored arguments
             # user_define_params[0] is the initial placeholder for chem_weight (or target_weight later)
             # user_define_params[1] is B_fuel_type
