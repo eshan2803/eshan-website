@@ -1937,7 +1937,7 @@ def run_lca_model(inputs):
         # LH2_plant_capacity, EIM_liquefication are already above for site_A_chem_liquification
 
         # Parameters for chem_storage_at_port_A
-        storage_time, liquid_chem_density, storage_volume, 
+        storage_time_A, liquid_chem_density, storage_volume, 
         storage_radius, BOR_land_storage, tank_metal_thickness, 
         tank_insulator_thickness, # metal_thermal_conduct, insulator_thermal_conduct already above
         BOG_recirculation_storage # This is the percentage from inputs
@@ -2028,7 +2028,7 @@ def run_lca_model(inputs):
                 elif func_to_call.__name__ == "chem_site_B_unloading_from_truck":
                     process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_site_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
                 elif func_to_call.__name__ == "chem_storage_at_site_B":
-                    process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, end_local_temperature, BOR_land_storage, storage_time, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
+                    process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, end_local_temperature, BOR_land_storage, storage_time_B, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
                 elif func_to_call.__name__ == "chem_unloading_from_site_B":
                     process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_site_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
     
