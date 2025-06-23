@@ -675,7 +675,7 @@ def run_lca_model(inputs):
         # Original logic of the function, using the unpacked '_arg' variables
         number_of_storage = math.ceil(A / liquid_chem_density_arg[B_fuel_type] / storage_volume_arg[B_fuel_type])
         local_BOR_storage = dBOR_dT_arg[B_fuel_type] * (start_local_temperature_arg - 25) + BOR_land_storage_arg[B_fuel_type]
-        current_BOG_loss = A * local_BOR_storage * storage_time_arg # Renamed BOG_loss to current_BOG_loss
+        current_BOG_loss = A * local_BOR_storage * storage_time_A_arg # Renamed BOG_loss to current_BOG_loss
         
         A_after_loss = A - current_BOG_loss # Initial chemical amount after BOG loss, before recirculation
         
@@ -699,7 +699,7 @@ def run_lca_model(inputs):
         if C_recirculation_BOG == 2: # If BOG recirculation is active
             if E_storage_apply == 1: # 1) Re-liquefy BOG
                 usable_BOG = current_BOG_loss * BOG_recirculation_storage_percentage_arg * 0.01
-                BOG_flowrate = usable_BOG / storage_time_arg * 1 / 24 # kg/hr
+                BOG_flowrate = usable_BOG / storage_time_A_arg * 1 / 24 # kg/hr
                 
                 # liquification_data_fitting is a global helper
                 reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
@@ -963,7 +963,7 @@ def run_lca_model(inputs):
         # Original logic of the function, using the unpacked '_arg' variables
         number_of_storage = math.ceil(A / liquid_chem_density_arg[B_fuel_type] / storage_volume_arg[B_fuel_type])
         local_BOR_storage = dBOR_dT_arg[B_fuel_type] * (end_local_temperature_arg - 25) + BOR_land_storage_arg[B_fuel_type]
-        current_BOG_loss = A * local_BOR_storage * storage_time_arg
+        current_BOG_loss = A * local_BOR_storage * storage_time_B_arg
         
         A_after_loss = A - current_BOG_loss
         
@@ -986,7 +986,7 @@ def run_lca_model(inputs):
         if C_recirculation_BOG == 2:
             if E_storage_apply == 1: # Re-liquefy BOG
                 usable_BOG = current_BOG_loss * BOG_recirculation_storage_percentage_arg * 0.01
-                BOG_flowrate = usable_BOG / storage_time_arg * 1 / 24
+                BOG_flowrate = usable_BOG / storage_time_B_arg * 1 / 24
                 
                 reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
                 reliq_ener_consumed = reliq_ener_required * usable_BOG
@@ -1233,7 +1233,7 @@ def run_lca_model(inputs):
         # Original logic of the function, using the unpacked '_arg' variables
         number_of_storage = math.ceil(A / liquid_chem_density_arg[B_fuel_type] / storage_volume_arg[B_fuel_type])
         local_BOR_storage = dBOR_dT_arg[B_fuel_type] * (end_local_temperature_arg - 25) + BOR_land_storage_arg[B_fuel_type]
-        current_BOG_loss = A * local_BOR_storage * storage_time_arg
+        current_BOG_loss = A * local_BOR_storage * storage_time_C_arg
         
         A_after_loss = A - current_BOG_loss
         
@@ -1244,7 +1244,7 @@ def run_lca_model(inputs):
         OHTC_val = 1 / thermal_resist_val if thermal_resist_val > 0 else float('inf')
         
         heat_required_val = OHTC_val * storage_area_val * (end_local_temperature_arg + 273 - 20) # Using end_local_temperature
-        ener_consumed_refrig = (heat_required_val / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * 86400 * storage_time_arg
+        ener_consumed_refrig = (heat_required_val / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * 86400 * storage_time_C_arg
         
         money = ener_consumed_refrig * end_electricity_price_tuple_arg[2] # Using end_electricity_price
         total_energy_consumed = ener_consumed_refrig
@@ -1256,7 +1256,7 @@ def run_lca_model(inputs):
         if C_recirculation_BOG == 2:
             if E_storage_apply == 1: # Re-liquefy BOG
                 usable_BOG = current_BOG_loss * BOG_recirculation_storage_percentage_arg * 0.01
-                BOG_flowrate = usable_BOG / storage_time_arg * 1 / 24 # kg/hr
+                BOG_flowrate = usable_BOG / storage_time_C_arg * 1 / 24 # kg/hr
                 
                 reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
                 reliq_ener_consumed = reliq_ener_required * usable_BOG
