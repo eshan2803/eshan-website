@@ -2105,14 +2105,19 @@ def run_lca_model(inputs):
 
     # This line has been moved to step 4
     # data_for_display = [row for row in data if row[0] != 'site_A_chem_production']
-    detailed_data_formatted = data # Send raw numbers to frontend for formatting
+    data_for_display = [row for row in data if row[0] != 'site_A_chem_production']
 
+    # 2. Use this new filtered list for the data being sent to the frontend table.
+    detailed_data_formatted = data_for_display 
+    
+    # --- END OF CHANGE ---
+    
     summary1_data = [
         ["Cost ($/kg chemical)", f"{chem_cost:.2f}"],
         ["Consumed Energy (MJ/kg chemical)", f"{chem_energy:.2f}"],
         ["Emission (kg CO2/kg chemical)", f"{chem_CO2e:.2f}"]
     ]
-
+    
     final_energy_output_gj = final_energy_output_mj / 1000
     summary2_data = [
         ["Cost ($/GJ)", f"{total_results[0] / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
@@ -2126,29 +2131,22 @@ def run_lca_model(inputs):
         [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"],
         [f"Marine Fuel Price at {marine_fuel_port_name}", f"{marine_shipping_price_start:.2f} $/ton"]
     ]
-    new_detailed_headers = ["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]    
+    
+    new_detailed_headers = ["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
+    # IMPORTANT: The CSV download will still contain the complete, unfiltered data for full transparency.
     csv_data = [new_detailed_headers] + data
-
+    
     # --- 8. Package Final JSON Response ---
     response = {
-        "status": "success",
-        "map_data": {
-            "coor_start": {"lat": coor_start_lat, "lng": coor_start_lng},
-            "coor_end": {"lat": coor_end_lat, "lng": coor_end_lng},
-            "start_port": {"lat": start_port_lat, "lng": start_port_lng, "name": start_port_name},
-            "end_port": {"lat": end_port_lat, "lng": end_port_lng, "name": end_port_name},
-            "road_route_start_coords": road_route_start_coords,
-            "road_route_end_coords": road_route_end_coords,
-            "sea_route_coords": searoute_coor
-        },
+        # ... (status and map_data) ...
         "table_data": {
             "detailed_headers": new_detailed_headers,
-            "detailed_data": detailed_data_formatted,
+            "detailed_data": detailed_data_formatted, # This now uses the filtered list
             "summary1_headers": ["Metric", "Value"], "summary1_data": summary1_data,
             "summary2_headers": ["Per Energy Output", "Value"], "summary2_data": summary2_data,
             "assumed_prices_headers": ["Assumed Price", "Value"], "assumed_prices_data": assumed_prices_data
         },
-        "csv_data": csv_data
+        "csv_data": csv_data # This remains unfiltered
     }
     return response
 
