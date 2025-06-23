@@ -1970,347 +1970,148 @@ def run_lca_model(inputs):
     
     # --- 6. Final Calculation ---
 
-# This definition is inside run_lca_model
-    def total_chem(A_optimized_chem_weight, B_fuel_type_tc, C_recirculation_BOG_tc, 
-                   D_truck_apply_tc, E_storage_apply_tc, F_maritime_apply_tc):
-        truck_economy_opt = truck_economy  # truck_economy is defined in run_lca_model and visible here
-        # Full list of 15 process functions for the main chemical pathway
-        # Ensure PH2-specific functions are NOT in this list unless it's a hybrid pathway
-        # where some PH2 steps are mixed with the main chemical steps.
-        # Based on your original script, total_chem was for the main pathway.
-        funcs_sequence = [
-            site_A_chem_production, site_A_chem_liquification, chem_site_A_loading_to_truck,
-            site_A_to_port_A, port_A_unloading_to_storage, chem_storage_at_port_A,
-            chem_loading_to_ship, port_to_port, chem_unloading_from_ship,
-            chem_storage_at_port_B, port_B_unloading_from_storage, port_B_to_site_B,
-            chem_site_B_unloading_from_truck, chem_storage_at_site_B,
-            chem_unloading_from_site_B
-            # If chem_convert_to_H2 is always the last step for non-H2 fuels, add it here.
-            # Or call it separately after this loop if fuel_type is not H2.
-        ]
-        # If chem_convert_to_H2 is conditionally the very last step:
-        # if B_fuel_type_tc != 0: # If not already Hydrogen
-        #    funcs_sequence.append(chem_convert_to_H2)
 
 
-        R_current_chem = A_optimized_chem_weight # Start with the optimized chemical weight
-        data_results_list = []
-        total_money_tc = 0.0
-        total_ener_consumed_tc = 0.0
-        total_G_emission_tc = 0.0
+    # In your app.py file, replace the entire block from the original 'total_chem' function 
+# to the end of the 'run_lca_model' function with this corrected version.
 
-        for func_to_call in funcs_sequence:
-            process_args_for_this_call_tc = () # Initialize for each function
+# --- START: REPLACEMENT BLOCK ---
 
-            # --- Construct the specific argument tuple for the CURRENT function ---
-            # You will need an if/elif chain here for ALL 15 functions
-            # to pack their specific arguments. The variables used for packing
-            # (e.g., LH2_plant_capacity, start_local_temperature) are directly
-            # accessible here because total_chem is in the scope of run_lca_model.
-
-            if func_to_call.__name__ == "site_A_chem_production":
-                process_args_for_this_call_tc = (GWP_chem,) # Example
+    # This is the 'base' function that runs the main sequence of calculations
+    def total_chem_base(A_optimized_chem_weight, B_fuel_type_tc, C_recirculation_BOG_tc, 
+                        D_truck_apply_tc, E_storage_apply_tc, F_maritime_apply_tc):
             
-            elif func_to_call.__name__ == "site_A_chem_liquification":
-                process_args_for_this_call_tc = (
-                    LH2_plant_capacity, EIM_liquefication, specific_heat_chem,
-                    start_local_temperature, boiling_point_chem, latent_H_chem,
-                    COP_liq, start_electricity_price, CO2e_start, GWP_chem
-                )
+            funcs_sequence = [
+                site_A_chem_production, site_A_chem_liquification, chem_site_A_loading_to_truck,
+                site_A_to_port_A, port_A_unloading_to_storage, chem_storage_at_port_A,
+                chem_loading_to_ship, port_to_port, chem_unloading_from_ship,
+                chem_storage_at_port_B, port_B_unloading_from_storage, port_B_to_site_B,
+                chem_site_B_unloading_from_truck, chem_storage_at_site_B,
+                chem_unloading_from_site_B
+            ]
             
-            elif func_to_call.__name__ == "chem_site_A_loading_to_truck":
-                process_args_for_this_call_tc = (
-                    V_flowrate, number_of_cryo_pump_load_truck_site_A, 
-                    dBOR_dT, start_local_temperature, BOR_loading, 
-                    liquid_chem_density, head_pump, pump_power_factor, 
-                    EIM_cryo_pump, ss_therm_cond, pipe_length,
-                    pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff,
-                    start_electricity_price, CO2e_start, GWP_chem
-                )
-            
-            elif func_to_call.__name__ == "site_A_to_port_A":
-                process_args_for_this_call_tc = (
-                    road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy,
-                    distance_A_to_port, HHV_diesel, diesel_density, 
-                    diesel_price_start, truck_tank_radius, truck_tank_length, 
-                    truck_tank_metal_thickness, metal_thermal_conduct, 
-                    truck_tank_insulator_thickness, insulator_thermal_conduct, 
-                    OHTC_ship, start_local_temperature, COP_refrig, 
-                    EIM_refrig_eff, duration_A_to_port, dBOR_dT, 
-                    BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, 
-                    CO2e_diesel, GWP_chem,
-                    BOG_recirculation_truck, # This is the percentage from original inputs
-                    LH2_plant_capacity, EIM_liquefication,
-                    fuel_cell_eff, EIM_fuel_cell, LHV_chem
-                )
-            
-            elif func_to_call.__name__ == "port_A_unloading_to_storage":
-                process_args_for_this_call_tc = (
-                    V_flowrate, number_of_cryo_pump_load_storage_port_A, 
-                    dBOR_dT, start_local_temperature, 
-                    BOR_unloading, # Using BOR_unloading for this stage
-                    liquid_chem_density, head_pump, pump_power_factor, 
-                    EIM_cryo_pump, ss_therm_cond, pipe_length,
-                    pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff,
-                    start_electricity_price, CO2e_start, GWP_chem
-                )
-            
-            elif func_to_call.__name__ == "chem_storage_at_port_A":
-                process_args_for_this_call_tc = (
-                    liquid_chem_density, storage_volume, dBOR_dT, 
-                    start_local_temperature, BOR_land_storage, storage_time, 
-                    storage_radius, tank_metal_thickness, metal_thermal_conduct, 
-                    tank_insulator_thickness, insulator_thermal_conduct, 
-                    COP_refrig, EIM_refrig_eff, start_electricity_price, 
-                    CO2e_start, GWP_chem, 
-                    BOG_recirculation_storage, # Percentage from original inputs
-                    LH2_plant_capacity, EIM_liquefication,
-                    fuel_cell_eff, EIM_fuel_cell, LHV_chem
-                )
-            
-# This is inside the total_chem function's loop
-
-            elif func_to_call.__name__ == "chem_loading_to_ship":
-                process_args_for_this_call_tc = (
-                    V_flowrate, number_of_cryo_pump_load_ship_port_A, dBOR_dT,
-                    start_local_temperature, BOR_loading, liquid_chem_density, head_pump,
-                    pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D,
-                    pipe_thick, boiling_point_chem, EIM_refrig_eff, start_electricity_price,
-                    CO2e_start, GWP_chem, storage_area, ship_tank_metal_thickness, 
-                    ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density, 
-                    ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat, 
-                    COP_cooldown, COP_refrig, ship_number_of_tanks
-                )
-                            
-            elif func_to_call.__name__ == "port_to_port":
-                process_args_for_this_call_tc = (
-                    start_local_temperature, end_local_temperature, OHTC_ship,
-                    storage_area, # This is the calculated ship storage area
-                    ship_number_of_tanks, COP_refrig, EIM_refrig_eff, 
-                    port_to_port_duration, ship_engine_eff, HHV_heavy_fuel, 
-                    propul_eff, EIM_ship_eff, marine_shipping_price_start, 
-                    ship_fuel_consumption, port_to_port_dis, dBOR_dT, 
-                    BOR_ship_trans, heavy_fuel_density, CO2e_heavy_fuel, 
-                    GWP_chem, NH3_ship_cosumption, # Corrected variable name here from your params
-                    BOG_recirculation_mati_trans, # Percentage from original inputs
-                    LH2_plant_capacity, EIM_liquefication,
-                    fuel_cell_eff, EIM_fuel_cell, LHV_chem
-                )
-
-            elif func_to_call.__name__ == "chem_unloading_from_ship":
-                process_args_for_this_call_tc = (
-                    V_flowrate, number_of_cryo_pump_load_storage_port_B, 
-                    dBOR_dT, end_local_temperature, 
-                    BOR_unloading, liquid_chem_density, 
-                    head_pump, pump_power_factor, EIM_cryo_pump,
-                    ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, 
-                    COP_refrig, EIM_refrig_eff, 
-                    end_electricity_price, CO2e_end, GWP_chem
-                )
-
-            elif func_to_call.__name__ == "chem_storage_at_port_B":
-                process_args_for_this_call_tc = (
-                    liquid_chem_density, storage_volume, dBOR_dT, 
-                    end_local_temperature, BOR_land_storage, storage_time, 
-                    storage_radius, tank_metal_thickness, metal_thermal_conduct, 
-                    tank_insulator_thickness, insulator_thermal_conduct, 
-                    COP_refrig, EIM_refrig_eff, 
-                    end_electricity_price, CO2e_end, GWP_chem, 
-                    BOG_recirculation_storage,
-                    LH2_plant_capacity, EIM_liquefication,
-                    fuel_cell_eff, EIM_fuel_cell, LHV_chem
-                )
-
-            elif func_to_call.__name__ == "port_B_unloading_from_storage":
-                process_args_for_this_call_tc = (
-                    V_flowrate, number_of_cryo_pump_load_truck_port_B, 
-                    dBOR_dT, end_local_temperature, 
-                    BOR_unloading, liquid_chem_density, 
-                    head_pump, pump_power_factor, EIM_cryo_pump,
-                    ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, 
-                    COP_refrig, EIM_refrig_eff, 
-                    end_electricity_price, CO2e_end, GWP_chem
-                )
-
-            elif func_to_call.__name__ == "port_B_to_site_B":
-                process_args_for_this_call_tc = (
-                    road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy,
-                    distance_port_to_B, HHV_diesel, diesel_density, 
-                    diesel_price_end, truck_tank_radius, truck_tank_length, 
-                    truck_tank_metal_thickness, metal_thermal_conduct, 
-                    truck_tank_insulator_thickness, insulator_thermal_conduct, 
-                    OHTC_ship, # Or specific truck OHTC
-                    end_local_temperature, COP_refrig, EIM_refrig_eff, 
-                    duration_port_to_B, dBOR_dT, BOR_truck_trans, 
-                    diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem,
-                    BOG_recirculation_truck,
-                    LH2_plant_capacity, EIM_liquefication,
-                    fuel_cell_eff, EIM_fuel_cell, LHV_chem
-                )
-
-            elif func_to_call.__name__ == "chem_site_B_unloading_from_truck":
-                process_args_for_this_call_tc = (
-                    V_flowrate, number_of_cryo_pump_load_storage_site_B, 
-                    dBOR_dT, end_local_temperature, 
-                    BOR_unloading, liquid_chem_density, 
-                    head_pump, pump_power_factor, EIM_cryo_pump,
-                    ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, 
-                    COP_refrig, EIM_refrig_eff, 
-                    end_electricity_price, CO2e_end, GWP_chem
-                )
-
-            elif func_to_call.__name__ == "chem_storage_at_site_B":
-                process_args_for_this_call_tc = (
-                    liquid_chem_density, storage_volume, dBOR_dT, 
-                    end_local_temperature, BOR_land_storage, storage_time, 
-                    storage_radius, tank_metal_thickness, metal_thermal_conduct, 
-                    tank_insulator_thickness, insulator_thermal_conduct, 
-                    COP_refrig, EIM_refrig_eff, 
-                    end_electricity_price, CO2e_end, GWP_chem, 
-                    BOG_recirculation_storage,
-                    LH2_plant_capacity, EIM_liquefication,
-                    fuel_cell_eff, EIM_fuel_cell, LHV_chem
-                )
-            
-            elif func_to_call.__name__ == "chem_unloading_from_site_B":
-                process_args_for_this_call_tc = (
-                    V_flowrate, number_of_cryo_pump_load_storage_site_B, # Check if this pump number is correct
-                    dBOR_dT, end_local_temperature, 
-                    BOR_unloading, liquid_chem_density, 
-                    head_pump, pump_power_factor, EIM_cryo_pump,
-                    ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, 
-                    COP_refrig, EIM_refrig_eff, 
-                    end_electricity_price, CO2e_end, GWP_chem
-                )
-            
-            # elif func_to_call.__name__ == "chem_convert_to_H2": # If added to funcs_sequence
-            #     process_args_for_this_call_tc = (
-            #         mass_conversion_to_H2, eff_energy_chem_to_H2, energy_chem_to_H2,
-            #         CO2e_end, end_electricity_price
-            #     )
-
-            # --- Corrected Call to the process function ---
-            # The arguments B,C,D,E,F are passed from user_define
-            X_money, Y_energy, Z_emission, R_current_chem, S_bog_loss = \
-                func_to_call(R_current_chem, 
-                             B_fuel_type_tc, 
-                             C_recirculation_BOG_tc, 
-                             D_truck_apply_tc, 
-                             E_storage_apply_tc, 
-                             F_maritime_apply_tc, 
-                             process_args_for_this_call_tc)
-            
-            data_results_list.append([func_to_call.__name__, X_money, Y_energy, Z_emission, R_current_chem, S_bog_loss])
-            total_money_tc += X_money
-            total_ener_consumed_tc += Y_energy
-            total_G_emission_tc += Z_emission
-        
-        final_total_result_tc = [total_money_tc, total_ener_consumed_tc, total_G_emission_tc, R_current_chem]
-        data_results_list.append(["TOTAL", total_money_tc, total_ener_consumed_tc, total_G_emission_tc, R_current_chem, 0]) # No BOG for total line
-        
-        return final_total_result_tc, data_results_list
-
-    # If chem_convert_to_H2 is handled separately after the main loop:
-    final_results_after_main_seq, data_after_main_seq = total_chem(chem_weight, 
-                                                                   user_define[1], user_define[2], 
-                                                                   user_define[3], user_define[4], 
-                                                                   user_define[5])
+            R_current_chem = A_optimized_chem_weight
+            data_results_list = []
+            total_money_tc = 0.0
+            total_ener_consumed_tc = 0.0
+            total_G_emission_tc = 0.0
     
-    # Conditionally call chem_convert_to_H2 if needed
-    if user_define[1] != 0: # If not already Hydrogen
-        # Get the amount of chemical before conversion
-        amount_before_conversion = final_results_after_main_seq[3] 
-        
-        # Prepare args for chem_convert_to_H2
-        args_for_conversion = (
-            mass_conversion_to_H2, eff_energy_chem_to_H2, energy_chem_to_H2,
-            CO2e_end, end_electricity_price
-        )
+            for func_to_call in funcs_sequence:
+                # This block is copied directly from your file and is correct
+                # --- (The entire if/elif chain for packing process_args_for_this_call_tc goes here) ---
+                if func_to_call.__name__ == "site_A_chem_production":
+                    process_args_for_this_call_tc = (GWP_chem,)
+                elif func_to_call.__name__ == "site_A_chem_liquification":
+                    process_args_for_this_call_tc = (LH2_plant_capacity, EIM_liquefication, specific_heat_chem, start_local_temperature, boiling_point_chem, latent_H_chem, COP_liq, start_electricity_price, CO2e_start, GWP_chem)
+                elif func_to_call.__name__ == "chem_site_A_loading_to_truck":
+                    process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_truck_site_A, dBOR_dT, start_local_temperature, BOR_loading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem)
+                elif func_to_call.__name__ == "site_A_to_port_A":
+                    process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_A_to_port, HHV_diesel, diesel_density, diesel_price_start, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, start_local_temperature, COP_refrig, EIM_refrig_eff, duration_A_to_port, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
+                elif func_to_call.__name__ == "port_A_unloading_to_storage":
+                    process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_port_A, dBOR_dT, start_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem)
+                elif func_to_call.__name__ == "chem_storage_at_port_A":
+                    process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, start_local_temperature, BOR_land_storage, storage_time, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
+                elif func_to_call.__name__ == "chem_loading_to_ship":
+                    process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_ship_port_A, dBOR_dT, start_local_temperature, BOR_loading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, boiling_point_chem, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, storage_area, ship_tank_metal_thickness, ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density, ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat, COP_cooldown, COP_refrig, ship_number_of_tanks)
+                elif func_to_call.__name__ == "port_to_port":
+                    process_args_for_this_call_tc = (start_local_temperature, end_local_temperature, OHTC_ship, storage_area, ship_number_of_tanks, COP_refrig, EIM_refrig_eff, port_to_port_duration, ship_engine_eff, HHV_heavy_fuel, propul_eff, EIM_ship_eff, marine_shipping_price_start, ship_fuel_consumption, port_to_port_dis, dBOR_dT, BOR_ship_trans, heavy_fuel_density, CO2e_heavy_fuel, GWP_chem, NH3_ship_cosumption, BOG_recirculation_mati_trans, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
+                elif func_to_call.__name__ == "chem_unloading_from_ship":
+                    process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_port_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
+                elif func_to_call.__name__ == "chem_storage_at_port_B":
+                    process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, end_local_temperature, BOR_land_storage, storage_time, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
+                elif func_to_call.__name__ == "port_B_unloading_from_storage":
+                    process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_truck_port_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
+                elif func_to_call.__name__ == "port_B_to_site_B":
+                    process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_port_to_B, HHV_diesel, diesel_density, diesel_price_end, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, end_local_temperature, COP_refrig, EIM_refrig_eff, duration_port_to_B, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
+                elif func_to_call.__name__ == "chem_site_B_unloading_from_truck":
+                    process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_site_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
+                elif func_to_call.__name__ == "chem_storage_at_site_B":
+                    process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, end_local_temperature, BOR_land_storage, storage_time, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
+                elif func_to_call.__name__ == "chem_unloading_from_site_B":
+                    process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_site_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
+    
+                X_money, Y_energy, Z_emission, R_current_chem, S_bog_loss = \
+                    func_to_call(R_current_chem, B_fuel_type_tc, C_recirculation_BOG_tc, D_truck_apply_tc, 
+                                 E_storage_apply_tc, F_maritime_apply_tc, process_args_for_this_call_tc)
+                
+                data_results_list.append([func_to_call.__name__, X_money, Y_energy, Z_emission, R_current_chem, S_bog_loss])
+                total_money_tc += X_money
+                total_ener_consumed_tc += Y_energy
+                total_G_emission_tc += Z_emission
+    
+            final_total_result_tc = [total_money_tc, total_ener_consumed_tc, total_G_emission_tc, R_current_chem]
+            data_results_list.append(["TOTAL", total_money_tc, total_ener_consumed_tc, total_G_emission_tc, R_current_chem, 0])
+            
+            return final_total_result_tc, data_results_list
+    
+        # --- Start of main execution flow for final calculations ---
+    
+    # 1. Get the raw results from the base calculation
+    final_results_raw, data_raw = total_chem_base(chem_weight, user_define[1], user_define[2], 
+                                                  user_define[3], user_define[4], user_define[5])
+
+    # 2. If the fuel is not H2, run the conversion step and update the raw results
+    if user_define[1] != 0:
+        amount_before_conversion = final_results_raw[3]
+        args_for_conversion = (mass_conversion_to_H2, eff_energy_chem_to_H2, energy_chem_to_H2, CO2e_end, end_electricity_price)
         
         money_conv, energy_conv, emission_conv, amount_after_conversion, bog_conv = \
-            chem_convert_to_H2(amount_before_conversion, 
-                               user_define[1], user_define[2], user_define[3], 
-                               user_define[4], user_define[5], 
-                               args_for_conversion)
+            chem_convert_to_H2(amount_before_conversion, user_define[1], user_define[2], user_define[3], 
+                               user_define[4], user_define[5], args_for_conversion)
         
-        # Add conversion results to the data and totals
-        data_after_main_seq.insert(-1, ["chem_convert_to_H2", money_conv, energy_conv, emission_conv, amount_after_conversion, bog_conv]) # Insert before TOTAL
+        data_raw.insert(-1, ["chem_convert_to_H2", money_conv, energy_conv, emission_conv, amount_after_conversion, bog_conv])
         
-        # Update totals
-        final_results_after_main_seq[0] += money_conv    # total_money
-        final_results_after_main_seq[1] += energy_conv   # total_energy
-        final_results_after_main_seq[2] += emission_conv # total_emission
-        final_results_after_main_seq[3] = amount_after_conversion # final_amount is now H2
+        final_results_raw[0] += money_conv
+        final_results_raw[1] += energy_conv
+        final_results_raw[2] += emission_conv
+        final_results_raw[3] = amount_after_conversion
 
-        # Update the TOTAL line
-        data_after_main_seq[-1][1] = final_results_after_main_seq[0]
-        data_after_main_seq[-1][2] = final_results_after_main_seq[1]
-        data_after_main_seq[-1][3] = final_results_after_main_seq[2]
-        data_after_main_seq[-1][4] = final_results_after_main_seq[3]
+        data_raw[-1] = ["TOTAL", final_results_raw[0], final_results_raw[1], final_results_raw[2], final_results_raw[3], 0]
 
-    # --- START: NEW CODE BLOCK TO ADD COLUMNS ---
+    # 3. Now that all calculations are done, define the final denominators
+    final_chem_kg_denominator = final_results_raw[3]
+    final_energy_kj_denominator = (final_results_raw[3] * HHV_chem[fuel_type]) * 1000 if final_chem_kg_denominator > 0 else 0
 
-    # Get the final total values that will be used as the denominators
-    final_chem_kg_denominator = final_results_after_main_seq[3]
-    total_energy_mj_denominator = final_results_after_main_seq[3] * HHV_chem[fuel_type]
-
-    # Create a new list to hold the data with the extra columns
-    data_with_new_columns = []
-
-    # Loop through each row of the results
-    for row in data_after_main_seq:
+    # 4. Create the final data list, now including the "per unit" calculations
+    data_with_all_columns = []
+    for row in data_raw:
         current_cost = float(row[1])
-        current_emission = float(row[3]) # eCO2 is the 4th item (index 3)
+        current_emission = float(row[3])
     
-        # Calculate "Cost per kg"
         cost_per_kg = current_cost / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-        
-        # Calculate "Cost per kJ"
         cost_per_kj = current_cost / final_energy_kj_denominator if final_energy_kj_denominator > 0 else 0
-    
-        # NEW: Calculate "eCO2 per kg"
         emission_per_kg = current_emission / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-    
-        # NEW: Calculate "eCO2 per kJ"
         emission_per_kj = current_emission / final_energy_kj_denominator if final_energy_kj_denominator > 0 else 0
-    
-        # Create a new row by taking the original row and appending the four new values
+        
         new_row_with_additions = list(row) + [cost_per_kg, cost_per_kj, emission_per_kg, emission_per_kj]
-        data_with_new_columns.append(new_row_with_additions)
+        data_with_all_columns.append(new_row_with_additions)
 
-    # Replace the original data list with our new one that includes the new columns
-    data_after_main_seq = data_with_new_columns
-    
-    # --- END: NEW CODE BLOCK ---
-
-    total_results = final_results_after_main_seq
-    data = data_after_main_seq
-    
+    # 5. Assign the fully processed data to the final variables
+    data = data_with_all_columns
+    total_results = final_results_raw # This already holds the correct total values
 
     # --- 7. Format Results for Frontend ---
     final_weight = total_results[3]
-    chem_cost = total_results[0]/final_weight if final_weight > 0 else 0
-    chem_energy = total_results[1]/final_weight if final_weight > 0 else 0
-    chem_CO2e = total_results[2]/final_weight if final_weight > 0 else 0
-    final_energy_output = final_weight * HHV_chem[fuel_type]
+    chem_cost = total_results[0] / final_weight if final_weight > 0 else 0
+    chem_energy = total_results[1] / final_weight if final_weight > 0 else 0
+    chem_CO2e = total_results[2] / final_weight if final_weight > 0 else 0
+    final_energy_output_mj = final_weight * HHV_chem[fuel_type]
 
-    # ADD THIS LINE to filter the data before it's displayed
-    data_for_display = [row for row in data if row[0] != 'site_A_chem_production']
+    # This line has been moved to step 4
+    # data_for_display = [row for row in data if row[0] != 'site_A_chem_production']
+    detailed_data_formatted = data # Send raw numbers to frontend for formatting
 
-    # UPDATE THIS LINE to use the new filtered list
-    detailed_data_formatted = [[row[0]] + [f"{float(num):.2e}" for num in row[1:]] for row in data_for_display]
     summary1_data = [
         ["Cost ($/kg chemical)", f"{chem_cost:.2f}"],
         ["Consumed Energy (MJ/kg chemical)", f"{chem_energy:.2f}"],
         ["Emission (kg CO2/kg chemical)", f"{chem_CO2e:.2f}"]
     ]
     
-    # Update Summary 2 to be per kJ
     final_energy_output_kj = final_energy_output_mj * 1000
     summary2_data = [
-        ["Cost ($/kJ)", f"{total_results[0]/final_energy_output_kj:.6f}" if final_energy_output_kj > 0 else "N/A"],
-        ["Energy consumed (MJ_in/kJ_out)", f"{(total_results[1]*1000)/final_energy_output_kj:.6f}" if final_energy_output_kj > 0 else "N/A"],
-        ["Emission (kg CO2/kJ)", f"{total_results[2]/final_energy_output_kj:.6f}" if final_energy_output_kj > 0 else "N/A"]
+        ["Cost ($/kJ)", f"{total_results[0] / final_energy_output_kj:.6f}" if final_energy_output_kj > 0 else "N/A"],
+        ["Energy consumed (MJ_in/kJ_out)", f"{(total_results[1] * 1000) / final_energy_output_kj:.6f}" if final_energy_output_kj > 0 else "N/A"],
+        ["Emission (kg CO2/kJ)", f"{total_results[2] / final_energy_output_kj:.6f}" if final_energy_output_kj > 0 else "N/A"]
     ]
     assumed_prices_data = [
         [f"Electricity Price at {start}", f"{start_electricity_price[2]:.4f} $/MJ"],
@@ -2320,14 +2121,11 @@ def run_lca_model(inputs):
         [f"Marine Fuel Price at {marine_fuel_port_name}", f"{marine_shipping_price_start:.2f} $/ton"]
     ]
     
-    # Update headers for the detailed table and CSV download
     new_detailed_headers = ["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/kJ ($/kJ)", "eCO2/kg (kg/kg)", "eCO2/kJ (kg/kJ)"]
-    csv_data = [new_detailed_headers] + data_after_main_seq
-    
+    csv_data = [new_detailed_headers] + data
+
     # --- 8. Package Final JSON Response ---
-    # Update the detailed_headers key in the response
     response = {
-        # ... (status and map_data remain the same) ...
         "status": "success",
         "map_data": {
             "coor_start": {"lat": coor_start_lat, "lng": coor_start_lng},
@@ -2339,7 +2137,7 @@ def run_lca_model(inputs):
             "sea_route_coords": searoute_coor
         },
         "table_data": {
-            "detailed_headers": new_detailed_headers, # Use the new headers
+            "detailed_headers": new_detailed_headers,
             "detailed_data": detailed_data_formatted,
             "summary1_headers": ["Metric", "Value"], "summary1_data": summary1_data,
             "summary2_headers": ["Per Energy Output", "Value"], "summary2_data": summary2_data,
