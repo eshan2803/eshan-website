@@ -48,7 +48,9 @@ def run_lca_model(inputs):
     BOG_recirculation_storage_apply = inputs['BOG_recirculation_storage_apply']
     BOG_recirculation_mati_trans = inputs['BOG_recirculation_mati_trans']
     BOG_recirculation_mati_trans_apply = inputs['BOG_recirculation_mati_trans_apply']
-    storage_time = inputs['storage_time']
+    # --- START: Corrected Python Lines ---
+    storage_time_A = inputs['storage_time_A']
+    storage_time_B = inputs['storage_time_B']
     LH2_plant_capacity = inputs['LH2_plant_capacity']
     total_ship_volume = inputs['total_ship_volume']
     ship_tank_shape = inputs['ship_tank_shape']
@@ -662,7 +664,7 @@ def run_lca_model(inputs):
         # The order of variables here MUST EXACTLY MATCH the order they are packed.
 
         liquid_chem_density_arg, storage_volume_arg, dBOR_dT_arg, start_local_temperature_arg, \
-        BOR_land_storage_arg, storage_time_arg, storage_radius_arg, tank_metal_thickness_arg, \
+        BOR_land_storage_arg, storage_time_A_arg, storage_radius_arg, tank_metal_thickness_arg, \
         metal_thermal_conduct_arg, tank_insulator_thickness_arg, insulator_thermal_conduct_arg, \
         COP_refrig_arg, EIM_refrig_eff_arg, start_electricity_price_tuple_arg, CO2e_start_arg, \
         GWP_chem_list_arg, BOG_recirculation_storage_percentage_arg, \
@@ -683,7 +685,7 @@ def run_lca_model(inputs):
         OHTC_val = 1 / thermal_resist_val if thermal_resist_val > 0 else float('inf') # Avoid division by zero
         
         heat_required_val = OHTC_val * storage_area_val * (start_local_temperature_arg + 273 - 20) # Assuming 20K target
-        ener_consumed_refrig = (heat_required_val / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * 86400 * storage_time_arg
+        ener_consumed_refrig = (heat_required_val / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * 86400 * storage_time_A_arg
         
         money = ener_consumed_refrig * start_electricity_price_tuple_arg[2]
         total_energy_consumed = ener_consumed_refrig # Initial total energy
@@ -950,7 +952,7 @@ def run_lca_model(inputs):
         # The order of variables here MUST EXACTLY MATCH the order they are packed.
 
         liquid_chem_density_arg, storage_volume_arg, dBOR_dT_arg, end_local_temperature_arg, \
-        BOR_land_storage_arg, storage_time_arg, storage_radius_arg, tank_metal_thickness_arg, \
+        BOR_land_storage_arg, storage_time_B_arg, storage_radius_arg, tank_metal_thickness_arg, \
         metal_thermal_conduct_arg, tank_insulator_thickness_arg, insulator_thermal_conduct_arg, \
         COP_refrig_arg, EIM_refrig_eff_arg, end_electricity_price_tuple_arg, CO2e_end_arg, \
         GWP_chem_list_arg, BOG_recirculation_storage_percentage_arg, \
@@ -971,7 +973,7 @@ def run_lca_model(inputs):
         OHTC_val = 1 / thermal_resist_val if thermal_resist_val > 0 else float('inf')
         
         heat_required_val = OHTC_val * storage_area_val * (end_local_temperature_arg + 273 - 20) # Using end_local_temperature
-        ener_consumed_refrig = (heat_required_val / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * 86400 * storage_time_arg
+        ener_consumed_refrig = (heat_required_val / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * 86400 * storage_time_B_arg
         
         money = ener_consumed_refrig * end_electricity_price_tuple_arg[2] # Using end_electricity_price
         total_energy_consumed = ener_consumed_refrig
@@ -1780,7 +1782,7 @@ def run_lca_model(inputs):
          diesel_density_opt, diesel_price_start_opt, diesel_price_end_opt, CO2e_diesel_opt,
          BOG_recirculation_truck_opt, # This is the BOG_recirculation_truck_percentage
          fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem_opt,
-         storage_time_opt, liquid_chem_density_opt, storage_volume_opt,
+         storage_time_A_opt, liquid_chem_density_opt, storage_volume_opt,
          storage_radius_opt, BOR_land_storage_opt, tank_metal_thickness_opt,
          tank_insulator_thickness_opt, BOG_recirculation_storage_opt # BOG_recirculation_storage_percentage
         ) = all_shared_params_tuple
@@ -1845,7 +1847,7 @@ def run_lca_model(inputs):
             elif func_to_call.__name__ == "chem_storage_at_port_A":
                 process_args_for_current_func = (
                     liquid_chem_density_opt, storage_volume_opt, dBOR_dT_opt, 
-                    start_local_temperature_opt, BOR_land_storage_opt, storage_time_opt, 
+                    start_local_temperature_opt, BOR_land_storage_opt, storage_time__A_opt, 
                     storage_radius_opt, tank_metal_thickness_opt, metal_thermal_conduct_opt, 
                     tank_insulator_thickness_opt, insulator_thermal_conduct_opt, 
                     COP_refrig_opt, EIM_refrig_eff_opt, start_electricity_price_opt, 
@@ -2010,7 +2012,7 @@ def run_lca_model(inputs):
                 elif func_to_call.__name__ == "port_A_unloading_to_storage":
                     process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_port_A, dBOR_dT, start_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem)
                 elif func_to_call.__name__ == "chem_storage_at_port_A":
-                    process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, start_local_temperature, BOR_land_storage, storage_time, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
+                    process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, start_local_temperature, BOR_land_storage, storage_time_A, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
                 elif func_to_call.__name__ == "chem_loading_to_ship":
                     process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_ship_port_A, dBOR_dT, start_local_temperature, BOR_loading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, boiling_point_chem, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, storage_area, ship_tank_metal_thickness, ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density, ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat, COP_cooldown, COP_refrig, ship_number_of_tanks)
                 elif func_to_call.__name__ == "port_to_port":
@@ -2018,7 +2020,7 @@ def run_lca_model(inputs):
                 elif func_to_call.__name__ == "chem_unloading_from_ship":
                     process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_port_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
                 elif func_to_call.__name__ == "chem_storage_at_port_B":
-                    process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, end_local_temperature, BOR_land_storage, storage_time, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
+                    process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, end_local_temperature, BOR_land_storage, storage_time_B, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
                 elif func_to_call.__name__ == "port_B_unloading_from_storage":
                     process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_truck_port_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
                 elif func_to_call.__name__ == "port_B_to_site_B":
