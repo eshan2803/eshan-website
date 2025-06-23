@@ -1847,7 +1847,7 @@ def run_lca_model(inputs):
             elif func_to_call.__name__ == "chem_storage_at_port_A":
                 process_args_for_current_func = (
                     liquid_chem_density_opt, storage_volume_opt, dBOR_dT_opt, 
-                    start_local_temperature_opt, BOR_land_storage_opt, storage_time__A_opt, 
+                    start_local_temperature_opt, BOR_land_storage_opt, storage_time_A_opt, 
                     storage_radius_opt, tank_metal_thickness_opt, metal_thermal_conduct_opt, 
                     tank_insulator_thickness_opt, insulator_thermal_conduct_opt, 
                     COP_refrig_opt, EIM_refrig_eff_opt, start_electricity_price_opt, 
