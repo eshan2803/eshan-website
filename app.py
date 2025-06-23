@@ -2067,11 +2067,13 @@ def run_lca_model(inputs):
         final_results_raw[3] = amount_after_conversion
 
         data_raw[-1] = ["TOTAL", final_results_raw[0], final_results_raw[1], final_results_raw[2], final_results_raw[3], 0]
+# --- START: CORRECTED REPLACEMENT BLOCK ---
 
     # 3. Now that all calculations are done, define the final denominators
     final_chem_kg_denominator = final_results_raw[3]
-    final_energy_kj_denominator = (final_results_raw[3] * HHV_chem[fuel_type]) * 1000 if final_chem_kg_denominator > 0 else 0
-
+    # NEW: Calculate final energy in GigaJoules (MJ / 1000)
+    final_energy_gj_denominator = (final_results_raw[3] * HHV_chem[fuel_type]) / 1000 if final_chem_kg_denominator > 0 else 0
+    
     # 4. Create the final data list, now including the "per unit" calculations
     data_with_all_columns = []
     for row in data_raw:
@@ -2079,13 +2081,17 @@ def run_lca_model(inputs):
         current_emission = float(row[3])
     
         cost_per_kg = current_cost / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-        cost_per_kj = current_cost / final_energy_kj_denominator if final_energy_kj_denominator > 0 else 0
-        emission_per_kg = current_emission / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-        emission_per_kj = current_emission / final_energy_kj_denominator if final_energy_kj_denominator > 0 else 0
+        # NEW: Calculate "Cost per GJ"
+        cost_per_gj = current_cost / final_energy_gj_denominator if final_energy_gj_denominator > 0 else 0
         
-        new_row_with_additions = list(row) + [cost_per_kg, cost_per_kj, emission_per_kg, emission_per_kj]
+        emission_per_kg = current_emission / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+        # NEW: Calculate "eCO2 per GJ"
+        emission_per_gj = current_emission / final_energy_gj_denominator if final_energy_gj_denominator > 0 else 0
+        
+        # Append the new values in the correct order
+        new_row_with_additions = list(row) + [cost_per_kg, cost_per_gj, emission_per_kg, emission_per_gj]
         data_with_all_columns.append(new_row_with_additions)
-
+    
     # 5. Assign the fully processed data to the final variables
     data = data_with_all_columns
     total_results = final_results_raw # This already holds the correct total values
@@ -2106,12 +2112,12 @@ def run_lca_model(inputs):
         ["Consumed Energy (MJ/kg chemical)", f"{chem_energy:.2f}"],
         ["Emission (kg CO2/kg chemical)", f"{chem_CO2e:.2f}"]
     ]
-    
-    final_energy_output_kj = final_energy_output_mj * 1000
+
+    final_energy_output_gj = final_energy_output_mj / 1000
     summary2_data = [
-        ["Cost ($/kJ)", f"{total_results[0] / final_energy_output_kj:.6f}" if final_energy_output_kj > 0 else "N/A"],
-        ["Energy consumed (MJ_in/kJ_out)", f"{(total_results[1] * 1000) / final_energy_output_kj:.6f}" if final_energy_output_kj > 0 else "N/A"],
-        ["Emission (kg CO2/kJ)", f"{total_results[2] / final_energy_output_kj:.6f}" if final_energy_output_kj > 0 else "N/A"]
+        ["Cost ($/GJ)", f"{total_results[0] / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
+        ["Energy consumed (MJ_in/GJ_out)", f"{total_results[1] / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
+        ["Emission (kg CO2/GJ)", f"{total_results[2] / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"]
     ]
     assumed_prices_data = [
         [f"Electricity Price at {start}", f"{start_electricity_price[2]:.4f} $/MJ"],
@@ -2120,8 +2126,7 @@ def run_lca_model(inputs):
         [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"],
         [f"Marine Fuel Price at {marine_fuel_port_name}", f"{marine_shipping_price_start:.2f} $/ton"]
     ]
-    
-    new_detailed_headers = ["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/kJ ($/kJ)", "eCO2/kg (kg/kg)", "eCO2/kJ (kg/kJ)"]
+    new_detailed_headers = ["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]    
     csv_data = [new_detailed_headers] + data
 
     # --- 8. Package Final JSON Response ---
