@@ -347,7 +347,7 @@ def run_lca_model(inputs):
     storage_volume = [5683, 50000000/liquid_chem_density[1], 50000000/liquid_chem_density[2]];
     storage_radius = [np.cbrt(3 * volume / (4 * np.pi)) for volume in storage_volume];
     ship_fuel_consumption = 0.23; OHTC_ship = [0.05, 0.22, 0.02];
-    COP_reliq = [0.036, 1.636, 2]; COP_liq = [0.131, 1.714, 2]; COP_refrig = [0.131, 1.714, 2];
+    COP_reliq = [0.036, 1.636, 2]; COP_liq = [0.131, 1.714, 2]; COP_refrig = [0.036, 1.636, 2];
     dBOR_dT = [(0.02538-0.02283)/(45-15)/4, (0.000406-0.0006122)/(45-15)/4, 0];
     EIM_liquefication=100; EIM_cryo_pump=100; EIM_truck_eff=100; EIM_ship_eff=100; EIM_refrig_eff=100; EIM_fuel_cell=100;
     diesel_density = 3.22; diesel_engine_eff = 0.4; heavy_fuel_density = 3.6; propul_eff = 0.55;
