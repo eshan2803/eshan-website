@@ -403,14 +403,18 @@ nav a:hover::after {
 
         logStatus("Calculation complete. Rendering results...");
         console.log("Data for map IS being passed to displayMap now.");
-        // ** THIS IS THE NEW, CRITICAL PART **
-        displayMap(results.map_data);
+        const routeBounds = displayMap(results.map_data); // Capture the returned bounds
         displayTables(results.table_data);
-        completeResultsForCsv = results.csv_data; // Store data for CSV download
-        // ** END OF NEW PART **
-
+        completeResultsForCsv = results.csv_data; 
+        
         outputsDiv.classList.remove('hidden');
-        setTimeout(() => { map.invalidateSize(); }, 1);
+        setTimeout(() => {
+            map.invalidateSize(); // First, fix the size
+            // Then, if the bounds are valid, zoom to fit them
+            if (routeBounds && routeBounds.isValid()) {
+                map.fitBounds(routeBounds.pad(0.1));
+            }
+        }, 1); // A small delay is enough
 
       } catch (error) {
         logStatus(`Error: ${error.message}`);
@@ -500,9 +504,7 @@ nav a:hover::after {
             addPolylineToMap(mapData.sea_route_coords, 'green');
             
             if (bounds.isValid()) {
-                // *** ADD THIS LOG ***
                 console.log("Fitting map to valid bounds. MinLat:", bounds.getSouthWest().lat, "MinLng:", bounds.getSouthWest().lng, "MaxLat:", bounds.getNorthEast().lat, "MaxLng:", bounds.getNorthEast().lng);
-                map.fitBounds(bounds.pad(0.1)); 
                 console.log("Map bounds fitted.");
             } else if (mapData.coor_start && typeof mapData.coor_start.lat === 'number') {
                 map.setView([mapData.coor_start.lat, mapData.coor_start.lng], 6);
@@ -515,6 +517,7 @@ nav a:hover::after {
             console.error("Error occurred within displayMap function:", e);
             document.getElementById('map').innerHTML = `<p style="padding:20px; text-align:center;">An error occurred while rendering the map.</p>`;
         }
+      return bounds;
     }
 
     function createTableHtml(headers, dataArray, isDetailed = false) {
