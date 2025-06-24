@@ -206,28 +206,44 @@ nav a:hover::after {
           <input type="number" id="lh2PlantCapacity" value="1000">
         </div>
         <div class="input-group">
-          <label for="totalShipVolume">Total Ship Cargo Volume (m³)</label>
-          <input type="number" id="totalShipVolume" value="70000">
-        </div>
-
-        <div class="input-group">
-          <label for="shipTankShape">Ship Tank Shape</label>
-          <select id="shipTankShape">
-            <option value="1">Capsule</option>
-            <option value="2" selected>Spherical</option>
+          <label for="shipArchetypeSelect">Select Ship Archetype</label>
+          <select id="shipArchetypeSelect">
+            <option value="custom">Build my own ship...</option>
+            <option value="standard" selected>Standard Modern Carrier (174,000 m³)</option>
+            <option value="small">Small-Scale Carrier (20,000 m³)</option>
+            <option value="midsized">Midsized Carrier (90,000 m³)</option>
+            <option value="q-flex">Q-Flex Carrier (210,000 m³)</option>
+            <option value="q-max">Q-Max Carrier (266,000 m³)</option>
           </select>
         </div>
 
-        <div class="input-group">
-          <label for="shipNumberOfTanks">Number of Ship Tanks</label>
-          <select id="shipNumberOfTanks">
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4" selected>4</option> <option value="5">5</option>
-          </select>
-        </div>
-        
+        <div id="customShipDetails" class="hidden input-group" style="border: 1px solid #ccc; padding: 1rem; border-radius: 4px; background-color: #f8f9fa;">
+          <h3 style="font-size: 1.1rem; margin-top:0; margin-bottom: 1rem;">Custom Ship Details:</h3>
+          
+          <div class="input-group">
+            <label for="totalShipVolume">Total Ship Cargo Volume (m³)</label>
+            <input type="number" id="totalShipVolume" value="174000">
+          </div>
+
+          <div class="input-group">
+            <label for="shipNumberOfTanks">Number of Ship Tanks</label>
+            <select id="shipNumberOfTanks">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4" selected>4</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label for="shipTankShape">Ship Tank Shape</label>
+            <select id="shipTankShape">
+              <option value="1">Capsule (Membrane)</option>
+              <option value="2" selected>Spherical (Moss)</option>
+            </select>
+          </div>
+        </div>        
         <div class="input-group">
           <button type="submit" class="button">Calculate</button>
         </div>
@@ -302,6 +318,14 @@ nav a:hover::after {
     document.getElementById('bogRecirculation').addEventListener('change', () => {
       document.getElementById('bogRecirculationDetails').classList.remove('hidden');
     });
+    document.getElementById('shipArchetypeSelect').addEventListener('change', function() {
+        const customDetailsPanel = document.getElementById('customShipDetails');
+        if (this.value === 'custom') {
+            customDetailsPanel.classList.remove('hidden');
+        } else {
+            customDetailsPanel.classList.add('hidden');
+        }
+    });
     document.getElementById('lcaForm').addEventListener('submit', handleCalculation);
     document.getElementById('downloadCsvButton').addEventListener('click', downloadCSV);
 
@@ -336,11 +360,13 @@ nav a:hover::after {
       calculateButton.textContent = 'Calculating...';
       outputsDiv.classList.add('hidden');
 
+      const shipArchetype = document.getElementById('shipArchetypeSelect').value;
       const userInputs = {
         start: document.getElementById('startLocation').value,
         end: document.getElementById('endLocation').value,
         fuel_type: parseInt(document.getElementById('fuelType').value),
         marine_fuel_choice: document.getElementById('marineFuelChoice').value,
+        ship_archetype: shipArchetype, // Always send the selected archetype key
         recirculation_BOG: document.querySelector('input[name="bogTreatment"]:checked').value,
         BOG_recirculation_truck: parseFloat(document.getElementById('bogRecirculationTruck').value),
         BOG_recirculation_truck_apply: document.getElementById('bogRecirculationTruckApply').value,
@@ -352,10 +378,12 @@ nav a:hover::after {
         storage_time_B: parseFloat(document.getElementById('storageTimeB').value),
         storage_time_C: parseFloat(document.getElementById('storageTimeC').value),
         LH2_plant_capacity: parseFloat(document.getElementById('lh2PlantCapacity').value),
-        total_ship_volume: parseFloat(document.getElementById('totalShipVolume').value),
-        ship_tank_shape: parseInt(document.getElementById('shipTankShape').value),
-        ship_number_of_tanks: parseInt(document.getElementById('shipNumberOfTanks').value),
       };
+      if (shipArchetype === 'custom') {
+          userInputs.total_ship_volume = parseFloat(document.getElementById('totalShipVolume').value);
+          userInputs.ship_number_of_tanks = parseInt(document.getElementById('shipNumberOfTanks').value);
+          userInputs.ship_tank_shape = parseInt(document.getElementById('shipTankShape').value);
+      }
 
       try {
         logStatus("Sending data to the Python server for calculation... (This may take up to a minute)");
