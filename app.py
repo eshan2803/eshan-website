@@ -1,3 +1,4 @@
+
 # app.py
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -48,11 +49,11 @@ def run_lca_model(inputs):
     BOG_recirculation_storage_apply = inputs['BOG_recirculation_storage_apply']
     BOG_recirculation_mati_trans = inputs['BOG_recirculation_mati_trans']
     BOG_recirculation_mati_trans_apply = inputs['BOG_recirculation_mati_trans_apply']
-    # --- START: Corrected Python Lines ---
     storage_time_A = inputs['storage_time_A']
     storage_time_B = inputs['storage_time_B']
     storage_time_C = inputs['storage_time_C']
     LH2_plant_capacity = inputs['LH2_plant_capacity']
+    marine_fuel_choice = inputs.get('marine_fuel_choice', 'VLSFO')
     total_ship_volume = inputs['total_ship_volume']
     ship_tank_shape = inputs['ship_tank_shape']
     ship_number_of_tanks = inputs['ship_number_of_tanks']
@@ -219,62 +220,86 @@ def run_lca_model(inputs):
             app.logger.error(f"Error in openai_get_electricity_price for coords {coords_str}: {e}")
             return None, None, default_price_mj
 
-    def openai_get_vlsfo_price(port_coords_tuple, port_name_str):
+# RENAME and MODIFY your existing function: openai_get_vlsfo_price
+# New name: openai_get_marine_fuel_price
+
+    def openai_get_marine_fuel_price(fuel_name, port_coords_tuple, port_name_str):
         """
-        Uses the OpenAI API to get the latest VLSFO bunker price for a given port.
+        Uses the OpenAI API to get the latest bunker price for a given fuel at a given port.
         """
         from openai import OpenAI
         client = OpenAI(api_key=api_key_openAI)
         
-        default_price_usd_per_mt = 650.0
+        # Set a reasonable default price for each fuel type as a fallback
+        default_prices = {
+            'VLSFO': 650.0,
+            'LNG': 550.0,
+            'Methanol': 700.0,
+            'Ammonia': 800.0
+        }
+        default_price_usd_per_mt = default_prices.get(fuel_name, 650.0)
 
         try:
             prompt_content = f"""
             Given the port named '{port_name_str}' at coordinates {port_coords_tuple}, 
-            provide the latest available price for VLSFO (Very Low Sulphur Fuel Oil) bunker fuel at this specific port or the nearest major bunkering hub.
-            
+            provide the latest available bunker price for the marine fuel '{fuel_name}'.
+
             Return the data in the following JSON format:
             {{
                 "port_name": "PORT_NAME_HERE",
-                "vlsfo_price_usd_per_mt": LATEST_PRICE_IN_USD_PER_METRIC_TON
+                "fuel_name": "{fuel_name}",
+                "price_usd_per_mt": LATEST_PRICE_IN_USD_PER_METRIC_TON
             }}
             """
 
             response = client.chat.completions.create(
                 model="gpt-4o",
                 response_format={"type": "json_object"},
-                temperature = 0,
+                temperature=0,
                 messages=[
-                    {"role": "system", "content": "You are a maritime fuel market data expert. Your task is to provide the latest VLSFO bunker fuel prices for major world ports in JSON format."},
+                    {"role": "system", "content": "You are a maritime fuel market data expert. Your task is to provide the latest bunker fuel prices for specified fuels at major world ports in JSON format."},
                     {"role": "user", "content": prompt_content}
                 ]
             )
             
             output = response.choices[0].message.content
+            result = json.loads(output)
+            price = result.get("price_usd_per_mt")
 
-            try:
-                result = json.loads(output)
-                price = result.get("vlsfo_price_usd_per_mt")
-                port = result.get("port_name")
-
-                if price is not None and port is not None:
-                    try:
-                        return port, float(price)
-                    except (ValueError, TypeError):
-                        app.logger.warning(f"Warning: Could not convert VLSFO price '{price}' to float. Using default.")
-                        return port_name_str, default_price_usd_per_mt
-                else:
-                    app.logger.warning(f"Warning: OpenAI response did not contain price or port name for {port_name_str}. Using default.")
-                    return port_name_str, default_price_usd_per_mt
-
-            except json.JSONDecodeError:
-                app.logger.warning(f"Warning: Failed to parse JSON from OpenAI for VLSFO price. Using default.")
+            if price is not None:
+                return port_name_str, float(price)
+            else:
+                app.logger.warning(f"Warning: OpenAI response did not contain price for {fuel_name}. Using default.")
                 return port_name_str, default_price_usd_per_mt
 
         except Exception as e:
-            app.logger.error(f"An error occurred during the OpenAI VLSFO price call: {e}. Using default.")
+            app.logger.error(f"An error occurred during the OpenAI {fuel_name} price call: {e}. Using default.")
             return port_name_str, default_price_usd_per_mt
-            
+      
+    def calculate_ship_power_kw(ship_volume_m3):
+        """
+        Calculates the average engine power based on ship cargo volume
+        using linear interpolation on known data points for LNG carriers.
+        """
+        # Data points: (Volume in m^3, Power in kW)
+        # Sourced from technical specifications of common LNG carrier classes.
+        power_scaling_data = [
+            (20000, 7000),    # Small-scale
+            (90000, 15000),   # Midsized
+            (174000, 19900),  # Standard Modern Carrier
+            (210000, 25000),  # Q-Flex
+            (266000, 43540)   # Q-Max
+        ]
+        
+        # Separate the data into two lists for interpolation
+        volumes_m3 = [point[0] for point in power_scaling_data]
+        powers_kw = [point[1] for point in power_scaling_data]
+        
+        # Use numpy's interpolation function. It will also extrapolate if the
+        # user's input is outside the range of the data.
+        calculated_power = np.interp(ship_volume_m3, volumes_m3, powers_kw)
+        
+        return calculated_power          
     # =================================================================
     # END OF HELPER FUNCTIONS
     # =================================================================
@@ -317,8 +342,11 @@ def run_lca_model(inputs):
     diesel_price_end = get_diesel_price(end_port_lat, end_port_lng)
 
     # Get dynamic marine fuel price from the starting port
-    marine_fuel_port_name, marine_shipping_price_start = openai_get_vlsfo_price((start_port_lat, start_port_lng), start_port_name)
-
+    marine_fuel_port_name, dynamic_price = openai_get_marine_fuel_price(
+        marine_fuel_choice, 
+        (start_port_lat, start_port_lng), 
+        start_port_name
+    )
     # --- 3. Parameters (Copied from LCA_WebApp.py) ---
     volume_per_tank = total_ship_volume / ship_number_of_tanks
     if ship_tank_shape == 1:
@@ -389,6 +417,43 @@ def run_lca_model(inputs):
     
     # Sourced from Table 6 for the "Cooldown" scenario 
     COP_cooldown = [0.131, 1.714, 0] # (H2, NH3, Methanol)
+    
+    marine_fuels_data = {
+        'VLSFO': {
+            'price_usd_per_ton': 650.0,
+            'sfoc_g_per_kwh': 185,
+            'hhv_mj_per_kg': 41.0, # Higher Heating Value
+            'co2_emissions_factor_kg_per_kg_fuel': 3.114,
+            'methane_slip_gwp100': 0 # Negligible for VLSFO
+        },
+        'LNG': {
+            'price_usd_per_ton': 550.0,
+            'sfoc_g_per_kwh': 135,
+            'hhv_mj_per_kg': 50.0,
+            'co2_emissions_factor_kg_per_kg_fuel': 2.75,
+            # Methane slip is critical for LNG. Assumes 3% slip, GWP100 of 28 for CH4.
+            'methane_slip_gwp100': (0.03 * 28)
+        },
+        'Methanol': {
+            'price_usd_per_ton': 700.0,
+            'sfoc_g_per_kwh': 380, # Methanol is less energy-dense, so SFOC is higher.
+            'hhv_mj_per_kg': 22.7,
+            'co2_emissions_factor_kg_per_kg_fuel': 1.375,
+            'methane_slip_gwp100': 0
+        },
+        'Ammonia': {
+            'price_usd_per_ton': 800.0,
+            'sfoc_g_per_kwh': 320, # Also less energy-dense than VLSFO/LNG.
+            'hhv_mj_per_kg': 22.5,
+            'co2_emissions_factor_kg_per_kg_fuel': 0, # No carbon in the fuel.
+            'methane_slip_gwp100': 0
+            # Note: A full LCA for ammonia would also include N2O emissions, but this is a great start.
+        }
+    }
+
+    selected_marine_fuel_params = marine_fuels_data[marine_fuel_choice]
+    selected_marine_fuel_params['price_usd_per_ton'] = dynamic_price
+    avg_ship_power_kw = calculate_ship_power_kw(total_ship_volume)
     # --- 4. Process Functions (Copied from LCA_WebApp.py) ---
     #placeholder functions need to be filled in. 
     def PH2_pressure_fnc(density): return density * 1.2 # Simplified placeholder
@@ -789,111 +854,106 @@ def run_lca_model(inputs):
         
         return money, ener_consumed, G_emission, A_after_loss, BOG_loss
         
+# =========================================================================================
+# === PASTE THIS ENTIRE BLOCK TO REPLACE YOUR EXISTING port_to_port FUNCTION DEFINITION ===
+# =========================================================================================
 # This definition goes inside run_lca_model
     def port_to_port(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
-        # Unpack the specific arguments this function needs from the passed-in tuple.
-        # The order of variables here MUST EXACTLY MATCH the order they are packed.
+        """
+        Calculates the cost, emissions, and losses for the maritime transportation leg of the supply chain.
+        This version uses a power-based (SFOC) consumption model and supports multiple marine fuel types.
+        """
+        # --- 1. Unpack all incoming arguments ---
+        # This unpacks the arguments passed from the total_chem_base function call
+        (
+            start_local_temperature_arg, end_local_temperature_arg, OHTC_ship_arg,
+            calculated_storage_area_arg, ship_number_of_tanks_arg, COP_refrig_arg, EIM_refrig_eff_arg,
+            port_to_port_duration_arg, selected_fuel_params_arg, # This is our new dictionary of fuel properties
+            dBOR_dT_arg, BOR_ship_trans_arg, GWP_chem_list_arg,
+            BOG_recirculation_maritime_percentage_arg, LH2_plant_capacity_arg, EIM_liquefication_arg,
+            fuel_cell_eff_arg, EIM_fuel_cell_arg, LHV_chem_arg,
+            avg_ship_power_kw_arg,
+            aux_engine_efficiency_arg
+        ) = process_args_tuple
 
-        start_local_temperature_arg, end_local_temperature_arg, OHTC_ship_arg, \
-        calculated_storage_area_arg, ship_number_of_tanks_arg, COP_refrig_arg, EIM_refrig_eff_arg, \
-        port_to_port_duration_arg, ship_engine_eff_arg, HHV_heavy_fuel_arg, propul_eff_arg, \
-        EIM_ship_eff_arg, marine_shipping_price_arg, ship_fuel_consumption_arg, \
-        port_to_port_dis_arg, dBOR_dT_arg, BOR_ship_trans_arg, heavy_fuel_density_arg, \
-        CO2e_heavy_fuel_arg, GWP_chem_list_arg, NH3_ship_consumption_arg, \
-        BOG_recirculation_maritime_percentage_arg, \
-        LH2_plant_capacity_arg, EIM_liquefication_arg, \
-        fuel_cell_eff_arg, EIM_fuel_cell_arg, LHV_chem_arg = process_args_tuple
+        # --- 2. Calculate Base Propulsion Requirements ---
+        # Assume an average power requirement for a vessel of this size. This is a key assumption.
+        # For a standard 165,000 m3 ship, average power might be around 18,000 kW.
+        total_propulsion_energy_kwh = avg_ship_power_kw_arg * port_to_port_duration_arg
 
+        sfoc_g_per_kwh = selected_fuel_params_arg['sfoc_g_per_kwh']
+        price_usd_per_ton = selected_fuel_params_arg['price_usd_per_ton']
+        fuel_hhv_mj_per_kg = selected_fuel_params_arg['hhv_mj_per_kg']
+
+        # Calculate fuel consumed and cost for main propulsion
+        propulsion_fuel_kg = (total_propulsion_energy_kwh * sfoc_g_per_kwh) / 1000
+        propulsion_money = (propulsion_fuel_kg / 1000) * price_usd_per_ton
+
+        # --- 3. Calculate BOG Generation and Refrigeration Load (for the CARGO) ---
         T_avg = (start_local_temperature_arg + end_local_temperature_arg) / 2
-        current_BOG_loss = 0 # Initialize BOG loss
-        ener_consumed_refrig = 0 # Initialize
-        marine_fuel_needed = 0 # Initialize
+        local_BOR_transportation = dBOR_dT_arg[B_fuel_type] * (T_avg - 25) + BOR_ship_trans_arg[B_fuel_type]
+        current_BOG_loss = local_BOR_transportation * (1 / 24) * port_to_port_duration_arg * A
 
-        if B_fuel_type == 0: # LH2
-            heat_required = OHTC_ship_arg[B_fuel_type] * calculated_storage_area_arg * \
-                            (T_avg + 273 - 20) * ship_number_of_tanks_arg # W
-            ener_consumed_refrig = (heat_required / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / \
-                                   1000000 * 3600 * port_to_port_duration_arg / ship_engine_eff_arg # MJ
-            
-            refrig_money = (ener_consumed_refrig / (HHV_heavy_fuel_arg * propul_eff_arg * EIM_ship_eff_arg / 100)) * \
-                           (1 / 1000) * marine_shipping_price_arg # $
-            
-            marine_fuel_needed = ship_fuel_consumption_arg * (1 / 1.609) * port_to_port_dis_arg  # metric ton
-            money = marine_fuel_needed * marine_shipping_price_arg + refrig_money  # $
-            total_energy_consumed = marine_fuel_needed * 1000 * HHV_heavy_fuel_arg + ener_consumed_refrig  # MJ
-            
-            local_BOR_transportation = dBOR_dT_arg[B_fuel_type] * (T_avg - 25) + BOR_ship_trans_arg[B_fuel_type]
-            current_BOG_loss = local_BOR_transportation * (1 / 24) * port_to_port_duration_arg * A  # kg
-            
-            A_after_loss = A - current_BOG_loss
-            G_emission = total_energy_consumed / (HHV_heavy_fuel_arg * heavy_fuel_density_arg) * \
-                         CO2e_heavy_fuel_arg + current_BOG_loss * GWP_chem_list_arg[B_fuel_type]
+        # Refrigeration is only needed for cryogenic cargo (LH2)
+        refrig_fuel_kg = 0
+        refrig_money = 0
         
-        else: # Ammonia or Methanol
-            ener_consumed_refrig = 0 # Assuming no active refrigeration for NH3/Methanol ships in this model
-            total_energy_consumed = NH3_ship_consumption_arg * port_to_port_dis_arg  # MJ (using NH3_ship_consumption for both as per original else block)
-            marine_fuel_needed = total_energy_consumed / HHV_heavy_fuel_arg * (1 / 1000)  # metric ton
-            money = marine_fuel_needed * marine_shipping_price_arg  # $
+        if B_fuel_type == 0: # LH2 requires active refrigeration
+            heat_required_watts = OHTC_ship_arg[B_fuel_type] * calculated_storage_area_arg * (T_avg + 273 - 20) * ship_number_of_tanks_arg
+            # Energy needed by the refrigeration unit (in MJ)
+            ener_consumed_refrig_mj = (heat_required_watts / (COP_refrig_arg[B_fuel_type] * (EIM_refrig_eff_arg / 100))) / 1000000 * 3600 * port_to_port_duration_arg
             
-            local_BOR_transportation = dBOR_dT_arg[B_fuel_type] * (T_avg - 25) + BOR_ship_trans_arg[B_fuel_type]
-            current_BOG_loss = local_BOR_transportation * (1 / 24) * port_to_port_duration_arg * A  # kg
-            
-            A_after_loss = A - current_BOG_loss
-            G_emission = total_energy_consumed / (HHV_heavy_fuel_arg * heavy_fuel_density_arg) * \
-                         CO2e_heavy_fuel_arg + current_BOG_loss * GWP_chem_list_arg[B_fuel_type]
+            # Calculate how much EXTRA marine fuel is needed to generate this energy
+            if fuel_hhv_mj_per_kg > 0 and aux_engine_efficiency_arg > 0:
+                refrig_fuel_kg = ener_consumed_refrig_mj / (fuel_hhv_mj_per_kg * aux_engine_efficiency_arg)
+                refrig_money = (refrig_fuel_kg / 1000) * price_usd_per_ton
 
-        net_BOG_loss = current_BOG_loss # This will be updated if recirculation occurs
-
-        # Recirculation logic
-        # C_recirculation_BOG is user_define[2], F_maritime_apply is user_define[5]
-        if C_recirculation_BOG == 2: # If BOG recirculation is active
-            if F_maritime_apply == 1: # 1) Re-liquefy BOG
-                usable_BOG = current_BOG_loss * BOG_recirculation_maritime_percentage_arg * 0.01
-                BOG_flowrate = usable_BOG / port_to_port_duration_arg # kg/hr (duration is in hours)
-                
-                reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100) # liquification_data_fitting needs to be accessible
-                reliq_ener_consumed = reliq_ener_required * usable_BOG
-                
-                total_energy_consumed += reliq_ener_consumed
-                
-                # Cost of reliquefaction (assuming it uses same heavy fuel as ship)
-                reliq_money = (reliq_ener_consumed / (HHV_heavy_fuel_arg * propul_eff_arg * EIM_ship_eff_arg / 100)) / \
-                              heavy_fuel_density_arg * marine_shipping_price_arg # This seems to be original intent for cost source
-                money += reliq_money
-                
-                A_after_loss += usable_BOG
-                net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_maritime_percentage_arg * 0.01)
-                
-                G_emission_energy = total_energy_consumed / (HHV_heavy_fuel_arg * heavy_fuel_density_arg) * CO2e_heavy_fuel_arg
-                G_emission = G_emission_energy + net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
-
-            elif F_maritime_apply == 2: # 2) Use BOG as another energy source (fuel cell for refrigeration)
-                usable_BOG = current_BOG_loss * BOG_recirculation_maritime_percentage_arg * 0.01
-                usable_ener = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
-                
-                energy_saved_from_refrig = min(usable_ener, ener_consumed_refrig) # Can't save more than what was needed for refrig
-                money_saved_from_refrig = (energy_saved_from_refrig / (HHV_heavy_fuel_arg * propul_eff_arg * EIM_ship_eff_arg / 100)) * \
-                                          (1/1000) * marine_shipping_price_arg # If B=0, else this part is slightly different
-
-                # Recalculate total energy and money
-                if B_fuel_type == 0: # LH2 had initial refrigeration
-                    total_energy_consumed = (marine_fuel_needed * 1000 * HHV_heavy_fuel_arg) + (ener_consumed_refrig - energy_saved_from_refrig)
-                    money = (marine_fuel_needed * marine_shipping_price_arg) + (refrig_money - money_saved_from_refrig)
-                else: # NH3/Methanol had no initial refrigeration energy, so BOG can only offset main fuel
-                    main_propulsion_energy = NH3_ship_consumption_arg * port_to_port_dis_arg
-                    energy_offset_by_bog = min(usable_ener, main_propulsion_energy)
-                    total_energy_consumed = main_propulsion_energy - energy_offset_by_bog
-                    marine_fuel_needed_new = total_energy_consumed / HHV_heavy_fuel_arg * (1/1000)
-                    money = marine_fuel_needed_new * marine_shipping_price_arg
-                
-                net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_maritime_percentage_arg * 0.01)
-                # A_after_loss remains A - current_BOG_loss, as BOG is consumed
-                
-                G_emission_energy = total_energy_consumed / (HHV_heavy_fuel_arg * heavy_fuel_density_arg) * CO2e_heavy_fuel_arg
-                G_emission = G_emission_energy + net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
+        # --- 4. Handle BOG Recirculation / Treatment ---
+        net_BOG_loss = current_BOG_loss
+        A_after_loss = A - current_BOG_loss # Start with the amount after natural boil-off
         
-        return money, total_energy_consumed, G_emission, A_after_loss, net_BOG_loss
-    
+        reliq_fuel_kg = 0 # Fuel needed for re-liquefaction
+        fuel_saved_from_bog_kg = 0 # Fuel saved by using BOG as fuel
+
+        if C_recirculation_BOG == 2:
+            usable_BOG = current_BOG_loss * (BOG_recirculation_maritime_percentage_arg / 100.0)
+            net_BOG_loss -= usable_BOG # This portion is treated, not lost to atmosphere
+            
+            if F_maritime_apply == 1: # Option 1: Re-liquefy BOG
+                A_after_loss += usable_BOG # Add the mass back to the cargo
+                reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
+                reliq_ener_consumed_mj = reliq_ener_required * usable_BOG
+                
+                # Calculate extra fuel needed to power the re-liquefaction unit
+                if fuel_hhv_mj_per_kg > 0 and aux_engine_efficiency_arg > 0:
+                    reliq_fuel_kg = reliq_ener_consumed_mj / (fuel_hhv_mj_per_kg * aux_engine_efficiency_arg)
+
+            elif F_maritime_apply == 2: # Option 2: Use BOG as fuel
+                # BOG is consumed, so A_after_loss is not increased
+                usable_ener_from_bog_mj = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
+                
+                # Calculate how much marine fuel this energy saves
+                if fuel_hhv_mj_per_kg > 0:
+                    fuel_saved_from_bog_kg = usable_ener_from_bog_mj / fuel_hhv_mj_per_kg
+                    
+        # --- 5. Aggregate Final Totals ---
+        total_fuel_consumed_kg = propulsion_fuel_kg + refrig_fuel_kg + reliq_fuel_kg - fuel_saved_from_bog_kg
+        total_money = (total_fuel_consumed_kg / 1000) * price_usd_per_ton
+
+        # Calculate total emissions from all fuel consumed
+        co2_factor = selected_fuel_params_arg['co2_emissions_factor_kg_per_kg_fuel']
+        methane_factor = selected_fuel_params_arg['methane_slip_gwp100']
+        fuel_emissions_co2e = (total_fuel_consumed_kg * co2_factor) + (total_fuel_consumed_kg * methane_factor)
+        
+        # Emissions from any BOG that was ultimately vented
+        bog_emissions_co2e = net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
+        
+        total_G_emission = fuel_emissions_co2e + bog_emissions_co2e
+        
+        # Total energy consumed is the heating value of the fuel used
+        total_energy_consumed_mj = total_fuel_consumed_kg * fuel_hhv_mj_per_kg
+        
+        return total_money, total_energy_consumed_mj, total_G_emission, A_after_loss, net_BOG_loss    
 # This definition goes inside run_lca_model
     def chem_unloading_from_ship(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         # Unpack the specific arguments this function needs from the passed-in tuple.
@@ -2017,7 +2077,16 @@ def run_lca_model(inputs):
                 elif func_to_call.__name__ == "chem_loading_to_ship":
                     process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_ship_port_A, dBOR_dT, start_local_temperature, BOR_loading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, boiling_point_chem, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, storage_area, ship_tank_metal_thickness, ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density, ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat, COP_cooldown, COP_refrig, ship_number_of_tanks)
                 elif func_to_call.__name__ == "port_to_port":
-                    process_args_for_this_call_tc = (start_local_temperature, end_local_temperature, OHTC_ship, storage_area, ship_number_of_tanks, COP_refrig, EIM_refrig_eff, port_to_port_duration, ship_engine_eff, HHV_heavy_fuel, propul_eff, EIM_ship_eff, marine_shipping_price_start, ship_fuel_consumption, port_to_port_dis, dBOR_dT, BOR_ship_trans, heavy_fuel_density, CO2e_heavy_fuel, GWP_chem, NH3_ship_cosumption, BOG_recirculation_mati_trans, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
+                    process_args_for_this_call_tc = (
+                        start_local_temperature, end_local_temperature, OHTC_ship,
+                        storage_area, ship_number_of_tanks, COP_refrig, EIM_refrig_eff, 
+                        port_to_port_duration, selected_marine_fuel_params,
+                        dBOR_dT, BOR_ship_trans, GWP_chem, 
+                        BOG_recirculation_mati_trans, LH2_plant_capacity, EIM_liquefication, 
+                        fuel_cell_eff, EIM_fuel_cell, LHV_chem,
+                        avg_ship_power_kw,
+                        0.45 # Assumed auxiliary engine efficiency (45%)
+                    )
                 elif func_to_call.__name__ == "chem_unloading_from_ship":
                     process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_port_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
                 elif func_to_call.__name__ == "chem_storage_at_port_B":
@@ -2132,7 +2201,7 @@ def run_lca_model(inputs):
         [f"Electricity Price at {end}", f"{end_electricity_price[2]:.4f} $/MJ"],
         [f"Diesel Price at {start}", f"{diesel_price_start:.2f} $/gal"],
         [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"],
-        [f"Marine Fuel Price at {marine_fuel_port_name}", f"{marine_shipping_price_start:.2f} $/ton"]
+        [f"Marine Fuel ({marine_fuel_choice}) Price at {marine_fuel_port_name}", f"{dynamic_price:.2f} $/ton"],
     ]
     
     new_detailed_headers = ["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
