@@ -855,13 +855,10 @@ def run_lca_model(inputs):
         
         return money, ener_consumed, G_emission, A_after_loss, BOG_loss
 
-# ==============================================================================
-# === REPLACE YOUR ENTIRE port_to_port FUNCTION WITH THIS UPDATED VERSION ===
-    # ==============================================================================
     def port_to_port(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         """
         Calculates the cost, emissions, and losses for the maritime transportation leg.
-        This version includes N2O and NOx emissions for Ammonia fuel.
+        This version includes a corrected N2O calculation for Ammonia fuel.
         """
         # --- 1. Unpack all incoming arguments ---
         (
@@ -873,79 +870,75 @@ def run_lca_model(inputs):
             fuel_cell_eff_arg, EIM_fuel_cell_arg, LHV_chem_arg,
             avg_ship_power_kw_arg,
             aux_engine_efficiency_arg,
-            GWP_N2O_arg # <-- Unpack the new GWP value
+            GWP_N2O_arg
         ) = process_args_tuple
-
-        # --- 2. Calculate Base Propulsion & Auxiliary Requirements ---
-        total_propulsion_energy_kwh = avg_ship_power_kw_arg * port_to_port_duration_arg
-        
-        # ... (fuel consumption and cost logic remains the same) ...
-        sfoc_g_per_kwh = selected_fuel_params_arg['sfoc_g_per_kwh']
-        price_usd_per_ton = selected_fuel_params_arg['price_usd_per_ton']
-        fuel_hhv_mj_per_kg = selected_fuel_params_arg['hhv_mj_per_kg']
-        propulsion_fuel_kg = (total_propulsion_energy_kwh * sfoc_g_per_kwh) / 1000
-
-        # --- 3. Calculate BOG & Refrigeration ---
-        # ... (this entire section remains the same) ...
+    
+        # --- 2. Calculate Propulsion and Refrigeration Energy Requirements ---
+        propulsion_work_kwh = avg_ship_power_kw_arg * port_to_port_duration_arg
+        refrig_work_mj = 0
+        if B_fuel_type == 0: # LH2 requires active refrigeration
+            heat_required_watts = OHTC_ship_arg[B_fuel_type] * calculated_storage_area_arg * (T_avg + 273 - 20) * ship_number_of_tanks_arg
+            refrig_work_mj = (heat_required_watts / (COP_refrig_arg[B_fuel_type] * (EIM_refrig_eff_arg / 100))) / 1000000 * 3600 * port_to_port_duration_arg
+    
+        # --- 3. Calculate BOG and Recirculation Energy ---
         T_avg = (start_local_temperature_arg + end_local_temperature_arg) / 2
         local_BOR_transportation = dBOR_dT_arg[B_fuel_type] * (T_avg - 25) + BOR_ship_trans_arg[B_fuel_type]
         current_BOG_loss = local_BOR_transportation * (1 / 24) * port_to_port_duration_arg * A
-        refrig_fuel_kg = 0
-        if B_fuel_type == 0:
-            heat_required_watts = OHTC_ship_arg[B_fuel_type] * calculated_storage_area_arg * (T_avg + 273 - 20) * ship_number_of_tanks_arg
-            ener_consumed_refrig_mj = (heat_required_watts / (COP_refrig_arg[B_fuel_type] * (EIM_refrig_eff_arg / 100))) / 1000000 * 3600 * port_to_port_duration_arg
-            if fuel_hhv_mj_per_kg > 0 and aux_engine_efficiency_arg > 0:
-                refrig_fuel_kg = ener_consumed_refrig_mj / (fuel_hhv_mj_per_kg * aux_engine_efficiency_arg)
         
-        # --- 4. Handle BOG Recirculation ---
-        # ... (this entire section remains the same) ...
         net_BOG_loss = current_BOG_loss
         A_after_loss = A - current_BOG_loss
-        reliq_fuel_kg = 0
-        fuel_saved_from_bog_kg = 0
+        reliq_work_mj = 0
+        energy_saved_from_bog_mj = 0
+    
         if C_recirculation_BOG == 2:
             usable_BOG = current_BOG_loss * (BOG_recirculation_maritime_percentage_arg / 100.0)
             net_BOG_loss -= usable_BOG
-            if F_maritime_apply == 1:
+            if F_maritime_apply == 1: # Re-liquefy
                 A_after_loss += usable_BOG
                 reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
-                reliq_ener_consumed_mj = reliq_ener_required * usable_BOG
-                if fuel_hhv_mj_per_kg > 0 and aux_engine_efficiency_arg > 0:
-                    reliq_fuel_kg = reliq_ener_consumed_mj / (fuel_hhv_mj_per_kg * aux_engine_efficiency_arg)
-            elif F_maritime_apply == 2:
-                usable_ener_from_bog_mj = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
-                if fuel_hhv_mj_per_kg > 0:
-                    fuel_saved_from_bog_kg = usable_ener_from_bog_mj / fuel_hhv_mj_per_kg
-
-        # --- 5. Aggregate Final Totals ---
-        total_fuel_consumed_kg = propulsion_fuel_kg + refrig_fuel_kg + reliq_fuel_kg - fuel_saved_from_bog_kg
-        total_money = (total_fuel_consumed_kg / 1000) * price_usd_per_ton
-
-        # --- 6. NEW: Calculate N2O and NOx emissions ---
-        n2o_emissions_co2e = 0
-        # Check if the selected fuel is Ammonia and calculate its specific emissions
-        if 'n2o_emission_factor_g_per_kwh' in selected_fuel_params_arg:
-            # Calculate total energy generated by the ship's engines (propulsion + refrigeration + reliquefaction)
-            total_engine_energy_kwh = (total_fuel_consumed_kg * fuel_hhv_mj_per_kg * aux_engine_efficiency_arg) * (1000 / 3.6)
-            
-            # Calculate N2O emissions and convert to CO2-equivalent
-            n2o_factor_g_kwh = selected_fuel_params_arg['n2o_emission_factor_g_per_kwh']
-            n2o_emissions_kg = (total_engine_energy_kwh * n2o_factor_g_kwh) / 1000
-            n2o_emissions_co2e = n2o_emissions_kg * GWP_N2O_arg
-
-        # --- 7. Aggregate Final Emissions ---
+                reliq_work_mj = reliq_ener_required * usable_BOG # This is the energy needed for re-liquefaction
+            elif F_maritime_apply == 2: # Use as fuel
+                energy_saved_from_bog_mj = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
+    
+        # --- 4. Calculate Total Fuel Consumed ---
+        fuel_hhv_mj_per_kg = selected_fuel_params_arg['hhv_mj_per_kg']
+        sfoc_g_per_kwh = selected_fuel_params_arg['sfoc_g_per_kwh']
+        
+        # Calculate total work the engines must produce (in MJ)
+        total_engine_work_mj = (propulsion_work_kwh * 3.6) + refrig_work_mj + reliq_work_mj - energy_saved_from_bog_mj
+        total_engine_work_kwh = total_engine_work_mj / 3.6
+        
+        # Calculate fuel needed for this work, based on engine efficiency (SFOC)
+        # Note: SFOC is defined based on work output, so we use the engine's kWh output.
+        total_fuel_consumed_kg = (total_engine_work_kwh * sfoc_g_per_kwh) / 1000
+        
+        # --- 5. Aggregate Final Cost and Emissions ---
+        total_money = (total_fuel_consumed_kg / 1000) * selected_fuel_params_arg['price_usd_per_ton']
+    
+        # Emissions from fuel combustion (CO2 and CH4)
         co2_factor = selected_fuel_params_arg['co2_emissions_factor_kg_per_kg_fuel']
         methane_factor = selected_fuel_params_arg['methane_slip_gwp100']
         fuel_emissions_co2e = (total_fuel_consumed_kg * co2_factor) + (total_fuel_consumed_kg * methane_factor)
         
+        # Emissions from N2O (for Ammonia fuel)
+        n2o_emissions_co2e = 0
+        if 'n2o_emission_factor_g_per_kwh' in selected_fuel_params_arg:
+            n2o_factor_g_kwh = selected_fuel_params_arg['n2o_emission_factor_g_per_kwh']
+            n2o_emissions_kg = (total_engine_work_kwh * n2o_factor_g_kwh) / 1000
+            n2o_emissions_co2e = n2o_emissions_kg * GWP_N2O_arg
+    
+        # Emissions from vented cargo BOG
         bog_emissions_co2e = net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
         
-        # Add the new N2O CO2e to the total
+        # Sum all emissions sources
         total_G_emission = fuel_emissions_co2e + bog_emissions_co2e + n2o_emissions_co2e
+        
+        # Total chemical energy consumed is the HHV of the fuel burned
         total_energy_consumed_mj = total_fuel_consumed_kg * fuel_hhv_mj_per_kg
-        return total_money, total_energy_consumed_mj, total_G_emission, A_after_loss, net_BOG_loss        
+        
+        return total_money, total_energy_consumed_mj, total_G_emission, A_after_loss, net_BOG_loss
 
-# This definition goes inside run_lca_model
+    # This definition goes inside run_lca_model
     def chem_unloading_from_ship(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         # Unpack the specific arguments this function needs from the passed-in tuple.
         # The order of variables here MUST EXACTLY MATCH the order they are packed.
