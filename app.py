@@ -854,7 +854,6 @@ def run_lca_model(inputs):
         G_emission = ener_consumed * 0.2778 * CO2e_start_arg * 0.001 + BOG_loss * GWP_chem_list_arg[B_fuel_type]
         
         return money, ener_consumed, G_emission, A_after_loss, BOG_loss
-
     def port_to_port(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         """
         Calculates the cost, emissions, and losses for the maritime transportation leg.
@@ -873,18 +872,22 @@ def run_lca_model(inputs):
             GWP_N2O_arg
         ) = process_args_tuple
     
-        # --- 2. Calculate Propulsion and Refrigeration Energy Requirements ---
+        # --- 2. Calculate Base Propulsion Requirements ---
         propulsion_work_kwh = avg_ship_power_kw_arg * port_to_port_duration_arg
+        
+        # --- 3. Calculate BOG & Refrigeration ---
+        # **FIX IS HERE**: T_avg is now defined BEFORE it is used.
+        T_avg = (start_local_temperature_arg + end_local_temperature_arg) / 2
+        
         refrig_work_mj = 0
         if B_fuel_type == 0: # LH2 requires active refrigeration
             heat_required_watts = OHTC_ship_arg[B_fuel_type] * calculated_storage_area_arg * (T_avg + 273 - 20) * ship_number_of_tanks_arg
             refrig_work_mj = (heat_required_watts / (COP_refrig_arg[B_fuel_type] * (EIM_refrig_eff_arg / 100))) / 1000000 * 3600 * port_to_port_duration_arg
     
-        # --- 3. Calculate BOG and Recirculation Energy ---
-        T_avg = (start_local_temperature_arg + end_local_temperature_arg) / 2
         local_BOR_transportation = dBOR_dT_arg[B_fuel_type] * (T_avg - 25) + BOR_ship_trans_arg[B_fuel_type]
         current_BOG_loss = local_BOR_transportation * (1 / 24) * port_to_port_duration_arg * A
         
+        # --- 4. Handle BOG Recirculation ---
         net_BOG_loss = current_BOG_loss
         A_after_loss = A - current_BOG_loss
         reliq_work_mj = 0
@@ -896,23 +899,24 @@ def run_lca_model(inputs):
             if F_maritime_apply == 1: # Re-liquefy
                 A_after_loss += usable_BOG
                 reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
-                reliq_work_mj = reliq_ener_required * usable_BOG # This is the energy needed for re-liquefaction
+                reliq_work_mj = reliq_ener_required * usable_BOG
             elif F_maritime_apply == 2: # Use as fuel
                 energy_saved_from_bog_mj = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
     
-        # --- 4. Calculate Total Fuel Consumed ---
+        # --- 5. Calculate Total Fuel Consumed ---
         fuel_hhv_mj_per_kg = selected_fuel_params_arg['hhv_mj_per_kg']
         sfoc_g_per_kwh = selected_fuel_params_arg['sfoc_g_per_kwh']
         
         # Calculate total work the engines must produce (in MJ)
         total_engine_work_mj = (propulsion_work_kwh * 3.6) + refrig_work_mj + reliq_work_mj - energy_saved_from_bog_mj
+        if total_engine_work_mj < 0: total_engine_work_mj = 0 # Cannot have negative work
+            
         total_engine_work_kwh = total_engine_work_mj / 3.6
         
         # Calculate fuel needed for this work, based on engine efficiency (SFOC)
-        # Note: SFOC is defined based on work output, so we use the engine's kWh output.
         total_fuel_consumed_kg = (total_engine_work_kwh * sfoc_g_per_kwh) / 1000
         
-        # --- 5. Aggregate Final Cost and Emissions ---
+        # --- 6. Aggregate Final Cost and Emissions ---
         total_money = (total_fuel_consumed_kg / 1000) * selected_fuel_params_arg['price_usd_per_ton']
     
         # Emissions from fuel combustion (CO2 and CH4)
@@ -937,7 +941,7 @@ def run_lca_model(inputs):
         total_energy_consumed_mj = total_fuel_consumed_kg * fuel_hhv_mj_per_kg
         
         return total_money, total_energy_consumed_mj, total_G_emission, A_after_loss, net_BOG_loss
-
+        
     # This definition goes inside run_lca_model
     def chem_unloading_from_ship(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         # Unpack the specific arguments this function needs from the passed-in tuple.
