@@ -134,6 +134,15 @@ nav a:hover::after {
           </select>
         </div>
         <div class="input-group">
+          <label for="marineFuelChoice">Marine Propulsion Fuel</label>
+          <select id="marineFuelChoice">
+            <option value="VLSFO">VLSFO (Conventional)</option>
+            <option value="LNG">LNG (Liquefied Natural Gas)</option>
+            <option value="Methanol">Methanol</option>
+            <option value="Ammonia">Ammonia</option>
+          </select>
+        </div>
+        <div class="input-group">
           <label>Boil-off Gas (BOG) Treatment</label>
           <div class="input-inline">
   <label style="display: flex; align-items: center; gap: 0.5rem;">
@@ -331,6 +340,7 @@ nav a:hover::after {
         start: document.getElementById('startLocation').value,
         end: document.getElementById('endLocation').value,
         fuel_type: parseInt(document.getElementById('fuelType').value),
+        marine_fuel_choice: document.getElementById('marineFuelChoice').value,
         recirculation_BOG: document.querySelector('input[name="bogTreatment"]:checked').value,
         BOG_recirculation_truck: parseFloat(document.getElementById('bogRecirculationTruck').value),
         BOG_recirculation_truck_apply: document.getElementById('bogRecirculationTruckApply').value,
