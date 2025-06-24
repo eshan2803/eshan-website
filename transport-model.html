@@ -459,7 +459,7 @@ nav a:hover::after {
             }).addTo(map);
             console.log("Tile layer added.");
 
-            const bounds = L.latLngBounds();
+            bounds = L.latLngBounds();
 
             function addMarkerToMap(coords, name, iconUrl) {
                 if (coords && typeof coords.lat === 'number' && typeof coords.lng === 'number') {
