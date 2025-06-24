@@ -1,4 +1,5 @@
 
+
 # app.py
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -54,10 +55,56 @@ def run_lca_model(inputs):
     storage_time_C = inputs['storage_time_C']
     LH2_plant_capacity = inputs['LH2_plant_capacity']
     marine_fuel_choice = inputs.get('marine_fuel_choice', 'VLSFO')
-    total_ship_volume = inputs['total_ship_volume']
-    ship_tank_shape = inputs['ship_tank_shape']
-    ship_number_of_tanks = inputs['ship_number_of_tanks']
-    
+    ship_archetypes = {
+        'small': {
+            'name': 'Small-Scale Carrier',
+            'volume_m3': 20000,
+            'num_tanks': 2,
+            'shape': 2 # Spherical
+        },
+        'midsized': {
+            'name': 'Midsized Carrier',
+            'volume_m3': 90000,
+            'num_tanks': 4,
+            'shape': 2 # Spherical
+        },
+        'standard': {
+            'name': 'Standard Modern Carrier',
+            'volume_m3': 174000,
+            'num_tanks': 4,
+            'shape': 1 # Capsule (representing Membrane)
+        },
+        'q-flex': {
+            'name': 'Q-Flex Carrier',
+            'volume_m3': 210000,
+            'num_tanks': 5,
+            'shape': 1 # Capsule (representing Membrane)
+        },
+        'q-max': {
+            'name': 'Q-Max Carrier',
+            'volume_m3': 266000,
+            'num_tanks': 5,
+            'shape': 1 # Capsule (representing Membrane)
+        }
+    }    
+
+    ship_archetype_key = inputs.get('ship_archetype', 'standard')
+
+    if ship_archetype_key == 'custom':
+        # If user is building their own, get parameters directly from inputs
+        total_ship_volume = inputs['total_ship_volume']
+        ship_number_of_tanks = inputs['ship_number_of_tanks']
+        ship_tank_shape = inputs['ship_tank_shape']
+    else:
+        # If user selected an archetype, derive parameters from our dictionary
+        if ship_archetype_key not in ship_archetypes:
+            raise ValueError(f"Invalid ship archetype key: {ship_archetype_key}")
+        
+        selected_ship_params = ship_archetypes[ship_archetype_key]
+        total_ship_volume = selected_ship_params['volume_m3']
+        ship_number_of_tanks = selected_ship_params['num_tanks']
+        ship_tank_shape = selected_ship_params['shape']
+        
     # This mirrors the user_define list from your script
     user_define = [0, fuel_type, int(recirculation_BOG), int(BOG_recirculation_truck_apply), int(BOG_recirculation_storage_apply), int(BOG_recirculation_mati_trans_apply)]
 
@@ -451,7 +498,6 @@ def run_lca_model(inputs):
             'nox_emission_factor_g_per_kwh': 2.0   # Assumes IMO Tier III compliance with SCR
         }
     }
-
     selected_marine_fuel_params = marine_fuels_data[marine_fuel_choice]
     selected_marine_fuel_params['price_usd_per_ton'] = dynamic_price
     avg_ship_power_kw = calculate_ship_power_kw(total_ship_volume)
