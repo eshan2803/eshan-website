@@ -410,6 +410,7 @@ nav a:hover::after {
         // ** END OF NEW PART **
 
         outputsDiv.classList.remove('hidden');
+        setTimeout(() => { map.invalidateSize(); }, 1);
 
       } catch (error) {
         logStatus(`Error: ${error.message}`);
@@ -447,9 +448,6 @@ nav a:hover::after {
             }
             
             map = L.map('map').setView([initialLat, initialLng], initialZoom);
-            
-            // *** ADD THIS LINE ***
-            map.invalidateSize(); 
             console.log("Leaflet map instance created and size invalidated.");
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
