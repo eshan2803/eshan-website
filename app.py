@@ -1,5 +1,6 @@
 
 
+
 # app.py
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -14,6 +15,9 @@ from urllib.parse import urlencode
 import re
 import os
 import json
+import matplotlib.pyplot as plt 
+import io                         
+import base64                     
 
 # --- Initialize Flask App ---
 app = Flask(__name__)
@@ -346,7 +350,41 @@ def run_lca_model(inputs):
         # user's input is outside the range of the data.
         calculated_power = np.interp(ship_volume_m3, volumes_m3, powers_kw)
         
-        return calculated_power          
+        return calculated_power   
+
+    def create_breakdown_chart(data, column_index, title, x_label):
+        """
+        Creates a horizontal bar chart from the results data, sorts it,
+        and returns it as a Base64 encoded string.
+        """
+        # Extract data for plotting, skipping the 'TOTAL' row at the end
+        labels = [row[0] for row in data[:-1]]
+        values = [float(row[column_index]) for row in data[:-1]]
+
+        # Combine labels and values to sort them together
+        sorted_data = sorted(zip(values, labels))
+        values_sorted, labels_sorted = zip(*sorted_data)
+
+        # Create the plot
+        fig, ax = plt.subplots(figsize=(10, 8))
+        ax.barh(labels_sorted, values_sorted, color='#4CAF50')
+        ax.set_xlabel(x_label)
+        ax.set_title(title, fontsize=16, fontweight='bold')
+        ax.grid(axis='x', linestyle='--', alpha=0.6)
+        
+        # Ensure layout is tight so labels are not cut off
+        plt.tight_layout()
+
+        # Save the plot to a memory buffer
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', dpi=90)
+        buf.seek(0)
+        
+        # Encode the image in Base64 and convert to a string
+        img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+        plt.close(fig) # Close the figure to free memory
+        
+        return img_base64       
     # =================================================================
     # END OF HELPER FUNCTIONS
     # =================================================================
@@ -2242,9 +2280,18 @@ def run_lca_model(inputs):
     new_detailed_headers = ["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
     # IMPORTANT: The CSV download will still contain the complete, unfiltered data for full transparency.
     csv_data = [new_detailed_headers] + data
+    cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
+    eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)")
     
+    cost_chart_base64 = create_breakdown_chart(
+        data, cost_per_kg_index, 'Cost Breakdown per Kilogram of Delivered Fuel', 'Cost ($/kg)'
+    )
+    emission_chart_base64 = create_breakdown_chart(
+        data, eco2_per_kg_index, 'CO2e Breakdown per Kilogram of Delivered Fuel', 'CO2e (kg/kg)'
+    )
+
     # --- 8. Package Final JSON Response ---
-    # --- 8. Package Final JSON Response ---
+    
     response = {
         "status": "success",
         "map_data": {
@@ -2263,7 +2310,11 @@ def run_lca_model(inputs):
             "summary2_headers": ["Per Energy Output", "Value"], "summary2_data": summary2_data,
             "assumed_prices_headers": ["Assumed Price", "Value"], "assumed_prices_data": assumed_prices_data
         },
-        "csv_data": csv_data
+        "csv_data": csv_data,
+        "charts": {
+            "cost_chart_base64": cost_chart_base64,
+            "emission_chart_base64": emission_chart_base64
+        }
     }
     return response
 
