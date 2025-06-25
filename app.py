@@ -2324,7 +2324,7 @@ def run_lca_model(inputs):
         emission_chart_data.insert(0, smr_emissions_row) # Add to the beginning
         
     # --- 8. Package Final JSON Response ---
-   summary1_data = [
+    summary1_data = [
         ["Cost ($/kg chemical)", f"{chem_cost:.2f}"],
         ["Consumed Energy (MJ/kg chemical)", f"{chem_energy:.2f}"],
         ["Emission (kg CO2/kg chemical)", f"{chem_CO2e:.2f}"]
