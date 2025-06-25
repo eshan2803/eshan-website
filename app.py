@@ -2291,79 +2291,38 @@ def run_lca_model(inputs):
     data = data_with_all_columns
     total_results = final_results_raw # This already holds the correct total values
 
-    # --- 7. Format Results for Frontend ---
+# --- 7. Format Results for Frontend ---
     final_weight = total_results[3]
     chem_cost = total_results[0] / final_weight if final_weight > 0 else 0
     chem_energy = total_results[1] / final_weight if final_weight > 0 else 0
     chem_CO2e = total_results[2] / final_weight if final_weight > 0 else 0
     final_energy_output_mj = final_weight * HHV_chem[fuel_type]
-
-    data_for_display = [row for row in data if row[0] != 'site_A_chem_production']
-
-    # 2. Use this new filtered list for the data being sent to the frontend table.
-    detailed_data_formatted = data_for_display 
-    
-    # --- END OF CHANGE ---
-    if final_energy_gj_denominator > 0: # A good check to ensure calculations were successful
-        # Create cost row for Hydrogen Production
-        h2_prod_cost_total = hydrogen_production_price * final_weight
-        h2_prod_cost_per_kg = hydrogen_production_price
-        h2_prod_cost_per_gj = h2_prod_cost_total / final_energy_gj_denominator
-        
-        # Structure: [Name, Cost, Energy, eCO2, Chem, BOG, Cost/kg, Cost/GJ, eCO2/kg, eCO2/GJ]
-        hydrogen_cost_row = [
-            "Green Hydrogen Production", h2_prod_cost_total, 0, 0, 0, 0,
-            h2_prod_cost_per_kg, h2_prod_cost_per_gj, 0, 0
-        ]
-        data_for_display.insert(0, hydrogen_cost_row) # Add to the beginning of the list
-
-        # Create emissions row for SMR Benchmark
-        smr_emissions_total = SMR_EMISSIONS_KG_PER_KG_H2 * final_weight
-        smr_emissions_per_kg = SMR_EMISSIONS_KG_PER_KG_H2
-        smr_emissions_per_gj = smr_emissions_total / final_energy_gj_denominator
-        
-        smr_emissions_row = [
-            "Gray Hydrogen Production (SMR)", 0, 0, smr_emissions_total, 0, 0,
-            0, 0, smr_emissions_per_kg, smr_emissions_per_gj
-        ]
-        data_for_display.insert(1, smr_emissions_row) # Add as the second item
-
-
-    detailed_data_formatted = data_for_display 
-    summary1_data = [
-        ["Cost ($/kg chemical)", f"{chem_cost:.2f}"],
-        ["Consumed Energy (MJ/kg chemical)", f"{chem_energy:.2f}"],
-        ["Emission (kg CO2/kg chemical)", f"{chem_CO2e:.2f}"]
-    ]
-    
     final_energy_output_gj = final_energy_output_mj / 1000
-    summary2_data = [
-        ["Cost ($/GJ)", f"{total_results[0] / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
-        ["Energy consumed (MJ_in/GJ_out)", f"{total_results[1] / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
-        ["Emission (kg CO2/GJ)", f"{total_results[2] / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"]
-    ]
-    assumed_prices_data = [
-        [f"Electricity Price at {start}", f"{start_electricity_price[2]:.4f} $/MJ"],
-        [f"Electricity Price at {end}", f"{end_electricity_price[2]:.4f} $/MJ"],
-        [f"Diesel Price at {start}", f"{diesel_price_start:.2f} $/gal"],
-        [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"],
-        [f"Marine Fuel ({marine_fuel_choice}) Price at {marine_fuel_port_name}", f"{dynamic_price:.2f} $/ton"],
-        [f"Green H2 Production Price at {start}", f"{hydrogen_production_price:.2f} $/kg"],
-    ]
-    
-    new_detailed_headers = ["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
-    # IMPORTANT: The CSV download will still contain the complete, unfiltered data for full transparency.
-    csv_data = [new_detailed_headers] + data
-    cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
-    eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)")
-    
-    cost_chart_base64 = create_breakdown_chart(
-        data, cost_per_kg_index, 'Cost Breakdown per Kilogram of Delivered Fuel', 'Cost ($/kg)'
-    )
-    emission_chart_base64 = create_breakdown_chart(
-        data, eco2_per_kg_index, 'CO2e Breakdown per Kilogram of Delivered Fuel', 'CO2e (kg/kg)'
-    )
 
+    # --- PREPARE DATA FOR THE DETAILED TABLE (WITHOUT BENCHMARKS) ---
+    data_for_display = [row for row in data if row[0] != 'site_A_chem_production']
+    detailed_data_formatted = data_for_display
+    
+    # --- PREPARE SEPARATE DATA LISTS FOR THE CHARTS (WITH BENCHMARKS) ---
+    # Create base copies of the data for each chart
+    cost_chart_data = list(data_for_display)
+    emission_chart_data = list(data_for_display)
+    # Inject the benchmark rows into their respective chart data lists
+    if final_energy_gj_denominator > 0:
+        # 1. Create and add the Hydrogen Production row to the COST chart data
+        # Create a placeholder row: ["Name", 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        hydrogen_cost_row = ["Green Hydrogen Production"] + [0] * 9
+        # Directly insert the known per-kg value into the correct column (index 6)
+        hydrogen_cost_row[6] = hydrogen_production_price
+        cost_chart_data.insert(0, hydrogen_cost_row) # Add to the beginning
+    
+        # 2. Create and add the SMR benchmark row to the EMISSIONS chart data
+        # Create a placeholder row.
+        smr_emissions_row = ["Gray Hydrogen Production (SMR)"] + [0] * 9
+        # Directly insert the known per-kg value into the correct column (index 8)
+        smr_emissions_row[8] = SMR_EMISSIONS_KG_PER_KG_H2
+        emission_chart_data.insert(0, smr_emissions_row) # Add to the beginning
+        
     # --- 8. Package Final JSON Response ---
     
     response = {
