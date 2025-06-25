@@ -2274,8 +2274,7 @@ def run_lca_model(inputs):
         final_results_raw[3] = amount_after_conversion
 
         data_raw[-1] = ["TOTAL", final_results_raw[0], final_results_raw[1], final_results_raw[2], final_results_raw[3], 0]
-# --- START: CORRECTED REPLACEMENT BLOCK ---
-
+    
     # 3. Now that all calculations are done, define the final denominators
     final_chem_kg_denominator = final_results_raw[3]
     # NEW: Calculate final energy in GigaJoules (MJ / 1000)
@@ -2303,7 +2302,11 @@ def run_lca_model(inputs):
     data = data_with_all_columns
     total_results = final_results_raw # This already holds the correct total values
 
-# --- 7. Format Results for Frontend ---
+    # In your run_lca_model function...
+    # Find the line that says "# --- 7. Format Results for Frontend ---"
+    # and REPLACE everything from there to the end of the function with this block:
+    
+    # --- 7. Format Results for Frontend ---
     final_weight = total_results[3]
     chem_cost = total_results[0] / final_weight if final_weight > 0 else 0
     chem_energy = total_results[1] / final_weight if final_weight > 0 else 0
@@ -2311,61 +2314,62 @@ def run_lca_model(inputs):
     final_energy_output_mj = final_weight * HHV_chem[fuel_type]
     final_energy_output_gj = final_energy_output_mj / 1000
 
-    # --- PREPARE DATA FOR THE DETAILED TABLE (WITHOUT BENCHMARKS) ---
-    data_for_display = [row for row in data if row[0] != 'site_A_chem_production']
-    detailed_data_formatted = data_for_display
+    # FIX 1: Correctly filter the data for a clean chart display.
+    # We remove the 'TOTAL' row and the initial 'production' step which has zero values.
+    data_for_display = [row for row in data if row[0] not in ['site_A_chem_production', 'TOTAL']]
+    detailed_data_formatted = data # The detailed table in the UI should show everything, including totals.
+    
+    # --- PREPARE CONTEXTUAL OVERLAY TEXT FOR CHARTS ---
     
     # 1. Prepare text for the Cost Chart
     cost_overlay_text = ""
-    # Ensure we have a valid production price to avoid division by zero
     if hydrogen_production_price > 0:
         ratio_cost = chem_cost / hydrogen_production_price
+        # FIX 2: Added the asterisk and full disclaimer footnote to the cost text.
         cost_overlay_text = (
             f"Context:\n"
-            f"• Production Cost in {start}: ${hydrogen_production_price:.2f}/kg\n"
+            f"• Production Cost in {start}: ${hydrogen_production_price:.2f}/kg*\n"
             f"• Total Transport Cost: ${chem_cost:.2f}/kg\n"
-            f"• Transport cost is {ratio_cost:.1f} times the production cost."
+            f"• Transport cost is {ratio_cost:.1f} times the production cost.\n\n"
+            f"*Hydrogen production cost is an estimate. Take with a pinch of salt.\n"
+            f" Working to improve this."
         )
 
     # 2. Prepare text for the Emissions Chart
     emission_overlay_text = ""
-    # Ensure SMR emissions are non-zero to avoid division by zero
     if SMR_EMISSIONS_KG_PER_KG_H2 > 0:
         ratio_emission = chem_CO2e / SMR_EMISSIONS_KG_PER_KG_H2
+        # FIX 3 & 4: Corrected text to reference emissions and use the 'ratio_emission' variable.
+        # Removed the misplaced disclaimer.
         emission_overlay_text = (
             f"Context:\n"
             f"• Gray Hydrogen (SMR) Emission: {SMR_EMISSIONS_KG_PER_KG_H2:.2f} kg CO₂e/kg\n"
             f"• Total Transport Emission: {chem_CO2e:.2f} kg CO₂e/kg\n"
-            f"• Transport cost is {ratio_cost:.1f} times the production cost.\n\n"  
-            f"*Hydrogen production cost from Google search. Take with a pinch of salt.\n"
-            f" Working to improve this estimate."
+            f"• Transport emission is {ratio_emission:.1f} times the SMR emission."
         )
 
-    # --- DEFINE HEADERS AND INDICES ---
-    # This part remains the same.
+    # --- DEFINE HEADERS, INDICES, AND PACKAGE FINAL RESPONSE ---
+    
     new_detailed_headers = ["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
     csv_data = [new_detailed_headers] + data
     cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
     eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)")
     
-    # --- GENERATE CHARTS WITH THE NEW OVERLAY TEXT ---
-    # The benchmark bar logic is now removed. Both charts use the clean `data_for_display`.
     cost_chart_base64 = create_breakdown_chart(
         data_for_display, 
         cost_per_kg_index, 
         'Cost Breakdown per Kilogram of Delivered Fuel', 
         'Cost ($/kg)',
-        overlay_text=cost_overlay_text  # Pass the new text here
+        overlay_text=cost_overlay_text
     )
     emission_chart_base64 = create_breakdown_chart(
         data_for_display, 
         eco2_per_kg_index, 
         'CO2e Breakdown per Kilogram of Delivered Fuel', 
         'CO2e (kg/kg)',
-        overlay_text=emission_overlay_text # Pass the new text here
+        overlay_text=emission_overlay_text
     )
         
-    # --- 8. Package Final JSON Response ---
     summary1_data = [
         ["Cost ($/kg chemical)", f"{chem_cost:.2f}"],
         ["Consumed Energy (MJ/kg chemical)", f"{chem_energy:.2f}"],
@@ -2379,28 +2383,16 @@ def run_lca_model(inputs):
     ]
     
     assumed_prices_data = [
-        [f"Electricity Price at {start}", f"{start_electricity_price[2]:.4f} $/MJ"],
-        [f"Electricity Price at {end}", f"{end_electricity_price[2]:.4f} $/MJ"],
+        [f"Electricity Price at {start}*", f"{start_electricity_price[2]:.4f} $/MJ"],
+        [f"Electricity Price at {end}*", f"{end_electricity_price[2]:.4f} $/MJ"],
         [f"Diesel Price at {start}", f"{diesel_price_start:.2f} $/gal"],
         [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"],
-        [f"Marine Fuel ({marine_fuel_choice}) Price at {marine_fuel_port_name}", f"{dynamic_price:.2f} $/ton"],
+        [f"Marine Fuel ({marine_fuel_choice}) Price at {start_port_name}*", f"{dynamic_price:.2f} $/ton"],
         [f"Green H2 Production Price at {start}*", f"{hydrogen_production_price:.2f} $/kg"],
     ]
     
-    new_detailed_headers = ["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
-    csv_data = [new_detailed_headers] + data
-    cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
-    eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)")
-    
-    # Generate charts using the now-defined variables
-    cost_chart_base64 = create_breakdown_chart(
-        cost_chart_data, cost_per_kg_index, 'Cost Breakdown per Kilogram of Delivered Fuel', 'Cost ($/kg)'
-    )
-    emission_chart_base64 = create_breakdown_chart(
-        emission_chart_data, eco2_per_kg_index, 'CO2e Breakdown per Kilogram of Delivered Fuel', 'CO2e (kg/kg)'
-    )
-
-   
+    # FIX 5: Removed the large duplicated block of code that was here.
+    # The response is now assembled correctly with no redundant definitions.
     response = {
         "status": "success",
         "map_data": {
