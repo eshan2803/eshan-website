@@ -425,14 +425,14 @@ def run_lca_model(inputs):
         ax.set_title(title, fontsize=16, fontweight='bold')
         ax.grid(axis='x', linestyle='--', alpha=0.6)
         
-        # --- NEW: Add the overlay text box if provided ---
         if overlay_text:
-            # Place the text in the lower-left corner of the chart area.
+            # Place the text in the bottom-right corner of the chart area.
             # `transform=ax.transAxes` uses coordinates from (0,0) to (1,1).
-            ax.text(0.03, 0.03, overlay_text,
+            ax.text(0.97, 0.03, overlay_text,
                     transform=ax.transAxes,
-                    fontsize=9,
+                    fontsize=12,  # Increased font size from 9 to 12
                     verticalalignment='bottom',
+                    horizontalalignment='right', # Added for right alignment
                     bbox=dict(boxstyle='round,pad=0.5', fc='white', alpha=0.75))
     
         plt.tight_layout()
@@ -445,6 +445,7 @@ def run_lca_model(inputs):
         plt.close(fig)
         
         return img_base64
+
     # =================================================================
     # END OF HELPER FUNCTIONS
     # =================================================================
