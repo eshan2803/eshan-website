@@ -8,3 +8,4 @@ searoute
 openai
 gunicorn
 matplotlib
+googlesearch-python
