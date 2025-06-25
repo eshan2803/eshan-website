@@ -15,6 +15,8 @@ from urllib.parse import urlencode
 import re
 import os
 import json
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt 
 import io                         
 import base64                     
