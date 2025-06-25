@@ -19,8 +19,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt 
 import io                         
-import base64   
-from googlesearch import search                  
+import base64                     
 
 # --- Initialize Flask App ---
 app = Flask(__name__)
@@ -225,111 +224,157 @@ def run_lca_model(inputs):
             return 4  # Default value if country not found or price missing
         return diesel_price
 
-# In app.py, DELETE your existing agent functions and PASTE this entire block.
+    def openai_get_electricity_price(coords_str):
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key_openAI)
+        default_price_mj = 0.03
 
-    def get_live_commodity_price(commodity, location):
-        """
-        Performs a live Google search.
-        CORRECTED: This version robustly handles the output from the search library.
-        """
         try:
-            query = f"latest price of {commodity} in {location}"
-            print(f"Executing web search for: '{query}'")
-            
-            # The library returns an iterator of URL strings. We collect them into a list.
-            # This is more robust and avoids the attribute error.
-            search_results_iterator = search(query, num_results=4, lang="en")
-            search_urls = list(search_results_iterator)
-            
-            # We will return the URLs as a newline-separated string for the LLM to process.
-            return "\n".join(search_urls) if search_urls else "No search results found."
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                response_format={"type": "json_object"},
+                temperature = 0,
+                messages=[
+                    {"role": "system", "content": "Retrieve the latest average electricity price for the given coordinates, preferring commercial rates. Convert kWh to MJ and return in JSON format."},
+                    {"role": "user", "content": f"""Given coordinates {coords_str}, return the electricity pricing information in JSON format:
+                    {{
+                        "average_price_kwh": PRICE_IN_USD_PER_KWH,
+                        "average_price_mj": PRICE_IN_USD_PER_MJ,
+                        "country": "COUNTRY_NAME_HERE",
+                        "latitude": LATITUDE,
+                        "longitude": LONGITUDE
+                    }}"""
+                    },
+                ]
+            )
+            output = response.choices[0].message.content
+
+            try:
+                result = json.loads(output)
+                price_mj = result.get("average_price_mj")
+                lat = result.get("latitude")
+                lng = result.get("longitude")
+
+                if price_mj is not None:
+                    try:
+                        return lat, lng, float(price_mj)
+                    except (ValueError, TypeError):
+                        app.logger.warning(f"Could not convert OpenAI price '{price_mj}' to float for coords {coords_str}. Using default.")
+                        return lat, lng, default_price_mj
+                else:
+                    app.logger.warning(f"OpenAI did not return 'average_price_mj' for coords {coords_str}. Using default.")
+                    return lat, lng, default_price_mj
+
+            except json.JSONDecodeError as e:
+                app.logger.warning(f"JSON parsing error: {e}")
+                return None, None, default_price_mj
+
         except Exception as e:
-            print(f"Error during web search: {e}")
-            return f"An error occurred during search: {str(e)}"
+            app.logger.error(f"Error in openai_get_electricity_price for coords {coords_str}: {e}")
+            return None, None, default_price_mj
+# Add this new function in app_marinefuels.py
     
-    def convert_price_to_requested_unit(price, unit_found, requested_unit):
+    def openai_get_hydrogen_price(coords_str):
         """
-        Deterministically converts prices. This function is correct and remains unchanged.
-        """
-        if not isinstance(price, (int, float)):
-            return None # Cannot convert non-numeric price
-            
-        if unit_found == requested_unit:
-            return price
-    
-        if requested_unit == "USD per MJ" and unit_found == "USD per kWh":
-            return price / 3.6
-        
-        print(f"Warning: Unit mismatch. Found '{unit_found}' but need '{requested_unit}'. No conversion rule exists.")
-        return None # Return None if conversion is not possible, forcing a default.
-    
-    def run_search_agent_for_price(commodity, location, requested_unit):
-        """
-        Manages the two-step conversation with the LLM.
-        CORRECTED: This version has more robust error handling.
+        Uses the OpenAI API to get the latest levelized cost of producing
+        green hydrogen at a given location.
         """
         from openai import OpenAI
         client = OpenAI(api_key=api_key_openAI)
+        
+        # A global average fallback price for green hydrogen
+        default_price_usd_per_kg = 6.5
     
-        tools = [
-            # The tool definition remains the same
-            {"type": "function", "function": {"name": "get_live_commodity_price", "description": "Gets the latest price of a commodity by searching the web.", "parameters": {"type": "object", "properties": {"commodity": {"type": "string"},"location": {"type": "string"}},"required": ["commodity", "location"]}}}
-        ]
-        
-        prompt = (
-            f"Based on a web search, what is the latest price of {commodity} in {location}? "
-            f"Return the single most reliable price you can find. "
-            f"Your final response MUST be a JSON object with three keys: 'price' (a float), 'unit' (a string, e.g., 'USD per kWh', 'USD per metric ton'), and 'source' (the URL)."
-        )
-        messages = [{"role": "user", "content": prompt}]
-        
         try:
-            # First API call
-            response = client.chat.completions.create(model="gpt-4o", messages=messages, tools=tools, tool_choice="auto")
-            response_message = response.choices[0].message
-            tool_calls = response_message.tool_calls
+            prompt_content = f"""
+            Given the coordinates {coords_str}, provide the latest available
+            levelized cost of producing green hydrogen (from electrolysis, not SMR) in USD per kg.
     
-            if not tool_calls:
-                print("Model did not call the tool. Cannot retrieve price.")
-                return None
+            Return the data in the following JSON format:
+            {{
+                "location_coordinates": "{coords_str}",
+                "fuel_name": "Green Hydrogen",
+                "price_usd_per_kg": LATEST_PRICE_IN_USD_PER_KILOGRAM
+            }}
+            """
     
-            # Execute the tool call (our corrected web search function)
-            messages.append(response_message)
-            tool_call = tool_calls[0]
-            function_args = json.loads(tool_call.function.arguments)
-            function_response = get_live_commodity_price(
-                commodity=function_args.get("commodity"),
-                location=function_args.get("location"),
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                response_format={"type": "json_object"},
+                temperature=0,
+                messages=[
+                    {"role": "system", "content": "You are a renewable energy market data expert. Your task is to provide the latest production prices for green hydrogen in JSON format."},
+                    {"role": "user", "content": prompt_content}
+                ]
             )
             
-            messages.append({"tool_call_id": tool_call.id, "role": "tool", "name": tool_call.function.name, "content": function_response})
-            
-            # Second API call
-            print("Sending search results back to LLM for final answer...")
-            second_response = client.chat.completions.create(model="gpt-4o", messages=messages, response_format={"type": "json_object"})
-            
-            # Parse the final, structured response
-            result_json = json.loads(second_response.choices[0].message.content)
-            
-            # ROBUSTNESS FIX: Check if the 'price' key exists and is not null before converting.
-            price_value = result_json.get("price")
-            if price_value is None:
-                print(f"LLM response did not contain a valid 'price' value. Response: {result_json}")
-                return None
+            output = response.choices[0].message.content
+            result = json.loads(output)
+            price = result.get("price_usd_per_kg")
     
-            price_found = float(price_value)
-            unit_found = result_json.get("unit")
-            
-            print(f"LLM extracted: {price_found} {unit_found}")
-            
-            final_price = convert_price_to_requested_unit(price_found, unit_found, requested_unit)
-            return final_price
+            if price is not None:
+                return coords_str, float(price)
+            else:
+                app.logger.warning(f"Warning: OpenAI response did not contain hydrogen price. Using default.")
+                return coords_str, default_price_usd_per_kg
     
         except Exception as e:
-            print(f"An error occurred in the search agent: {e}")
-            traceback.print_exc() # Print full traceback for debugging
-            return None          
+            app.logger.error(f"An error occurred during the OpenAI hydrogen price call: {e}. Using default.")
+            return coords_str, default_price_usd_per_kg
+
+    def openai_get_marine_fuel_price(fuel_name, port_coords_tuple, port_name_str):
+        """
+        Uses the OpenAI API to get the latest bunker price for a given fuel at a given port.
+        """
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key_openAI)
+        
+        # Set a reasonable default price for each fuel type as a fallback
+        default_prices = {
+            'VLSFO': 650.0,
+            'LNG': 550.0,
+            'Methanol': 700.0,
+            'Ammonia': 800.0
+        }
+        default_price_usd_per_mt = default_prices.get(fuel_name, 650.0)
+
+        try:
+            prompt_content = f"""
+            Given the port named '{port_name_str}' at coordinates {port_coords_tuple}, 
+            provide the latest available bunker price for the marine fuel '{fuel_name}'.
+
+            Return the data in the following JSON format:
+            {{
+                "port_name": "PORT_NAME_HERE",
+                "fuel_name": "{fuel_name}",
+                "price_usd_per_mt": LATEST_PRICE_IN_USD_PER_METRIC_TON
+            }}
+            """
+
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                response_format={"type": "json_object"},
+                temperature=0,
+                messages=[
+                    {"role": "system", "content": "You are a maritime fuel market data expert. Your task is to provide the latest bunker fuel prices for specified fuels at major world ports in JSON format."},
+                    {"role": "user", "content": prompt_content}
+                ]
+            )
             
+            output = response.choices[0].message.content
+            result = json.loads(output)
+            price = result.get("price_usd_per_mt")
+
+            if price is not None:
+                return port_name_str, float(price)
+            else:
+                app.logger.warning(f"Warning: OpenAI response did not contain price for {fuel_name}. Using default.")
+                return port_name_str, default_price_usd_per_mt
+
+        except Exception as e:
+            app.logger.error(f"An error occurred during the OpenAI {fuel_name} price call: {e}. Using default.")
+            return port_name_str, default_price_usd_per_mt
+      
     def calculate_ship_power_kw(ship_volume_m3):
         """
         Calculates the average engine power based on ship cargo volume
@@ -354,8 +399,6 @@ def run_lca_model(inputs):
         calculated_power = np.interp(ship_volume_m3, volumes_m3, powers_kw)
         
         return calculated_power   
-
-    # Replace the old create_breakdown_chart function with this one.
 
     def create_breakdown_chart(data, column_index, title, x_label, overlay_text=None):
         """
@@ -402,7 +445,6 @@ def run_lca_model(inputs):
         plt.close(fig)
         
         return img_base64
-
     # =================================================================
     # END OF HELPER FUNCTIONS
     # =================================================================
@@ -412,17 +454,7 @@ def run_lca_model(inputs):
     coor_end_lat, coor_end_lng, _ = extract_lat_long(end)
     start_port_lat, start_port_lng, start_port_name = openai_get_nearest_port(f"{coor_start_lat},{coor_start_lng}")
     end_port_lat, end_port_lng, end_port_name = openai_get_nearest_port(f"{coor_end_lat},{coor_end_lng}")
-
-    price_elec_start = run_search_agent_for_price("commercial electricity", start, "USD per MJ") or 0.08
-    price_elec_end = run_search_agent_for_price("commercial electricity", end, "USD per MJ") or 0.08
-    price_marine_fuel = run_search_agent_for_price(marine_fuel_choice, start_port_name, f"USD per metric ton") or 650.0
-    price_hydrogen_prod = run_search_agent_for_price("green hydrogen from electrolysis", start, "USD per kg") or 7.0
-
-    # Store prices in the format the rest of the script expects
-    start_electricity_price = (coor_start_lat, coor_start_lng, price_elec_start)
-    end_electricity_price = (coor_end_lat, coor_end_lng, price_elec_end)
-    dynamic_price = price_marine_fuel
-    hydrogen_production_price = price_hydrogen_prod
+    _, hydrogen_production_price = openai_get_hydrogen_price(f"{coor_start_lat},{coor_start_lng}")
     
     route = sr.searoute((start_port_lng, start_port_lat), (end_port_lng, end_port_lat), units="nm")
     searoute_coor = [[lat, lon] for lon, lat in route.geometry['coordinates']]
@@ -443,6 +475,11 @@ def run_lca_model(inputs):
     CO2e_start = carbon_intensity(coor_start_lat, coor_start_lng)
     CO2e_end = carbon_intensity(coor_end_lat, coor_end_lng)
 
+    start_electricity_price = openai_get_electricity_price(f"{coor_start_lat},{coor_start_lng}")
+    end_electricity_price = openai_get_electricity_price(f"{coor_end_lat},{coor_end_lng}")
+    start_port_electricity_price = openai_get_electricity_price(f"{start_port_lat},{start_port_lng}")
+    end_port_electricity_price = openai_get_electricity_price(f"{end_port_lat},{end_port_lng}")
+
     road_route_start_coords = extract_route_coor((coor_start_lat, coor_start_lng), (start_port_lat, start_port_lng))
     road_route_end_coords = extract_route_coor((end_port_lat, end_port_lng), (coor_end_lat, end_port_lng))
 
@@ -450,6 +487,12 @@ def run_lca_model(inputs):
     diesel_price_start = get_diesel_price(coor_start_lat, coor_start_lng)
     diesel_price_end = get_diesel_price(end_port_lat, end_port_lng)
 
+    # Get dynamic marine fuel price from the starting port
+    marine_fuel_port_name, dynamic_price = openai_get_marine_fuel_price(
+        marine_fuel_choice, 
+        (start_port_lat, start_port_lng), 
+        start_port_name
+    )
     # --- 3. Parameters (Copied from LCA_WebApp.py) ---
     volume_per_tank = total_ship_volume / ship_number_of_tanks
     if ship_tank_shape == 1:
@@ -2281,9 +2324,7 @@ def run_lca_model(inputs):
             f"Context:\n"
             f"• Production Cost in {start}: ${hydrogen_production_price:.2f}/kg\n"
             f"• Total Transport Cost: ${chem_cost:.2f}/kg\n"
-            f"• Transport cost is {ratio_cost:.1f} times the production cost.\n\n"  
-            f"*Hydrogen production cost from Google search. Take with a pinch of salt.\n"
-            f" Working to improve this estimate."
+            f"• Transport cost is {ratio_cost:.1f} times the production cost."
         )
 
     # 2. Prepare text for the Emissions Chart
@@ -2295,7 +2336,9 @@ def run_lca_model(inputs):
             f"Context:\n"
             f"• Gray Hydrogen (SMR) Emission: {SMR_EMISSIONS_KG_PER_KG_H2:.2f} kg CO₂e/kg\n"
             f"• Total Transport Emission: {chem_CO2e:.2f} kg CO₂e/kg\n"
-            f"• Transport emission is {ratio_emission:.1f} times the SMR emission."
+            f"• Transport cost is {ratio_cost:.1f} times the production cost.\n\n"  
+            f"*Hydrogen production cost from Google search. Take with a pinch of salt.\n"
+            f" Working to improve this estimate."
         )
 
     # --- DEFINE HEADERS AND INDICES ---
@@ -2340,11 +2383,10 @@ def run_lca_model(inputs):
         [f"Electricity Price at {end}", f"{end_electricity_price[2]:.4f} $/MJ"],
         [f"Diesel Price at {start}", f"{diesel_price_start:.2f} $/gal"],
         [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"],
-        [f"Marine Fuel ({marine_fuel_choice}) Price at {start_port_name}", f"{dynamic_price:.2f} $/ton"],
+        [f"Marine Fuel ({marine_fuel_choice}) Price at {marine_fuel_port_name}", f"{dynamic_price:.2f} $/ton"],
         [f"Green H2 Production Price at {start}*", f"{hydrogen_production_price:.2f} $/kg"],
     ]
     
-    # ** THE FIX IS HERE: Define new_detailed_headers and related variables before they are used **
     new_detailed_headers = ["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
     csv_data = [new_detailed_headers] + data
     cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
