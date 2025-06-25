@@ -2324,7 +2324,42 @@ def run_lca_model(inputs):
         emission_chart_data.insert(0, smr_emissions_row) # Add to the beginning
         
     # --- 8. Package Final JSON Response ---
+   summary1_data = [
+        ["Cost ($/kg chemical)", f"{chem_cost:.2f}"],
+        ["Consumed Energy (MJ/kg chemical)", f"{chem_energy:.2f}"],
+        ["Emission (kg CO2/kg chemical)", f"{chem_CO2e:.2f}"]
+    ]
     
+    summary2_data = [
+        ["Cost ($/GJ)", f"{total_results[0] / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
+        ["Energy consumed (MJ_in/GJ_out)", f"{total_results[1] / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
+        ["Emission (kg CO2/GJ)", f"{total_results[2] / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"]
+    ]
+    
+    assumed_prices_data = [
+        [f"Electricity Price at {start}", f"{start_electricity_price[2]:.4f} $/MJ"],
+        [f"Electricity Price at {end}", f"{end_electricity_price[2]:.4f} $/MJ"],
+        [f"Diesel Price at {start}", f"{diesel_price_start:.2f} $/gal"],
+        [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"],
+        [f"Marine Fuel ({marine_fuel_choice}) Price at {marine_fuel_port_name}", f"{dynamic_price:.2f} $/ton"],
+        [f"Green H2 Production Price at {start}", f"{hydrogen_production_price:.2f} $/kg"],
+    ]
+    
+    # ** THE FIX IS HERE: Define new_detailed_headers and related variables before they are used **
+    new_detailed_headers = ["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
+    csv_data = [new_detailed_headers] + data
+    cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
+    eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)")
+    
+    # Generate charts using the now-defined variables
+    cost_chart_base64 = create_breakdown_chart(
+        cost_chart_data, cost_per_kg_index, 'Cost Breakdown per Kilogram of Delivered Fuel', 'Cost ($/kg)'
+    )
+    emission_chart_base64 = create_breakdown_chart(
+        emission_chart_data, eco2_per_kg_index, 'CO2e Breakdown per Kilogram of Delivered Fuel', 'CO2e (kg/kg)'
+    )
+
+   
     response = {
         "status": "success",
         "map_data": {
