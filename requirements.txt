@@ -7,3 +7,4 @@ requests
 searoute
 openai
 gunicorn
+matplotlib
