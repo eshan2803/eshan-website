@@ -2281,7 +2281,9 @@ def run_lca_model(inputs):
             f"Context:\n"
             f"• Production Cost in {start}: ${hydrogen_production_price:.2f}/kg\n"
             f"• Total Transport Cost: ${chem_cost:.2f}/kg\n"
-            f"• Transport cost is {ratio_cost:.1f} times the production cost."
+            f"• Transport cost is {ratio_cost:.1f} times the production cost.\n\n"  
+            f"*Hydrogen production cost from Google search. Take with a pinch of salt.\n"
+            f" Working to improve this estimate."
         )
 
     # 2. Prepare text for the Emissions Chart
@@ -2339,7 +2341,7 @@ def run_lca_model(inputs):
         [f"Diesel Price at {start}", f"{diesel_price_start:.2f} $/gal"],
         [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"],
         [f"Marine Fuel ({marine_fuel_choice}) Price at {start_port_name}", f"{dynamic_price:.2f} $/ton"],
-        [f"Green H2 Production Price at {start}", f"{hydrogen_production_price:.2f} $/kg"],
+        [f"Green H2 Production Price at {start}*", f"{hydrogen_production_price:.2f} $/kg"],
     ]
     
     # ** THE FIX IS HERE: Define new_detailed_headers and related variables before they are used **
