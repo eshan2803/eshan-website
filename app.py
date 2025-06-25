@@ -272,9 +272,55 @@ def run_lca_model(inputs):
         except Exception as e:
             app.logger.error(f"Error in openai_get_electricity_price for coords {coords_str}: {e}")
             return None, None, default_price_mj
-
-# RENAME and MODIFY your existing function: openai_get_vlsfo_price
-# New name: openai_get_marine_fuel_price
+# Add this new function in app_marinefuels.py
+    
+    def openai_get_hydrogen_price(coords_str):
+        """
+        Uses the OpenAI API to get the latest levelized cost of producing
+        green hydrogen at a given location.
+        """
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key_openAI)
+        
+        # A global average fallback price for green hydrogen
+        default_price_usd_per_kg = 6.5
+    
+        try:
+            prompt_content = f"""
+            Given the coordinates {coords_str}, provide the latest available
+            levelized cost of producing green hydrogen (from electrolysis, not SMR) in USD per kg.
+    
+            Return the data in the following JSON format:
+            {{
+                "location_coordinates": "{coords_str}",
+                "fuel_name": "Green Hydrogen",
+                "price_usd_per_kg": LATEST_PRICE_IN_USD_PER_KILOGRAM
+            }}
+            """
+    
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                response_format={"type": "json_object"},
+                temperature=0,
+                messages=[
+                    {"role": "system", "content": "You are a renewable energy market data expert. Your task is to provide the latest production prices for green hydrogen in JSON format."},
+                    {"role": "user", "content": prompt_content}
+                ]
+            )
+            
+            output = response.choices[0].message.content
+            result = json.loads(output)
+            price = result.get("price_usd_per_kg")
+    
+            if price is not None:
+                return coords_str, float(price)
+            else:
+                app.logger.warning(f"Warning: OpenAI response did not contain hydrogen price. Using default.")
+                return coords_str, default_price_usd_per_kg
+    
+        except Exception as e:
+            app.logger.error(f"An error occurred during the OpenAI hydrogen price call: {e}. Using default.")
+            return coords_str, default_price_usd_per_kg
 
     def openai_get_marine_fuel_price(fuel_name, port_coords_tuple, port_name_str):
         """
@@ -396,6 +442,7 @@ def run_lca_model(inputs):
     coor_end_lat, coor_end_lng, _ = extract_lat_long(end)
     start_port_lat, start_port_lng, start_port_name = openai_get_nearest_port(f"{coor_start_lat},{coor_start_lng}")
     end_port_lat, end_port_lng, end_port_name = openai_get_nearest_port(f"{coor_end_lat},{coor_end_lng}")
+    _, hydrogen_production_price = openai_get_hydrogen_price(f"{coor_start_lat},{coor_start_lng}")
     
     route = sr.searoute((start_port_lng, start_port_lat), (end_port_lng, end_port_lat), units="nm")
     searoute_coor = [[lat, lon] for lon, lat in route.geometry['coordinates']]
@@ -504,7 +551,8 @@ def run_lca_model(inputs):
     
     # Sourced from Table 6 for the "Cooldown" scenario 
     COP_cooldown = [0.131, 1.714, 0] # (H2, NH3, Methanol)
-    
+    SMR_EMISSIONS_KG_PER_KG_H2 = 9.3 # kg CO2e / kg H2 for unabated Steam Methane Reforming
+
     marine_fuels_data = {
         'VLSFO': {
             'price_usd_per_ton': 650.0,
@@ -2250,15 +2298,38 @@ def run_lca_model(inputs):
     chem_CO2e = total_results[2] / final_weight if final_weight > 0 else 0
     final_energy_output_mj = final_weight * HHV_chem[fuel_type]
 
-    # This line has been moved to step 4
-    # data_for_display = [row for row in data if row[0] != 'site_A_chem_production']
     data_for_display = [row for row in data if row[0] != 'site_A_chem_production']
 
     # 2. Use this new filtered list for the data being sent to the frontend table.
     detailed_data_formatted = data_for_display 
     
     # --- END OF CHANGE ---
-    
+    if final_energy_gj_denominator > 0: # A good check to ensure calculations were successful
+        # Create cost row for Hydrogen Production
+        h2_prod_cost_total = hydrogen_production_price * final_weight
+        h2_prod_cost_per_kg = hydrogen_production_price
+        h2_prod_cost_per_gj = h2_prod_cost_total / final_energy_gj_denominator
+        
+        # Structure: [Name, Cost, Energy, eCO2, Chem, BOG, Cost/kg, Cost/GJ, eCO2/kg, eCO2/GJ]
+        hydrogen_cost_row = [
+            "Green Hydrogen Production", h2_prod_cost_total, 0, 0, 0, 0,
+            h2_prod_cost_per_kg, h2_prod_cost_per_gj, 0, 0
+        ]
+        data_for_display.insert(0, hydrogen_cost_row) # Add to the beginning of the list
+
+        # Create emissions row for SMR Benchmark
+        smr_emissions_total = SMR_EMISSIONS_KG_PER_KG_H2 * final_weight
+        smr_emissions_per_kg = SMR_EMISSIONS_KG_PER_KG_H2
+        smr_emissions_per_gj = smr_emissions_total / final_energy_gj_denominator
+        
+        smr_emissions_row = [
+            "Gray Hydrogen Production (SMR)", 0, 0, smr_emissions_total, 0, 0,
+            0, 0, smr_emissions_per_kg, smr_emissions_per_gj
+        ]
+        data_for_display.insert(1, smr_emissions_row) # Add as the second item
+
+
+    detailed_data_formatted = data_for_display 
     summary1_data = [
         ["Cost ($/kg chemical)", f"{chem_cost:.2f}"],
         ["Consumed Energy (MJ/kg chemical)", f"{chem_energy:.2f}"],
@@ -2277,6 +2348,7 @@ def run_lca_model(inputs):
         [f"Diesel Price at {start}", f"{diesel_price_start:.2f} $/gal"],
         [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"],
         [f"Marine Fuel ({marine_fuel_choice}) Price at {marine_fuel_port_name}", f"{dynamic_price:.2f} $/ton"],
+        [f"Green H2 Production Price at {start}", f"{hydrogen_production_price:.2f} $/kg"],
     ]
     
     new_detailed_headers = ["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
