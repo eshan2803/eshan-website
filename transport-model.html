@@ -418,11 +418,14 @@ nav a:hover::after {
         displayTables(results.table_data);
         completeResultsForCsv = results.csv_data; 
         if (results.charts) {
-          document.getElementById('costChartImg').src = "data:image/png;base64," + results.charts.cost_chart;
-          document.getElementById('emissionChartImg').src = "data:image/png;base64," + results.charts.emission_chart;
+          document.getElementById('costChartImg').src = "data:image/png;base64," + results.charts.cost_chart_base64;
+          document.getElementById('emissionChartImg').src = "data:image/png;base64," + results.charts.emission_chart_base64;
         }
-        outputsDiv.classList.remove('hidden');
-        setTimeout(() => {
+
+        const routeBounds = displayMap(results.map_data);
+        displayTables(results.table_data);
+        completeResultsForCsv = results.csv_data; 
+        outputsDiv.classList.remove('hidden');        setTimeout(() => {
             map.invalidateSize(); // First, fix the size
             // Then, if the bounds are valid, zoom to fit them
             if (routeBounds && routeBounds.isValid()) {
