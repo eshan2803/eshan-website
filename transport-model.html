@@ -265,6 +265,17 @@ nav a:hover::after {
   <div id="summaryTableContainer" class="table-container mb-6 shadow-md"><table id="assumptionTable"></table></div>
   <h3 class="text-lg font-semibold mb-3 text-gray-600">Detailed Process Breakdown:</h3>
   <div id="detailedTableContainer" class="table-container mb-6 shadow-md"><table id="detailedTable"></table></div>
+  <div class="charts-container" style="margin-top: 2rem;">
+            <h3 class="text-lg font-semibold mb-3 text-gray-600">Cost Breakdown Chart:</h3>
+            <div style="border: 1px solid #e5e7eb; padding: 1rem; border-radius: 8px; margin-bottom: 2rem;">
+                <img id="costChartImg" src="" alt="Cost Breakdown Chart" style="max-width: 100%;"/>
+            </div>
+
+            <h3 class="text-lg font-semibold mb-3 text-gray-600">Emissions Breakdown Chart:</h3>
+            <div style="border: 1px solid #e5e7eb; padding: 1rem; border-radius: 8px;">
+                <img id="emissionChartImg" src="" alt="Emissions Breakdown Chart" style="max-width: 100%;"/>
+            </div>
+        </div>
   <div class="text-center mt-6">
     <button id="downloadCsvButton" class="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out">Download Results (CSV)</button>
   </div>
@@ -406,7 +417,10 @@ nav a:hover::after {
         const routeBounds = displayMap(results.map_data); // Capture the returned bounds
         displayTables(results.table_data);
         completeResultsForCsv = results.csv_data; 
-        
+        if (results.charts) {
+          document.getElementById('costChartImg').src = "data:image/png;base64," + results.charts.cost_chart;
+          document.getElementById('emissionChartImg').src = "data:image/png;base64," + results.charts.emission_chart;
+        }
         outputsDiv.classList.remove('hidden');
         setTimeout(() => {
             map.invalidateSize(); // First, fix the size
