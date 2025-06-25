@@ -355,39 +355,54 @@ def run_lca_model(inputs):
         
         return calculated_power   
 
-    def create_breakdown_chart(data, column_index, title, x_label):
+    # Replace the old create_breakdown_chart function with this one.
+
+    def create_breakdown_chart(data, column_index, title, x_label, overlay_text=None):
         """
-        Creates a horizontal bar chart from the results data, sorts it,
+        Creates a horizontal bar chart, sorts it, adds an optional text overlay,
         and returns it as a Base64 encoded string.
         """
         # Extract data for plotting, skipping the 'TOTAL' row at the end
-        labels = [row[0] for row in data[:-1]]
-        values = [float(row[column_index]) for row in data[:-1]]
-
-        # Combine labels and values to sort them together
-        sorted_data = sorted(zip(values, labels))
-        values_sorted, labels_sorted = zip(*sorted_data)
-
-        # Create the plot
+        labels = [row[0] for row in data if row[0] != 'TOTAL']
+        values = [float(row[column_index]) for row in data if row[0] != 'TOTAL']
+    
+        # Filter out zero-value items to keep the chart clean
+        filtered_data = [(val, lab) for val, lab in zip(values, labels) if val > 0]
+        
+        # If all values are zero, don't create a chart
+        if not filtered_data:
+            # You can create a placeholder image or return an empty string
+            return "" 
+    
+        values_sorted, labels_sorted = zip(*sorted(filtered_data))
+    
         fig, ax = plt.subplots(figsize=(10, 8))
         ax.barh(labels_sorted, values_sorted, color='#4CAF50')
         ax.set_xlabel(x_label)
         ax.set_title(title, fontsize=16, fontweight='bold')
         ax.grid(axis='x', linestyle='--', alpha=0.6)
         
-        # Ensure layout is tight so labels are not cut off
+        # --- NEW: Add the overlay text box if provided ---
+        if overlay_text:
+            # Place the text in the lower-left corner of the chart area.
+            # `transform=ax.transAxes` uses coordinates from (0,0) to (1,1).
+            ax.text(0.03, 0.03, overlay_text,
+                    transform=ax.transAxes,
+                    fontsize=9,
+                    verticalalignment='bottom',
+                    bbox=dict(boxstyle='round,pad=0.5', fc='white', alpha=0.75))
+    
         plt.tight_layout()
-
-        # Save the plot to a memory buffer
+    
         buf = io.BytesIO()
         plt.savefig(buf, format='png', dpi=90)
         buf.seek(0)
         
-        # Encode the image in Base64 and convert to a string
         img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-        plt.close(fig) # Close the figure to free memory
+        plt.close(fig)
         
-        return img_base64       
+        return img_base64
+
     # =================================================================
     # END OF HELPER FUNCTIONS
     # =================================================================
@@ -2257,25 +2272,53 @@ def run_lca_model(inputs):
     data_for_display = [row for row in data if row[0] != 'site_A_chem_production']
     detailed_data_formatted = data_for_display
     
-    # --- PREPARE SEPARATE DATA LISTS FOR THE CHARTS (WITH BENCHMARKS) ---
-    # Create base copies of the data for each chart
-    cost_chart_data = list(data_for_display)
-    emission_chart_data = list(data_for_display)
-    # Inject the benchmark rows into their respective chart data lists
-    if final_energy_gj_denominator > 0:
-        # 1. Create and add the Hydrogen Production row to the COST chart data
-        # Create a placeholder row: ["Name", 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        hydrogen_cost_row = ["Green Hydrogen Production"] + [0] * 9
-        # Directly insert the known per-kg value into the correct column (index 6)
-        hydrogen_cost_row[6] = hydrogen_production_price
-        cost_chart_data.insert(0, hydrogen_cost_row) # Add to the beginning
+    # 1. Prepare text for the Cost Chart
+    cost_overlay_text = ""
+    # Ensure we have a valid production price to avoid division by zero
+    if hydrogen_production_price > 0:
+        ratio_cost = chem_cost / hydrogen_production_price
+        cost_overlay_text = (
+            f"Context:\n"
+            f"• Production Cost in {start}: ${hydrogen_production_price:.2f}/kg\n"
+            f"• Total Transport Cost: ${chem_cost:.2f}/kg\n"
+            f"• Transport cost is {ratio_cost:.1f} times the production cost."
+        )
+
+    # 2. Prepare text for the Emissions Chart
+    emission_overlay_text = ""
+    # Ensure SMR emissions are non-zero to avoid division by zero
+    if SMR_EMISSIONS_KG_PER_KG_H2 > 0:
+        ratio_emission = chem_CO2e / SMR_EMISSIONS_KG_PER_KG_H2
+        emission_overlay_text = (
+            f"Context:\n"
+            f"• Gray Hydrogen (SMR) Emission: {SMR_EMISSIONS_KG_PER_KG_H2:.2f} kg CO₂e/kg\n"
+            f"• Total Transport Emission: {chem_CO2e:.2f} kg CO₂e/kg\n"
+            f"• Transport emission is {ratio_emission:.1f} times the SMR emission."
+        )
+
+    # --- DEFINE HEADERS AND INDICES ---
+    # This part remains the same.
+    new_detailed_headers = ["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
+    csv_data = [new_detailed_headers] + data
+    cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
+    eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)")
     
-        # 2. Create and add the SMR benchmark row to the EMISSIONS chart data
-        # Create a placeholder row.
-        smr_emissions_row = ["Gray Hydrogen Production (SMR)"] + [0] * 9
-        # Directly insert the known per-kg value into the correct column (index 8)
-        smr_emissions_row[8] = SMR_EMISSIONS_KG_PER_KG_H2
-        emission_chart_data.insert(0, smr_emissions_row) # Add to the beginning
+    # --- GENERATE CHARTS WITH THE NEW OVERLAY TEXT ---
+    # The benchmark bar logic is now removed. Both charts use the clean `data_for_display`.
+    cost_chart_base64 = create_breakdown_chart(
+        data_for_display, 
+        cost_per_kg_index, 
+        'Cost Breakdown per Kilogram of Delivered Fuel', 
+        'Cost ($/kg)',
+        overlay_text=cost_overlay_text  # Pass the new text here
+    )
+    emission_chart_base64 = create_breakdown_chart(
+        data_for_display, 
+        eco2_per_kg_index, 
+        'CO2e Breakdown per Kilogram of Delivered Fuel', 
+        'CO2e (kg/kg)',
+        overlay_text=emission_overlay_text # Pass the new text here
+    )
         
     # --- 8. Package Final JSON Response ---
     summary1_data = [
