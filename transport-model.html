@@ -344,7 +344,6 @@ nav a:hover::after {
     const BACKEND_URL = "https://transport-model.onrender.com"; // URL of the running Python Flask server
     let map; // Leaflet map instance
     let completeResultsForCsv = []; // To store data for CSV download
-
     // --- Main Calculation Handler ---
     async function handleCalculation(e) {
       console.log("handleCalculation function started!");
@@ -414,6 +413,8 @@ nav a:hover::after {
 
         logStatus("Calculation complete. Rendering results...");
         console.log("Data for map IS being passed to displayMap now.");
+
+        // This is the single, corrected block of rendering logic
         const routeBounds = displayMap(results.map_data); // Capture the returned bounds
         displayTables(results.table_data);
         completeResultsForCsv = results.csv_data; 
@@ -421,11 +422,9 @@ nav a:hover::after {
           document.getElementById('costChartImg').src = "data:image/png;base64," + results.charts.cost_chart_base64;
           document.getElementById('emissionChartImg').src = "data:image/png;base64," + results.charts.emission_chart_base64;
         }
-
-        const routeBounds = displayMap(results.map_data);
-        displayTables(results.table_data);
-        completeResultsForCsv = results.csv_data; 
-        outputsDiv.classList.remove('hidden');        setTimeout(() => {
+        
+        outputsDiv.classList.remove('hidden');
+        setTimeout(() => {
             map.invalidateSize(); // First, fix the size
             // Then, if the bounds are valid, zoom to fit them
             if (routeBounds && routeBounds.isValid()) {
@@ -442,7 +441,6 @@ nav a:hover::after {
         calculateButton.textContent = 'Calculate';
       }
     }
-
     // --- UI Display Functions ---
     function displayMap(mapData) {
         console.log("displayMap called with data:", mapData);
