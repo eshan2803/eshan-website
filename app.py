@@ -225,84 +225,75 @@ def run_lca_model(inputs):
             return 4  # Default value if country not found or price missing
         return diesel_price
 
+# In app.py, DELETE your existing agent functions and PASTE this entire block.
+
     def get_live_commodity_price(commodity, location):
         """
-        Performs a live Google search. This is the "tool" the LLM uses.
-        (This function remains the same as before).
+        Performs a live Google search.
+        CORRECTED: This version robustly handles the output from the search library.
         """
         try:
             query = f"latest price of {commodity} in {location}"
             print(f"Executing web search for: '{query}'")
-            search_results_iterator = search(query, num_results=3, lang="en")
-            search_snippets = [f"Title: {r.title}\nDescription: {r.description}\nURL: {r.url}\n---" for r in search_results_iterator]
-            return "\n".join(search_snippets) if search_snippets else "No search results found."
+            
+            # The library returns an iterator of URL strings. We collect them into a list.
+            # This is more robust and avoids the attribute error.
+            search_results_iterator = search(query, num_results=4, lang="en")
+            search_urls = list(search_results_iterator)
+            
+            # We will return the URLs as a newline-separated string for the LLM to process.
+            return "\n".join(search_urls) if search_urls else "No search results found."
         except Exception as e:
             print(f"Error during web search: {e}")
             return f"An error occurred during search: {str(e)}"
-
+    
     def convert_price_to_requested_unit(price, unit_found, requested_unit):
         """
-        Deterministically converts prices from a found unit to a required unit.
-        This makes the final output reliable.
+        Deterministically converts prices. This function is correct and remains unchanged.
         """
+        if not isinstance(price, (int, float)):
+            return None # Cannot convert non-numeric price
+            
         if unit_found == requested_unit:
             return price
-
-        # Conversion logic for electricity (kWh to MJ)
+    
         if requested_unit == "USD per MJ" and unit_found == "USD per kWh":
             return price / 3.6
         
-        # Add other conversions as needed. For now, we assume others match.
-        # For example, if you find marine fuel is often in $/bbl, you'd add that conversion here.
-        
-        print(f"Warning: Unit mismatch. Found '{unit_found}' but need '{requested_unit}'. Returning original price.")
-        return price # Fallback if no conversion rule exists
-
+        print(f"Warning: Unit mismatch. Found '{unit_found}' but need '{requested_unit}'. No conversion rule exists.")
+        return None # Return None if conversion is not possible, forcing a default.
+    
     def run_search_agent_for_price(commodity, location, requested_unit):
         """
-        Manages the two-step conversation with the LLM to get a price and its unit,
-        then reliably converts it.
+        Manages the two-step conversation with the LLM.
+        CORRECTED: This version has more robust error handling.
         """
         from openai import OpenAI
         client = OpenAI(api_key=api_key_openAI)
-
+    
         tools = [
-            {
-                "type": "function",
-                "function": {
-                    "name": "get_live_commodity_price",
-                    "description": "Gets the latest price of a commodity by searching the web.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "commodity": {"type": "string"},
-                            "location": {"type": "string"},
-                        },
-                        "required": ["commodity", "location"],
-                    },
-                },
-            }
+            # The tool definition remains the same
+            {"type": "function", "function": {"name": "get_live_commodity_price", "description": "Gets the latest price of a commodity by searching the web.", "parameters": {"type": "object", "properties": {"commodity": {"type": "string"},"location": {"type": "string"}},"required": ["commodity", "location"]}}}
         ]
         
-        # NEW PROMPT: Ask for a JSON object with price, unit, and source.
         prompt = (
             f"Based on a web search, what is the latest price of {commodity} in {location}? "
             f"Return the single most reliable price you can find. "
-            f"Your final response MUST be a JSON object with three keys: 'price' (a float), 'unit' (a string, e.g., 'USD per kWh', 'USD per metric ton', 'USD per kg'), and 'source' (the URL)."
+            f"Your final response MUST be a JSON object with three keys: 'price' (a float), 'unit' (a string, e.g., 'USD per kWh', 'USD per metric ton'), and 'source' (the URL)."
         )
         messages = [{"role": "user", "content": prompt}]
         
         try:
-            # First API call to let the model use the tool
+            # First API call
             response = client.chat.completions.create(model="gpt-4o", messages=messages, tools=tools, tool_choice="auto")
             response_message = response.choices[0].message
             tool_calls = response_message.tool_calls
-
+    
             if not tool_calls:
                 print("Model did not call the tool. Cannot retrieve price.")
                 return None
-
-            # Execute the tool call (web search)
+    
+            # Execute the tool call (our corrected web search function)
             messages.append(response_message)
             tool_call = tool_calls[0]
             function_args = json.loads(tool_call.function.arguments)
@@ -311,28 +302,34 @@ def run_lca_model(inputs):
                 location=function_args.get("location"),
             )
             
-            # Append the search results to the conversation history
             messages.append({"tool_call_id": tool_call.id, "role": "tool", "name": tool_call.function.name, "content": function_response})
             
-            # Second API call to get the structured JSON answer
+            # Second API call
             print("Sending search results back to LLM for final answer...")
             second_response = client.chat.completions.create(model="gpt-4o", messages=messages, response_format={"type": "json_object"})
             
             # Parse the final, structured response
             result_json = json.loads(second_response.choices[0].message.content)
-            price_found = float(result_json.get("price"))
+            
+            # ROBUSTNESS FIX: Check if the 'price' key exists and is not null before converting.
+            price_value = result_json.get("price")
+            if price_value is None:
+                print(f"LLM response did not contain a valid 'price' value. Response: {result_json}")
+                return None
+    
+            price_found = float(price_value)
             unit_found = result_json.get("unit")
             
             print(f"LLM extracted: {price_found} {unit_found}")
             
-            # Reliably convert to the unit our model needs
             final_price = convert_price_to_requested_unit(price_found, unit_found, requested_unit)
             return final_price
-
+    
         except Exception as e:
             print(f"An error occurred in the search agent: {e}")
-            return None
-                
+            traceback.print_exc() # Print full traceback for debugging
+            return None          
+            
     def calculate_ship_power_kw(ship_volume_m3):
         """
         Calculates the average engine power based on ship cargo volume
@@ -2298,7 +2295,7 @@ def run_lca_model(inputs):
         [f"Electricity Price at {end}", f"{end_electricity_price[2]:.4f} $/MJ"],
         [f"Diesel Price at {start}", f"{diesel_price_start:.2f} $/gal"],
         [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"],
-        [f"Marine Fuel ({marine_fuel_choice}) Price at {marine_fuel_port_name}", f"{dynamic_price:.2f} $/ton"],
+        [f"Marine Fuel ({marine_fuel_choice}) Price at {start_port_name}", f"{dynamic_price:.2f} $/ton"],
         [f"Green H2 Production Price at {start}", f"{hydrogen_production_price:.2f} $/kg"],
     ]
     
