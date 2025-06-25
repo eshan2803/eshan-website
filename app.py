@@ -2331,7 +2331,7 @@ def run_lca_model(inputs):
             f"• Production Cost in {start}: ${hydrogen_production_price:.2f}/kg*\n"
             f"• Total Transport Cost: ${chem_cost:.2f}/kg\n"
             f"• Transport cost is {ratio_cost:.1f} times the production cost.\n\n"
-            f"*Hydrogen production cost is an estimate. Take with a pinch of salt.\n"
+            f"*These costs are estimates. Take with a pinch of salt.\n"
             f" Working to improve this."
         )
 
