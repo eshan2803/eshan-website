@@ -2388,15 +2388,15 @@ def run_lca_model(inputs):
     cost_chart_base64 = create_breakdown_chart(
         data_for_display,
         cost_per_kg_index,
-        'Cost Breakdown per Kilogram of Delivered Fuel',
+        'Cost Breakdown per kg of Delivered Fuel',
         'Cost ($/kg)',
         overlay_text=cost_overlay_text
     )
     emission_chart_base64 = create_breakdown_chart(
         data_for_display,
         eco2_per_kg_index,
-        'CO2e Breakdown per Kilogram of Delivered Fuel',
-        'CO2e (kg/kg)',
+        'CO2eq Breakdown per kg of Delivered Fuel',
+        'CO2eq (kg/kg)',
         overlay_text=emission_overlay_text
     )
 
