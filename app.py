@@ -2303,7 +2303,7 @@ def run_lca_model(inputs):
     data = data_with_all_columns
     total_results = final_results_raw # This already holds the correct total values
 
-    # --- 7. Format Results for Frontend ---
+# --- 7. Format Results for Frontend ---
     final_weight = total_results[3]
     chem_cost = total_results[0] / final_weight if final_weight > 0 else 0
     chem_energy = total_results[1] / final_weight if final_weight > 0 else 0
@@ -2311,11 +2311,13 @@ def run_lca_model(inputs):
     final_energy_output_mj = final_weight * HHV_chem[fuel_type]
     final_energy_output_gj = final_energy_output_mj / 1000
 
-    # --- NEW: Define human-readable labels ---
+    # Define human-readable labels
     fuel_names = ['Liquid Hydrogen', 'Ammonia', 'Methanol']
     selected_fuel_name = fuel_names[fuel_type]
 
+    # --- FIX IS HERE: Added the missing key for "site_A_chem_production" ---
     label_map = {
+        "site_A_chem_production": "Initial Production (Placeholder)",
         "site_A_chem_liquification": f"Liquifaction in {start}",
         "chem_site_A_loading_to_truck": f"Loading {selected_fuel_name} on trucks",
         "site_A_to_port_A": f"Road transport: {start} to {start_port_name}",
@@ -2330,30 +2332,28 @@ def run_lca_model(inputs):
         "chem_site_B_unloading_from_truck": f"Unloading {selected_fuel_name} at {end}",
         "chem_storage_at_site_B": f"Storing {selected_fuel_name} at {end}",
         "chem_unloading_from_site_B": "Unloading for final use",
-        "chem_convert_to_H2": "Cracking/Reforming to H2", # Added a label for this potential step
-        "TOTAL": "TOTAL" # Ensure TOTAL row is not affected
+        "chem_convert_to_H2": "Cracking/Reforming to H2",
+        "TOTAL": "TOTAL"
     }
 
-    # --- NEW: Apply the new labels to the data ---
+    # Apply the new labels to the data
     relabeled_data = []
     for row in data:
         function_name = row[0]
         if function_name in label_map:
-            # Create a new list for the modified row to avoid modifying the original list in loop
-            new_row = row[:] 
+            new_row = row[:]
             new_row[0] = label_map[function_name]
             relabeled_data.append(new_row)
         else:
-            # If a function name is not in the map, append it as is
             relabeled_data.append(row[:])
 
-    # --- FIX: Apply filtering correctly for table and charts ---
-    # Filter for the table (remove production step, keep TOTAL)
-    detailed_data_formatted = [row for row in relabeled_data if row[0] != label_map.get('site_A_chem_production')]
+    # Apply filtering correctly for table and charts
+    # This filter will now work correctly because the placeholder is in the map.
+    detailed_data_formatted = [row for row in relabeled_data if row[0] != label_map.get("site_A_chem_production")]
 
-    # Filter for the charts (remove production step AND TOTAL)
+    # Filter for the charts (removes the placeholder AND the TOTAL row)
     data_for_display = [row for row in detailed_data_formatted if row[0] != "TOTAL"]
-    
+
     # --- PREPARE CONTEXTUAL OVERLAY TEXT FOR CHARTS ---
     cost_overlay_text = ""
     if hydrogen_production_price > 0:
@@ -2379,38 +2379,37 @@ def run_lca_model(inputs):
 
     # --- DEFINE HEADERS, INDICES, AND PACKAGE FINAL RESPONSE ---
     new_detailed_headers = ["Process Step", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
-    # We use the relabeled data for the CSV export as well
     csv_data = [new_detailed_headers] + detailed_data_formatted
     cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
     eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)")
-    
+
     cost_chart_base64 = create_breakdown_chart(
-        data_for_display, 
-        cost_per_kg_index, 
-        'Cost Breakdown per Kilogram of Delivered Fuel', 
+        data_for_display,
+        cost_per_kg_index,
+        'Cost Breakdown per Kilogram of Delivered Fuel',
         'Cost ($/kg)',
         overlay_text=cost_overlay_text
     )
     emission_chart_base64 = create_breakdown_chart(
-        data_for_display, 
-        eco2_per_kg_index, 
-        'CO2e Breakdown per Kilogram of Delivered Fuel', 
+        data_for_display,
+        eco2_per_kg_index,
+        'CO2e Breakdown per Kilogram of Delivered Fuel',
         'CO2e (kg/kg)',
         overlay_text=emission_overlay_text
     )
-        
+
     summary1_data = [
         ["Cost ($/kg chemical)", f"{chem_cost:.2f}"],
         ["Consumed Energy (MJ/kg chemical)", f"{chem_energy:.2f}"],
         ["Emission (kg CO2/kg chemical)", f"{chem_CO2e:.2f}"]
     ]
-    
+
     summary2_data = [
         ["Cost ($/GJ)", f"{total_results[0] / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
         ["Energy consumed (MJ_in/GJ_out)", f"{total_results[1] / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
         ["Emission (kg CO2/GJ)", f"{total_results[2] / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"]
     ]
-    
+
     assumed_prices_data = [
         [f"Electricity Price at {start}*", f"{start_electricity_price[2]:.4f} $/MJ"],
         [f"Electricity Price at {end}*", f"{end_electricity_price[2]:.4f} $/MJ"],
@@ -2419,7 +2418,7 @@ def run_lca_model(inputs):
         [f"Marine Fuel ({marine_fuel_choice}) Price at {start_port_name}*", f"{dynamic_price:.2f} $/ton"],
         [f"Green H2 Production Price at {start}*", f"{hydrogen_production_price:.2f} $/kg"],
     ]
-    
+
     response = {
         "status": "success",
         "map_data": {
