@@ -228,7 +228,7 @@ def run_lca_model(inputs):
     coor_end_lat, coor_end_lng, _ = extract_lat_long(end)
     start_port_lat, start_port_lng, start_port_name = openai_get_nearest_port(f"{coor_start_lat},{coor_start_lng}")
     end_port_lat, end_port_lng, end_port_name = openai_get_nearest_port(f"{coor_end_lat},{coor_end_lng}")
-    
+    _, hydrogen_production_price = openai_get_hydrogen_price(f"{coor_start_lat},{coor_start_lng}")
     route = sr.searoute((start_port_lng, start_port_lat), (end_port_lng, end_port_lat), units="nm")
     searoute_coor = [[lat, lon] for lon, lat in route.geometry['coordinates']]
     port_to_port_dis = route.properties['length'] * 1.852
