@@ -315,6 +315,7 @@ def run_lca_model(inputs):
         BOG_recirculation_mati_trans = inputs['BOG_recirculation_mati_trans']
         BOG_recirculation_mati_trans_apply = inputs['BOG_recirculation_mati_trans_apply']
         user_define = [0, fuel_type, int(recirculation_BOG), int(BOG_recirculation_truck_apply), int(BOG_recirculation_storage_apply), int(BOG_recirculation_mati_trans_apply)]
+        LH2_plant_capacity = facility_capacity
         volume_per_tank = total_ship_volume / ship_number_of_tanks
         if ship_tank_shape == 1: # Capsule (Membrane)
             # Derived from volume formula V = (4/3)*pi*r^3 + pi*r^2*h where h = 8r
