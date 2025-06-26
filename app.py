@@ -2246,9 +2246,10 @@ def run_lca_model(inputs):
                 total_money_tc += X_money
                 total_ener_consumed_tc += Y_energy
                 total_G_emission_tc += Z_emission
+                total_S_bog_loss_tc += S_bog_loss
     
             final_total_result_tc = [total_money_tc, total_ener_consumed_tc, total_G_emission_tc, R_current_chem]
-            data_results_list.append(["TOTAL", total_money_tc, total_ener_consumed_tc, total_G_emission_tc, R_current_chem, 0])
+            data_results_list.append(["TOTAL", total_money_tc, total_ener_consumed_tc, total_G_emission_tc, R_current_chem, total_S_bog_loss_tc])
             
             return final_total_result_tc, data_results_list
     
