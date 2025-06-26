@@ -2303,10 +2303,6 @@ def run_lca_model(inputs):
     data = data_with_all_columns
     total_results = final_results_raw # This already holds the correct total values
 
-    # In your run_lca_model function...
-    # Find the line that says "# --- 7. Format Results for Frontend ---"
-    # and REPLACE everything from there to the end of the function with this block:
-    
     # --- 7. Format Results for Frontend ---
     final_weight = total_results[3]
     chem_cost = total_results[0] / final_weight if final_weight > 0 else 0
@@ -2315,18 +2311,53 @@ def run_lca_model(inputs):
     final_energy_output_mj = final_weight * HHV_chem[fuel_type]
     final_energy_output_gj = final_energy_output_mj / 1000
 
-    # FIX 1: Correctly filter the data for a clean chart display.
-    # We remove the 'TOTAL' row and the initial 'production' step which has zero values.
-    data_for_display = [row for row in data if row[0] not in ['site_A_chem_production', 'TOTAL']]
-    detailed_data_formatted = data # The detailed table in the UI should show everything, including totals.
+    # --- NEW: Define human-readable labels ---
+    fuel_names = ['Liquid Hydrogen', 'Liquid Ammonia', 'Liquid Methanol']
+    selected_fuel_name = fuel_names[fuel_type]
+
+    label_map = {
+        "site_A_chem_liquification": f"Liquifaction in {start}",
+        "chem_site_A_loading_to_truck": f"Loading {selected_fuel_name} on trucks",
+        "site_A_to_port_A": f"Road transport: {start} to {start_port_name}",
+        "port_A_unloading_to_storage": f"Unloading at {start_port_name}",
+        "chem_storage_at_port_A": f"Storing {selected_fuel_name} at {start_port_name}",
+        "chem_loading_to_ship": f"Loading {selected_fuel_name} on Ship",
+        "port_to_port": f"Marine transport: {start_port_name} to {end_port_name}",
+        "chem_unloading_from_ship": f"Unloading {selected_fuel_name} from Ship",
+        "chem_storage_at_port_B": f"Storing {selected_fuel_name} at {end_port_name}",
+        "port_B_unloading_from_storage": "Loading from Storage to Truck",
+        "port_B_to_site_B": f"Road transport: {end_port_name} to {end}",
+        "chem_site_B_unloading_from_truck": f"Unloading {selected_fuel_name} at {end}",
+        "chem_storage_at_site_B": f"Storing {selected_fuel_name} at {end}",
+        "chem_unloading_from_site_B": "Unloading for final use",
+        "chem_convert_to_H2": "Cracking/Reforming to H2", # Added a label for this potential step
+        "TOTAL": "TOTAL" # Ensure TOTAL row is not affected
+    }
+
+    # --- NEW: Apply the new labels to the data ---
+    relabeled_data = []
+    for row in data:
+        function_name = row[0]
+        if function_name in label_map:
+            # Create a new list for the modified row to avoid modifying the original list in loop
+            new_row = row[:] 
+            new_row[0] = label_map[function_name]
+            relabeled_data.append(new_row)
+        else:
+            # If a function name is not in the map, append it as is
+            relabeled_data.append(row[:])
+
+    # --- FIX: Apply filtering correctly for table and charts ---
+    # Filter for the table (remove production step, keep TOTAL)
+    detailed_data_formatted = [row for row in relabeled_data if row[0] != label_map.get('site_A_chem_production')]
+
+    # Filter for the charts (remove production step AND TOTAL)
+    data_for_display = [row for row in detailed_data_formatted if row[0] != "TOTAL"]
     
     # --- PREPARE CONTEXTUAL OVERLAY TEXT FOR CHARTS ---
-    
-    # 1. Prepare text for the Cost Chart
     cost_overlay_text = ""
     if hydrogen_production_price > 0:
         ratio_cost = chem_cost / hydrogen_production_price
-        # FIX 2: Added the asterisk and full disclaimer footnote to the cost text.
         cost_overlay_text = (
             f"Context:\n"
             f"• Production Cost in {start}: ${hydrogen_production_price:.2f}/kg*\n"
@@ -2336,12 +2367,9 @@ def run_lca_model(inputs):
             f" Working to improve this."
         )
 
-    # 2. Prepare text for the Emissions Chart
     emission_overlay_text = ""
     if SMR_EMISSIONS_KG_PER_KG_H2 > 0:
         ratio_emission = chem_CO2e / SMR_EMISSIONS_KG_PER_KG_H2
-        # FIX 3 & 4: Corrected text to reference emissions and use the 'ratio_emission' variable.
-        # Removed the misplaced disclaimer.
         emission_overlay_text = (
             f"Context:\n"
             f"• Gray Hydrogen (SMR) Emission: {SMR_EMISSIONS_KG_PER_KG_H2:.2f} kg CO₂e/kg\n"
@@ -2350,9 +2378,9 @@ def run_lca_model(inputs):
         )
 
     # --- DEFINE HEADERS, INDICES, AND PACKAGE FINAL RESPONSE ---
-    
-    new_detailed_headers = ["Function", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
-    csv_data = [new_detailed_headers] + data
+    new_detailed_headers = ["Process Step", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
+    # We use the relabeled data for the CSV export as well
+    csv_data = [new_detailed_headers] + detailed_data_formatted
     cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
     eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)")
     
@@ -2392,8 +2420,6 @@ def run_lca_model(inputs):
         [f"Green H2 Production Price at {start}*", f"{hydrogen_production_price:.2f} $/kg"],
     ]
     
-    # FIX 5: Removed the large duplicated block of code that was here.
-    # The response is now assembled correctly with no redundant definitions.
     response = {
         "status": "success",
         "map_data": {
@@ -2408,7 +2434,7 @@ def run_lca_model(inputs):
         "table_data": {
             "detailed_headers": new_detailed_headers,
             "detailed_data": detailed_data_formatted,
-            "summary1_headers": ["Metric", "Value"], "summary1_data": summary1_data,
+            "summary1_headers": ["Metric", "Value"], "summary1_data": summary1_a
             "summary2_headers": ["Per Energy Output", "Value"], "summary2_data": summary2_data,
             "assumed_prices_headers": ["Assumed Price", "Value"], "assumed_prices_data": assumed_prices_data
         },
@@ -2419,7 +2445,6 @@ def run_lca_model(inputs):
         }
     }
     return response
-
 # --- Flask API Endpoint ---
 @app.route('/calculate', methods=['POST'])
 def calculate_endpoint():
