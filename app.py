@@ -2312,7 +2312,7 @@ def run_lca_model(inputs):
     final_energy_output_gj = final_energy_output_mj / 1000
 
     # --- NEW: Define human-readable labels ---
-    fuel_names = ['Liquid Hydrogen', 'Liquid Ammonia', 'Liquid Methanol']
+    fuel_names = ['Liquid Hydrogen', 'Ammonia', 'Methanol']
     selected_fuel_name = fuel_names[fuel_type]
 
     label_map = {
