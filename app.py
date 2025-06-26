@@ -2193,6 +2193,7 @@ def run_lca_model(inputs):
             total_money_tc = 0.0
             total_ener_consumed_tc = 0.0
             total_G_emission_tc = 0.0
+            total_S_bog_loss_tc = 0.0
     
             for func_to_call in funcs_sequence:
                 # This block is copied directly from your file and is correct
