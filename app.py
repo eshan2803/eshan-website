@@ -2434,7 +2434,7 @@ def run_lca_model(inputs):
         "table_data": {
             "detailed_headers": new_detailed_headers,
             "detailed_data": detailed_data_formatted,
-            "summary1_headers": ["Metric", "Value"], "summary1_data": summary1_a
+            "summary1_headers": ["Metric", "Value"], "summary1_data": summary1_data,
             "summary2_headers": ["Per Energy Output", "Value"], "summary2_data": summary2_data,
             "assumed_prices_headers": ["Assumed Price", "Value"], "assumed_prices_data": assumed_prices_data
         },
@@ -2445,6 +2445,7 @@ def run_lca_model(inputs):
         }
     }
     return response
+    
 # --- Flask API Endpoint ---
 @app.route('/calculate', methods=['POST'])
 def calculate_endpoint():
