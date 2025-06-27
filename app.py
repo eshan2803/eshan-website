@@ -2440,16 +2440,16 @@ def run_lca_model(inputs):
             ratio_emission = chem_CO2e / SMR_EMISSIONS_KG_PER_KG_H2
             emission_overlay_text = (
                 f"Context:\n"
-                f"• Gray Hydrogen (SMR) Emission: {SMR_EMISSIONS_KG_PER_KG_H2:.2f} kg CO₂e/kg\n"
-                f"• Total Transport Emission: {chem_CO2e:.2f} kg CO₂e/kg\n"
+                f"• Gray Hydrogen (SMR) Emission: {SMR_EMISSIONS_KG_PER_KG_H2:.2f} kg CO2eq/kg\n"
+                f"• Total Transport Emission: {chem_CO2e:.2f} kg CO2eq/kg\n"
                 f"• Transport emission is {ratio_emission:.1f} times the SMR emission."
             )
 
         # --- DEFINE HEADERS, INDICES, AND PACKAGE FINAL RESPONSE ---
-        new_detailed_headers = ["Process Step", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
+        new_detailed_headers = ["Process Step", "Cost ($)", "Energy (MJ)", "CO2eq (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "CO2eq/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
         csv_data = [new_detailed_headers] + detailed_data_formatted
         cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
-        eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)")
+        eco2_per_kg_index = new_detailed_headers.index("CO2eq/kg (kg/kg)")
 
         cost_chart_base64 = create_breakdown_chart(
             data_for_display,
@@ -2469,13 +2469,13 @@ def run_lca_model(inputs):
         summary1_data = [
             ["Cost ($/kg chemical)", f"{chem_cost:.2f}"],
             ["Consumed Energy (MJ/kg chemical)", f"{chem_energy:.2f}"],
-            ["Emission (kg CO2/kg chemical)", f"{chem_CO2e:.2f}"]
+            ["Emission (kg CO2eq/kg chemical)", f"{chem_CO2e:.2f}"]
         ]
 
         summary2_data = [
             ["Cost ($/GJ)", f"{total_results[0] / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
             ["Energy consumed (MJ_in/GJ_out)", f"{total_results[1] / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
-            ["Emission (kg CO2/GJ)", f"{total_results[2] / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"]
+            ["Emission (kg CO2eq/GJ)", f"{total_results[2] / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"]
         ]
 
         assumed_prices_data = [
