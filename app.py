@@ -2001,6 +2001,46 @@ def run_lca_model(inputs):
             print(f"AI price lookup failed: {e}")
             return None
         
+    def openai_get_nearest_farm_region(food_name, location_name):
+        """
+        Uses an AI model to find a major commercial farming region for a food item
+        nearest to a given destination.
+        """
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key_openAI)
+        
+        # This prompt guides the AI to provide a realistic, commercially viable origin
+        prompt_messages = [
+            {
+                "role": "system",
+                "content": """You are an expert in agricultural logistics and supply chains. Your task is to identify a major commercial producing region for a specific food item that is as close as possible to a target destination city. Return the name of this region and its representative geographic coordinates as a JSON object. If the destination is itself a major producer, use a location within that region. If no significant commercial production exists nearby, return null."""
+            },
+            {
+                "role": "user",
+                "content": f"""For the food item '{food_name}', find the nearest major commercial farming region to the destination '{location_name}'. Return the result in the following JSON format: {{"farm_region_name": "NAME_OF_REGION", "latitude": "LATITUDE_FLOAT", "longitude": "LONGITUDE_FLOAT"}}"""
+            }
+        ]
+        
+        try:
+            print(f"Requesting AI analysis for nearest farm region for: {food_name} near {location_name}")
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                response_format={"type": "json_object"},
+                temperature=0,
+                messages=prompt_messages
+            )
+            result = json.loads(response.choices[0].message.content)
+            
+            # Ensure all keys exist and are valid before returning
+            if all(k in result for k in ['farm_region_name', 'latitude', 'longitude']) and isinstance(result['latitude'], (int, float)):
+                return result
+            else:
+                return None
+                
+        except Exception as e:
+            print(f"AI farm region lookup failed: {e}")
+            return None
+                
     # =================================================================
     # <<< MAIN CONDITIONAL BRANCH STARTS HERE >>>
     # =================================================================
@@ -2699,13 +2739,50 @@ def run_lca_model(inputs):
             [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"],
             [f"Marine Fuel ({marine_fuel_choice}) Price at {start_port_name}*", f"{dynamic_price:.2f} $/ton"],
         ]
+        local_sourcing_results = None
+        farm_region = openai_get_nearest_farm_region(current_food_params['name'], end)
+        if farm_region:
+            # We have a local farm, now calculate the logistics from farm to destination
+            farm_lat = farm_region['latitude']
+            farm_lon = farm_region['longitude']
+            farm_name = farm_region['farm_region_name']
+            
+            # 1. Calculate local trucking distance and duration (reusing existing function)
+            local_dist_str, local_dur_str = inland_routes_cal((farm_lat, farm_lon), (coor_end_lat, coor_end_lng))
+            local_distance_km = float(re.sub(r'[^\d.]', '', local_dist_str))
+            local_duration_mins = time_to_minutes(local_dur_str)
+            
+            # Use the final delivered weight from the main scenario for an apples-to-apples comparison
+            comparison_weight = final_commodity_kg
+            
+            # 2. Calculate local processing costs (assuming processing happens near the farm)
+            # We reuse the same process functions, but with destination prices and CO2 factors
+            local_precool_money, local_precool_energy, local_precool_emissions, _, _ = food_precooling_process(comparison_weight, (food_params[food_type], end_electricity_price, CO2e_end))
+            local_freeze_money, local_freeze_energy, local_freeze_emissions, _, _ = food_freezing_process(comparison_weight, (food_params[food_type], end_local_temperature, end_electricity_price, CO2e_end))
+
+            # 3. Calculate local trucking costs
+            local_trucking_args = (food_params[food_type], local_distance_km, local_duration_mins, diesel_price_end, HHV_diesel, diesel_density, CO2e_diesel)
+            local_trucking_money, local_trucking_energy, local_trucking_emissions, _, _ = food_road_transport(comparison_weight, local_trucking_args)
+
+            # 4. Sum the costs for the local scenario
+            local_total_money = local_precool_money + local_freeze_money + local_trucking_money
+            local_total_emissions = local_precool_emissions + local_freeze_emissions + local_trucking_emissions
+            
+            # 5. Store the results
+            local_sourcing_results = {
+                "source_name": farm_name,
+                "distance_km": local_distance_km,
+                "cost_per_kg": local_total_money / comparison_weight if comparison_weight > 0 else 0,
+                "emissions_per_kg": local_total_emissions / comparison_weight if comparison_weight > 0 else 0
+            }
         
         response = {
             "status": "success",
             "map_data": { "coor_start": {"lat": coor_start_lat, "lng": coor_start_lng}, "coor_end": {"lat": coor_end_lat, "lng": coor_end_lng}, "start_port": {"lat": start_port_lat, "lng": start_port_lng, "name": start_port_name}, "end_port": {"lat": end_port_lat, "lng": end_port_lng, "name": end_port_name}, "road_route_start_coords": road_route_start_coords, "road_route_end_coords": road_route_end_coords, "sea_route_coords": searoute_coor },
             "table_data": { "detailed_headers": new_detailed_headers, "detailed_data": detailed_data_formatted, "summary1_headers": ["Metric", "Value"], "summary1_data": summary1_data, "summary2_headers": ["Per Energy Output", "Value"], "summary2_data": summary2_data, "assumed_prices_headers": ["Assumed Price", "Value"], "assumed_prices_data": assumed_prices_data },
             "csv_data": [new_detailed_headers] + detailed_data_formatted,
-            "charts": { "cost_chart_base64": cost_chart_base64, "emission_chart_base64": emission_chart_base64 }
+            "charts": { "cost_chart_base64": cost_chart_base64, "emission_chart_base64": emission_chart_base64 },
+            "local_sourcing_comparison": local_sourcing_results
         }
         return response
         
