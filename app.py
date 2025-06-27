@@ -2739,8 +2739,13 @@ def run_lca_model(inputs):
             [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"],
             [f"Marine Fuel ({marine_fuel_choice}) Price at {start_port_name}*", f"{dynamic_price:.2f} $/ton"],
         ]
+        # --- NEW: LOCAL SOURCING COMPARISON SCENARIO ---
         local_sourcing_results = None
-        farm_region = openai_get_nearest_farm_region(current_food_params['name'], end)
+        # Find a nearby farm region using our new AI function
+        # Using a broader location name for the AI search
+        end_country = get_country_from_coords(coor_end_lat, coor_end_lng) or end
+        farm_region = openai_get_nearest_farm_region(current_food_params['name'], end_country)
+
         if farm_region:
             # We have a local farm, now calculate the logistics from farm to destination
             farm_lat = farm_region['latitude']
@@ -2755,14 +2760,22 @@ def run_lca_model(inputs):
             # Use the final delivered weight from the main scenario for an apples-to-apples comparison
             comparison_weight = final_commodity_kg
             
-            # 2. Calculate local processing costs (assuming processing happens near the farm)
-            # We reuse the same process functions, but with destination prices and CO2 factors
-            local_precool_money, local_precool_energy, local_precool_emissions, _, _ = food_precooling_process(comparison_weight, (food_params[food_type], end_electricity_price, CO2e_end))
-            local_freeze_money, local_freeze_energy, local_freeze_emissions, _, _ = food_freezing_process(comparison_weight, (food_params[food_type], end_local_temperature, end_electricity_price, CO2e_end))
+            # --- CORRECTED SECTION IS HERE ---
 
-            # 3. Calculate local trucking costs
-            local_trucking_args = (food_params[food_type], local_distance_km, local_duration_mins, diesel_price_end, HHV_diesel, diesel_density, CO2e_diesel)
+            # 2. Calculate local processing costs
+            # First, prepare the combined parameter dictionaries, just like in total_food_lca
+            precooling_full_params = {**current_food_params.get('precooling_params', {}), **current_food_params.get('general_params', {})}
+            freezing_full_params = {**current_food_params.get('freezing_params', {}), **current_food_params.get('general_params', {})}
+
+            # Now, call the process functions with the correctly prepared parameters
+            local_precool_money, local_precool_energy, local_precool_emissions, _, _ = food_precooling_process(comparison_weight, (precooling_full_params, end_electricity_price, CO2e_end))
+            local_freeze_money, local_freeze_energy, local_freeze_emissions, _, _ = food_freezing_process(comparison_weight, (freezing_full_params, end_local_temperature, end_electricity_price, CO2e_end))
+
+            # 3. Calculate local trucking costs (this call was already correct)
+            local_trucking_args = (current_food_params, local_distance_km, local_duration_mins, diesel_price_end, HHV_diesel, diesel_density, CO2e_diesel, end_local_temperature)
             local_trucking_money, local_trucking_energy, local_trucking_emissions, _, _ = food_road_transport(comparison_weight, local_trucking_args)
+
+            # --- END OF CORRECTED SECTION ---
 
             # 4. Sum the costs for the local scenario
             local_total_money = local_precool_money + local_freeze_money + local_trucking_money
