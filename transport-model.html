@@ -608,32 +608,73 @@
       return bounds;
     }
 
+// --- REPLACE your old createTableHtml function with this one ---
     function createTableHtml(headers, dataArray, isDetailed = false) {
-      let html = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+      // Start with the table header
+      let html = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead>';
+      
+      // Start the table body
+      html += '<tbody>';
+      
+      // Loop through each ROW in the data array
       dataArray.forEach(row => {
-        html += '<tr>';
+        html += '<tr>'; // Start a new table row for each data row
+        
+        // Loop through each CELL in the current row
         row.forEach((cell, index) => {
           let cellContent = cell;
-          // Apply special formatting only for the detailed table
+          
+          // Apply special number formatting only for the detailed table
           if (isDetailed) {
-            if (index === 0) { // First column (Function Name)
+            if (index === 0) { // First column (Process Step) is always text
               cellContent = cell;
-            } else if (index >= 6) { // "Per unit" columns (Cost/kg, Cost/kJ, etc.)
-              // General number format with 6 decimal places
-              cellContent = Number(cell).toFixed(2); 
-            } else { // Raw data columns (Cost, Energy, etc.)
-              // Scientific notation
-              cellContent = Number(cell).toExponential(2);
+            } else if (index >= 6) { // "Per unit" columns get 4 decimal places
+              cellContent = isNaN(Number(cell)) ? cell : Number(cell).toFixed(4); 
+            } else { // Raw data columns (Cost, Energy, etc.) get scientific notation
+              cellContent = isNaN(Number(cell)) ? cell : Number(cell).toExponential(2);
             }
           }
+          // Add the individual table cell
           html += `<td>${cellContent}</td>`;
         });
-        html += '</tr>';
+        
+        html += '</tr>'; // End the table row
       });
-      html += '</tbody>';
-      return html;
+      
+      html += '</tbody>'; // End the table body
+      return '<table>' + html + '</table>'; // Wrap everything in a <table> tag
     }
     
+    function displayTables(tableData) {
+      // Detailed Table
+      if (tableData.detailed_data && tableData.detailed_headers) {
+        document.getElementById('detailedTableContainer').innerHTML = createTableHtml(tableData.detailed_headers, tableData.detailed_data, true);
+      }
+
+      // Summary Table 1 (per kg or per unit)
+      if (tableData.summary1_data && tableData.summary1_headers) {
+        document.getElementById('summaryTableContainer').innerHTML = createTableHtml(tableData.summary1_headers, tableData.summary1_data);
+      }
+
+      // Summary Table 2 (per GJ) - This also handles hiding/showing the section
+      const summary2Container = document.getElementById('summaryTableContainer2');
+      const summary2Title = summary2Container.previousElementSibling; 
+      if (tableData.summary2_data && tableData.summary2_data.length > 0) {
+        summary2Container.innerHTML = createTableHtml(tableData.summary2_headers, tableData.summary2_data);
+        summary2Container.classList.remove('hidden');
+        if (summary2Title) summary2Title.classList.remove('hidden');
+      } else {
+        summary2Container.innerHTML = '';
+        summary2Container.classList.add('hidden');
+        if (summary2Title) summary2Title.classList.add('hidden');
+      }
+
+      // Assumption Table
+      if (tableData.assumed_prices_data && tableData.assumed_prices_headers) {
+        document.getElementById('assumptionTableContainer').innerHTML = createTableHtml(tableData.assumed_prices_headers, tableData.assumed_prices_data);
+      }
+    }
+
     function displayTables(tableData) {
       // Detailed Table
       const detailedHeaders = tableData.detailed_headers || [];
