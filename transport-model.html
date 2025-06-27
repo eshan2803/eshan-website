@@ -366,12 +366,14 @@
         fuelOptionsDiv.classList.remove('hidden');
         foodOptionsDiv.classList.add('hidden');
         shipDetailsWrapper.classList.remove('hidden');
-        capacityInputGroup.classList.remove('hidden'); // <-- SHOW the capacity input
+        capacityInputGroup.classList.remove('hidden'); 
     
-        // --- UPDATE LABELS FOR FUEL ---
         capacityLabel.textContent = 'LH2 Plant Capacity (TPD):';
-        // (rest of your existing logic for fuel labels...)
-        
+        shipOptions[1].textContent = 'Small-Scale Carrier (20,000 m³)';
+        shipOptions[2].textContent = 'Midsized Carrier (90,000 m³)';
+        shipOptions[3].textContent = 'Standard Modern Carrier (174,000 m³)';
+        shipOptions[4].textContent = 'Q-Flex Carrier (210,000 m³)';
+        shipOptions[5].textContent = 'Q-Max Carrier (266,000 m³)';        
         // Handle BOG panel visibility
         if (bogRecirculationRadio.checked) {
           bogRecirculationDetailsPanel.classList.remove('hidden');
@@ -384,12 +386,14 @@
         fuelOptionsDiv.classList.add('hidden');
         foodOptionsDiv.classList.remove('hidden');
         shipDetailsWrapper.classList.remove('hidden');
-        capacityInputGroup.classList.add('hidden'); // <-- HIDE the capacity input
+        capacityInputGroup.classList.add('hidden'); 
     
-        // --- UPDATE LABELS FOR FOOD ---
-        // (This line for capacityLabel is no longer visible, but doesn't harm anything)
         capacityLabel.textContent = 'Processing & Freezing Facility Capacity (Tons/Day):';
-        // (rest of your existing logic for food labels...)
+        shipOptions[1].textContent = 'Feeder Vessel (~2,000 Containers)';
+        shipOptions[2].textContent = 'Midsized Vessel (~6,000 Containers)';
+        shipOptions[3].textContent = 'Post-Panamax Vessel (~10,000 Containers)';
+        shipOptions[4].textContent = 'New-Panamax Vessel (~14,000 Containers)';
+        shipOptions[5].textContent = 'Ultra-Large Vessel (20,000+ Containers)';
       }
     
       // Handle custom ship panel visibility (this works for both fuel and food)
