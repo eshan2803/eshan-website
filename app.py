@@ -1722,9 +1722,7 @@ def run_lca_model(inputs):
         return money, energy, emissions, A - loss, loss
 
     def food_road_transport(A, args):
-        # Unpack arguments as before
-        params, distance, duration_mins, diesel_price, hh_diesel, dens_diesel, co2_diesel = args
-        ambient_temp = start_local_temperature # (or end_local_temperature for the second leg)
+        params, distance, duration_mins, diesel_price, hh_diesel, dens_diesel, co2_diesel, ambient_temp = args
         base_spoilage_rate = params['general_params']['spoilage_rate_per_day']
 
         # Increase spoilage rate by 20% for every 5 degrees above the ideal temp
@@ -1936,10 +1934,10 @@ def run_lca_model(inputs):
             # We now check for the unique port name in the label, which is more robust.
             elif func == food_road_transport and start_port_name in label:
                 # This is the first leg: from start city TO start port
-                args_for_func = (food_params, distance_A_to_port, duration_A_to_port, diesel_price_start, HHV_diesel, diesel_density, CO2e_diesel)
+                args_for_func = (food_params, distance_A_to_port, duration_A_to_port, diesel_price_start, HHV_diesel, diesel_density, CO2e_diesel, start_local_temperature)
             elif func == food_road_transport and end_port_name in label:
                 # This is the second leg: from end port TO end city
-                args_for_func = (food_params, distance_port_to_B, duration_port_to_B, diesel_price_end, HHV_diesel, diesel_density, CO2e_diesel)
+                args_for_func = (food_params, distance_port_to_B, duration_port_to_B, diesel_price_end, HHV_diesel, diesel_density, CO2e_diesel, end_local_temperature)
             
             elif func == food_sea_transport:
                 args_for_func = (food_params, port_to_port_duration, selected_marine_fuel_params, avg_ship_power_kw)
