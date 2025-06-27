@@ -1891,34 +1891,36 @@ def run_lca_model(inputs):
         
         return money, energy_mj, emissions, A - loss, loss
 
+# REPLACE your old total_food_lca function with this one
+
     def total_food_lca(initial_weight, food_params):
         # Start with a base list of processes that always happen
         food_funcs_sequence = [
             (food_harvest_and_prep, "Harvesting & Preparation"),
         ]
-
-        # --- Dynamically add steps based on the food's flags ---
+    
+        # Dynamically add steps based on the food's flags
         flags = food_params['process_flags']
         if flags.get('needs_precooling', False):
             food_funcs_sequence.append((food_precooling_process, f"Pre-cooling in {start}"))
-
+    
         if flags.get('needs_freezing', False):
             food_funcs_sequence.append((food_freezing_process, f"Freezing in {start}"))
-
+    
         # Add the universal transport and storage steps
         food_funcs_sequence.extend([
             (food_road_transport, f"Road Transport: {start} to {start_port_name}"),
             (food_cold_storage, f"Cold Storage at {start_port_name}"),
             (food_sea_transport, f"Marine Transport: {start_port_name} to {end_port_name}")
         ])
-
+    
         # Add the remaining universal steps
         food_funcs_sequence.extend([
             (food_cold_storage, f"Cold Storage at {end_port_name}"),
             (food_road_transport, f"Road Transport: {end_port_name} to {end}"),
             (food_cold_storage, f"Cold Storage at {end} (Destination)"),
         ])
-
+    
         current_weight = initial_weight
         results_list = []
         for func, label in food_funcs_sequence:
@@ -1929,10 +1931,16 @@ def run_lca_model(inputs):
             elif func == food_freezing_process:
                 freezing_full_params = {**food_params.get('freezing_params', {}), **food_params['general_params']}
                 args_for_func = (freezing_full_params, start_local_temperature, start_electricity_price, CO2e_start)
-            elif func == food_road_transport and "start" in label:
+            
+            # --- CORRECTED LOGIC IS HERE ---
+            # We now check for the unique port name in the label, which is more robust.
+            elif func == food_road_transport and start_port_name in label:
+                # This is the first leg: from start city TO start port
                 args_for_func = (food_params, distance_A_to_port, duration_A_to_port, diesel_price_start, HHV_diesel, diesel_density, CO2e_diesel)
-            elif func == food_road_transport and "end" in label:
+            elif func == food_road_transport and end_port_name in label:
+                # This is the second leg: from end port TO end city
                 args_for_func = (food_params, distance_port_to_B, duration_port_to_B, diesel_price_end, HHV_diesel, diesel_density, CO2e_diesel)
+            
             elif func == food_sea_transport:
                 args_for_func = (food_params, port_to_port_duration, selected_marine_fuel_params, avg_ship_power_kw)
             elif func == food_cold_storage and "at " + start_port_name in label:
@@ -1941,12 +1949,19 @@ def run_lca_model(inputs):
                 args_for_func = (food_params, storage_time_B, end_port_electricity_price, CO2e_end, end_local_temperature)
             elif func == food_cold_storage and "Destination" in label:
                 args_for_func = (food_params, storage_time_C, end_electricity_price, CO2e_end, end_local_temperature)
+            elif func == food_harvest_and_prep:
+                # This function doesn't need extra args, so the tuple remains empty
+                args_for_func = () 
             else:
+                # This is a fallback, but the specific elifs should prevent us from getting here.
+                # We pass the full params dict just in case.
                 args_for_func = (food_params,)
+    
+            # The function call that was causing the error
             money, energy, emissions, current_weight, loss = func(current_weight, args_for_func)
             results_list.append([label, money, energy, emissions, current_weight, loss])
+            
         return results_list
-
     def openai_get_food_price(food_name, location_name):
         """
         Uses an AI model to find, parse, and convert the retail price of a
