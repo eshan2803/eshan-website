@@ -330,6 +330,10 @@
     </div>
   </footer>
   <script>
+    const BACKEND_URL = "https://transport-model.onrender.com";
+    let map;
+    let completeResultsForCsv = [];
+
     // --- UI Element References ---
     const commoditySelector = document.getElementById('commodity-type');
     const fuelOptionsDiv = document.getElementById('fuel-options');
@@ -407,10 +411,6 @@
 
     document.getElementById('lcaForm').addEventListener('submit', handleCalculation);
     document.getElementById('downloadCsvButton').addEventListener('click', downloadCSV);
-
-    const BACKEND_URL = "https://transport-model.onrender.com";
-    let map;
-    let completeResultsForCsv = [];
 
     async function handleCalculation(e) {
       e.preventDefault();
