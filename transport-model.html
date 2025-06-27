@@ -282,6 +282,15 @@
         <div id="summaryTableContainer2" class="table-container mb-6 shadow-md"><table id="summaryTable2"></table></div>
         <h3 class="text-lg font-semibold mb-3 text-gray-600">Assumed Prices:</h3>
         <div id="assumptionTableContainer" class="table-container mb-6 shadow-md"><table id="assumptionTable"></table></div>
+        <h3 class="text-lg font-semibold mb-3 text-gray-600">Summary Metrics (per GJ):</h3>
+        <div id="summaryTableContainer2" class="table-container mb-6 shadow-md"><table id="summaryTable2"></table></div>
+
+        <div id="comparisonSection" class="hidden">
+            <h3 class="text-lg font-semibold mb-3 text-gray-600">Shipment vs. Local Sourcing Comparison:</h3>
+            <div id="comparisonTableContainer" class="table-container mb-6 shadow-md"></div>
+        </div>
+        <h3 class="text-lg font-semibold mb-3 text-gray-600">Assumed Prices:</h3>
+        <div id="assumptionTableContainer" class="table-container mb-6 shadow-md"><table id="assumptionTable"></table></div>
         <h3 class="text-lg font-semibold mb-3 text-gray-600">Detailed Process Breakdown:</h3>
         <div id="detailedTableContainer" class="table-container mb-6 shadow-md"><table id="detailedTable"></table></div>
         <div class="charts-container" style="margin-top: 2rem;">
@@ -498,7 +507,25 @@
           document.getElementById('costChartImg').src = "data:image/png;base64," + results.charts.cost_chart_base64;
           document.getElementById('emissionChartImg').src = "data:image/png;base64," + results.charts.emission_chart_base64;
         }
-        
+        const comparisonSection = document.getElementById('comparisonSection');
+        const comparisonContainer = document.getElementById('comparisonTableContainer');
+        if (results.local_sourcing_comparison) {
+            const localData = results.local_sourcing_comparison;
+            const shipmentCostPerKg = results.table_data.summary1_data[0][1]; // Get shipment cost from existing summary
+            const shipmentEmissionsPerKg = results.table_data.summary1_data[2][1]; // Get shipment emissions
+    
+            const comparisonHeaders = ['', 'International Shipment', `Local Sourcing (from ${localData.source_name})`];
+            const comparisonData = [
+                ['Transport Cost ($/kg)', parseFloat(shipmentCostPerKg).toFixed(2), localData.cost_per_kg.toFixed(2)],
+                ['Transport Emissions (kg CO2e/kg)', parseFloat(shipmentEmissionsPerKg).toFixed(2), localData.emissions_per_kg.toFixed(2)]
+            ];
+    
+            comparisonContainer.innerHTML = createTableHtml(comparisonHeaders, comparisonData);
+            comparisonSection.classList.remove('hidden');
+        } else {
+            // No comparison data, so hide the section
+            comparisonSection.classList.add('hidden');
+        }
         outputsDiv.classList.remove('hidden');
         setTimeout(() => {
           map.invalidateSize();
