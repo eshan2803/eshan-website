@@ -2615,7 +2615,7 @@ def run_lca_model(inputs):
         current_food_params = food_params[food_type]
         # Determine initial weight
         num_containers = math.floor(total_ship_volume / 76)
-        initial_weight = num_containers * current_food_params['cargo_per_truck_kg']
+        initial_weight = num_containers * current_food_params['general_params']['cargo_per_truck_kg']
         current_weight = initial_weight
 
         # --- Run the Food LCA and Format the Output ---
