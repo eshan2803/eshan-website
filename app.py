@@ -1968,15 +1968,15 @@ def run_lca_model(inputs):
         from openai import OpenAI
         client = OpenAI(api_key=api_key_openAI)
         
-        # The prompt instructs the AI to act as a data analyst.
+        # Improved prompt to handle broader locations
         prompt_messages = [
             {
                 "role": "system",
-                "content": """You are an expert data analyst. Your task is to find the latest retail price for a specific food item in a given location. You must perform all necessary unit conversions (e.g., from lb to kg) and currency conversions to return a final price in USD per kg. Your response must be only a JSON object with the specified format. If you cannot find a reliable price, return null for the price value."""
+                "content": """You are an expert data analyst specializing in global food prices. Your task is to find a recent, representative retail price for a specific food item in a given country or region. Perform all necessary unit (e.g., lb to kg) and currency conversions to return a final price in USD per kg. Your response must be only a JSON object. If you cannot find a reliable price for the specific region, use the national average for that country. If no reliable price can be found, return null."""
             },
             {
                 "role": "user",
-                "content": f"""Find the current retail price for {food_name} in {location_name} and return the result in the following JSON format: {{"price_usd_per_kg": "PRICE_HERE_AS_FLOAT_OR_NULL", "original_price_found": "ORIGINAL_PRICE_AS_STRING", "source_info": "BRIEF_DESCRIPTION_OF_SOURCE"}}"""
+                "content": f"""Find a representative retail price for {food_name} in the country or region of '{location_name}'. Return the result in the following JSON format: {{"price_usd_per_kg": "PRICE_HERE_AS_FLOAT_OR_NULL", "original_price_found": "ORIGINAL_PRICE_AS_STRING", "source_info": "BRIEF_DESCRIPTION_OF_SOURCE_AND_LOCATION"}}"""
             }
         ]
         
@@ -2660,8 +2660,10 @@ def run_lca_model(inputs):
         eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)")
         
         food_name_for_lookup = current_food_params["name"]
-        price_start = openai_get_food_price(food_name_for_lookup, start)
-        price_end = openai_get_food_price(food_name_for_lookup, end)
+        start_country = get_country_from_coords(coor_start_lat, coor_start_lng) or start
+        end_country = get_country_from_coords(coor_end_lat, coor_end_lng) or end
+        price_start = openai_get_food_price(food_name_for_lookup, start_country)
+        price_end = openai_get_food_price(food_name_for_lookup, end_country)
         price_start_text = f"${price_start:.2f}/kg" if price_start is not None else "Not available"
         price_end_text = f"${price_end:.2f}/kg" if price_end is not None else "Not available"
 
