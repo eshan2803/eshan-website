@@ -263,6 +263,84 @@
           <li><strong>Coefficient of Performance (COP) - Vessel Cooldown:</strong>  Hydrogen: 0.131; Ammonia: 1.714; Methanol: 2.0</li>
       </ul>
 
+      <h4 id="overhead-assumptions">3.3. Voyage Overhead Cost Parameters</h4>
+      <p>
+        To provide a more comprehensive and realistic transport cost, the model includes an option to incorporate major non-fuel overhead costs. These costs represent the economic realities of operating a large marine vessel beyond its direct energy consumption. The values used are industry-average estimates, informed by reports from leading maritime research firms such as <strong>Drewry Maritime Research</strong> and <strong>Clarkson Research</strong>. Real-world costs can vary based on the vessel's age, flag registry, and management company, but these parameters serve as a robust proxy for a comparative analysis.
+      </p>
+      <p>The total overhead cost is comprised of four key components:</p>
+      <ul>
+          <li><strong>Daily Operating Costs (OPEX):</strong> A fixed daily cost that includes crew salaries and provisions, routine maintenance and repairs, stores and supplies (e.g., lubricating oils), and vessel insurance (Hull & Machinery, Protection & Indemnity).</li>
+          <li><strong>Daily Capital Costs (CAPEX):</strong> Represents the amortized cost of the vessel itself. This accounts for the financing and depreciation of a multi-hundred-million-dollar asset over its operational lifetime.</li>
+          <li><strong>Port Fees:</strong> Fees charged by port authorities at both the origin and destination for docking, tugboat services, and use of port facilities. The model assumes one charge at each end of the sea route.</li>
+          <li><strong>Canal Transit Fees:</strong> A significant, one-time cost for passing through major waterways. The model dynamically detects if a route passes through the Suez or Panama canals and applies a representative toll based on the vessel's size class.</li>
+      </ul>
+      <div style="overflow-x: auto;">
+        <table class="parameter-table">
+          <thead>
+            <tr>
+              <th>Ship Archetype</th>
+              <th>Daily OPEX ($)</th>
+              <th>Daily CAPEX ($)</th>
+              <th>Port Fee per Call ($)</th>
+              <th>Suez Toll (est. $)</th>
+              <th>Panama Toll (est. $)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Small (20k m³)</td><td>15,000</td><td>10,000</td><td>30,000</td><td>250,000</td><td>200,000</td></tr>
+            <tr style="background-color: #f2f2f2;"><td>Midsized (90k m³)</td><td>20,000</td><td>25,000</td><td>50,000</td><td>400,000</td><td>350,000</td></tr>
+            <tr><td>Standard (174k m³)</td><td>25,000</td><td>45,000</td><td>70,000</td><td>550,000</td><td>450,000</td></tr>
+            <tr style="background-color: #f2f2f2;"><td>Q-Flex (210k m³)</td><td>28,000</td><td>55,000</td><td>80,000</td><td>650,000</td><td>550,000</td></tr>
+            <tr><td>Q-Max (266k m³)</td><td>30,000</td><td>65,000</td><td>90,000</td><td>700,000</td><td>600,000</td></tr>
+          </tbody>
+        </table>
+      </div>
+            <h4>3.4. Infrastructure Capital Cost (CAPEX) Assumptions</h4>
+      <p>
+        In addition to voyage overheads, the model includes an estimation of the amortized capital cost (CAPEX) for major land-based infrastructure. This captures the significant cost of building facilities like liquefaction plants, freezers, and storage terminals. The methodology involves:
+      </p>
+      <ul>
+        <li>Estimating the total "overnight" construction cost of a facility based on its type and capacity, using power-law scaling (`Cost = BaseCost * (Capacity / BaseCapacity) ^ Exponent`) to account for economies of scale.</li>
+        <li>Amortizing this total cost over an assumed facility lifetime (20-25 years) with a fixed cost of capital to derive an annualized CAPEX.</li>
+        <li>Calculating the facility's total annual throughput in kilograms based on its daily capacity and assumed operational days per year (330 days).</li>
+        <li>Dividing the annualized CAPEX by the annual throughput to arrive at a final **CAPEX cost per kilogram ($/kg)**, which is added to the operational cost of that process step.</li>
+      </ul>
+      <p>The cost models are based on figures from techno-economic analyses by institutions like NREL and the IEA, as well as general industry reports on cold chain logistics.</p>
+      
+      <h5>Fuel Infrastructure CAPEX Models</h5>
+      <table class="parameter-table">
+          <thead>
+            <tr>
+              <th>Facility Type</th>
+              <th>Base CAPEX (Millions USD)</th>
+              <th>Base Capacity (Tons/Day)</th>
+              <th>Scaling Exponent</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>LH₂ Liquefaction Plant</td><td>3,000</td><td>1,000</td><td>0.7</td></tr>
+            <tr style="background-color: #f2f2f2;"><td>Ammonia Synthesis Plant</td><td>1,500</td><td>1,000</td><td>0.7</td></tr>
+            <tr><td>Cryogenic Storage (LH₂)</td><td>200</td><td>1,000</td><td>0.7</td></tr>
+            <tr style="background-color: #f2f2f2;"><td>Refrigerated Storage (NH₃)</td><td>100</td><td>1,000</td><td>0.7</td></tr>
+          </tbody>
+      </table>
+
+      <h5>Food Infrastructure CAPEX Models</h5>
+      <table class="parameter-table">
+        <thead>
+          <tr>
+            <th>Facility Type</th>
+            <th>Base CAPEX (Millions USD)</th>
+            <th>Base Capacity (Tons/Day)</th>
+            <th>Scaling Exponent</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Pre-cooling Facility</td><td>5</td><td>500</td><td>0.6</td></tr>
+          <tr style="background-color: #f2f2f2;"><td>Industrial Freezing Plant</td><td>15</td><td>500</td><td>0.65</td></tr>
+          <tr><td>Cold Storage Warehouse</td><td>10</td><td>500</td><td>0.7</td></tr>
+        </tbody>
+      </table>
       <h3>4. References</h3>
       <ol>
         <li>Bossel, U., & Eliasson, B. (2006). Does a Hydrogen Economy Make Sense?</li>
@@ -291,9 +369,11 @@
         <li><a href="https://kleinmanenergy.upenn.edu/research/publications/ammonias-role-in-a-net-zero-hydrogen-economy/" target="_blank">Kleinman Center for Energy Policy. (2023). <em>Ammonia’s Role in a Net-Zero Hydrogen Economy</em>.</a></li>
         <li><a href="https://doi.org/10.1016/j.ijhydene.2012.11.097" target="_blank">Dincer, I., & Acar, C. (2015). Review and evaluation of hydrogen production methods for better sustainability. <em>International Journal of Hydrogen Energy</em>, 40(34), 11094-11111.</a></li>
         <li><a href="https://doi.org/10.3390/en14248326" target="_blank">Kim, K., et al. (2021). A Study on the Fuel Consumption and Exhaust Gas of a Ship according to the Application of an Energy-Saving Device. <em>Energies</em>, 14(24), 8326.</a></li>
+        <li><strong>Drewry Maritime Research.</strong> (Ongoing). Publishes detailed annual reports on ship operating costs, which inform the OPEX and CAPEX estimates used in this model. See <a href="https://www.drewry.co.uk/" target="_blank">www.drewry.co.uk</a>.</li>
+        <li><strong>Clarkson Research Services (Clarksons).</strong> (Ongoing). Provides extensive data and analysis on shipping markets, including vessel costs and freight rates, serving as a primary source for economic assumptions. See <a href="https://www.clarksons.com/research" target="_blank">www.clarksons.com/research</a>.</li>
+        <li><strong>Suez Canal Authority.</strong> (Ongoing). Provides official toll information and regulations for transiting the Suez Canal. Tolls are complex and based on vessel type and Suez Canal Net Tonnage (SCNT). See <a href="https://www.suezcanal.gov.eg/" target="_blank">www.suezcanal.gov.eg</a>.</li>
+        <li><strong>Panama Canal Authority (ACP).</strong> (Ongoing). Provides the official toll structure for transiting the Panama Canal, based on the Panama Canal Universal Measurement System (PC/UMS). See <a href="https://www.pancanal.com/" target="_blank">www.pancanal.com</a>.</li>
       </ol>
-
-
       </section>
   </main>
 
