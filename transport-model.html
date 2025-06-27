@@ -188,15 +188,19 @@
         </div>
 
         <div id="food-options" class="hidden">
-            <div class="input-group">
-                <label for="food_type">Select Food Type:</label>
-                <select id="food_type" name="food_type" class="form-control">
-                    <option value="strawberry">🍓 Strawberry</option>
-                    <option value="hass_avocado">🥑 Hass Avocado</option>
-                    <option value="banana">🍌 Banana</option>
-                </select>
-            </div>
-        </div>
+                    <div class="input-group">
+                        <label for="food_type">Select Food Type:</label>
+                        <select id="food_type" name="food_type" class="form-control">
+                            <option value="strawberry">🍓 Strawberry</option>
+                            <option value="hass_avocado">🥑 Hass Avocado</option>
+                            <option value="banana">🍌 Banana</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="shipmentSizeContainers">Shipment Size (Number of 40ft Containers)</label>
+                        <input type="number" id="shipmentSizeContainers" value="10">
+                    </div>
+                </div>
 
         <div class="input-group">
         <label for="marineFuelChoice">Marine Propulsion Fuel</label>
@@ -207,6 +211,17 @@
             <option value="Ammonia">Ammonia</option>
         </select>
         </div>
+        <div class="input-group">
+            <label class="input-inline" style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" id="includeOverheads" name="includeOverheads" checked style="width: auto;">
+                <span style="font-weight: normal;">
+                    Include CAPEX for Infrastructure and Overhead Costs for Shipping (Capital, OPEX, Port & Canal Fees)?
+                    <a href="transport-model-documentation.html#overhead-assumptions" target="_blank" style="color: #007BFF; text-decoration: underline;">
+                        Refer to Documentation.
+                    </a>
+                </span>
+            </label>
+        </div>        
         <div class="input-group" id="capacity-input-group">
           <label id="capacity-label" for="lh2PlantCapacity">LH2 Plant Capacity (TPD):</label>
           <input type="number" id="lh2PlantCapacity" value="1000">
@@ -443,7 +458,7 @@
       // Conditionally build the userInputs object
       const commodity = document.getElementById('commodity-type').value;
       const shipArchetype = document.getElementById('shipArchetypeSelect').value;
-      
+      const includeOverheads = document.getElementById('includeOverheads').checked;
       let userInputs = {
         commodity_type: commodity,
         start: document.getElementById('startLocation').value,
@@ -453,6 +468,7 @@
         storage_time_C: parseFloat(document.getElementById('storageTimeC').value),
         LH2_plant_capacity: parseFloat(document.getElementById('lh2PlantCapacity').value), // We can repurpose this input
         ship_archetype: shipArchetype,
+        include_overheads: includeOverheads,
       };
 
       if (commodity === 'fuel') {
@@ -472,11 +488,11 @@
         // Add food-specific keys
         Object.assign(userInputs, {
           food_type: document.getElementById('food_type').value,
-          marine_fuel_choice: document.getElementById('marineFuelChoice').value, // Also needed for food
+          marine_fuel_choice: document.getElementById('marineFuelChoice').value,
+          shipment_size_containers: parseInt(document.getElementById('shipmentSizeContainers').value)
         });
-      }
+      }        
 
-      // Add custom ship details if selected (works for both)
       if (shipArchetype === 'custom') {
         Object.assign(userInputs, {
           total_ship_volume: parseFloat(document.getElementById('totalShipVolume').value),
