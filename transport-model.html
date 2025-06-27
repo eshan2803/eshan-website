@@ -492,7 +492,7 @@
         logStatus("Calculation complete. Rendering results...");
         
         const routeBounds = displayMap(results.map_data);
-        displayTables(results.table_data);
+        displayTables(results.table_data, commodity);
         completeResultsForCsv = results.csv_data; 
         if (results.charts) {
           document.getElementById('costChartImg').src = "data:image/png;base64," + results.charts.cost_chart_base64;
@@ -608,7 +608,6 @@
       return bounds;
     }
 
-// --- REPLACE your old createTableHtml function with this one ---
     function createTableHtml(headers, dataArray, isDetailed = false) {
       // Start with the table header
       let html = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead>';
@@ -645,69 +644,52 @@
       return '<table>' + html + '</table>'; // Wrap everything in a <table> tag
     }
     
-    function displayTables(tableData) {
-      // Detailed Table
-      if (tableData.detailed_data && tableData.detailed_headers) {
-        document.getElementById('detailedTableContainer').innerHTML = createTableHtml(tableData.detailed_headers, tableData.detailed_data, true);
-      }
-
-      // Summary Table 1 (per kg or per unit)
-      if (tableData.summary1_data && tableData.summary1_headers) {
-        document.getElementById('summaryTableContainer').innerHTML = createTableHtml(tableData.summary1_headers, tableData.summary1_data);
-      }
-
-      // Summary Table 2 (per GJ) - This also handles hiding/showing the section
-      const summary2Container = document.getElementById('summaryTableContainer2');
-      const summary2Title = summary2Container.previousElementSibling; 
-      if (tableData.summary2_data && tableData.summary2_data.length > 0) {
-        summary2Container.innerHTML = createTableHtml(tableData.summary2_headers, tableData.summary2_data);
-        summary2Container.classList.remove('hidden');
-        if (summary2Title) summary2Title.classList.remove('hidden');
-      } else {
-        summary2Container.innerHTML = '';
-        summary2Container.classList.add('hidden');
-        if (summary2Title) summary2Title.classList.add('hidden');
-      }
-
-      // Assumption Table
-      if (tableData.assumed_prices_data && tableData.assumed_prices_headers) {
-        document.getElementById('assumptionTableContainer').innerHTML = createTableHtml(tableData.assumed_prices_headers, tableData.assumed_prices_data);
-      }
+    function displayTables(tableData, commodity) {
+        // --- 1. DETAILED TABLE LOGIC ---
+        let detailedHeaders = tableData.detailed_headers || [];
+        let detailedData = tableData.detailed_data || [];
+    
+        if (commodity === 'food') {
+            // If the commodity is food, filter out the GJ columns
+            const columnsToRemove = [7, 9]; // Indices for 'Cost/GJ' and 'eCO2/GJ'
+            detailedHeaders = detailedHeaders.filter((_, index) => !columnsToRemove.includes(index));
+            detailedData = detailedData.map(row => row.filter((_, index) => !columnsToRemove.includes(index)));
+        }
+        // Render the detailed table with the (potentially filtered) data
+        document.getElementById('detailedTableContainer').innerHTML = createTableHtml(detailedHeaders, detailedData, true);
+    
+    
+        // --- 2. SUMMARY TABLE 1 LOGIC (No changes here) ---
+        const summary1Headers = tableData.summary1_headers || [];
+        const summary1Data = tableData.summary1_data || [];
+        document.getElementById('summaryTableContainer').innerHTML = createTableHtml(summary1Headers, summary1Data);
+    
+    
+        // --- 3. SUMMARY TABLE 2 (PER GJ) LOGIC ---
+        const summary2Container = document.getElementById('summaryTableContainer2');
+        const summary2Title = summary2Container.previousElementSibling; // The H3 title
+    
+        if (commodity === 'fuel' && tableData.summary2_data && tableData.summary2_data.length > 0) {
+            // ONLY show this table if the commodity is 'fuel'
+            summary2Container.innerHTML = createTableHtml(tableData.summary2_headers, tableData.summary2_data);
+            summary2Container.classList.remove('hidden');
+            summary2Title.classList.remove('hidden');
+        } else {
+            // Hide this table for 'food' or if there's no data
+            summary2Container.innerHTML = '';
+            summary2Container.classList.add('hidden');
+            summary2Title.classList.add('hidden');
+        }
+    
+        // --- 4. ASSUMPTION TABLE LOGIC (No changes here) ---
+        const assumptionHeaders = tableData.assumed_prices_headers || [];
+        const assumptionData = tableData.assumed_prices_data || [];
+        const assumptionContainer = document.getElementById('assumptionTableContainer');
+        if(assumptionContainer) {
+            assumptionContainer.innerHTML = createTableHtml(assumptionHeaders, assumptionData);
+        }
     }
-
-    function displayTables(tableData) {
-      // Detailed Table
-      const detailedHeaders = tableData.detailed_headers || [];
-      const detailedData = tableData.detailed_data || [];
-      document.getElementById('detailedTableContainer').innerHTML = createTableHtml(detailedHeaders, detailedData, true);
-
-      // Summary Table 1 (per kg)
-      const summary1Headers = tableData.summary1_headers || [];
-      const summary1Data = tableData.summary1_data || [];
-      document.getElementById('summaryTableContainer').innerHTML = createTableHtml(summary1Headers, summary1Data);
-
-      // Summary Table 2 (per GJ) - Conditional Display
-      const summary2Container = document.getElementById('summaryTableContainer2');
-      const summary2Title = summary2Container.previousElementSibling; // The H3 title
-      if (tableData.summary2_data && tableData.summary2_data.length > 0) {
-        summary2Container.innerHTML = createTableHtml(tableData.summary2_headers, tableData.summary2_data);
-        summary2Container.classList.remove('hidden');
-        summary2Title.classList.remove('hidden');
-      } else {
-        summary2Container.innerHTML = ''; // Clear previous results
-        summary2Container.classList.add('hidden');
-        summary2Title.classList.add('hidden');
-      }
-
-      // Assumption Table
-      const assumptionHeaders = tableData.assumed_prices_headers || [];
-      const assumptionData = tableData.assumed_prices_data || [];
-      // Assuming you have a container with this ID. If not, you might need to adjust.
-      const assumptionContainer = document.getElementById('assumptionTableContainer');
-      if(assumptionContainer) {
-        assumptionContainer.innerHTML = createTableHtml(assumptionHeaders, assumptionData);
-      }
-    }
+    
 
   </script>
 
