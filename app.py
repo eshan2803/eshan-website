@@ -2547,6 +2547,7 @@ def run_lca_model(inputs):
                             'reefer_container_power_kw': 3.5, # Average power draw for a reefer container holding frozen goods. Source: Reefer manufacturer specifications (e.g., Carrier, Thermo King).
                             'cargo_per_truck_kg': 20000, # Standard maximum payload for a 40ft refrigerated container. Source: Freight and logistics industry standards.
                             'specific_heat_fresh_mj_kgK': 0.0039, # Thermodynamic property based on high water content (~91%). Source: Food science literature, ASHRAE handbooks.
+                            'reefer_truck_fuel_consumption_L_hr': 1.5,
                         },
                         'precooling_params': { # Parameters for the initial pre-cooling process.
                             'initial_field_heat_celsius': 28.0, # Represents a typical ambient temperature during a summer harvest season in a region like California. Source: Agricultural and meteorological data.
@@ -2574,6 +2575,7 @@ def run_lca_model(inputs):
                             'reefer_container_power_kw': 1.5, # Lower average power draw for chilled goods compared to frozen. Source: Reefer manufacturer specifications.
                             'cargo_per_truck_kg': 20000, # Standard maximum payload for a 40ft refrigerated container. Source: Freight and logistics industry standards.
                             'specific_heat_fresh_mj_kgK': 0.0035, # Thermodynamic property based on the fruit's composition. Source: Food science literature.
+                            'reefer_truck_fuel_consumption_L_hr': 1.5,
                         },
                         'precooling_params': { # Parameters for the initial pre-cooling process.
                             'initial_field_heat_celsius': 25.0, # A typical field heat for avocados from subtropical/tropical climates. Source: Agricultural data.
@@ -2607,6 +2609,7 @@ def run_lca_model(inputs):
                             'reefer_container_power_kw': 1.8, # Power draw for this specific chilled temperature. Source: Reefer manufacturer specifications.
                             'cargo_per_truck_kg': 20000, # Standard maximum payload. Source: Freight and logistics industry standards.
                             'specific_heat_fresh_mj_kgK': 0.0033, # Thermodynamic property. Source: Food science literature.
+                            'reefer_truck_fuel_consumption_L_hr': 1.5,
                         },
                         'precooling_params': { # Parameters for the initial pre-cooling process.
                             'initial_field_heat_celsius': 30.0, # Represents a typical field heat in a tropical harvesting environment. Source: Agricultural and meteorological data.
