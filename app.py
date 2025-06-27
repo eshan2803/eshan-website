@@ -2631,34 +2631,10 @@ def run_lca_model(inputs):
                     }
                 }
         current_food_params = food_params[food_type]
-        # Determine initial weight
         num_containers = math.floor(total_ship_volume / 76)
         initial_weight = num_containers * current_food_params['general_params']['cargo_per_truck_kg']
-        current_weight = initial_weight
-
         # --- Run the Food LCA and Format the Output ---
         data_raw = total_food_lca(initial_weight, current_food_params)
-        food_name_for_lookup = current_food_params["name"]
-        price_start = openai_get_food_price(food_name_for_lookup, start)
-        price_end = openai_get_food_price(food_name_for_lookup, end)
-        price_start_text = f"${price_start:.2f}/kg" if price_start is not None else "Not available"
-        price_end_text = f"${price_end:.2f}/kg" if price_end is not None else "Not available"
-
-        cost_overlay_text = (
-            f"Context:\n"
-            f"• Retail price of {food_name_for_lookup} in {start}: {price_start_text}\n"
-            f"• Retail price of {food_name_for_lookup} in {end}: {price_end_text}\n\n"
-            f"Compare local prices to the total transport cost."
-        )
-        cost_chart_base64 = create_breakdown_chart(
-            data_for_display, 
-            cost_per_kg_index, 
-            f'Cost Breakdown per kg of Delivered {current_food_params["name"]}', 
-            'Cost ($/kg)',
-            overlay_text=cost_overlay_text 
-        )
-
-        
         total_money = sum(row[1] for row in data_raw)
         total_energy = sum(row[2] for row in data_raw)
         total_emissions = sum(row[3] for row in data_raw)
@@ -2685,6 +2661,25 @@ def run_lca_model(inputs):
         cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
         eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)")
         
+        food_name_for_lookup = current_food_params["name"]
+        price_start = openai_get_food_price(food_name_for_lookup, start)
+        price_end = openai_get_food_price(food_name_for_lookup, end)
+        price_start_text = f"${price_start:.2f}/kg" if price_start is not None else "Not available"
+        price_end_text = f"${price_end:.2f}/kg" if price_end is not None else "Not available"
+
+        cost_overlay_text = (
+            f"Context:\n"
+            f"• Retail price of {food_name_for_lookup} in {start}: {price_start_text}\n"
+            f"• Retail price of {food_name_for_lookup} in {end}: {price_end_text}\n\n"
+            f"Compare local prices to the total transport cost."
+        )
+        cost_chart_base64 = create_breakdown_chart(
+            data_for_display, 
+            cost_per_kg_index, 
+            f'Cost Breakdown per kg of Delivered {current_food_params["name"]}', 
+            'Cost ($/kg)',
+            overlay_text=cost_overlay_text 
+        )
         emission_chart_base64 = create_breakdown_chart(data_for_display, eco2_per_kg_index, f'CO2eq Breakdown per kg of Delivered {current_food_params["name"]}', 'CO2eq (kg/kg)')
         
         summary1_data = [
