@@ -230,8 +230,8 @@ def run_lca_model(inputs):
             plt.tight_layout(pad=2.0)
             
             if overlay_text:
-                fig.text(0.95, 0.1, overlay_text,
-                        ha='right', va='bottom', size=12,
+                fig.text(0.95, 0.15, overlay_text,
+                        ha='right', va='bottom', size=10,
                         bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.6))
 
             # --- Saving the plot to a memory buffer ---
