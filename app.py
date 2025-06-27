@@ -193,14 +193,66 @@ def run_lca_model(inputs):
         return np.interp(ship_volume_m3, volumes_m3, powers_kw)
 
     def create_breakdown_chart(data, column_index, title, x_label, overlay_text=None):
-        # ... (omitted for brevity, no changes needed here)
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png', dpi=90)
-        buf.seek(0)
-        img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-        plt.close()
-        return img_base64
+        # --- NEW: Add comprehensive error handling ---
+        try:
+            # --- NEW: Check if there is any data to plot ---
+            if not data:
+                print("Chart creation skipped: No data provided.")
+                return ""
 
+            # Extract labels and ensure values are numeric, defaulting to 0 if not.
+            labels = [row[0] for row in data]
+            values = []
+            for row in data:
+                try:
+                    # Attempt to convert the value to a float
+                    values.append(float(row[column_index]))
+                except (ValueError, TypeError):
+                    # If it fails, default to 0 and print a warning
+                    values.append(0.0)
+                    print(f"Warning: Could not convert value '{row[column_index]}' to a number for chart '{title}'. Defaulting to 0.")
+
+            # --- Your existing plotting logic is here ---
+            plt.style.use('seaborn-v0_8-whitegrid')
+            fig, ax = plt.subplots(figsize=(10, len(labels) * 0.5))
+            
+            y_pos = np.arange(len(labels))
+            ax.barh(y_pos, values, align='center', color='#4CAF50', edgecolor='black')
+            ax.set_yticks(y_pos)
+            ax.set_yticklabels(labels, fontsize=12)
+            ax.invert_yaxis()  # labels read top-to-bottom
+            ax.set_xlabel(x_label, fontsize=14, weight='bold')
+            ax.set_title(title, fontsize=16, weight='bold', pad=20)
+            
+            for i, v in enumerate(values):
+                ax.text(v, i, f' {v:,.2f}', color='black', va='center', fontweight='bold')
+                
+            plt.tight_layout(pad=2.0)
+            
+            if overlay_text:
+                fig.text(0.5, 0.5, overlay_text,
+                        ha='center', va='center', size=12,
+                        bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.6))
+
+            # --- Saving the plot to a memory buffer ---
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png', dpi=100) # Increased dpi for better quality
+            buf.seek(0)
+            img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+            plt.close(fig) # Explicitly close the figure to free up memory
+            
+            return img_base64
+
+        # --- NEW: Catch any exception during chart creation ---
+        except Exception as e:
+            # Print a detailed error message to your backend logs
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            print(f"CRITICAL ERROR generating chart '{title}': {e}")
+            import traceback
+            traceback.print_exc()
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            # Return an empty string so the frontend doesn't break
+            return ""
     # =================================================================
     # <<<                   FUEL PROCESS FUNCTIONS                  >>>
     # =================================================================
