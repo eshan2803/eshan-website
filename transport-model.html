@@ -207,8 +207,7 @@
             <option value="Ammonia">Ammonia</option>
         </select>
         </div>
-
-        <div class="input-group">
+        <div class="input-group" id="capacity-input-group">
           <label id="capacity-label" for="lh2PlantCapacity">LH2 Plant Capacity (TPD):</label>
           <input type="number" id="lh2PlantCapacity" value="1000">
         </div>
@@ -345,6 +344,7 @@
 
     // --- UI Element References ---
     const commoditySelector = document.getElementById('commodity-type');
+    const capacityInputGroup = document.getElementById('capacity-input-group'); 
     const fuelOptionsDiv = document.getElementById('fuel-options');
     const foodOptionsDiv = document.getElementById('food-options');
     const capacityLabel = document.getElementById('capacity-label');
@@ -357,24 +357,20 @@
     // --- Main Function to Control UI Visibility ---
     function updateFormVisibility() {
       const selectedCommodity = commoditySelector.value;
-
+    
       // Get all the option elements from the ship archetype dropdown
       const shipOptions = shipArchetypeSelect.options;
-
+    
       if (selectedCommodity === 'fuel') {
         // --- SHOW FUEL SECTIONS ---
         fuelOptionsDiv.classList.remove('hidden');
         foodOptionsDiv.classList.add('hidden');
         shipDetailsWrapper.classList.remove('hidden');
-
+        capacityInputGroup.classList.remove('hidden'); // <-- SHOW the capacity input
+    
         // --- UPDATE LABELS FOR FUEL ---
         capacityLabel.textContent = 'LH2 Plant Capacity (TPD):';
-        // Set ship labels for LNG Carriers
-        shipOptions[1].textContent = 'Small-Scale Carrier (20,000 m³)';
-        shipOptions[2].textContent = 'Midsized Carrier (90,000 m³)';
-        shipOptions[3].textContent = 'Standard Modern Carrier (174,000 m³)';
-        shipOptions[4].textContent = 'Q-Flex Carrier (210,000 m³)';
-        shipOptions[5].textContent = 'Q-Max Carrier (266,000 m³)';
+        // (rest of your existing logic for fuel labels...)
         
         // Handle BOG panel visibility
         if (bogRecirculationRadio.checked) {
@@ -382,23 +378,20 @@
         } else {
           bogRecirculationDetailsPanel.classList.add('hidden');
         }
-
+    
       } else if (selectedCommodity === 'food') {
         // --- SHOW FOOD SECTIONS ---
         fuelOptionsDiv.classList.add('hidden');
         foodOptionsDiv.classList.remove('hidden');
-        shipDetailsWrapper.classList.remove('hidden'); // Show ship details for food as well
-
+        shipDetailsWrapper.classList.remove('hidden');
+        capacityInputGroup.classList.add('hidden'); // <-- HIDE the capacity input
+    
         // --- UPDATE LABELS FOR FOOD ---
+        // (This line for capacityLabel is no longer visible, but doesn't harm anything)
         capacityLabel.textContent = 'Processing & Freezing Facility Capacity (Tons/Day):';
-        // Set ship labels for Container Ships
-        shipOptions[1].textContent = 'Feeder Vessel (~2,000 Containers)';
-        shipOptions[2].textContent = 'Midsized Vessel (~6,000 Containers)';
-        shipOptions[3].textContent = 'Post-Panamax Vessel (~10,000 Containers)';
-        shipOptions[4].textContent = 'New-Panamax Vessel (~14,000 Containers)';
-        shipOptions[5].textContent = 'Ultra-Large Vessel (20,000+ Containers)';
+        // (rest of your existing logic for food labels...)
       }
-
+    
       // Handle custom ship panel visibility (this works for both fuel and food)
       if (shipArchetypeSelect.value === 'custom') {
         customShipDetailsPanel.classList.remove('hidden');
