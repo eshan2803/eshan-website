@@ -315,18 +315,20 @@ def run_lca_model(inputs):
             liquify_energy_required = 0
 
         liquify_ener_consumed = liquify_energy_required * A
-        opex_money = liquify_ener_consumed * start_electricity_price_tuple_arg[2] # Access the price float
-        total_money = opex_money
-        if include_overheads:
-            capex_per_kg = calculate_fuel_infra_capex("liquefaction", LH2_plant_capacity_arg, B_fuel_type)
-            capex_money = A * capex_per_kg
-            total_money += capex_money
+        money = liquify_ener_consumed * start_electricity_price_tuple_arg[2] # Access the price float
+        
         G_emission_from_energy = liquify_ener_consumed * 0.2778 * CO2e_start_arg * 0.001
         BOG_loss = 0.016 * A
+        
         A_after_loss = A - BOG_loss
+        
+        # ** THE FIX IS HERE: **
+        # Select the correct GWP value from the list using B_fuel_type as the index
         G_emission_from_bog = BOG_loss * GWP_chem_list_arg[B_fuel_type] 
+        
         G_emission = G_emission_from_energy + G_emission_from_bog
-        return total_money, liquify_ener_consumed, G_emission, A_after_loss, BOG_loss
+
+        return money, liquify_ener_consumed, G_emission, A_after_loss, BOG_loss
     
     def chem_site_A_loading_to_truck(A, B, C, D, E, F, process_args_tuple):
         # Unpack the specific arguments this function needs from the passed-in tuple.
@@ -545,8 +547,9 @@ def run_lca_model(inputs):
         heat_required_val = OHTC_val * storage_area_val * (start_local_temperature_arg + 273 - 20) # Assuming 20K target
         ener_consumed_refrig = (heat_required_val / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * 86400 * storage_time_A_arg
         
-        opex_money = ener_consumed_refrig * start_electricity_price_tuple_arg[2]
+        money = ener_consumed_refrig * start_electricity_price_tuple_arg[2]
         total_energy_consumed = ener_consumed_refrig # Initial total energy
+        
         G_emission = total_energy_consumed * 0.2778 * CO2e_start_arg * 0.001 + current_BOG_loss * GWP_chem_list_arg[B_fuel_type]
         net_BOG_loss = current_BOG_loss # This will be updated if recirculation occurs
 
@@ -557,12 +560,16 @@ def run_lca_model(inputs):
                 usable_BOG = current_BOG_loss * BOG_recirculation_storage_percentage_arg * 0.01
                 BOG_flowrate = usable_BOG / storage_time_A_arg * 1 / 24 # kg/hr
                 
+                # liquification_data_fitting is a global helper
                 reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
                 reliq_ener_consumed = reliq_ener_required * usable_BOG
+                
                 total_energy_consumed += reliq_ener_consumed # Add energy for re-liquefaction
-                opex_money = total_energy_consumed * start_electricity_price_tuple_arg[2] # Recalculate money
+                money = total_energy_consumed * start_electricity_price_tuple_arg[2] # Recalculate money
+                
                 A_after_loss += usable_BOG # Add back re-liquefied BOG
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_storage_percentage_arg * 0.01)
+                
                 G_emission = total_energy_consumed * 0.2778 * CO2e_start_arg * 0.001 + net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
 
             elif E_storage_apply == 2: # 2) Use BOG as another energy source (e.g., fuel cell)
@@ -575,18 +582,14 @@ def run_lca_model(inputs):
                     ener_consumed_refrig = 0
                 
                 total_energy_consumed = ener_consumed_refrig # Update total energy (only refrigeration part changes)
-                opex_money = total_energy_consumed * start_electricity_price_tuple_arg[2] # Recalculate money
+                money = total_energy_consumed * start_electricity_price_tuple_arg[2] # Recalculate money
                 
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_storage_percentage_arg * 0.01)
                 # A_after_loss remains A - current_BOG_loss, as BOG is consumed
                 
                 G_emission = total_energy_consumed * 0.2778 * CO2e_start_arg * 0.001 + net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
-        total_money = opex_money
-        if include_overheads:
-            capex_per_kg = calculate_fuel_infra_capex("storage", LH2_plant_capacity_arg, B_fuel_type)
-            capex_money = A * capex_per_kg
-            total_money += capex_money        
-        return total_money, total_energy_consumed, G_emission, A_after_loss, net_BOG_loss
+        
+        return money, total_energy_consumed, G_emission, A_after_loss, net_BOG_loss
     
     def chem_loading_to_ship(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         # Unpack all necessary arguments
@@ -809,7 +812,7 @@ def run_lca_model(inputs):
         heat_required_val = OHTC_val * storage_area_val * (end_local_temperature_arg + 273 - 20) # Using end_local_temperature
         ener_consumed_refrig = (heat_required_val / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * 86400 * storage_time_B_arg
         
-        opex_money = ener_consumed_refrig * end_electricity_price_tuple_arg[2]
+        money = ener_consumed_refrig * end_electricity_price_tuple_arg[2] # Using end_electricity_price
         total_energy_consumed = ener_consumed_refrig
         
         G_emission = total_energy_consumed * 0.2778 * CO2e_end_arg * 0.001 + current_BOG_loss * GWP_chem_list_arg[B_fuel_type] # Using CO2e_end
@@ -825,7 +828,7 @@ def run_lca_model(inputs):
                 reliq_ener_consumed = reliq_ener_required * usable_BOG
                 
                 total_energy_consumed += reliq_ener_consumed
-                opex_money = total_energy_consumed * end_electricity_price_tuple_arg[2] # Using end_electricity_price
+                money = total_energy_consumed * end_electricity_price_tuple_arg[2] # Using end_electricity_price
                 
                 A_after_loss += usable_BOG
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_storage_percentage_arg * 0.01)
@@ -842,17 +845,13 @@ def run_lca_model(inputs):
                     ener_consumed_refrig = 0
                 
                 total_energy_consumed = ener_consumed_refrig # Update total energy
-                opex_money = total_energy_consumed * end_electricity_price_tuple_arg[2] # Using end_electricity_price
+                money = total_energy_consumed * end_electricity_price_tuple_arg[2] # Using end_electricity_price
                 
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_storage_percentage_arg * 0.01)
                 
                 G_emission = total_energy_consumed * 0.2778 * CO2e_end_arg * 0.001 + net_BOG_loss * GWP_chem_list_arg[B_fuel_type] # Using CO2e_end
-        total_money = opex_money
-        if include_overheads:
-            capex_per_kg = calculate_fuel_infra_capex("storage", LH2_plant_capacity_arg, B_fuel_type)
-            capex_money = A * capex_per_kg
-            total_money += capex_money        
-        return total_money, total_energy_consumed, G_emission, A_after_loss, net_BOG_loss
+        
+        return money, total_energy_consumed, G_emission, A_after_loss, net_BOG_loss
 
     def port_B_unloading_from_storage(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         # Unpack the specific arguments this function needs from the passed-in tuple.
@@ -1074,7 +1073,7 @@ def run_lca_model(inputs):
         heat_required_val = OHTC_val * storage_area_val * (end_local_temperature_arg + 273 - 20) # Using end_local_temperature
         ener_consumed_refrig = (heat_required_val / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * 86400 * storage_time_C_arg
         
-        opex_money = ener_consumed_refrig * end_electricity_price_tuple_arg[2] # Using end_electricity_price
+        money = ener_consumed_refrig * end_electricity_price_tuple_arg[2] # Using end_electricity_price
         total_energy_consumed = ener_consumed_refrig
         
         G_emission = total_energy_consumed * 0.2778 * CO2e_end_arg * 0.001 + current_BOG_loss * GWP_chem_list_arg[B_fuel_type] # Using CO2e_end
@@ -1090,7 +1089,7 @@ def run_lca_model(inputs):
                 reliq_ener_consumed = reliq_ener_required * usable_BOG
                 
                 total_energy_consumed += reliq_ener_consumed
-                opex_money = total_energy_consumed * end_electricity_price_tuple_arg[2] # Using end_electricity_price
+                money = total_energy_consumed * end_electricity_price_tuple_arg[2] # Using end_electricity_price
                 
                 A_after_loss += usable_BOG
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_storage_percentage_arg * 0.01)
@@ -1108,18 +1107,14 @@ def run_lca_model(inputs):
                     ener_consumed_refrig_after_bog = 0
                 
                 total_energy_consumed = ener_consumed_refrig_after_bog # Update total energy
-                opex_money = total_energy_consumed * end_electricity_price_tuple_arg[2] # Using end_electricity_price
+                money = total_energy_consumed * end_electricity_price_tuple_arg[2] # Using end_electricity_price
                 
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_storage_percentage_arg * 0.01)
                 # A_after_loss remains A - current_BOG_loss, as BOG is consumed
                 
                 G_emission = total_energy_consumed * 0.2778 * CO2e_end_arg * 0.001 + net_BOG_loss * GWP_chem_list_arg[B_fuel_type] # Using CO2e_end
-        total_money = opex_money
-        if include_overheads:
-            capex_per_kg = calculate_fuel_infra_capex("storage", LH2_plant_capacity_arg, B_fuel_type)
-            capex_money = A * capex_per_kg
-            total_money += capex_money        
-        return total_money, total_energy_consumed, G_emission, A_after_loss, net_BOG_loss
+        
+        return money, total_energy_consumed, G_emission, A_after_loss, net_BOG_loss
 
     def chem_unloading_from_site_B(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         # Unpack the specific arguments this function needs from the passed-in tuple.
@@ -1706,117 +1701,6 @@ def run_lca_model(inputs):
     def constraint(A):
         """Ensures the optimized weight is not less than the target weight."""
         return A[0] - target_weight # This must be >= 0
-    
-    def calculate_fuel_infra_capex(process_name, capacity_tpd, fuel_type):
-        """
-        Estimates the amortized capital cost per kg for fuel infrastructure.
-        Source: Based on techno-economic analyses from NREL, IEA, and hydrogen industry reports.
-        """
-        # Simplified CAPEX models for different fuel types
-        cost_models = {
-            # Cost to build a liquefaction plant in millions USD
-            "liquefaction": {0: 3000, 1: 1500, 2: 0}, # LH2, NH3, Methanol (0)
-            # Cost to build a large-scale cryogenic storage tank facility in millions USD
-            "storage": {0: 200, 1: 100, 2: 20}
-        }
-        
-        base_capex_M_usd = cost_models.get(process_name, {}).get(fuel_type, 0)
-        if base_capex_M_usd == 0:
-            return 0
-
-        # Calculate total capital cost using a power law (e.g., 0.7 exponent)
-        total_capex_usd = (base_capex_M_usd * 1_000_000) * (capacity_tpd / 1000) ** 0.7
-        
-        # Amortize over 25 years with an 8% cost of capital (simplified to an annual factor)
-        annualized_capex = total_capex_usd * 0.09
-        
-        # Calculate annual throughput
-        annual_throughput_kg = capacity_tpd * 1000 * 330
-        
-        if annual_throughput_kg == 0:
-            return 0
-            
-        capex_per_kg = annualized_capex / annual_throughput_kg
-        return capex_per_kg
-    
-        # This is the 'base' function that runs the main sequence of calculations
-    def total_chem_base(A_optimized_chem_weight, B_fuel_type_tc, C_recirculation_BOG_tc, 
-                        D_truck_apply_tc, E_storage_apply_tc, F_maritime_apply_tc):
-            
-        funcs_sequence = [
-            site_A_chem_production, site_A_chem_liquification, chem_site_A_loading_to_truck,
-            site_A_to_port_A, port_A_unloading_to_storage, chem_storage_at_port_A,
-            chem_loading_to_ship, port_to_port, chem_unloading_from_ship,
-            chem_storage_at_port_B, port_B_unloading_from_storage, port_B_to_site_B,
-            chem_site_B_unloading_from_truck, chem_storage_at_site_B,
-            chem_unloading_from_site_B
-        ]
-        
-        R_current_chem = A_optimized_chem_weight
-        data_results_list = []
-        total_money_tc = 0.0
-        total_ener_consumed_tc = 0.0
-        total_G_emission_tc = 0.0
-        total_S_bog_loss_tc = 0.0
-
-        for func_to_call in funcs_sequence:
-            # This block is copied directly from your file and is correct
-            # --- (The entire if/elif chain for packing process_args_for_this_call_tc goes here) ---
-            if func_to_call.__name__ == "site_A_chem_production":
-                process_args_for_this_call_tc = (GWP_chem,)
-            elif func_to_call.__name__ == "site_A_chem_liquification":
-                process_args_for_this_call_tc = (LH2_plant_capacity, EIM_liquefication, specific_heat_chem, start_local_temperature, boiling_point_chem, latent_H_chem, COP_liq, start_electricity_price, CO2e_start, GWP_chem)
-            elif func_to_call.__name__ == "chem_site_A_loading_to_truck":
-                process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_truck_site_A, dBOR_dT, start_local_temperature, BOR_loading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem)
-            elif func_to_call.__name__ == "site_A_to_port_A":
-                process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_A_to_port, HHV_diesel, diesel_density, diesel_price_start, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, start_local_temperature, COP_refrig, EIM_refrig_eff, duration_A_to_port, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
-            elif func_to_call.__name__ == "port_A_unloading_to_storage":
-                process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_port_A, dBOR_dT, start_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem)
-            elif func_to_call.__name__ == "chem_storage_at_port_A":
-                process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, start_local_temperature, BOR_land_storage, storage_time_A, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
-            elif func_to_call.__name__ == "chem_loading_to_ship":
-                process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_ship_port_A, dBOR_dT, start_local_temperature, BOR_loading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, boiling_point_chem, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, storage_area, ship_tank_metal_thickness, ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density, ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat, COP_cooldown, COP_refrig, ship_number_of_tanks)
-            elif func_to_call.__name__ == "port_to_port":
-                process_args_for_this_call_tc = (
-                    start_local_temperature, end_local_temperature, OHTC_ship,
-                    storage_area, ship_number_of_tanks, COP_refrig, EIM_refrig_eff, 
-                    port_to_port_duration, selected_marine_fuel_params,
-                    dBOR_dT, BOR_ship_trans, GWP_chem, 
-                    BOG_recirculation_mati_trans, LH2_plant_capacity, EIM_liquefication, 
-                    fuel_cell_eff, EIM_fuel_cell, LHV_chem,
-                    avg_ship_power_kw,
-                    0.45, # Assumed auxiliary engine efficiency (45%)
-                    GWP_N2O
-                )
-            elif func_to_call.__name__ == "chem_unloading_from_ship":
-                process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_port_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
-            elif func_to_call.__name__ == "chem_storage_at_port_B":
-                process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, end_local_temperature, BOR_land_storage, storage_time_B, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
-            elif func_to_call.__name__ == "port_B_unloading_from_storage":
-                process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_truck_port_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
-            elif func_to_call.__name__ == "port_B_to_site_B":
-                process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_port_to_B, HHV_diesel, diesel_density, diesel_price_end, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, end_local_temperature, COP_refrig, EIM_refrig_eff, duration_port_to_B, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
-            elif func_to_call.__name__ == "chem_site_B_unloading_from_truck":
-                process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_site_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
-            elif func_to_call.__name__ == "chem_storage_at_site_B":
-                process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, end_local_temperature, BOR_land_storage, storage_time_C, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
-            elif func_to_call.__name__ == "chem_unloading_from_site_B":
-                process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_site_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
-
-            X_money, Y_energy, Z_emission, R_current_chem, S_bog_loss = \
-                func_to_call(R_current_chem, B_fuel_type_tc, C_recirculation_BOG_tc, D_truck_apply_tc, 
-                            E_storage_apply_tc, F_maritime_apply_tc, process_args_for_this_call_tc)
-            
-            data_results_list.append([func_to_call.__name__, X_money, Y_energy, Z_emission, R_current_chem, S_bog_loss])
-            total_money_tc += X_money
-            total_ener_consumed_tc += Y_energy
-            total_G_emission_tc += Z_emission
-            total_S_bog_loss_tc += S_bog_loss
-
-        final_total_result_tc = [total_money_tc, total_ener_consumed_tc, total_G_emission_tc, R_current_chem]
-        data_results_list.append(["TOTAL", total_money_tc, total_ener_consumed_tc, total_G_emission_tc, R_current_chem, total_S_bog_loss_tc])
-        
-        return final_total_result_tc, data_results_list
 
     # =================================================================
     # <<<                  FOOD PROCESSING FUNCTIONS                >>>
@@ -1832,14 +1716,10 @@ def run_lca_model(inputs):
         energy_sensible_heat2 = A * params['specific_heat_frozen_mj_kgK'] * (0 - params['target_temp_celsius'])
         total_heat_to_remove = energy_sensible_heat1 + energy_latent_heat + energy_sensible_heat2
         energy = total_heat_to_remove / params['cop_freezing_system']
-        opex_money = energy * elec_price[2]
-        # The 'facility_capacity' input is now used here
-        capex_per_kg = calculate_food_infra_capex("freezing", facility_capacity)
-        capex_money = A * capex_per_kg
+        money = energy * elec_price[2]
         emissions = energy * 0.2778 * co2_factor * 0.001
         loss = 0.005 * A
-        total_money = opex_money + capex_money
-        return total_money, energy, emissions, A - loss, loss
+        return money, energy, emissions, A - loss, loss
 
     def food_road_transport(A, args):
         params, distance, duration_mins, diesel_price, hh_diesel, dens_diesel, co2_diesel, ambient_temp = args
@@ -1891,10 +1771,7 @@ def run_lca_model(inputs):
         energy_mj = heat_to_remove_mj / precool_params['cop_precooling_system']
 
         # 4. Calculate the financial cost and CO2 emissions
-        opex_money = energy_mj * elec_price[2] # elec_price[2] is the price per MJ
-        capex_per_kg = calculate_food_infra_capex("precool", facility_capacity)
-        capex_money = A * capex_per_kg        
-        total_money = opex_money + capex_money
+        money = energy_mj * elec_price[2] # elec_price[2] is the price per MJ
         # Convert MJ to kWh for emission calculation (1 MJ ≈ 0.2778 kWh)
         emissions = energy_mj * 0.2778 * co2_factor * 0.001
 
@@ -1902,8 +1779,7 @@ def run_lca_model(inputs):
         loss = A * precool_params['moisture_loss_percent']
 
         # 6. Return the standard tuple of results
-        return total_money, energy_mj, emissions, A - loss, loss
-    
+        return money, energy_mj, emissions, A - loss, loss
     def calculate_ca_energy_kwh(A, food_params, duration_hrs):
         """
         Calculates the energy consumption of a Controlled Atmosphere system
@@ -1983,11 +1859,8 @@ def run_lca_model(inputs):
         
         # Spoilage calculation remains the same
         duration_days = duration_hrs / 24.0
-        spoilage_rate = food_params['general_params']['spoilage_rate_per_day'] # Default rate
-        if food_params['process_flags'].get('needs_controlled_atmosphere'):
-            # If CA is active, use the lower spoilage rate
-            spoilage_rate = food_params['general_params']['spoilage_rate_ca_per_day']
-        loss = A * spoilage_rate * duration_days
+        loss = A * food_params['general_params']['spoilage_rate_per_day'] * duration_days
+
         return total_money, total_energy_mj, total_emissions, A - loss, loss
     
     def food_cold_storage(A, args):
@@ -2008,20 +1881,13 @@ def run_lca_model(inputs):
         total_energy_kwh = energy_kwh_per_day * storage_days
         
         energy_mj = total_energy_kwh * 3.6
-        opex_money = energy_mj * elec_price[2]
-        capex_per_kg = calculate_food_infra_capex("cold_storage", facility_capacity)
-        capex_money = A * capex_per_kg
-        total_money = opex_money + capex_money
+        money = energy_mj * elec_price[2]
         emissions = energy_mj * 0.2778 * co2_factor * 0.001
-        # Spoilage calculation becomes dynamic
-        spoilage_rate = params['general_params']['spoilage_rate_per_day'] # Default rate
-        if params['process_flags'].get('needs_controlled_atmosphere'):
-            # If CA is active, use the lower spoilage rate
-            spoilage_rate = params['general_params']['spoilage_rate_ca_per_day']
-            
-        loss = A * spoilage_rate * storage_days        
         
-        return total_money, energy_mj, emissions, A - loss, loss
+        # Use the 'general_params' sub-dictionary for spoilage rate
+        loss = A * params['general_params']['spoilage_rate_per_day'] * storage_days
+        
+        return money, energy_mj, emissions, A - loss, loss
 
 # REPLACE your old total_food_lca function with this one
 
@@ -2175,108 +2041,6 @@ def run_lca_model(inputs):
             print(f"AI farm region lookup failed: {e}")
             return None
                 
-    def detect_canal_transit(route_object):
-        """
-        Inspects the searoute object's properties to detect major canal transits.
-        Returns a dictionary with flags for each major canal.
-        """
-        transits = {
-            "suez": False,
-            "panama": False
-            # Future canals like Kiel can be added here
-        }
-        try:
-            # The route properties often contain a name or metadata string
-            route_info_string = json.dumps(route_object.properties).lower()
-            if "suez" in route_info_string:
-                transits["suez"] = True
-            if "panama" in route_info_string:
-                transits["panama"] = True
-        except Exception as e:
-            print(f"Could not parse route properties for canal detection: {e}")
-        
-        return transits
-
-    def calculate_voyage_overheads(voyage_duration_days, ship_params, canal_transits, port_regions):
-        """
-        Calculates total non-fuel overheads, with dynamic port AND canal fees.
-        """
-        ship_gt = ship_params['gross_tonnage']
-        overheads = VOYAGE_OVERHEADS_DATA.get(ship_params.get('key', 'standard'), VOYAGE_OVERHEADS_DATA['standard'])
-
-        opex_cost = overheads['daily_operating_cost_usd'] * voyage_duration_days
-        capex_cost = overheads['daily_capital_cost_usd'] * voyage_duration_days
-        
-        # Dynamic port fee calculation (already correct)
-        fee_per_gt_start = REGIONAL_PORT_FEE_DATA.get(port_regions['start'], REGIONAL_PORT_FEE_DATA['Default'])
-        fee_per_gt_end = REGIONAL_PORT_FEE_DATA.get(port_regions['end'], REGIONAL_PORT_FEE_DATA['Default'])
-        port_fees_cost = (ship_gt * fee_per_gt_start) + (ship_gt * fee_per_gt_end)
-
-        # --- DYNAMIC CANAL FEE CALCULATION ---
-        canal_fees_cost = 0
-        if canal_transits.get("suez"):
-            canal_fees_cost = ship_gt * overheads['suez_toll_per_gt_usd']
-        elif canal_transits.get("panama"):
-            canal_fees_cost = ship_gt * overheads['panama_toll_per_gt_usd']
-        
-        total_overheads = opex_cost + capex_cost + port_fees_cost + canal_fees_cost
-        return total_overheads
-    
-    def calculate_single_reefer_service_cost(duration_hrs, food_params):
-
-        # Calculate energy needed for the reefer unit + CA system for one container
-        # Dummy mass of 1kg is used because the CA energy function scales by container, not mass
-        ca_energy_kwh_per_container = calculate_ca_energy_kwh(1, food_params, duration_hrs)
-        reefer_energy_kwh_per_container = food_params['general_params']['reefer_container_power_kw'] * duration_hrs
-        
-        total_energy_kwh = ca_energy_kwh_per_container + reefer_energy_kwh_per_container
-        
-        # Calculate fuel burned by auxiliary engine to provide this electricity
-        aux_sfoc_g_kwh = 200 # g/kWh for auxiliary engines
-        fuel_kg = (total_energy_kwh * aux_sfoc_g_kwh) / 1000.0
-        
-        # Calculate cost, energy, and emissions from that fuel
-        cost = (fuel_kg / 1000.0) * auxiliary_fuel_params['price_usd_per_ton']
-        energy_mj = fuel_kg * auxiliary_fuel_params['hhv_mj_per_kg']
-        emissions = fuel_kg * auxiliary_fuel_params['co2_emissions_factor_kg_per_kg_fuel']
-        
-        return cost, energy_mj, emissions
-
-    def calculate_food_infra_capex(process_name, capacity_tons_per_day):
-        """
-        Estimates the amortized capital cost per kg for food processing facilities.
-        Source: Based on general industry capital cost estimates for food processing and cold chain logistics.
-        """
-        # Simplified CAPEX models (Cost = A * (Capacity)^B)
-        # These would be replaced by detailed engineering estimates in a full study.
-        cost_models = {
-            # Cost to build a pre-cooling facility in millions USD
-            "precool": {"base_cost_M_usd": 5, "power_law_exp": 0.6},
-            # Cost to build a freezing facility in millions USD
-            "freezing": {"base_cost_M_usd": 15, "power_law_exp": 0.65},
-            # Cost to build a cold storage warehouse in millions USD
-            "cold_storage": {"base_cost_M_usd": 10, "power_law_exp": 0.7}
-        }
-        
-        model = cost_models.get(process_name)
-        if not model:
-            return 0
-
-        # Calculate total capital cost using a power law for economy of scale
-        total_capex_usd = (model['base_cost_M_usd'] * 1_000_000) * (capacity_tons_per_day / 500) ** model['power_law_exp']
-        
-        # Amortize the cost over 20 years with an 8% cost of capital (simplified to an annual factor)
-        annualized_capex = total_capex_usd * 0.1 
-        
-        # Calculate annual throughput in kg
-        annual_throughput_kg = capacity_tons_per_day * 1000 * 330 # Assume 330 operating days/year
-        
-        if annual_throughput_kg == 0:
-            return 0
-            
-        capex_per_kg = annualized_capex / annual_throughput_kg
-        return capex_per_kg
-
     # =================================================================
     # <<< MAIN CONDITIONAL BRANCH STARTS HERE >>>
     # =================================================================
@@ -2286,7 +2050,6 @@ def run_lca_model(inputs):
     end = inputs['end']
     commodity_type = inputs.get('commodity_type', 'fuel')
     marine_fuel_choice = inputs.get('marine_fuel_choice', 'VLSFO')
-    include_overheads = inputs.get('include_overheads', True)
     storage_time_A = inputs['storage_time_A']
     storage_time_B = inputs['storage_time_B']
     storage_time_C = inputs['storage_time_C']
@@ -2300,7 +2063,7 @@ def run_lca_model(inputs):
     route = sr.searoute((start_port_lng, start_port_lat), (end_port_lng, end_port_lat), units="nm")
     searoute_coor = [[lat, lon] for lon, lat in route.geometry['coordinates']]
     port_to_port_dis = route.properties['length'] * 1.852
-    canal_transits = detect_canal_transit(route)
+
     start_to_port_dist_str, start_to_port_dur_str = inland_routes_cal((coor_start_lat, coor_start_lng), (start_port_lat, start_port_lng))
     port_to_end_dist_str, port_to_end_dur_str = inland_routes_cal((end_port_lat, end_port_lng), (coor_end_lat, coor_end_lng))
 
@@ -2332,37 +2095,21 @@ def run_lca_model(inputs):
 
     ship_archetype_key = inputs.get('ship_archetype', 'standard')
     ship_archetypes = {
-        'small':    {'name': 'Small-Scale Carrier', 'volume_m3': 20000,  'num_tanks': 2, 'shape': 2, 'reefer_slots': 400,  'gross_tonnage': 25000},
-        'midsized': {'name': 'Midsized Carrier', 'volume_m3': 90000,  'num_tanks': 4, 'shape': 2, 'reefer_slots': 800,  'gross_tonnage': 95000},
-        'standard': {'name': 'Standard Modern Carrier', 'volume_m3': 174000, 'num_tanks': 4, 'shape': 1, 'reefer_slots': 1500, 'gross_tonnage': 165000},
-        'q-flex':   {'name': 'Q-Flex Carrier', 'volume_m3': 210000, 'num_tanks': 5, 'shape': 1, 'reefer_slots': 1800, 'gross_tonnage': 190000},
-        'q-max':    {'name': 'Q-Max Carrier', 'volume_m3': 266000, 'num_tanks': 5, 'shape': 1, 'reefer_slots': 2000, 'gross_tonnage': 215000}
-    }
-    REGIONAL_PORT_FEE_DATA = {
-        # Source: Estimates derived from various port authority tariff sheets and maritime economic reports
-        'North Europe': 3.50,
-        'US West Coast': 3.20,
-        'US East Coast': 3.00,
-        'East Asia': 2.80,
-        'Middle East': 2.50,
-        'Default': 3.00 # A global average fallback
+        'small': {'name': 'Small-Scale Carrier', 'volume_m3': 20000, 'num_tanks': 2, 'shape': 2},
+        'midsized': {'name': 'Midsized Carrier', 'volume_m3': 90000, 'num_tanks': 4, 'shape': 2},
+        'standard': {'name': 'Standard Modern Carrier', 'volume_m3': 174000, 'num_tanks': 4, 'shape': 1},
+        'q-flex': {'name': 'Q-Flex Carrier', 'volume_m3': 210000, 'num_tanks': 5, 'shape': 1},
+        'q-max': {'name': 'Q-Max Carrier', 'volume_m3': 266000, 'num_tanks': 5, 'shape': 1}
     }
     if ship_archetype_key == 'custom':
-        # Custom ship logic...
-        selected_ship_params = {
-            'volume_m3': inputs['total_ship_volume'],
-            'num_tanks': inputs['ship_number_of_tanks'],
-            'shape': inputs['ship_tank_shape'],
-            # Estimate GT for custom ships, e.g., by scaling from standard
-            'gross_tonnage': 165000 * (inputs['total_ship_volume'] / 174000)
-        }
+        total_ship_volume = inputs['total_ship_volume']
+        ship_number_of_tanks = inputs['ship_number_of_tanks']
+        ship_tank_shape = inputs['ship_tank_shape']
     else:
         selected_ship_params = ship_archetypes[ship_archetype_key]
-        # Add the key to the params for later lookup
-        selected_ship_params['key'] = ship_archetype_key
-    total_ship_volume = selected_ship_params['volume_m3']
-    ship_number_of_tanks = selected_ship_params['num_tanks']
-    ship_tank_shape = selected_ship_params['shape']
+        total_ship_volume = selected_ship_params['volume_m3']
+        ship_number_of_tanks = selected_ship_params['num_tanks']
+        ship_tank_shape = selected_ship_params['shape']
     
     avg_ship_power_kw = calculate_ship_power_kw(total_ship_volume)
     marine_fuels_data = {
@@ -2382,115 +2129,7 @@ def run_lca_model(inputs):
     HHV_diesel = 45.6
     diesel_density = 3.22 # kg per gal
     CO2e_diesel = 10.21
-    VOYAGE_OVERHEADS_DATA = {
-        # Archetype Key: {OPEX, CAPEX, Suez Toll per GT, Panama Toll per GT}
-        'small':    {'daily_operating_cost_usd': 15000, 'daily_capital_cost_usd': 10000, 'suez_toll_per_gt_usd': 4.50, 'panama_toll_per_gt_usd': 4.00},
-        'midsized': {'daily_operating_cost_usd': 20000, 'daily_capital_cost_usd': 25000, 'suez_toll_per_gt_usd': 4.50, 'panama_toll_per_gt_usd': 4.00},
-        'standard': {'daily_operating_cost_usd': 25000, 'daily_capital_cost_usd': 45000, 'suez_toll_per_gt_usd': 4.25, 'panama_toll_per_gt_usd': 3.75},
-        'q-flex':   {'daily_operating_cost_usd': 28000, 'daily_capital_cost_usd': 55000, 'suez_toll_per_gt_usd': 4.25, 'panama_toll_per_gt_usd': 3.75},
-        'q-max':    {'daily_operating_cost_usd': 30000, 'daily_capital_cost_usd': 65000, 'suez_toll_per_gt_usd': 4.10, 'panama_toll_per_gt_usd': 3.60}
-    }
-    food_params = {
-                'strawberry': {
-                    'name': 'Strawberry', # The common name for the commodity.
-                    'process_flags': { # These flags determine which process functions are called for this commodity.
-                        'needs_precooling': True, # Set to True because rapid cooling after harvest is critical for berries. Source: Postharvest handling guides.
-                        'needs_freezing': True, # This model assumes strawberries are transported frozen for long-distance sea freight. Source: Industry practice.
-                        'needs_controlled_atmosphere': False, # Typically not required for frozen products. Source: CA storage guides.
-                    },
-                    'general_params': { # Parameters used across multiple stages of the supply chain.
-                        'density_kg_per_m3': 450, # The bulk density of whole strawberries in a container. Source: Food engineering databases.
-                        'target_temp_celsius': -18.0, # Standard international temperature for frozen goods. Source: ISO standards, food logistics guides.
-                        'spoilage_rate_per_day': 0.0001, # Estimated degradation/loss rate for frozen products, representing handling/quality loss. Source: Shelf-life studies.
-                        'reefer_container_power_kw': 3.5, # Average power draw for a reefer container holding frozen goods. Source: Reefer manufacturer specifications (e.g., Carrier, Thermo King).
-                        'cargo_per_truck_kg': 20000, # Standard maximum payload for a 40ft refrigerated container. Source: Freight and logistics industry standards.
-                        'specific_heat_fresh_mj_kgK': 0.0039, # Thermodynamic property based on high water content (~91%). Source: Food science literature, ASHRAE handbooks.
-                        'reefer_truck_fuel_consumption_L_hr': 1.5,
-                    },
-                    'precooling_params': { # Parameters for the initial pre-cooling process.
-                        'initial_field_heat_celsius': 28.0, # Represents a typical ambient temperature during a summer harvest season in a region like California. Source: Agricultural and meteorological data.
-                        'target_precool_temperature_celsius': 1.0, # Ideal temperature to reach before freezing to ensure quality. Source: Postharvest handling guides (e.g., UC Davis).
-                        'cop_precooling_system': 2.0, # Coefficient of Performance for a typical forced-air cooling system. Source: HVAC/R engineering principles (ASHRAE).
-                        'moisture_loss_percent': 0.015, # Estimated water weight loss during forced-air cooling. Source: Postharvest studies on berry desiccation.
-                    },
-                    'freezing_params': { # Parameters for the main freezing process.
-                        'specific_heat_frozen_mj_kgK': 0.0018, # Thermodynamic property of the frozen product (ice has a lower specific heat than water). Source: Food science literature.
-                        'latent_heat_fusion_mj_kg': 0.300, # Energy required to freeze the water content of the fruit. Source: Physics handbooks, food engineering data.
-                        'cop_freezing_system': 2.5 # Coefficient of Performance for an industrial blast freezer. Source: HVAC/R engineering principles (ASHRAE).
-                    }
-                },
-                'hass_avocado': {
-                    'name': 'Hass Avocado', # The common name for the commodity.
-                    'process_flags': { # These flags determine which process functions are called for this commodity.
-                        'needs_precooling': True, # Pre-cooling is essential for avocados. Source: Postharvest handling guides.
-                        'needs_freezing': False, # Avocados are shipped chilled, not frozen. Source: Industry practice.
-                        'needs_controlled_atmosphere': True, # CA is critical for extending the shelf-life of avocados. Source: CA storage guides, UC Davis Postharvest Center.
-                    },
-                    'general_params': { # Parameters used across multiple stages of the supply chain.
-                        'density_kg_per_m3': 600, # Bulk density of whole avocados. Source: Food engineering databases.
-                        'target_temp_celsius': 5.0, # Optimal transport temperature for Hass avocados to control ripening. Source: UC Davis Postharvest Technology Center.
-                        'spoilage_rate_per_day': 0.0005, # Estimated loss rate for chilled avocados under CA. Source: Shelf-life studies.
-                        'spoilage_rate_ca_per_day': 0.0002, # Lower spoilage rate under CA
-                        'reefer_container_power_kw': 1.5, # Lower average power draw for chilled goods compared to frozen. Source: Reefer manufacturer specifications.
-                        'cargo_per_truck_kg': 20000, # Standard maximum payload for a 40ft refrigerated container. Source: Freight and logistics industry standards.
-                        'specific_heat_fresh_mj_kgK': 0.0035, # Thermodynamic property based on the fruit's composition. Source: Food science literature.
-                        'reefer_truck_fuel_consumption_L_hr': 1.5,
-                    },
-                    'precooling_params': { # Parameters for the initial pre-cooling process.
-                        'initial_field_heat_celsius': 25.0, # A typical field heat for avocados from subtropical/tropical climates. Source: Agricultural data.
-                        'target_precool_temperature_celsius': 6.0, # Target temperature after pre-cooling. Source: Postharvest handling guides.
-                        'cop_precooling_system': 2.0, # Coefficient of Performance for a forced-air cooling system. Source: HVAC/R engineering principles.
-                        'moisture_loss_percent': 0.01, # Estimated water weight loss. Source: Postharvest studies.
-                    },
-                    'ca_params': { # Parameters for the Controlled Atmosphere system.
-                        'o2_target_percent': 5.0, # Optimal low-oxygen level for avocados. Source: UC Davis Postharvest Technology Center.
-                        'co2_target_percent': 5.0, # Optimal carbon dioxide level to slow ripening. Source: UC Davis Postharvest Technology Center.
-                        'humidity_target_rh_percent': 90.0, # Target relative humidity to prevent shriveling. Source: Postharvest handling guides.
-                        'respiration_rate_ml_co2_per_kg_hr': 15.0, # A typical respiration rate for avocados at their target temperature. Source: Postharvest biology research papers.
-                        'container_leakage_rate_ach': 0.02, # Air Changes per Hour, representing the leakiness of a modern container. Source: ISO standards for freight containers.
-                        'n2_generator_efficiency_kwh_per_m3': 0.4, # Energy needed for an onboard nitrogen generator to produce 1 m³ of N2. Source: Manufacturer specifications.
-                        'co2_scrubber_efficiency_kwh_per_kg_co2': 0.2, # Energy needed for a CO2 scrubber to remove 1 kg of CO2. Source: Chemical engineering process design.
-                        'humidifier_efficiency_kwh_per_liter': 0.05, # Energy to atomize 1 liter of water for humidification. Source: HVAC/R equipment specifications.
-                        'base_control_power_kw': 0.1 # Baseline constant power draw for sensors and control units. Source: Equipment specifications.
-                    }
-                },
-                'banana': {
-                    'name': 'Banana', # The common name for the commodity.
-                    'process_flags': { # These flags determine which process functions are called for this commodity.
-                        'needs_precooling': True, # Pre-cooling is standard practice. Source: Postharvest handling guides for bananas.
-                        'needs_freezing': False, # Bananas are highly sensitive to cold and are never frozen for fresh market. Source: Industry practice.
-                        'needs_controlled_atmosphere': True, # CA is widely used to manage ripening during long sea voyages. Source: Postharvest handling guides.
-                    },
-                    'general_params': { # Parameters used across multiple stages of the supply chain.
-                        'density_kg_per_m3': 650, # Bulk density for hands of bananas in cartons. Source: Food engineering databases.
-                        'target_temp_celsius': 13.5, # Critical temperature to prevent chilling injury while managing ripening. Source: UC Davis Postharvest Technology Center.
-                        'spoilage_rate_per_day': 0.001, # Higher spoilage rate due to sensitivity. Source: Shelf-life studies on bananas.
-                        'spoilage_rate_ca_per_day': 0.0004, # Lower spoilage rate under CA
-                        'reefer_container_power_kw': 1.8, # Power draw for this specific chilled temperature. Source: Reefer manufacturer specifications.
-                        'cargo_per_truck_kg': 20000, # Standard maximum payload. Source: Freight and logistics industry standards.
-                        'specific_heat_fresh_mj_kgK': 0.0033, # Thermodynamic property. Source: Food science literature.
-                        'reefer_truck_fuel_consumption_L_hr': 1.5,
-                    },
-                    'precooling_params': { # Parameters for the initial pre-cooling process.
-                        'initial_field_heat_celsius': 30.0, # Represents a typical field heat in a tropical harvesting environment. Source: Agricultural and meteorological data.
-                        'target_precool_temperature_celsius': 14.0, # Target temperature after pre-cooling. Source: Postharvest handling guides.
-                        'cop_precooling_system': 2.0, # COP for forced-air cooling rooms at packing houses. Source: HVAC/R engineering principles.
-                        'moisture_loss_percent': 0.01, # Estimated water weight loss. Source: Postharvest studies.
-                    },
-                    'ca_params': { # Parameters for the Controlled Atmosphere system.
-                        'o2_target_percent': 2.0, # Very low oxygen is needed to put bananas "to sleep". Source: UC Davis Postharvest Technology Center.
-                        'co2_target_percent': 5.0, # High CO2 level helps inhibit ripening. Source: UC Davis Postharvest Technology Center.
-                        'humidity_target_rh_percent': 90.0, # Target relative humidity. Source: Postharvest handling guides.
-                        'respiration_rate_ml_co2_per_kg_hr': 25.0, # Bananas have a very high respiration rate compared to other fruits. Source: Postharvest biology research papers.
-                        'container_leakage_rate_ach': 0.02, # Air Changes per Hour for the container. Source: ISO standards.
-                        'n2_generator_efficiency_kwh_per_m3': 0.4, # Equipment efficiency. Source: Manufacturer specifications.
-                        'co2_scrubber_efficiency_kwh_per_kg_co2': 0.2, # Equipment efficiency. Source: Chemical engineering process design.
-                        'humidifier_efficiency_kwh_per_liter': 0.05, # Equipment efficiency. Source: HVAC/R equipment specifications.
-                        'base_control_power_kw': 0.1 # Baseline power draw for control systems. Source: Equipment specifications.
-                    }
-                }
-            }
-
+    
     data_raw = []
     response_data = {}
     if commodity_type == 'fuel':
@@ -2658,27 +2297,88 @@ def run_lca_model(inputs):
             raise Exception(f"Optimization failed: {result.message}")
         
         # --- 6. Final Calculation ---
+        # This is the 'base' function that runs the main sequence of calculations
+        def total_chem_base(A_optimized_chem_weight, B_fuel_type_tc, C_recirculation_BOG_tc, 
+                            D_truck_apply_tc, E_storage_apply_tc, F_maritime_apply_tc):
+                
+                funcs_sequence = [
+                    site_A_chem_production, site_A_chem_liquification, chem_site_A_loading_to_truck,
+                    site_A_to_port_A, port_A_unloading_to_storage, chem_storage_at_port_A,
+                    chem_loading_to_ship, port_to_port, chem_unloading_from_ship,
+                    chem_storage_at_port_B, port_B_unloading_from_storage, port_B_to_site_B,
+                    chem_site_B_unloading_from_truck, chem_storage_at_site_B,
+                    chem_unloading_from_site_B
+                ]
+                
+                R_current_chem = A_optimized_chem_weight
+                data_results_list = []
+                total_money_tc = 0.0
+                total_ener_consumed_tc = 0.0
+                total_G_emission_tc = 0.0
+                total_S_bog_loss_tc = 0.0
+        
+                for func_to_call in funcs_sequence:
+                    # This block is copied directly from your file and is correct
+                    # --- (The entire if/elif chain for packing process_args_for_this_call_tc goes here) ---
+                    if func_to_call.__name__ == "site_A_chem_production":
+                        process_args_for_this_call_tc = (GWP_chem,)
+                    elif func_to_call.__name__ == "site_A_chem_liquification":
+                        process_args_for_this_call_tc = (LH2_plant_capacity, EIM_liquefication, specific_heat_chem, start_local_temperature, boiling_point_chem, latent_H_chem, COP_liq, start_electricity_price, CO2e_start, GWP_chem)
+                    elif func_to_call.__name__ == "chem_site_A_loading_to_truck":
+                        process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_truck_site_A, dBOR_dT, start_local_temperature, BOR_loading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem)
+                    elif func_to_call.__name__ == "site_A_to_port_A":
+                        process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_A_to_port, HHV_diesel, diesel_density, diesel_price_start, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, start_local_temperature, COP_refrig, EIM_refrig_eff, duration_A_to_port, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
+                    elif func_to_call.__name__ == "port_A_unloading_to_storage":
+                        process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_port_A, dBOR_dT, start_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem)
+                    elif func_to_call.__name__ == "chem_storage_at_port_A":
+                        process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, start_local_temperature, BOR_land_storage, storage_time_A, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
+                    elif func_to_call.__name__ == "chem_loading_to_ship":
+                        process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_ship_port_A, dBOR_dT, start_local_temperature, BOR_loading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, boiling_point_chem, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, storage_area, ship_tank_metal_thickness, ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density, ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat, COP_cooldown, COP_refrig, ship_number_of_tanks)
+                    elif func_to_call.__name__ == "port_to_port":
+                        process_args_for_this_call_tc = (
+                            start_local_temperature, end_local_temperature, OHTC_ship,
+                            storage_area, ship_number_of_tanks, COP_refrig, EIM_refrig_eff, 
+                            port_to_port_duration, selected_marine_fuel_params,
+                            dBOR_dT, BOR_ship_trans, GWP_chem, 
+                            BOG_recirculation_mati_trans, LH2_plant_capacity, EIM_liquefication, 
+                            fuel_cell_eff, EIM_fuel_cell, LHV_chem,
+                            avg_ship_power_kw,
+                            0.45, # Assumed auxiliary engine efficiency (45%)
+                            GWP_N2O
+                        )
+                    elif func_to_call.__name__ == "chem_unloading_from_ship":
+                        process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_port_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
+                    elif func_to_call.__name__ == "chem_storage_at_port_B":
+                        process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, end_local_temperature, BOR_land_storage, storage_time_B, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
+                    elif func_to_call.__name__ == "port_B_unloading_from_storage":
+                        process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_truck_port_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
+                    elif func_to_call.__name__ == "port_B_to_site_B":
+                        process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_port_to_B, HHV_diesel, diesel_density, diesel_price_end, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, end_local_temperature, COP_refrig, EIM_refrig_eff, duration_port_to_B, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
+                    elif func_to_call.__name__ == "chem_site_B_unloading_from_truck":
+                        process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_site_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
+                    elif func_to_call.__name__ == "chem_storage_at_site_B":
+                        process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, end_local_temperature, BOR_land_storage, storage_time_C, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
+                    elif func_to_call.__name__ == "chem_unloading_from_site_B":
+                        process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_site_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
+        
+                    X_money, Y_energy, Z_emission, R_current_chem, S_bog_loss = \
+                        func_to_call(R_current_chem, B_fuel_type_tc, C_recirculation_BOG_tc, D_truck_apply_tc, 
+                                    E_storage_apply_tc, F_maritime_apply_tc, process_args_for_this_call_tc)
+                    
+                    data_results_list.append([func_to_call.__name__, X_money, Y_energy, Z_emission, R_current_chem, S_bog_loss])
+                    total_money_tc += X_money
+                    total_ener_consumed_tc += Y_energy
+                    total_G_emission_tc += Z_emission
+                    total_S_bog_loss_tc += S_bog_loss
+        
+                final_total_result_tc = [total_money_tc, total_ener_consumed_tc, total_G_emission_tc, R_current_chem]
+                data_results_list.append(["TOTAL", total_money_tc, total_ener_consumed_tc, total_G_emission_tc, R_current_chem, total_S_bog_loss_tc])
+                
+                return final_total_result_tc, data_results_list
         
         final_results_raw, data_raw = total_chem_base(chem_weight, user_define[1], user_define[2], 
                                                     user_define[3], user_define[4], user_define[5])
-        if include_overheads:
-            start_port_country = get_country_from_coords(start_port_lat, start_port_lng)
-            end_port_country = get_country_from_coords(end_port_lat, end_port_lng)
-            port_regions = {'start': start_port_country, 'end': end_port_country} # Simplified
-            voyage_duration_days = port_to_port_duration / 24.0
-            total_overhead_cost = calculate_voyage_overheads(voyage_duration_days, selected_ship_params, canal_transits, port_regions)
-            
-            marine_transport_index = -1
-            for i, row in enumerate(data_raw):
-                if row[0] == "port_to_port":
-                    marine_transport_index = i
-                    break
-            
-            if marine_transport_index != -1:
-                chem_kg_after_sea = data_raw[marine_transport_index][4]
-                overhead_row = ["voyage_overheads", total_overhead_cost, 0, 0, chem_kg_after_sea, 0]
-                data_raw.insert(marine_transport_index + 1, overhead_row)
-      
+
         # 2. If the fuel is not H2, run the conversion step and update the raw results
         if user_define[1] != 0:
             amount_before_conversion = final_results_raw[3]
@@ -2754,7 +2454,6 @@ def run_lca_model(inputs):
             "chem_storage_at_site_B": f"Storing {selected_fuel_name} at {end}",
             "chem_unloading_from_site_B": "Unloading for final use",
             "chem_convert_to_H2": "Cracking/Reforming to H2",
-            "voyage_overheads": "Voyage Overheads (Non-Fuel)", 
             "TOTAL": "TOTAL"
         }
 
@@ -2868,75 +2567,120 @@ def run_lca_model(inputs):
         return response
     
     elif commodity_type == 'food':
-        # --- 1. UNPACK INPUTS & GET SHIP DETAILS ---
         food_type = inputs.get('food_type')
-        shipment_size_containers = inputs.get('shipment_size_containers', 10)
+
+        # --- Define FOOD specific parameters ---
+        food_params = {
+                    'strawberry': {
+                        'name': 'Strawberry', # The common name for the commodity.
+                        'process_flags': { # These flags determine which process functions are called for this commodity.
+                            'needs_precooling': True, # Set to True because rapid cooling after harvest is critical for berries. Source: Postharvest handling guides.
+                            'needs_freezing': True, # This model assumes strawberries are transported frozen for long-distance sea freight. Source: Industry practice.
+                            'needs_controlled_atmosphere': False, # Typically not required for frozen products. Source: CA storage guides.
+                        },
+                        'general_params': { # Parameters used across multiple stages of the supply chain.
+                            'density_kg_per_m3': 450, # The bulk density of whole strawberries in a container. Source: Food engineering databases.
+                            'target_temp_celsius': -18.0, # Standard international temperature for frozen goods. Source: ISO standards, food logistics guides.
+                            'spoilage_rate_per_day': 0.0001, # Estimated degradation/loss rate for frozen products, representing handling/quality loss. Source: Shelf-life studies.
+                            'reefer_container_power_kw': 3.5, # Average power draw for a reefer container holding frozen goods. Source: Reefer manufacturer specifications (e.g., Carrier, Thermo King).
+                            'cargo_per_truck_kg': 20000, # Standard maximum payload for a 40ft refrigerated container. Source: Freight and logistics industry standards.
+                            'specific_heat_fresh_mj_kgK': 0.0039, # Thermodynamic property based on high water content (~91%). Source: Food science literature, ASHRAE handbooks.
+                            'reefer_truck_fuel_consumption_L_hr': 1.5,
+                        },
+                        'precooling_params': { # Parameters for the initial pre-cooling process.
+                            'initial_field_heat_celsius': 28.0, # Represents a typical ambient temperature during a summer harvest season in a region like California. Source: Agricultural and meteorological data.
+                            'target_precool_temperature_celsius': 1.0, # Ideal temperature to reach before freezing to ensure quality. Source: Postharvest handling guides (e.g., UC Davis).
+                            'cop_precooling_system': 2.0, # Coefficient of Performance for a typical forced-air cooling system. Source: HVAC/R engineering principles (ASHRAE).
+                            'moisture_loss_percent': 0.015, # Estimated water weight loss during forced-air cooling. Source: Postharvest studies on berry desiccation.
+                        },
+                        'freezing_params': { # Parameters for the main freezing process.
+                            'specific_heat_frozen_mj_kgK': 0.0018, # Thermodynamic property of the frozen product (ice has a lower specific heat than water). Source: Food science literature.
+                            'latent_heat_fusion_mj_kg': 0.300, # Energy required to freeze the water content of the fruit. Source: Physics handbooks, food engineering data.
+                            'cop_freezing_system': 2.5 # Coefficient of Performance for an industrial blast freezer. Source: HVAC/R engineering principles (ASHRAE).
+                        }
+                    },
+                    'hass_avocado': {
+                        'name': 'Hass Avocado', # The common name for the commodity.
+                        'process_flags': { # These flags determine which process functions are called for this commodity.
+                            'needs_precooling': True, # Pre-cooling is essential for avocados. Source: Postharvest handling guides.
+                            'needs_freezing': False, # Avocados are shipped chilled, not frozen. Source: Industry practice.
+                            'needs_controlled_atmosphere': True, # CA is critical for extending the shelf-life of avocados. Source: CA storage guides, UC Davis Postharvest Center.
+                        },
+                        'general_params': { # Parameters used across multiple stages of the supply chain.
+                            'density_kg_per_m3': 600, # Bulk density of whole avocados. Source: Food engineering databases.
+                            'target_temp_celsius': 5.0, # Optimal transport temperature for Hass avocados to control ripening. Source: UC Davis Postharvest Technology Center.
+                            'spoilage_rate_per_day': 0.0005, # Estimated loss rate for chilled avocados under CA. Source: Shelf-life studies.
+                            'reefer_container_power_kw': 1.5, # Lower average power draw for chilled goods compared to frozen. Source: Reefer manufacturer specifications.
+                            'cargo_per_truck_kg': 20000, # Standard maximum payload for a 40ft refrigerated container. Source: Freight and logistics industry standards.
+                            'specific_heat_fresh_mj_kgK': 0.0035, # Thermodynamic property based on the fruit's composition. Source: Food science literature.
+                            'reefer_truck_fuel_consumption_L_hr': 1.5,
+                        },
+                        'precooling_params': { # Parameters for the initial pre-cooling process.
+                            'initial_field_heat_celsius': 25.0, # A typical field heat for avocados from subtropical/tropical climates. Source: Agricultural data.
+                            'target_precool_temperature_celsius': 6.0, # Target temperature after pre-cooling. Source: Postharvest handling guides.
+                            'cop_precooling_system': 2.0, # Coefficient of Performance for a forced-air cooling system. Source: HVAC/R engineering principles.
+                            'moisture_loss_percent': 0.01, # Estimated water weight loss. Source: Postharvest studies.
+                        },
+                        'ca_params': { # Parameters for the Controlled Atmosphere system.
+                            'o2_target_percent': 5.0, # Optimal low-oxygen level for avocados. Source: UC Davis Postharvest Technology Center.
+                            'co2_target_percent': 5.0, # Optimal carbon dioxide level to slow ripening. Source: UC Davis Postharvest Technology Center.
+                            'humidity_target_rh_percent': 90.0, # Target relative humidity to prevent shriveling. Source: Postharvest handling guides.
+                            'respiration_rate_ml_co2_per_kg_hr': 15.0, # A typical respiration rate for avocados at their target temperature. Source: Postharvest biology research papers.
+                            'container_leakage_rate_ach': 0.02, # Air Changes per Hour, representing the leakiness of a modern container. Source: ISO standards for freight containers.
+                            'n2_generator_efficiency_kwh_per_m3': 0.4, # Energy needed for an onboard nitrogen generator to produce 1 m³ of N2. Source: Manufacturer specifications.
+                            'co2_scrubber_efficiency_kwh_per_kg_co2': 0.2, # Energy needed for a CO2 scrubber to remove 1 kg of CO2. Source: Chemical engineering process design.
+                            'humidifier_efficiency_kwh_per_liter': 0.05, # Energy to atomize 1 liter of water for humidification. Source: HVAC/R equipment specifications.
+                            'base_control_power_kw': 0.1 # Baseline constant power draw for sensors and control units. Source: Equipment specifications.
+                        }
+                    },
+                    'banana': {
+                        'name': 'Banana', # The common name for the commodity.
+                        'process_flags': { # These flags determine which process functions are called for this commodity.
+                            'needs_precooling': True, # Pre-cooling is standard practice. Source: Postharvest handling guides for bananas.
+                            'needs_freezing': False, # Bananas are highly sensitive to cold and are never frozen for fresh market. Source: Industry practice.
+                            'needs_controlled_atmosphere': True, # CA is widely used to manage ripening during long sea voyages. Source: Postharvest handling guides.
+                        },
+                        'general_params': { # Parameters used across multiple stages of the supply chain.
+                            'density_kg_per_m3': 650, # Bulk density for hands of bananas in cartons. Source: Food engineering databases.
+                            'target_temp_celsius': 13.5, # Critical temperature to prevent chilling injury while managing ripening. Source: UC Davis Postharvest Technology Center.
+                            'spoilage_rate_per_day': 0.001, # Higher spoilage rate due to sensitivity. Source: Shelf-life studies on bananas.
+                            'reefer_container_power_kw': 1.8, # Power draw for this specific chilled temperature. Source: Reefer manufacturer specifications.
+                            'cargo_per_truck_kg': 20000, # Standard maximum payload. Source: Freight and logistics industry standards.
+                            'specific_heat_fresh_mj_kgK': 0.0033, # Thermodynamic property. Source: Food science literature.
+                            'reefer_truck_fuel_consumption_L_hr': 1.5,
+                        },
+                        'precooling_params': { # Parameters for the initial pre-cooling process.
+                            'initial_field_heat_celsius': 30.0, # Represents a typical field heat in a tropical harvesting environment. Source: Agricultural and meteorological data.
+                            'target_precool_temperature_celsius': 14.0, # Target temperature after pre-cooling. Source: Postharvest handling guides.
+                            'cop_precooling_system': 2.0, # COP for forced-air cooling rooms at packing houses. Source: HVAC/R engineering principles.
+                            'moisture_loss_percent': 0.01, # Estimated water weight loss. Source: Postharvest studies.
+                        },
+                        'ca_params': { # Parameters for the Controlled Atmosphere system.
+                            'o2_target_percent': 2.0, # Very low oxygen is needed to put bananas "to sleep". Source: UC Davis Postharvest Technology Center.
+                            'co2_target_percent': 5.0, # High CO2 level helps inhibit ripening. Source: UC Davis Postharvest Technology Center.
+                            'humidity_target_rh_percent': 90.0, # Target relative humidity. Source: Postharvest handling guides.
+                            'respiration_rate_ml_co2_per_kg_hr': 25.0, # Bananas have a very high respiration rate compared to other fruits. Source: Postharvest biology research papers.
+                            'container_leakage_rate_ach': 0.02, # Air Changes per Hour for the container. Source: ISO standards.
+                            'n2_generator_efficiency_kwh_per_m3': 0.4, # Equipment efficiency. Source: Manufacturer specifications.
+                            'co2_scrubber_efficiency_kwh_per_kg_co2': 0.2, # Equipment efficiency. Source: Chemical engineering process design.
+                            'humidifier_efficiency_kwh_per_liter': 0.05, # Equipment efficiency. Source: HVAC/R equipment specifications.
+                            'base_control_power_kw': 0.1 # Baseline power draw for control systems. Source: Equipment specifications.
+                        }
+                    }
+                }
         current_food_params = food_params[food_type]
-        
-        # Get total container capacity of the selected ship
-        total_ship_container_capacity = math.floor(total_ship_volume / 76)
-
-        # --- 2. CALCULATE BASE VOYAGE & REEFER SERVICE COSTS ---
-        
-        # A) Calculate BASE costs (Propulsion + Overheads) for the ENTIRE SHIP
-        propulsion_fuel_kwh = avg_ship_power_kw * port_to_port_duration
-        propulsion_fuel_kg = (propulsion_fuel_kwh * selected_marine_fuel_params['sfoc_g_per_kwh']) / 1000.0
-        propulsion_cost = (propulsion_fuel_kg / 1000.0) * selected_marine_fuel_params['price_usd_per_ton']
-        
-        voyage_duration_days = port_to_port_duration / 24.0
-        total_overhead_cost = 0
-        if include_overheads:
-            start_port_country = get_country_from_coords(start_port_lat, start_port_lng)
-            end_port_country = get_country_from_coords(end_port_lat, end_port_lng)
-            port_regions = {'start': start_port_country, 'end': end_port_country} 
-            voyage_duration_days = port_to_port_duration / 24.0
-            total_overhead_cost = calculate_voyage_overheads(voyage_duration_days, selected_ship_params, canal_transits, port_regions)
-
-        # B) Calculate the BASE COST PER DRY SLOT on the ship
-        total_base_voyage_cost = propulsion_cost + total_overhead_cost
-        base_cost_per_slot = total_base_voyage_cost / total_ship_container_capacity if total_ship_container_capacity > 0 else 0
-
-        # C) Calculate the ADDITIONAL cost for the REEFER SERVICE for ONE container
-        reefer_service_cost, reefer_service_energy, reefer_service_emissions = calculate_single_reefer_service_cost(port_to_port_duration, current_food_params)
-        
-        # --- 3. RUN LAND-BASED LCA & INJECT PRORATED SEA COSTS ---
-        initial_weight = shipment_size_containers * current_food_params['general_params']['cargo_per_truck_kg']
+        num_containers = math.floor(total_ship_volume / 76)
+        initial_weight = num_containers * current_food_params['general_params']['cargo_per_truck_kg']
+        # --- Run the Food LCA and Format the Output ---
         data_raw = total_food_lca(initial_weight, current_food_params)
-        
-        # Inject the new, more detailed sea transport costs into the results
-        marine_transport_index = next((i for i, row in enumerate(data_raw) if "Marine Transport" in row[0]), -1)
-        if marine_transport_index != -1:
-            # Base freight cost for the user's shipment
-            base_freight_cost = base_cost_per_slot * shipment_size_containers
-            data_raw[marine_transport_index][0] = "Marine Transport (Base Freight)"
-            data_raw[marine_transport_index][1] = base_freight_cost
-            # We can approximate propulsion energy/emissions for the user's share
-            propulsion_emissions = (propulsion_fuel_kg * selected_marine_fuel_params['co2_emissions_factor_kg_per_kg_fuel'])
-            data_raw[marine_transport_index][3] = (propulsion_emissions / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0
-            
-            # Add a new row for the reefer service cost
-            reefer_service_total_cost = reefer_service_cost * shipment_size_containers
-            reefer_service_total_energy = reefer_service_energy * shipment_size_containers
-            reefer_service_total_emissions = reefer_service_emissions * shipment_size_containers
-            reefer_row = ["Reefer & CA Services", reefer_service_total_cost, reefer_service_total_energy, reefer_service_total_emissions, data_raw[marine_transport_index][4], 0]
-            data_raw.insert(marine_transport_index + 1, reefer_row)
-
-            # Add a new row for Overheads if included
-            if include_overheads:
-                prorated_overhead_cost = (total_overhead_cost / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0
-                overhead_row = ["Voyage Overheads (Prorated)", prorated_overhead_cost, 0, 0, data_raw[marine_transport_index][4], 0]
-                data_raw.insert(marine_transport_index + 1, overhead_row)
-
-        # --- 4. PROCESS FINAL DATA FOR TABLES AND CHARTS ---
         total_money = sum(row[1] for row in data_raw)
         total_energy = sum(row[2] for row in data_raw)
         total_emissions = sum(row[3] for row in data_raw)
         final_weight = data_raw[-1][4]
         data_raw.append(["TOTAL", total_money, total_energy, total_emissions, final_weight, sum(row[5] for row in data_raw)])
-        
+
         final_commodity_kg = final_weight
-        energy_content = current_food_params.get('general_params', {}).get('energy_content_mj_per_kg', 1)
-        final_energy_output_mj = final_commodity_kg * energy_content
+        final_energy_output_mj = final_commodity_kg * current_food_params.get('energy_content_mj_per_kg', 1)
         final_energy_output_gj = final_energy_output_mj / 1000
 
         data_with_all_columns = []
@@ -2955,7 +2699,6 @@ def run_lca_model(inputs):
         cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
         eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)")
         
-        # --- 5. CREATE CHARTS AND CONTEXT ---
         food_name_for_lookup = current_food_params["name"]
         start_country = get_country_from_coords(coor_start_lat, coor_start_lng) or start
         end_country = get_country_from_coords(coor_end_lat, coor_end_lng) or end
@@ -2966,15 +2709,43 @@ def run_lca_model(inputs):
 
         cost_overlay_text = (
             f"Context:\n"
-            f"• Retail price in {start_country}: {price_start_text}\n"
-            f"• Retail price in {end_country}: {price_end_text}"
+            f"• Retail price of {food_name_for_lookup} in {start}: {price_start_text}\n"
+            f"• Retail price of {food_name_for_lookup} in {end}: {price_end_text}\n\n"
+            f"Compare local prices to the total transport cost."
         )
-        cost_chart_base64 = create_breakdown_chart(data_for_display, cost_per_kg_index, f'Cost Breakdown per kg of Delivered {current_food_params["name"]}', 'Cost ($/kg)', overlay_text=cost_overlay_text)
+        cost_chart_base64 = create_breakdown_chart(
+            data_for_display, 
+            cost_per_kg_index, 
+            f'Cost Breakdown per kg of Delivered {current_food_params["name"]}', 
+            'Cost ($/kg)',
+            overlay_text=cost_overlay_text 
+        )
         emission_chart_base64 = create_breakdown_chart(data_for_display, eco2_per_kg_index, f'CO2eq Breakdown per kg of Delivered {current_food_params["name"]}', 'CO2eq (kg/kg)')
         
-        # --- 6. RUN LOCAL SOURCING COMPARISON ---
+        summary1_data = [
+            [f"Transport Cost ($/kg {current_food_params['name']})", f"{total_money / final_commodity_kg:.2f}" if final_commodity_kg > 0 else "N/A"],
+            [f"Consumed Energy (MJ/kg {current_food_params['name']})", f"{total_energy / final_commodity_kg:.2f}" if final_commodity_kg > 0 else "N/A"],
+            [f"Emission (kg CO2/kg {current_food_params['name']})", f"{total_emissions / final_commodity_kg:.2f}" if final_commodity_kg > 0 else "N/A"]
+        ]
+        summary2_data = [
+            ["Cost ($/GJ)", f"{total_money / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
+            ["Energy consumed (MJ_in/GJ_out)", f"{total_energy / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
+            ["Emission (kg CO2/GJ)", f"{total_emissions / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"]
+        ]
+        assumed_prices_data = [
+            [f"Electricity Price at {start}*", f"{start_electricity_price[2]:.4f} $/MJ"],
+            [f"Electricity Price at {end}*", f"{end_electricity_price[2]:.4f} $/MJ"],
+            [f"Diesel Price at {start}", f"{diesel_price_start:.2f} $/gal"],
+            [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"],
+            [f"Marine Fuel ({marine_fuel_choice}) Price at {start_port_name}*", f"{dynamic_price:.2f} $/ton"],
+        ]
+        # --- NEW: LOCAL SOURCING COMPARISON SCENARIO ---
         local_sourcing_results = None
+        # Find a nearby farm region using our new AI function
+        # Using a broader location name for the AI search
+        end_country = get_country_from_coords(coor_end_lat, coor_end_lng) or end
         farm_region = openai_get_nearest_farm_region(current_food_params['name'], end_country)
+
         if farm_region:
             # We have a local farm, now calculate the logistics from farm to destination
             farm_lat = farm_region['latitude']
@@ -3017,10 +2788,11 @@ def run_lca_model(inputs):
                 "cost_per_kg": local_total_money / comparison_weight if comparison_weight > 0 else 0,
                 "emissions_per_kg": local_total_emissions / comparison_weight if comparison_weight > 0 else 0
             }
+        
         response = {
             "status": "success",
-            "map_data": { ... },
-            "table_data": { ... },
+            "map_data": { "coor_start": {"lat": coor_start_lat, "lng": coor_start_lng}, "coor_end": {"lat": coor_end_lat, "lng": coor_end_lng}, "start_port": {"lat": start_port_lat, "lng": start_port_lng, "name": start_port_name}, "end_port": {"lat": end_port_lat, "lng": end_port_lng, "name": end_port_name}, "road_route_start_coords": road_route_start_coords, "road_route_end_coords": road_route_end_coords, "sea_route_coords": searoute_coor },
+            "table_data": { "detailed_headers": new_detailed_headers, "detailed_data": detailed_data_formatted, "summary1_headers": ["Metric", "Value"], "summary1_data": summary1_data, "summary2_headers": ["Per Energy Output", "Value"], "summary2_data": summary2_data, "assumed_prices_headers": ["Assumed Price", "Value"], "assumed_prices_data": assumed_prices_data },
             "csv_data": [new_detailed_headers] + detailed_data_formatted,
             "charts": { "cost_chart_base64": cost_chart_base64, "emission_chart_base64": emission_chart_base64 },
             "local_sourcing_comparison": local_sourcing_results
