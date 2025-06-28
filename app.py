@@ -3096,7 +3096,7 @@ def run_lca_model(inputs):
                     ["Landed Cost (Local Sourcing)", f"${landed_cost_local_per_kg:.2f}/kg"],
                     ["Emissions (International Shipment)", f"{emissions_international_per_kg:.2f} kg CO₂e/kg"],
                     ["Emissions (Local Sourcing)", f"{emissions_local_per_kg:.2f} kg CO₂e/kg"],
-                    ["Green Premium (Cost per ton of CO₂ saved)", f"{green_premium_usd_per_ton_co2}"]
+                    ["**Green Premium (Cost per ton of CO₂ saved)**", f"**{green_premium_usd_per_ton_co2}**"]
                 ]
                     
         # --- 4. PROCESS FINAL DATA FOR TABLES AND CHARTS ---
@@ -3180,7 +3180,8 @@ def run_lca_model(inputs):
             },
             "csv_data": [new_detailed_headers] + detailed_data_formatted,
             "charts": { "cost_chart_base64": cost_chart_base64, "emission_chart_base64": emission_chart_base64 },
-            "local_sourcing_comparison": local_sourcing_results
+            "local_sourcing_comparison": local_sourcing_results,
+            "food_type": food_type
         }
         return response        
 
