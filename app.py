@@ -94,7 +94,24 @@ def run_lca_model(inputs):
             ]
         )
         result = json.loads(response.choices[0].message.content)
-        return float(result.get("latitude")), float(result.get("longitude")), result.get("nearest_port")
+        lat_str = result.get("latitude")
+        lon_str = result.get("longitude")
+        port_name = result.get("nearest_port")
+
+        lat = None
+        lon = None
+
+        try:
+            if lat_str is not None:
+                lat = float(str(lat_str).strip().replace(',', ''))
+            if lon_str is not None:
+                lon = float(str(lon_str).strip().replace(',', ''))
+        except ValueError:
+            # Log the problematic string to understand why it failed
+            print(f"DEBUG: Could not convert latitude '{lat_str}' or longitude '{lon_str}' to float.")
+            return None, None, None # Return None for all if conversion fails for either
+
+        return lat, lon, port_name        
 
     def inland_routes_cal(start_coords, end_coords):
         endpoint = f'https://maps.googleapis.com/maps/api/distancematrix/json'
