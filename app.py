@@ -1751,10 +1751,10 @@ def run_lca_model(inputs):
             denominator = 200000  
             exponent = 0.6  # Power law exponent for LH2
         # Calculate total capital cost using a power law (e.g., 0.7 exponent)
-        total_capex_usd = (base_capex_M_usd * 1_000_000) * (capacity_tpd / denominator) ** exponent
+        total_capex_usd = (base_capex_M_usd * 1000000) * (capacity_tpd / denominator) ** exponent
         if process_name == "storage":
             # For storage, we assume a different amortization factor
-            total_capex_usd = base_capex_M_usd * 1_000_000
+            total_capex_usd = base_capex_M_usd * 1000000
         # Amortize over 25 years with an 8% cost of capital (simplified to an annual factor)
         annualized_capex = total_capex_usd * 0.09
         
@@ -1766,7 +1766,6 @@ def run_lca_model(inputs):
             
         capex_per_kg = annualized_capex / annual_throughput_kg
         return capex_per_kg
-
     
     # This is the 'base' function that runs the main sequence of calculations
     def total_chem_base(A_optimized_chem_weight, B_fuel_type_tc, C_recirculation_BOG_tc, 
@@ -2970,8 +2969,27 @@ def run_lca_model(inputs):
         cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
         eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)")
         
+        # Calculate per-kg metrics for summary table 1
+        cost_per_kg = total_money / final_commodity_kg if final_commodity_kg > 0 else 0
+        energy_per_kg = total_energy / final_commodity_kg if final_commodity_kg > 0 else 0
+        emissions_per_kg = total_emissions / final_commodity_kg if final_commodity_kg > 0 else 0
+        
+        summary1_data = [
+            ["Cost ($/kg food)", f"{cost_per_kg:.2f}"],
+            ["Consumed Energy (MJ/kg food)", f"{energy_per_kg:.2f}"],
+            ["Emission (kg CO2eq/kg food)", f"{emissions_per_kg:.2f}"]
+        ]
+
+        # Calculate per-GJ metrics for summary table 2
+        summary2_data = [
+            ["Cost ($/GJ)", f"{total_money / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
+            ["Energy consumed (MJ_in/GJ_out)", f"{total_energy / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
+            ["Emission (kg CO2eq/GJ)", f"{total_emissions / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"]
+        ]
+        # =================================================================
+
         # --- 5. CREATE CHARTS AND CONTEXT ---
-        food_name_for_lookup = current_food_params["name"]
+        food_name_for_lookup = current_food_params["name"]        
         start_country = get_country_from_coords(coor_start_lat, coor_start_lng) or start
         end_country = get_country_from_coords(coor_end_lat, coor_end_lng) or end
         price_start = openai_get_food_price(food_name_for_lookup, start_country)
