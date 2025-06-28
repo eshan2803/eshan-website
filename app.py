@@ -2278,7 +2278,7 @@ def run_lca_model(inputs):
             return 0
 
         # Calculate total capital cost using a power law for economy of scale
-        total_capex_usd = (model['base_cost_M_usd'] * 1_000_000) * (capacity_tons_per_day / 500) ** model['power_law_exp']
+        total_capex_usd = (model['base_cost_M_usd'] * 1000000) * (capacity_tons_per_day / 500) ** model['power_law_exp']
         
         # Amortize the cost over 20 years with an 8% cost of capital (simplified to an annual factor)
         annualized_capex = total_capex_usd * 0.1 
