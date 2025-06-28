@@ -1722,7 +1722,7 @@ def run_lca_model(inputs):
             # Cost to build a liquefaction plant in millions USD
             "liquefaction": {0: 160, 1: 350, 2: 0}, # LH2, NH3, Methanol (0)
             # Cost to build a large-scale cryogenic storage tank facility in millions USD
-            "storage": {0: 600, 1: 100, 2: 20}
+            "storage": {0: 200, 1: 100, 2: 20}
         }
         
         base_capex_M_usd = cost_models.get(process_name, {}).get(fuel_type, 0)
@@ -1731,9 +1731,12 @@ def run_lca_model(inputs):
         if fuel_type == 0:
             denominator = 27  
             exponent = 0.79  # Power law exponent for LH2
-        if fuel_type == 1:
-            denominator = 200000  
-            exponent = 0.6  # Power law exponent for LH2
+        elif fuel_type == 1:
+            denominator = 1000  
+            exponent = 0.65  # Power law exponent for LH2
+        else:
+            denominator = 1  
+            exponent = 1
         # Calculate total capital cost using a power law (e.g., 0.7 exponent)
         total_capex_usd = (base_capex_M_usd * 1000000) * (capacity_tpd / denominator) ** exponent
         if process_name == "storage":
