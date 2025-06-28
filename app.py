@@ -2934,11 +2934,82 @@ def run_lca_model(inputs):
         price_start_text = f"${price_start:.2f}/kg" if price_start is not None else "Not available"
         price_end_text = f"${price_end:.2f}/kg" if price_end is not None else "Not available"
         
+        # Initialize final_commodity_kg to avoid UnboundLocalError
+        final_commodity_kg = 0
+        total_money = 0
+        total_energy = 0
+        total_emissions = 0
+
+        # Get total container capacity of the selected ship
+        total_ship_container_capacity = math.floor(total_ship_volume / 76)
+
+        # --- RUN LAND-BASED LCA & INITIAL PRORATED SEA COSTS BEFORE LOCAL SOURCING ---
+        initial_weight = shipment_size_containers * current_food_params['general_params']['cargo_per_truck_kg']
+        data_raw = total_food_lca(initial_weight, current_food_params)
+        
+        # Calculate BASE costs (Propulsion + Overheads) for the ENTIRE SHIP
+        propulsion_fuel_kwh = avg_ship_power_kw * port_to_port_duration
+        propulsion_fuel_kg = (propulsion_fuel_kwh * selected_marine_fuel_params['sfoc_g_per_kwh']) / 1000.0
+        propulsion_cost = (propulsion_fuel_kg / 1000.0) * selected_marine_fuel_params['price_usd_per_ton']
+        
+        voyage_duration_days = port_to_port_duration / 24.0
+        total_overhead_cost = 0
+        if include_overheads:
+            start_port_country = get_country_from_coords(start_port_lat, start_port_lng)
+            end_port_country = get_country_from_coords(end_port_lat, end_port_lng)
+            port_regions = {'start': start_port_country, 'end': end_port_country} 
+            voyage_duration_days = port_to_port_duration / 24.0
+            total_overhead_cost = calculate_voyage_overheads(voyage_duration_days, selected_ship_params, canal_transits, port_regions)
+
+        # Calculate the BASE COST PER DRY SLOT on the ship
+        total_base_voyage_cost = propulsion_cost + total_overhead_cost
+        base_cost_per_slot = total_base_voyage_cost / total_ship_container_capacity if total_ship_container_capacity > 0 else 0
+
+        # Calculate the ADDITIONAL cost for the REEFER SERVICE for ONE container
+        reefer_service_cost, reefer_service_energy, reefer_service_emissions = calculate_single_reefer_service_cost(port_to_port_duration, current_food_params)
+        
+        # Inject the new, more detailed sea transport costs into the results
+        marine_transport_index = next((i for i, row in enumerate(data_raw) if "Marine Transport" in row[0]), -1)
+        if marine_transport_index != -1:
+            # Base freight cost for the user's shipment
+            base_freight_cost = base_cost_per_slot * shipment_size_containers
+            
+            # Preserve the commodity weight at this stage
+            commodity_weight_at_marine_transport = data_raw[marine_transport_index][4]
+
+            data_raw[marine_transport_index][0] = "Marine Transport (Base Freight)"
+            data_raw[marine_transport_index][1] = base_freight_cost
+            # We can approximate propulsion energy/emissions for the user's share
+            propulsion_emissions = (propulsion_fuel_kg * selected_marine_fuel_params['co2_emissions_factor_kg_per_kg_fuel'])
+            data_raw[marine_transport_index][3] = (propulsion_emissions / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0
+            data_raw[marine_transport_index][2] = (propulsion_fuel_kwh * 3.6 / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0
+
+            # Add a new row for the reefer service cost
+            reefer_service_total_cost = reefer_service_cost * shipment_size_containers
+            reefer_service_total_energy = reefer_service_energy * shipment_size_containers
+            reefer_service_total_emissions = reefer_service_emissions * shipment_size_containers
+            reefer_row = ["Reefer & CA Services", reefer_service_total_cost, reefer_service_total_energy, reefer_service_total_emissions, commodity_weight_at_marine_transport, 0]
+            data_raw.insert(marine_transport_index + 1, reefer_row)
+
+            # Add a new row for Overheads if included
+            if include_overheads:
+                prorated_overhead_cost = (total_overhead_cost / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0
+                overhead_row = ["Voyage Overheads (Prorated)", prorated_overhead_cost, 0, 0, commodity_weight_at_marine_transport, 0]
+                data_raw.insert(marine_transport_index + 1, overhead_row)
+
+        # Now, calculate the overall totals *after* all rows have been adjusted/inserted
+        total_money = sum(row[1] for row in data_raw)
+        total_energy = sum(row[2] for row in data_raw)
+        total_emissions = sum(row[3] for row in data_raw)
+        final_weight = data_raw[-1][4] # The last row from total_food_lca is the overall total
+        final_commodity_kg = final_weight # Now final_commodity_kg is correctly defined and up-to-date
+        
+        # --- LOCAL SOURCING COMPARISON (Can now safely use final_commodity_kg) ---
         local_sourcing_results = None
         green_premium_data = None
-        farm_name = None
-        price_farm = None
-                
+        farm_name = None # Ensure farm_name is initialized for checks outside the if block
+        price_farm = None # Ensure price_farm is initialized for checks outside the if block
+
         farm_region = openai_get_nearest_farm_region(current_food_params['name'], end_country)
 
         if farm_region:
@@ -3022,69 +3093,11 @@ def run_lca_model(inputs):
                     ["Emissions (Local Sourcing)", f"{emissions_local_per_kg:.2f} kg CO₂e/kg"],
                     ["**Green Premium (Cost per ton of CO₂ saved)**", f"**{green_premium_usd_per_ton_co2}**"]
                 ]
-                       
-        # Get total container capacity of the selected ship
-        total_ship_container_capacity = math.floor(total_ship_volume / 76)
-
-        # --- 2. CALCULATE BASE VOYAGE & REEFER SERVICE COSTS ---
-        
-        # A) Calculate BASE costs (Propulsion + Overheads) for the ENTIRE SHIP
-        propulsion_fuel_kwh = avg_ship_power_kw * port_to_port_duration
-        propulsion_fuel_kg = (propulsion_fuel_kwh * selected_marine_fuel_params['sfoc_g_per_kwh']) / 1000.0
-        propulsion_cost = (propulsion_fuel_kg / 1000.0) * selected_marine_fuel_params['price_usd_per_ton']
-        
-        voyage_duration_days = port_to_port_duration / 24.0
-        total_overhead_cost = 0
-        if include_overheads:
-            start_port_country = get_country_from_coords(start_port_lat, start_port_lng)
-            end_port_country = get_country_from_coords(end_port_lat, end_port_lng)
-            port_regions = {'start': start_port_country, 'end': end_port_country} 
-            voyage_duration_days = port_to_port_duration / 24.0
-            total_overhead_cost = calculate_voyage_overheads(voyage_duration_days, selected_ship_params, canal_transits, port_regions)
-
-        # B) Calculate the BASE COST PER DRY SLOT on the ship
-        total_base_voyage_cost = propulsion_cost + total_overhead_cost
-        base_cost_per_slot = total_base_voyage_cost / total_ship_container_capacity if total_ship_container_capacity > 0 else 0
-
-        # C) Calculate the ADDITIONAL cost for the REEFER SERVICE for ONE container
-        reefer_service_cost, reefer_service_energy, reefer_service_emissions = calculate_single_reefer_service_cost(port_to_port_duration, current_food_params)
-        
-        # --- 3. RUN LAND-BASED LCA & INJECT PRORATED SEA COSTS ---
-        initial_weight = shipment_size_containers * current_food_params['general_params']['cargo_per_truck_kg']
-        data_raw = total_food_lca(initial_weight, current_food_params)
-        
-        # Inject the new, more detailed sea transport costs into the results
-        marine_transport_index = next((i for i, row in enumerate(data_raw) if "Marine Transport" in row[0]), -1)
-        if marine_transport_index != -1:
-            # Base freight cost for the user's shipment
-            base_freight_cost = base_cost_per_slot * shipment_size_containers
-            data_raw[marine_transport_index][0] = "Marine Transport (Base Freight)"
-            data_raw[marine_transport_index][1] = base_freight_cost
-            # We can approximate propulsion energy/emissions for the user's share
-            propulsion_emissions = (propulsion_fuel_kg * selected_marine_fuel_params['co2_emissions_factor_kg_per_kg_fuel'])
-            data_raw[marine_transport_index][3] = (propulsion_emissions / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0
-            
-            # Add a new row for the reefer service cost
-            reefer_service_total_cost = reefer_service_cost * shipment_size_containers
-            reefer_service_total_energy = reefer_service_energy * shipment_size_containers
-            reefer_service_total_emissions = reefer_service_emissions * shipment_size_containers
-            reefer_row = ["Reefer & CA Services", reefer_service_total_cost, reefer_service_total_energy, reefer_service_total_emissions, data_raw[marine_transport_index][4], 0]
-            data_raw.insert(marine_transport_index + 1, reefer_row)
-
-            # Add a new row for Overheads if included
-            if include_overheads:
-                prorated_overhead_cost = (total_overhead_cost / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0
-                overhead_row = ["Voyage Overheads (Prorated)", prorated_overhead_cost, 0, 0, data_raw[marine_transport_index][4], 0]
-                data_raw.insert(marine_transport_index + 1, overhead_row)
-
+                    
         # --- 4. PROCESS FINAL DATA FOR TABLES AND CHARTS ---
-        total_money = sum(row[1] for row in data_raw)
-        total_energy = sum(row[2] for row in data_raw)
-        total_emissions = sum(row[3] for row in data_raw)
-        final_weight = data_raw[-1][4]
-        data_raw.append(["TOTAL", total_money, total_energy, total_emissions, final_weight, sum(row[5] for row in data_raw)])
+        # Add the final TOTAL row after all dynamic insertions
+        data_raw.append(["TOTAL", total_money, total_energy, total_emissions, final_commodity_kg, sum(row[5] for row in data_raw[:-1])])
         
-        final_commodity_kg = final_weight
         energy_content = current_food_params.get('general_params', {}).get('energy_content_mj_per_kg', 1)
         final_energy_output_mj = final_commodity_kg * energy_content
         final_energy_output_gj = final_energy_output_mj / 1000
@@ -3133,7 +3146,7 @@ def run_lca_model(inputs):
             [f"{food_name_for_lookup} Price in {end_country}*", f"${price_end:.2f}/kg" if price_end is not None else "N/A"],
         ]
         if 'farm_name' in locals() and 'price_farm' in locals() and price_farm is not None:
-             assumed_prices_data.append([f"{food_name_for_lookup} Price at {farm_name}*", f"${price_farm:.2f}/kg"])
+            assumed_prices_data.append([f"{food_name_for_lookup} Price at {farm_name}*", f"${price_farm:.2f}/kg"])
 
         # --- 5. CREATE CHARTS AND CONTEXT ---
 
@@ -3146,7 +3159,8 @@ def run_lca_model(inputs):
         emission_chart_base64 = create_breakdown_chart(data_for_display, eco2_per_kg_index, f'CO2eq Breakdown per kg of Delivered {current_food_params["name"]}', 'CO2eq (kg/kg)')
 
         # Find a nearby farm region using our new AI function
-        end_country = get_country_from_coords(coor_end_lat, coor_end_lng) or end
+        # This line is redundant as end_country is already defined above
+        # end_country = get_country_from_coords(coor_end_lat, coor_end_lng) or end
             
         response = {
             "status": "success",
@@ -3163,8 +3177,8 @@ def run_lca_model(inputs):
             "charts": { "cost_chart_base64": cost_chart_base64, "emission_chart_base64": emission_chart_base64 },
             "local_sourcing_comparison": local_sourcing_results
         }
-        return response
-        
+        return response        
+
 # --- Flask API Endpoint ---
 @app.route('/calculate', methods=['POST'])
 def calculate_endpoint():
