@@ -1867,7 +1867,7 @@ def run_lca_model(inputs):
         opex_money = energy * elec_price[2]
         capex_money = 0
         if include_overheads:
-            capex_per_kg = calculate_food_infra_capex("freezing", facility_capacity)
+            capex_per_kg = calculate_food_infra_capex("freezing", facility_capacity, A)
             capex_money = A * capex_per_kg
         emissions = energy * 0.2778 * co2_factor * 0.001
         loss = 0.005 * A
@@ -1927,7 +1927,7 @@ def run_lca_model(inputs):
         opex_money = energy_mj * elec_price[2] # elec_price[2] is the price per MJ
         capex_money = 0
         if include_overheads:
-            capex_per_kg = calculate_food_infra_capex("precool", facility_capacity)
+            capex_per_kg = calculate_food_infra_capex("precool", facility_capacity, A)
             capex_money = A * capex_per_kg        
         total_money = opex_money + capex_money
         # Convert MJ to kWh for emission calculation (1 MJ ≈ 0.2778 kWh)
@@ -2026,7 +2026,6 @@ def run_lca_model(inputs):
         return total_money, total_energy_mj, total_emissions, A - loss, loss
     
     def food_cold_storage(A, args):
-        # --- MODIFIED: Now unpacks 5 arguments, including ambient_temp ---
         params, storage_days, elec_price, co2_factor, ambient_temp = args
         
         # The 'params' dictionary now has a nested 'general_params' key
@@ -2046,7 +2045,7 @@ def run_lca_model(inputs):
         opex_money = energy_mj * elec_price[2]
         capex_money = 0
         if include_overheads:
-            capex_per_kg = calculate_food_infra_capex("cold_storage", facility_capacity)
+            capex_per_kg = calculate_food_infra_capex("cold_storage", facility_capacity, A)
             capex_money = A * capex_per_kg
         total_money = opex_money + capex_money
         emissions = energy_mj * 0.2778 * co2_factor * 0.001
@@ -2266,20 +2265,19 @@ def run_lca_model(inputs):
         
         return cost, energy_mj, emissions
 
-    def calculate_food_infra_capex(process_name, capacity_tons_per_day):
+    def calculate_food_infra_capex(process_name, capacity_tons_per_day, A):
         """
         Estimates the amortized capital cost per kg for food processing facilities.
         Source: Based on general industry capital cost estimates for food processing and cold chain logistics.
         """
         # Simplified CAPEX models (Cost = A * (Capacity)^B)
-        # These would be replaced by detailed engineering estimates in a full study.
         cost_models = {
             # Cost to build a pre-cooling facility in millions USD
-            "precool": {"base_cost_M_usd": 5, "power_law_exp": 0.6},
+            "precool": {"base_cost_M_usd": 5, "power_law_exp": 0.6, "reference_capacity": 500},
             # Cost to build a freezing facility in millions USD
-            "freezing": {"base_cost_M_usd": 15, "power_law_exp": 0.65},
+            "freezing": {"base_cost_M_usd": 15, "power_law_exp": 0.65, "reference_capacity": 500},
             # Cost to build a cold storage warehouse in millions USD
-            "cold_storage": {"base_cost_M_usd": 10, "power_law_exp": 0}
+            "cold_storage": {"base_cost_M_usd": 1.5, "power_law_exp": 0.7, "reference_capacity": 5000}
         }
         
         model = cost_models.get(process_name)
@@ -2287,13 +2285,18 @@ def run_lca_model(inputs):
             return 0
 
         # Calculate total capital cost using a power law for economy of scale
-        total_capex_usd = (model['base_cost_M_usd'] * 1000000) * (capacity_tons_per_day / 500) ** model['power_law_exp']
+        if process_name == "cold_storage":
+            # Use A (tons held) for cold storage capacity
+            total_capex_usd = (model['base_cost_M_usd'] * 1000000) * (A / model['reference_capacity']) ** model['power_law_exp']
+        else:
+            # Use capacity_tons_per_day for other processes
+            total_capex_usd = (model['base_cost_M_usd'] * 1000000) * (capacity_tons_per_day / model['reference_capacity']) ** model['power_law_exp']
         
         # Amortize the cost over 20 years with an 8% cost of capital (simplified to an annual factor)
         annualized_capex = total_capex_usd * 0.1 
         
         # Calculate annual throughput in kg
-        annual_throughput_kg = capacity_tons_per_day * 1000 * 330 # Assume 330 operating days/year
+        annual_throughput_kg = capacity_tons_per_day * 1000 * 330  # Assume 330 operating days/year
         
         if annual_throughput_kg == 0:
             return 0
