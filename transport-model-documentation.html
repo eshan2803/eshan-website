@@ -265,33 +265,33 @@
 
       <h4 id="overhead-assumptions">3.3. Voyage Overhead Cost Parameters</h4>
       <p>
-        To provide a more comprehensive and realistic transport cost, the model includes an option to incorporate major non-fuel overhead costs. These costs represent the economic realities of operating a large marine vessel beyond its direct energy consumption. The values used are industry-average estimates, informed by reports from leading maritime research firms such as <strong>Drewry Maritime Research</strong> and <strong>Clarkson Research</strong>. Real-world costs can vary based on the vessel's age, flag registry, and management company, but these parameters serve as a robust proxy for a comparative analysis.
+        To provide a more comprehensive and realistic transport cost, the model includes an option to incorporate major non-fuel overhead costs. These values are industry-average estimates, informed by reports from leading maritime research firms such as <strong>Drewry Maritime Research</strong> and <strong>Clarkson Research</strong>.
       </p>
       <p>The total overhead cost is comprised of four key components:</p>
       <ul>
-          <li><strong>Daily Operating Costs (OPEX):</strong> A fixed daily cost that includes crew salaries and provisions, routine maintenance and repairs, stores and supplies (e.g., lubricating oils), and vessel insurance (Hull & Machinery, Protection & Indemnity).</li>
-          <li><strong>Daily Capital Costs (CAPEX):</strong> Represents the amortized cost of the vessel itself. This accounts for the financing and depreciation of a multi-hundred-million-dollar asset over its operational lifetime.</li>
-          <li><strong>Port Fees:</strong> Fees charged by port authorities at both the origin and destination for docking, tugboat services, and use of port facilities. The model assumes one charge at each end of the sea route.</li>
-          <li><strong>Canal Transit Fees:</strong> A significant, one-time cost for passing through major waterways. The model dynamically detects if a route passes through the Suez or Panama canals and applies a representative toll based on the vessel's size class.</li>
+          <li><strong>Daily Operating Costs (OPEX):</strong> A fixed daily cost that includes crew salaries, maintenance, insurance, and supplies.</li>
+          <li><strong>Daily Capital Costs (CAPEX):</strong> Represents the amortized cost (depreciation and financing) of the vessel itself.</li>
+          <li><strong>Port Fees:</strong> Fees charged by port authorities. The model calculates this dynamically based on the vessel's Gross Tonnage (GT) and a regional fee estimate (in $/GT) for both the origin and destination ports.</li>
+          <li><strong>Canal Transit Fees:</strong> A significant cost for passing through major waterways. The model dynamically detects Suez or Panama Canal transits and calculates the toll based on the vessel's Gross Tonnage and a representative tariff (in $/GT).</li>
       </ul>
       <div style="overflow-x: auto;">
         <table class="parameter-table">
           <thead>
             <tr>
               <th>Ship Archetype</th>
+              <th>Gross Tonnage (GT)</th>
               <th>Daily OPEX ($)</th>
               <th>Daily CAPEX ($)</th>
-              <th>Port Fee per Call ($)</th>
-              <th>Suez Toll (est. $)</th>
-              <th>Panama Toll (est. $)</th>
+              <th>Suez Toll (est. $/GT)</th>
+              <th>Panama Toll (est. $/GT)</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td>Small (20k m³)</td><td>15,000</td><td>10,000</td><td>30,000</td><td>250,000</td><td>200,000</td></tr>
-            <tr style="background-color: #f2f2f2;"><td>Midsized (90k m³)</td><td>20,000</td><td>25,000</td><td>50,000</td><td>400,000</td><td>350,000</td></tr>
-            <tr><td>Standard (174k m³)</td><td>25,000</td><td>45,000</td><td>70,000</td><td>550,000</td><td>450,000</td></tr>
-            <tr style="background-color: #f2f2f2;"><td>Q-Flex (210k m³)</td><td>28,000</td><td>55,000</td><td>80,000</td><td>650,000</td><td>550,000</td></tr>
-            <tr><td>Q-Max (266k m³)</td><td>30,000</td><td>65,000</td><td>90,000</td><td>700,000</td><td>600,000</td></tr>
+            <tr><td>Small (20k m³)</td><td>25,000</td><td>15,000</td><td>10,000</td><td>4.50</td><td>4.00</td></tr>
+            <tr style="background-color: #f2f2f2;"><td>Midsized (90k m³)</td><td>95,000</td><td>20,000</td><td>25,000</td><td>4.50</td><td>4.00</td></tr>
+            <tr><td>Standard (174k m³)</td><td>165,000</td><td>25,000</td><td>45,000</td><td>4.25</td><td>3.75</td></tr>
+            <tr style="background-color: #f2f2f2;"><td>Q-Flex (210k m³)</td><td>190,000</td><td>28,000</td><td>55,000</td><td>4.25</td><td>3.75</td></tr>
+            <tr><td>Q-Max (266k m³)</td><td>215,000</td><td>30,000</td><td>65,000</td><td>4.10</td><td>3.60</td></tr>
           </tbody>
         </table>
       </div>
