@@ -2197,23 +2197,27 @@ def run_lca_model(inputs):
         
         return transits
 
-    def calculate_voyage_overheads(voyage_duration_days, ship_archetype_key, canal_transits):
+    def calculate_voyage_overheads(voyage_duration_days, ship_params, canal_transits, port_regions):
         """
-        Calculates the total non-fuel overhead costs for a sea voyage,
-        dynamically checking for Suez or Panama canal transits.
+        Calculates total non-fuel overheads, with dynamic port AND canal fees.
         """
-        overheads = VOYAGE_OVERHEADS_DATA.get(ship_archetype_key, VOYAGE_OVERHEADS_DATA['standard'])
+        ship_gt = ship_params['gross_tonnage']
+        overheads = VOYAGE_OVERHEADS_DATA.get(ship_params.get('key', 'standard'), VOYAGE_OVERHEADS_DATA['standard'])
 
         opex_cost = overheads['daily_operating_cost_usd'] * voyage_duration_days
         capex_cost = overheads['daily_capital_cost_usd'] * voyage_duration_days
-        port_fees_cost = overheads['port_fee_usd'] * 2
         
-        # Dynamically add the correct canal fee
+        # Dynamic port fee calculation (already correct)
+        fee_per_gt_start = REGIONAL_PORT_FEE_DATA.get(port_regions['start'], REGIONAL_PORT_FEE_DATA['Default'])
+        fee_per_gt_end = REGIONAL_PORT_FEE_DATA.get(port_regions['end'], REGIONAL_PORT_FEE_DATA['Default'])
+        port_fees_cost = (ship_gt * fee_per_gt_start) + (ship_gt * fee_per_gt_end)
+
+        # --- DYNAMIC CANAL FEE CALCULATION ---
         canal_fees_cost = 0
         if canal_transits.get("suez"):
-            canal_fees_cost = overheads['suez_toll_usd']
+            canal_fees_cost = ship_gt * overheads['suez_toll_per_gt_usd']
         elif canal_transits.get("panama"):
-            canal_fees_cost = overheads['panama_toll_usd']
+            canal_fees_cost = ship_gt * overheads['panama_toll_per_gt_usd']
         
         total_overheads = opex_cost + capex_cost + port_fees_cost + canal_fees_cost
         return total_overheads
@@ -2328,21 +2332,37 @@ def run_lca_model(inputs):
 
     ship_archetype_key = inputs.get('ship_archetype', 'standard')
     ship_archetypes = {
-        'small':    {'name': 'Small-Scale Carrier', 'volume_m3': 20000,  'num_tanks': 2, 'shape': 2, 'reefer_slots': 400},
-        'midsized': {'name': 'Midsized Carrier', 'volume_m3': 90000,  'num_tanks': 4, 'shape': 2, 'reefer_slots': 800},
-        'standard': {'name': 'Standard Modern Carrier', 'volume_m3': 174000, 'num_tanks': 4, 'shape': 1, 'reefer_slots': 1500},
-        'q-flex':   {'name': 'Q-Flex Carrier', 'volume_m3': 210000, 'num_tanks': 5, 'shape': 1, 'reefer_slots': 1800},
-        'q-max':    {'name': 'Q-Max Carrier', 'volume_m3': 266000, 'num_tanks': 5, 'shape': 1, 'reefer_slots': 2000}
+        'small':    {'name': 'Small-Scale Carrier', 'volume_m3': 20000,  'num_tanks': 2, 'shape': 2, 'reefer_slots': 400,  'gross_tonnage': 25000},
+        'midsized': {'name': 'Midsized Carrier', 'volume_m3': 90000,  'num_tanks': 4, 'shape': 2, 'reefer_slots': 800,  'gross_tonnage': 95000},
+        'standard': {'name': 'Standard Modern Carrier', 'volume_m3': 174000, 'num_tanks': 4, 'shape': 1, 'reefer_slots': 1500, 'gross_tonnage': 165000},
+        'q-flex':   {'name': 'Q-Flex Carrier', 'volume_m3': 210000, 'num_tanks': 5, 'shape': 1, 'reefer_slots': 1800, 'gross_tonnage': 190000},
+        'q-max':    {'name': 'Q-Max Carrier', 'volume_m3': 266000, 'num_tanks': 5, 'shape': 1, 'reefer_slots': 2000, 'gross_tonnage': 215000}
+    }
+    REGIONAL_PORT_FEE_DATA = {
+        # Source: Estimates derived from various port authority tariff sheets and maritime economic reports
+        'North Europe': 3.50,
+        'US West Coast': 3.20,
+        'US East Coast': 3.00,
+        'East Asia': 2.80,
+        'Middle East': 2.50,
+        'Default': 3.00 # A global average fallback
     }
     if ship_archetype_key == 'custom':
-        total_ship_volume = inputs['total_ship_volume']
-        ship_number_of_tanks = inputs['ship_number_of_tanks']
-        ship_tank_shape = inputs['ship_tank_shape']
+        # Custom ship logic...
+        selected_ship_params = {
+            'volume_m3': inputs['total_ship_volume'],
+            'num_tanks': inputs['ship_number_of_tanks'],
+            'shape': inputs['ship_tank_shape'],
+            # Estimate GT for custom ships, e.g., by scaling from standard
+            'gross_tonnage': 165000 * (inputs['total_ship_volume'] / 174000)
+        }
     else:
         selected_ship_params = ship_archetypes[ship_archetype_key]
-        total_ship_volume = selected_ship_params['volume_m3']
-        ship_number_of_tanks = selected_ship_params['num_tanks']
-        ship_tank_shape = selected_ship_params['shape']
+        # Add the key to the params for later lookup
+        selected_ship_params['key'] = ship_archetype_key
+    total_ship_volume = selected_ship_params['volume_m3']
+    ship_number_of_tanks = selected_ship_params['num_tanks']
+    ship_tank_shape = selected_ship_params['shape']
     
     avg_ship_power_kw = calculate_ship_power_kw(total_ship_volume)
     marine_fuels_data = {
@@ -2363,14 +2383,13 @@ def run_lca_model(inputs):
     diesel_density = 3.22 # kg per gal
     CO2e_diesel = 10.21
     VOYAGE_OVERHEADS_DATA = {
-        # Archetype Key: {OPEX, CAPEX, Port Fee, Suez Toll, Panama Toll}
-        'small':    {'daily_operating_cost_usd': 15000, 'daily_capital_cost_usd': 10000, 'port_fee_usd': 30000, 'suez_toll_usd': 250000, 'panama_toll_usd': 200000},
-        'midsized': {'daily_operating_cost_usd': 20000, 'daily_capital_cost_usd': 25000, 'port_fee_usd': 50000, 'suez_toll_usd': 400000, 'panama_toll_usd': 350000},
-        'standard': {'daily_operating_cost_usd': 25000, 'daily_capital_cost_usd': 45000, 'port_fee_usd': 70000, 'suez_toll_usd': 550000, 'panama_toll_usd': 450000},
-        'q-flex':   {'daily_operating_cost_usd': 28000, 'daily_capital_cost_usd': 55000, 'port_fee_usd': 80000, 'suez_toll_usd': 650000, 'panama_toll_usd': 550000},
-        'q-max':    {'daily_operating_cost_usd': 30000, 'daily_capital_cost_usd': 65000, 'port_fee_usd': 90000, 'suez_toll_usd': 700000, 'panama_toll_usd': 600000}
+        # Archetype Key: {OPEX, CAPEX, Suez Toll per GT, Panama Toll per GT}
+        'small':    {'daily_operating_cost_usd': 15000, 'daily_capital_cost_usd': 10000, 'suez_toll_per_gt_usd': 4.50, 'panama_toll_per_gt_usd': 4.00},
+        'midsized': {'daily_operating_cost_usd': 20000, 'daily_capital_cost_usd': 25000, 'suez_toll_per_gt_usd': 4.50, 'panama_toll_per_gt_usd': 4.00},
+        'standard': {'daily_operating_cost_usd': 25000, 'daily_capital_cost_usd': 45000, 'suez_toll_per_gt_usd': 4.25, 'panama_toll_per_gt_usd': 3.75},
+        'q-flex':   {'daily_operating_cost_usd': 28000, 'daily_capital_cost_usd': 55000, 'suez_toll_per_gt_usd': 4.25, 'panama_toll_per_gt_usd': 3.75},
+        'q-max':    {'daily_operating_cost_usd': 30000, 'daily_capital_cost_usd': 65000, 'suez_toll_per_gt_usd': 4.10, 'panama_toll_per_gt_usd': 3.60}
     }
-            # --- Define FOOD specific parameters ---
     food_params = {
                 'strawberry': {
                     'name': 'Strawberry', # The common name for the commodity.
@@ -2643,8 +2662,11 @@ def run_lca_model(inputs):
         final_results_raw, data_raw = total_chem_base(chem_weight, user_define[1], user_define[2], 
                                                     user_define[3], user_define[4], user_define[5])
         if include_overheads:
+            start_port_country = get_country_from_coords(start_port_lat, start_port_lng)
+            end_port_country = get_country_from_coords(end_port_lat, end_port_lng)
+            port_regions = {'start': start_port_country, 'end': end_port_country} # Simplified
             voyage_duration_days = port_to_port_duration / 24.0
-            total_overhead_cost = calculate_voyage_overheads(voyage_duration_days, ship_archetype_key, canal_transits)
+            total_overhead_cost = calculate_voyage_overheads(voyage_duration_days, selected_ship_params, canal_transits, port_regions)
             
             marine_transport_index = -1
             for i, row in enumerate(data_raw):
@@ -2864,7 +2886,11 @@ def run_lca_model(inputs):
         voyage_duration_days = port_to_port_duration / 24.0
         total_overhead_cost = 0
         if include_overheads:
-            total_overhead_cost = calculate_voyage_overheads(voyage_duration_days, ship_archetype_key, canal_transits)
+            start_port_country = get_country_from_coords(start_port_lat, start_port_lng)
+            end_port_country = get_country_from_coords(end_port_lat, end_port_lng)
+            port_regions = {'start': start_port_country, 'end': end_port_country} 
+            voyage_duration_days = port_to_port_duration / 24.0
+            total_overhead_cost = calculate_voyage_overheads(voyage_duration_days, selected_ship_params, canal_transits, port_regions)
 
         # B) Calculate the BASE COST PER DRY SLOT on the ship
         total_base_voyage_cost = propulsion_cost + total_overhead_cost
