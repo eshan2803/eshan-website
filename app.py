@@ -1754,7 +1754,7 @@ def run_lca_model(inputs):
         total_capex_usd = (base_capex_M_usd * 1_000_000) * (capacity_tpd / denominator) ** exponent
         if process_name == "storage":
             # For storage, we assume a different amortization factor
-            total_capex_usd = base_capex_M_usd
+            total_capex_usd = base_capex_M_usd * 1_000_000
         # Amortize over 25 years with an 8% cost of capital (simplified to an annual factor)
         annualized_capex = total_capex_usd * 0.09
         
