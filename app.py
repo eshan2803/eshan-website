@@ -1865,9 +1865,10 @@ def run_lca_model(inputs):
         total_heat_to_remove = energy_sensible_heat1 + energy_latent_heat + energy_sensible_heat2
         energy = total_heat_to_remove / params['cop_freezing_system']
         opex_money = energy * elec_price[2]
-        # The 'facility_capacity' input is now used here
-        capex_per_kg = calculate_food_infra_capex("freezing", facility_capacity)
-        capex_money = A * capex_per_kg
+        capex_money = 0
+        if include_overheads:
+            capex_per_kg = calculate_food_infra_capex("freezing", facility_capacity)
+            capex_money = A * capex_per_kg
         emissions = energy * 0.2778 * co2_factor * 0.001
         loss = 0.005 * A
         total_money = opex_money + capex_money
@@ -1924,8 +1925,10 @@ def run_lca_model(inputs):
 
         # 4. Calculate the financial cost and CO2 emissions
         opex_money = energy_mj * elec_price[2] # elec_price[2] is the price per MJ
-        capex_per_kg = calculate_food_infra_capex("precool", facility_capacity)
-        capex_money = A * capex_per_kg        
+        capex_money = 0
+        if include_overheads:
+            capex_per_kg = calculate_food_infra_capex("precool", facility_capacity)
+            capex_money = A * capex_per_kg        
         total_money = opex_money + capex_money
         # Convert MJ to kWh for emission calculation (1 MJ ≈ 0.2778 kWh)
         emissions = energy_mj * 0.2778 * co2_factor * 0.001
@@ -2041,8 +2044,10 @@ def run_lca_model(inputs):
         
         energy_mj = total_energy_kwh * 3.6
         opex_money = energy_mj * elec_price[2]
-        capex_per_kg = calculate_food_infra_capex("cold_storage", facility_capacity)
-        capex_money = A * capex_per_kg
+        capex_money = 0
+        if include_overheads:
+            capex_per_kg = calculate_food_infra_capex("cold_storage", facility_capacity)
+            capex_money = A * capex_per_kg
         total_money = opex_money + capex_money
         emissions = energy_mj * 0.2778 * co2_factor * 0.001
         # Spoilage calculation becomes dynamic
@@ -2680,7 +2685,7 @@ def run_lca_model(inputs):
         final_results_raw, data_raw = total_chem_base(chem_weight, user_define[1], user_define[2], 
                                                     user_define[3], user_define[4], user_define[5])
         
-# --- Correctly Handle Overheads and Infrastructure CAPEX ---
+        # --- Correctly Handle Overheads and Infrastructure CAPEX ---
         if include_overheads:
             # --- 1. Calculate Voyage Overheads (Non-Fuel Ship Costs) ---
             start_port_country = get_country_from_coords(start_port_lat, start_port_lng)
