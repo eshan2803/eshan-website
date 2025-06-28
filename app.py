@@ -2752,42 +2752,44 @@ def run_lca_model(inputs):
             farm_lon = farm_region['longitude']
             farm_name = farm_region['farm_region_name']
             
-            # 1. Calculate local trucking distance and duration (reusing existing function)
+            # Calculate local trucking distance and duration
             local_dist_str, local_dur_str = inland_routes_cal((farm_lat, farm_lon), (coor_end_lat, coor_end_lng))
             local_distance_km = float(re.sub(r'[^\d.]', '', local_dist_str))
             local_duration_mins = time_to_minutes(local_dur_str)
             
-            # Use the final delivered weight from the main scenario for an apples-to-apples comparison
+            # Use the final delivered weight for an apples-to-apples comparison
             comparison_weight = final_commodity_kg
             
-            # --- CORRECTED SECTION IS HERE ---
+            # Initialize local processing costs to zero
+            local_precool_money, local_precool_energy, local_precool_emissions = 0, 0, 0
+            local_freeze_money, local_freeze_energy, local_freeze_emissions = 0, 0, 0
 
-            # 2. Calculate local processing costs
-            # First, prepare the combined parameter dictionaries, just like in total_food_lca
-            precooling_full_params = {**current_food_params.get('precooling_params', {}), **current_food_params.get('general_params', {})}
-            freezing_full_params = {**current_food_params.get('freezing_params', {}), **current_food_params.get('general_params', {})}
+            # Conditionally calculate pre-cooling costs if needed
+            if current_food_params['process_flags'].get('needs_precooling'):
+                precooling_full_params = {**current_food_params.get('precooling_params', {}), **current_food_params.get('general_params', {})}
+                local_precool_money, local_precool_energy, local_precool_emissions, _, _ = food_precooling_process(comparison_weight, (precooling_full_params, end_electricity_price, CO2e_end))
 
-            # Now, call the process functions with the correctly prepared parameters
-            local_precool_money, local_precool_energy, local_precool_emissions, _, _ = food_precooling_process(comparison_weight, (precooling_full_params, end_electricity_price, CO2e_end))
-            local_freeze_money, local_freeze_energy, local_freeze_emissions, _, _ = food_freezing_process(comparison_weight, (freezing_full_params, end_local_temperature, end_electricity_price, CO2e_end))
+            # Conditionally calculate freezing costs if needed
+            if current_food_params['process_flags'].get('needs_freezing'):
+                freezing_full_params = {**current_food_params.get('freezing_params', {}), **current_food_params.get('general_params', {})}
+                local_freeze_money, local_freeze_energy, local_freeze_emissions, _, _ = food_freezing_process(comparison_weight, (freezing_full_params, end_local_temperature, end_electricity_price, CO2e_end))
 
-            # 3. Calculate local trucking costs (this call was already correct)
+            # Calculate local trucking costs (this call is already correct)
             local_trucking_args = (current_food_params, local_distance_km, local_duration_mins, diesel_price_end, HHV_diesel, diesel_density, CO2e_diesel, end_local_temperature)
             local_trucking_money, local_trucking_energy, local_trucking_emissions, _, _ = food_road_transport(comparison_weight, local_trucking_args)
-
             # --- END OF CORRECTED SECTION ---
 
-            # 4. Sum the costs for the local scenario
+            # Sum all costs for the local scenario
             local_total_money = local_precool_money + local_freeze_money + local_trucking_money
             local_total_emissions = local_precool_emissions + local_freeze_emissions + local_trucking_emissions
             
-            # 5. Store the results
+            # Store the results
             local_sourcing_results = {
                 "source_name": farm_name,
                 "distance_km": local_distance_km,
                 "cost_per_kg": local_total_money / comparison_weight if comparison_weight > 0 else 0,
                 "emissions_per_kg": local_total_emissions / comparison_weight if comparison_weight > 0 else 0
-            }
+            }        
         
         response = {
             "status": "success",
