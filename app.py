@@ -338,10 +338,6 @@ def run_lca_model(inputs):
         liquify_ener_consumed = liquify_energy_required * A
         opex_money = liquify_ener_consumed * start_electricity_price_tuple_arg[2] # Access the price float
         total_money = opex_money
-        if include_overheads:
-            capex_per_kg = calculate_fuel_infra_capex("liquefaction", LH2_plant_capacity_arg, B_fuel_type)
-            capex_money = A * capex_per_kg
-            total_money += capex_money
         G_emission_from_energy = liquify_ener_consumed * 0.2778 * CO2e_start_arg * 0.001
         BOG_loss = 0.016 * A
         A_after_loss = A - BOG_loss
@@ -603,10 +599,6 @@ def run_lca_model(inputs):
                 
                 G_emission = total_energy_consumed * 0.2778 * CO2e_start_arg * 0.001 + net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
         total_money = opex_money
-        if include_overheads:
-            capex_per_kg = calculate_fuel_infra_capex("storage", LH2_plant_capacity_arg, B_fuel_type)
-            capex_money = A * capex_per_kg
-            total_money += capex_money        
         return total_money, total_energy_consumed, G_emission, A_after_loss, net_BOG_loss
     
     def chem_loading_to_ship(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
@@ -869,10 +861,6 @@ def run_lca_model(inputs):
                 
                 G_emission = total_energy_consumed * 0.2778 * CO2e_end_arg * 0.001 + net_BOG_loss * GWP_chem_list_arg[B_fuel_type] # Using CO2e_end
         total_money = opex_money
-        if include_overheads:
-            capex_per_kg = calculate_fuel_infra_capex("storage", LH2_plant_capacity_arg, B_fuel_type)
-            capex_money = A * capex_per_kg
-            total_money += capex_money        
         return total_money, total_energy_consumed, G_emission, A_after_loss, net_BOG_loss
 
     def port_B_unloading_from_storage(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
@@ -1136,10 +1124,6 @@ def run_lca_model(inputs):
                 
                 G_emission = total_energy_consumed * 0.2778 * CO2e_end_arg * 0.001 + net_BOG_loss * GWP_chem_list_arg[B_fuel_type] # Using CO2e_end
         total_money = opex_money
-        if include_overheads:
-            capex_per_kg = calculate_fuel_infra_capex("storage", LH2_plant_capacity_arg, B_fuel_type)
-            capex_money = A * capex_per_kg
-            total_money += capex_money        
         return total_money, total_energy_consumed, G_emission, A_after_loss, net_BOG_loss
 
     def chem_unloading_from_site_B(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
@@ -2675,24 +2659,60 @@ def run_lca_model(inputs):
         
         final_results_raw, data_raw = total_chem_base(chem_weight, user_define[1], user_define[2], 
                                                     user_define[3], user_define[4], user_define[5])
+        
+# --- Correctly Handle Overheads and Infrastructure CAPEX ---
         if include_overheads:
+            # --- 1. Calculate Voyage Overheads (Non-Fuel Ship Costs) ---
             start_port_country = get_country_from_coords(start_port_lat, start_port_lng)
             end_port_country = get_country_from_coords(end_port_lat, end_port_lng)
-            port_regions = {'start': start_port_country, 'end': end_port_country} # Simplified
+            port_regions = {'start': start_port_country, 'end': end_port_country}
             voyage_duration_days = port_to_port_duration / 24.0
-            total_overhead_cost = calculate_voyage_overheads(voyage_duration_days, selected_ship_params, canal_transits, port_regions)
+            total_voyage_overheads = calculate_voyage_overheads(voyage_duration_days, selected_ship_params, canal_transits, port_regions)
+
+            # --- 2. Calculate Prorated Infrastructure CAPEX ---
+            # Get the amortized $/kg rates for the facilities
+            liquefaction_capex_per_kg = calculate_fuel_infra_capex("liquefaction", LH2_plant_capacity, fuel_type)
+            storage_capex_per_kg = calculate_fuel_infra_capex("storage", LH2_plant_capacity, fuel_type)
+
+            # Calculate the CAPEX cost for this specific shipment
+            # Liquefaction happens once at the start with the initial weight
+            total_liquefaction_capex = liquefaction_capex_per_kg * chem_weight
+
+            # Storage happens multiple times. We find the weight at each stage from the results.
+            total_storage_capex = 0
+            storage_A_weight = next((row[4] for row in data_raw if row[0] == "chem_storage_at_port_A"), 0)
+            storage_B_weight = next((row[4] for row in data_raw if row[0] == "chem_storage_at_port_B"), 0)
+            storage_C_weight = next((row[4] for row in data_raw if row[0] == "chem_storage_at_site_B"), 0)
             
-            marine_transport_index = -1
-            for i, row in enumerate(data_raw):
-                if row[0] == "port_to_port":
-                    marine_transport_index = i
-                    break
+            total_storage_capex += storage_capex_per_kg * storage_A_weight
+            total_storage_capex += storage_capex_per_kg * storage_B_weight
+            total_storage_capex += storage_capex_per_kg * storage_C_weight
             
+            # --- 3. Add Costs to Final Totals and Insert Rows for Display ---
+            # Add the calculated overhead and CAPEX to the final total cost
+            final_results_raw[0] += total_voyage_overheads
+            final_results_raw[0] += total_liquefaction_capex
+            final_results_raw[0] += total_storage_capex
+
+            # Create and insert display rows into the detailed data list
+            # Insert Voyage Overheads row after marine transport
+            marine_transport_index = next((i for i, row in enumerate(data_raw) if row[0] == "port_to_port"), -1)
             if marine_transport_index != -1:
-                chem_kg_after_sea = data_raw[marine_transport_index][4]
-                overhead_row = ["voyage_overheads", total_overhead_cost, 0, 0, chem_kg_after_sea, 0]
+                overhead_row = ["voyage_overheads", total_voyage_overheads, 0, 0, data_raw[marine_transport_index][4], 0]
                 data_raw.insert(marine_transport_index + 1, overhead_row)
-      
+
+            # Insert Liquefaction CAPEX row after liquefaction OPEX
+            liquefaction_index = next((i for i, row in enumerate(data_raw) if row[0] == "site_A_chem_liquification"), -1)
+            if liquefaction_index != -1:
+                liquefaction_capex_row = ["Liquefaction Facility CAPEX", total_liquefaction_capex, 0, 0, chem_weight, 0]
+                data_raw.insert(liquefaction_index + 1, liquefaction_capex_row)
+            
+            # Insert Storage CAPEX row (we'll add one consolidated row for simplicity)
+            last_storage_index = next((i for i, row in reversed(list(enumerate(data_raw))) if "chem_storage_at" in row[0]), -1)
+            if last_storage_index != -1:
+                storage_capex_row = ["Storage Facilities CAPEX (Total)", total_storage_capex, 0, 0, data_raw[last_storage_index][4], 0]
+                data_raw.insert(last_storage_index + 1, storage_capex_row)        
+        
         # 2. If the fuel is not H2, run the conversion step and update the raw results
         if user_define[1] != 0:
             amount_before_conversion = final_results_raw[3]
@@ -2886,7 +2906,103 @@ def run_lca_model(inputs):
         food_type = inputs.get('food_type')
         shipment_size_containers = inputs.get('shipment_size_containers', 10)
         current_food_params = food_params[food_type]
+        food_name_for_lookup = current_food_params["name"]        
+        start_country = get_country_from_coords(coor_start_lat, coor_start_lng) or start
+        end_country = get_country_from_coords(coor_end_lat, coor_end_lng) or end
+        price_start = openai_get_food_price(food_name_for_lookup, start_country)
+        price_end = openai_get_food_price(food_name_for_lookup, end_country)
+        price_start_text = f"${price_start:.2f}/kg" if price_start is not None else "Not available"
+        price_end_text = f"${price_end:.2f}/kg" if price_end is not None else "Not available"
         
+        local_sourcing_results = None
+        green_premium_data = None
+        farm_name = None
+        price_farm = None
+                
+        farm_region = openai_get_nearest_farm_region(current_food_params['name'], end_country)
+
+        if farm_region:
+            # We have a local farm, now calculate the logistics from farm to destination
+            farm_lat = farm_region['latitude']
+            farm_lon = farm_region['longitude']
+            farm_name = farm_region['farm_region_name']
+            price_farm = openai_get_food_price(current_food_params['name'], farm_name)
+            
+            # Calculate local trucking distance and duration
+            local_dist_str, local_dur_str = inland_routes_cal((farm_lat, farm_lon), (coor_end_lat, coor_end_lng))
+            local_distance_km = float(re.sub(r'[^\d.]', '', local_dist_str))
+            local_duration_mins = time_to_minutes(local_dur_str)
+            
+            # Use the final delivered weight for an apples-to-apples comparison
+            comparison_weight = final_commodity_kg
+            
+            # Initialize local processing costs to zero
+            local_precool_money, local_precool_energy, local_precool_emissions = 0, 0, 0
+            local_freeze_money, local_freeze_energy, local_freeze_emissions = 0, 0, 0
+
+            # Conditionally calculate pre-cooling costs if needed
+            if current_food_params['process_flags'].get('needs_precooling'):
+                precooling_full_params = {**current_food_params.get('precooling_params', {}), **current_food_params.get('general_params', {})}
+                local_precool_money, local_precool_energy, local_precool_emissions, _, _ = food_precooling_process(comparison_weight, (precooling_full_params, end_electricity_price, CO2e_end))
+
+            # Conditionally calculate freezing costs if needed
+            if current_food_params['process_flags'].get('needs_freezing'):
+                freezing_full_params = {**current_food_params.get('freezing_params', {}), **current_food_params.get('general_params', {})}
+                local_freeze_money, local_freeze_energy, local_freeze_emissions, _, _ = food_freezing_process(comparison_weight, (freezing_full_params, end_local_temperature, end_electricity_price, CO2e_end))
+
+            # Calculate local trucking costs (this call is already correct)
+            local_trucking_args = (current_food_params, local_distance_km, local_duration_mins, diesel_price_end, HHV_diesel, diesel_density, CO2e_diesel, end_local_temperature)
+            local_trucking_money, local_trucking_energy, local_trucking_emissions, _, _ = food_road_transport(comparison_weight, local_trucking_args)
+
+            # Sum all costs for the local scenario
+            local_total_money = local_precool_money + local_freeze_money + local_trucking_money
+            local_total_emissions = local_precool_emissions + local_freeze_emissions + local_trucking_emissions
+            
+            # Store the results
+            local_sourcing_results = {
+                "source_name": farm_name,
+                "distance_km": local_distance_km,
+                "cost_per_kg": local_total_money / comparison_weight if comparison_weight > 0 else 0,
+                "emissions_per_kg": local_total_emissions / comparison_weight if comparison_weight > 0 else 0
+            }        
+
+            green_premium_data = None
+            # Only proceed if we have valid prices for comparison
+            if price_farm is not None and price_start is not None and final_commodity_kg > 0 and comparison_weight > 0:
+                # Calculate total landed cost per kg for both scenarios
+                cost_international_transport_per_kg = total_money / final_commodity_kg
+                landed_cost_international_per_kg = price_start + cost_international_transport_per_kg
+
+                cost_local_sourcing_per_kg = local_total_money / comparison_weight
+                landed_cost_local_per_kg = price_farm + cost_local_sourcing_per_kg
+
+                # Calculate total emissions per kg for both scenarios
+                emissions_international_per_kg = total_emissions / final_commodity_kg
+                emissions_local_per_kg = local_total_emissions / comparison_weight
+
+                # Calculate the difference in cost and emissions
+                cost_difference_per_kg = landed_cost_local_per_kg - landed_cost_international_per_kg
+                emissions_saved_per_kg = emissions_international_per_kg - emissions_local_per_kg
+
+                # Calculate the Green Premium (cost of carbon abatement)
+                green_premium_usd_per_ton_co2 = "N/A (No emission savings)"
+                if emissions_saved_per_kg > 0:
+                    # Formula: ($/kg_food) / (kg_CO2/kg_food) -> $/kg_CO2. Then * 1000 for $/ton_CO2
+                    premium_raw = cost_difference_per_kg / emissions_saved_per_kg
+                    green_premium_usd_per_ton_co2 = f"${(premium_raw * 1000):,.2f}"
+                elif cost_difference_per_kg < 0:
+                    # Cheaper AND lower emissions
+                    green_premium_usd_per_ton_co2 = "Negative (Win-Win Scenario)"
+                
+                # Package the data for the frontend table
+                green_premium_data = [
+                    ["Landed Cost (International Shipment)", f"${landed_cost_international_per_kg:.2f}/kg"],
+                    ["Landed Cost (Local Sourcing)", f"${landed_cost_local_per_kg:.2f}/kg"],
+                    ["Emissions (International Shipment)", f"{emissions_international_per_kg:.2f} kg CO₂e/kg"],
+                    ["Emissions (Local Sourcing)", f"{emissions_local_per_kg:.2f} kg CO₂e/kg"],
+                    ["**Green Premium (Cost per ton of CO₂ saved)**", f"**{green_premium_usd_per_ton_co2}**"]
+                ]
+                       
         # Get total container capacity of the selected ship
         total_ship_container_capacity = math.floor(total_ship_volume / 76)
 
@@ -2986,16 +3102,20 @@ def run_lca_model(inputs):
             ["Energy consumed (MJ_in/GJ_out)", f"{total_energy / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
             ["Emission (kg CO2eq/GJ)", f"{total_emissions / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"]
         ]
-        # =================================================================
+
+        assumed_prices_data = [
+            [f"Electricity Price at {start}*", f"{start_electricity_price[2]:.4f} $/MJ"],
+            [f"Electricity Price at {end}*", f"{end_electricity_price[2]:.4f} $/MJ"],
+            [f"Diesel Price at {start}", f"{diesel_price_start:.2f} $/gal"],
+            [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"],
+            [f"Marine Fuel ({marine_fuel_choice}) Price at {start_port_name}*", f"{dynamic_price:.2f} $/ton"],
+            [f"{food_name_for_lookup} Price in {start_country}*", f"${price_start:.2f}/kg" if price_start is not None else "N/A"],
+            [f"{food_name_for_lookup} Price in {end_country}*", f"${price_end:.2f}/kg" if price_end is not None else "N/A"],
+        ]
+        if 'farm_name' in locals() and 'price_farm' in locals() and price_farm is not None:
+             assumed_prices_data.append([f"{food_name_for_lookup} Price at {farm_name}*", f"${price_farm:.2f}/kg"])
 
         # --- 5. CREATE CHARTS AND CONTEXT ---
-        food_name_for_lookup = current_food_params["name"]        
-        start_country = get_country_from_coords(coor_start_lat, coor_start_lng) or start
-        end_country = get_country_from_coords(coor_end_lat, coor_end_lng) or end
-        price_start = openai_get_food_price(food_name_for_lookup, start_country)
-        price_end = openai_get_food_price(food_name_for_lookup, end_country)
-        price_start_text = f"${price_start:.2f}/kg" if price_start is not None else "Not available"
-        price_end_text = f"${price_end:.2f}/kg" if price_end is not None else "Not available"
 
         cost_overlay_text = (
             f"Context:\n"
@@ -3004,93 +3124,9 @@ def run_lca_model(inputs):
         )
         cost_chart_base64 = create_breakdown_chart(data_for_display, cost_per_kg_index, f'Cost Breakdown per kg of Delivered {current_food_params["name"]}', 'Cost ($/kg)', overlay_text=cost_overlay_text)
         emission_chart_base64 = create_breakdown_chart(data_for_display, eco2_per_kg_index, f'CO2eq Breakdown per kg of Delivered {current_food_params["name"]}', 'CO2eq (kg/kg)')
-# --- 6. RUN LOCAL SOURCING COMPARISON ---
-        local_sourcing_results = None
+
         # Find a nearby farm region using our new AI function
         end_country = get_country_from_coords(coor_end_lat, coor_end_lng) or end
-        farm_region = openai_get_nearest_farm_region(current_food_params['name'], end_country)
-
-        if farm_region:
-            # We have a local farm, now calculate the logistics from farm to destination
-            farm_lat = farm_region['latitude']
-            farm_lon = farm_region['longitude']
-            farm_name = farm_region['farm_region_name']
-            price_farm = openai_get_food_price(current_food_params['name'], farm_name)
-            
-            # Calculate local trucking distance and duration
-            local_dist_str, local_dur_str = inland_routes_cal((farm_lat, farm_lon), (coor_end_lat, coor_end_lng))
-            local_distance_km = float(re.sub(r'[^\d.]', '', local_dist_str))
-            local_duration_mins = time_to_minutes(local_dur_str)
-            
-            # Use the final delivered weight for an apples-to-apples comparison
-            comparison_weight = final_commodity_kg
-            
-            # Initialize local processing costs to zero
-            local_precool_money, local_precool_energy, local_precool_emissions = 0, 0, 0
-            local_freeze_money, local_freeze_energy, local_freeze_emissions = 0, 0, 0
-
-            # Conditionally calculate pre-cooling costs if needed
-            if current_food_params['process_flags'].get('needs_precooling'):
-                precooling_full_params = {**current_food_params.get('precooling_params', {}), **current_food_params.get('general_params', {})}
-                local_precool_money, local_precool_energy, local_precool_emissions, _, _ = food_precooling_process(comparison_weight, (precooling_full_params, end_electricity_price, CO2e_end))
-
-            # Conditionally calculate freezing costs if needed
-            if current_food_params['process_flags'].get('needs_freezing'):
-                freezing_full_params = {**current_food_params.get('freezing_params', {}), **current_food_params.get('general_params', {})}
-                local_freeze_money, local_freeze_energy, local_freeze_emissions, _, _ = food_freezing_process(comparison_weight, (freezing_full_params, end_local_temperature, end_electricity_price, CO2e_end))
-
-            # Calculate local trucking costs (this call is already correct)
-            local_trucking_args = (current_food_params, local_distance_km, local_duration_mins, diesel_price_end, HHV_diesel, diesel_density, CO2e_diesel, end_local_temperature)
-            local_trucking_money, local_trucking_energy, local_trucking_emissions, _, _ = food_road_transport(comparison_weight, local_trucking_args)
-
-            # Sum all costs for the local scenario
-            local_total_money = local_precool_money + local_freeze_money + local_trucking_money
-            local_total_emissions = local_precool_emissions + local_freeze_emissions + local_trucking_emissions
-            
-            # Store the results
-            local_sourcing_results = {
-                "source_name": farm_name,
-                "distance_km": local_distance_km,
-                "cost_per_kg": local_total_money / comparison_weight if comparison_weight > 0 else 0,
-                "emissions_per_kg": local_total_emissions / comparison_weight if comparison_weight > 0 else 0
-            }        
-
-            green_premium_data = None
-            # Only proceed if we have valid prices for comparison
-            if price_farm is not None and price_start is not None and final_commodity_kg > 0 and comparison_weight > 0:
-                # Calculate total landed cost per kg for both scenarios
-                cost_international_transport_per_kg = total_money / final_commodity_kg
-                landed_cost_international_per_kg = price_start + cost_international_transport_per_kg
-
-                cost_local_sourcing_per_kg = local_total_money / comparison_weight
-                landed_cost_local_per_kg = price_farm + cost_local_sourcing_per_kg
-
-                # Calculate total emissions per kg for both scenarios
-                emissions_international_per_kg = total_emissions / final_commodity_kg
-                emissions_local_per_kg = local_total_emissions / comparison_weight
-
-                # Calculate the difference in cost and emissions
-                cost_difference_per_kg = landed_cost_local_per_kg - landed_cost_international_per_kg
-                emissions_saved_per_kg = emissions_international_per_kg - emissions_local_per_kg
-
-                # Calculate the Green Premium (cost of carbon abatement)
-                green_premium_usd_per_ton_co2 = "N/A (No emission savings)"
-                if emissions_saved_per_kg > 0:
-                    # Formula: ($/kg_food) / (kg_CO2/kg_food) -> $/kg_CO2. Then * 1000 for $/ton_CO2
-                    premium_raw = cost_difference_per_kg / emissions_saved_per_kg
-                    green_premium_usd_per_ton_co2 = f"${(premium_raw * 1000):,.2f}"
-                elif cost_difference_per_kg < 0:
-                    # Cheaper AND lower emissions
-                    green_premium_usd_per_ton_co2 = "Negative (Win-Win Scenario)"
-                
-                # Package the data for the frontend table
-                green_premium_data = [
-                    ["Landed Cost (International Shipment)", f"${landed_cost_international_per_kg:.2f}/kg"],
-                    ["Landed Cost (Local Sourcing)", f"${landed_cost_local_per_kg:.2f}/kg"],
-                    ["Emissions (International Shipment)", f"{emissions_international_per_kg:.2f} kg CO₂e/kg"],
-                    ["Emissions (Local Sourcing)", f"{emissions_local_per_kg:.2f} kg CO₂e/kg"],
-                    ["**Green Premium (Cost per ton of CO₂ saved)**", f"**{green_premium_usd_per_ton_co2}**"]
-                ]
             
         response = {
             "status": "success",
