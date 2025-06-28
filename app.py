@@ -267,7 +267,7 @@ def run_lca_model(inputs):
     def PH2_density_fnc_helper(pressure): return 0.25
     #actual process functions
     def liquification_data_fitting(H2_plant_capacity):
-        x = H2_plant_capacity
+        x = H2_plant_capacity*(1000/24) #convert TPD to kg/hr
         y0, x0, A1, A2, A3, t1, t2, t3 = 37.76586, -11.05773, 6248.66187, 80.56526, 25.95391, 2.71336, 32.3875, 685.33284
         return y0 + A1*np.exp(-(x-x0)/t1) + A2*np.exp(-(x-x0)/t2) + A3*np.exp(-(x-x0)/t3)
 
