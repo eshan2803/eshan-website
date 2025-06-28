@@ -188,19 +188,15 @@
         </div>
 
         <div id="food-options" class="hidden">
-                    <div class="input-group">
-                        <label for="food_type">Select Food Type:</label>
-                        <select id="food_type" name="food_type" class="form-control">
-                            <option value="strawberry">🍓 Strawberry</option>
-                            <option value="hass_avocado">🥑 Hass Avocado</option>
-                            <option value="banana">🍌 Banana</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="shipmentSizeContainers">Shipment Size (Number of 40ft Containers)</label>
-                        <input type="number" id="shipmentSizeContainers" value="10">
-                    </div>
-                </div>
+            <div class="input-group">
+                <label for="food_type">Select Food Type:</label>
+                <select id="food_type" name="food_type" class="form-control">
+                    <option value="strawberry">🍓 Strawberry</option>
+                    <option value="hass_avocado">🥑 Hass Avocado</option>
+                    <option value="banana">🍌 Banana</option>
+                </select>
+            </div>
+        </div>
 
         <div class="input-group">
         <label for="marineFuelChoice">Marine Propulsion Fuel</label>
@@ -211,17 +207,6 @@
             <option value="Ammonia">Ammonia</option>
         </select>
         </div>
-        <div class="input-group">
-            <label class="input-inline" style="display: flex; align-items: center; gap: 0.5rem;">
-                <input type="checkbox" id="includeOverheads" name="includeOverheads" checked style="width: auto;">
-                <span style="font-weight: normal;">
-                    Include All Non-Energy Costs (Infrastructure CAPEX & Voyage Overheads)?
-                    <a href="transport-model-documentation.html#overhead-assumptions" target="_blank" style="color: #007BFF; text-decoration: underline;">
-                        Refer to Documentation.
-                    </a>
-                </span>
-            </label>
-        </div>        
         <div class="input-group" id="capacity-input-group">
           <label id="capacity-label" for="lh2PlantCapacity">LH2 Plant Capacity (TPD):</label>
           <input type="number" id="lh2PlantCapacity" value="1000">
@@ -287,44 +272,42 @@
         <div id="outputTables"></div>
       </div>
       <div id="statusMessages" class="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700 min-h-[50px]">Waiting for input...</div>
-        <div id="outputs" class="hidden">
-            <h2 class="text-xl font-semibold mb-4 text-gray-700">Results</h2>
-            
-            <div id="map" class="mb-6 shadow-md" style="height: 400px;"></div>
-            
-            <h3 class="text-lg font-semibold mb-3 text-gray-600">Summary Metrics (per kg fuel/food):</h3>
-            <div id="summaryTableContainer" class="table-container mb-6 shadow-md"></div>
-            
-            <h3 class="text-lg font-semibold mb-3 text-gray-600">Summary Metrics (per GJ):</h3>
-            <div id="summaryTableContainer2" class="table-container mb-6 shadow-md"></div>
+      <div id="outputs" class="hidden">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">Results</h2>
+        <div id="map" class="mb-6 shadow-md" style="height: 400px;"></div>
+        <h3 class="text-lg font-semibold mb-3 text-gray-600">Summary Metrics (per kg fuel):</h3>
+        <div id="summaryTableContainer" class="table-container mb-6 shadow-md"><table id="summaryTable"></table></div>
+        <h3 class="text-lg font-semibold mb-3 text-gray-600">Summary Metrics (per GJ):</h3>
+        <div id="summaryTableContainer2" class="table-container mb-6 shadow-md"><table id="summaryTable2"></table></div>
+        <h3 class="text-lg font-semibold mb-3 text-gray-600">Assumed Prices:</h3>
+        <div id="assumptionTableContainer" class="table-container mb-6 shadow-md"><table id="assumptionTable"></table></div>
+        <h3 class="text-lg font-semibold mb-3 text-gray-600">Summary Metrics (per GJ):</h3>
+        <div id="summaryTableContainer2" class="table-container mb-6 shadow-md"><table id="summaryTable2"></table></div>
 
-            <div id="comparisonSection" class="hidden">
-                <h3 class="text-lg font-semibold mb-3 text-gray-600">Shipment vs. Local Sourcing Comparison:</h3>
-                <div id="comparisonTableContainer" class="table-container mb-6 shadow-md"></div>
-            </div>
+        <div id="comparisonSection" class="hidden">
+            <h3 class="text-lg font-semibold mb-3 text-gray-600">Shipment vs. Local Sourcing Comparison:</h3>
+            <div id="comparisonTableContainer" class="table-container mb-6 shadow-md"></div>
+        </div>
+        <h3 class="text-lg font-semibold mb-3 text-gray-600">Assumed Prices:</h3>
+        <div id="assumptionTableContainer" class="table-container mb-6 shadow-md"><table id="assumptionTable"></table></div>
+        <h3 class="text-lg font-semibold mb-3 text-gray-600">Detailed Process Breakdown:</h3>
+        <div id="detailedTableContainer" class="table-container mb-6 shadow-md"><table id="detailedTable"></table></div>
+        <div class="charts-container" style="margin-top: 2rem;">
+          <h3 class="text-lg font-semibold mb-3 text-gray-600">Cost Breakdown Chart:</h3>
+          <div style="border: 1px solid #e5e7eb; padding: 1rem; border-radius: 8px; margin-bottom: 2rem;">
+            <img id="costChartImg" src="" alt="Cost Breakdown Chart" style="max-width: 100%;"/>
+          </div>
 
-            <h3 class="text-lg font-semibold mb-3 text-gray-600">Assumed Prices:</h3>
-            <div id="assumptionTableContainer" class="table-container mb-6 shadow-md"></div>
-            
-            <h3 class="text-lg font-semibold mb-3 text-gray-600">Detailed Process Breakdown:</h3>
-            <div id="detailedTableContainer" class="table-container mb-6 shadow-md"></div>
-            
-            <div class="charts-container" style="margin-top: 2rem;">
-            <h3 class="text-lg font-semibold mb-3 text-gray-600">Cost Breakdown Chart:</h3>
-            <div style="border: 1px solid #e5e7eb; padding: 1rem; border-radius: 8px; margin-bottom: 2rem;">
-                <img id="costChartImg" src="" alt="Cost Breakdown Chart" style="max-width: 100%;"/>
-            </div>
+          <h3 class="text-lg font-semibold mb-3 text-gray-600">Emissions Breakdown Chart:</h3>
+          <div style="border: 1px solid #e5e7eb; padding: 1rem; border-radius: 8px;">
+            <img id="emissionChartImg" src="" alt="Emissions Breakdown Chart" style="max-width: 100%;"/>
+          </div>
+        </div>
+        <div class="text-center mt-6">
+          <button id="downloadCsvButton" class="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out">Download Results (CSV)</button>
+        </div>
+      </div>
 
-            <h3 class="text-lg font-semibold mb-3 text-gray-600">Emissions Breakdown Chart:</h3>
-            <div style="border: 1px solid #e5e7eb; padding: 1rem; border-radius: 8px;">
-                <img id="emissionChartImg" src="" alt="Emissions Breakdown Chart" style="max-width: 100%;"/>
-            </div>
-            </div>
-            
-            <div class="text-center mt-6">
-            <button id="downloadCsvButton" class="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out">Download Results (CSV)</button>
-            </div>
-        </div>      
       <div id="messageModal" class="modal">
         <div class="modal-content" style="text-align: center;">
           <p id="modalMessageText" style="margin-bottom: 1rem;"></p>
@@ -403,6 +386,7 @@
         fuelOptionsDiv.classList.add('hidden');
         foodOptionsDiv.classList.remove('hidden');
         shipDetailsWrapper.classList.remove('hidden');
+        capacityInputGroup.classList.add('hidden'); 
     
         capacityLabel.textContent = 'Processing & Freezing Facility Capacity (Tons/Day):';
         shipOptions[1].textContent = 'Feeder Vessel (~2,000 Containers)';
@@ -459,7 +443,7 @@
       // Conditionally build the userInputs object
       const commodity = document.getElementById('commodity-type').value;
       const shipArchetype = document.getElementById('shipArchetypeSelect').value;
-      const includeOverheads = document.getElementById('includeOverheads').checked;
+      
       let userInputs = {
         commodity_type: commodity,
         start: document.getElementById('startLocation').value,
@@ -469,7 +453,6 @@
         storage_time_C: parseFloat(document.getElementById('storageTimeC').value),
         LH2_plant_capacity: parseFloat(document.getElementById('lh2PlantCapacity').value), // We can repurpose this input
         ship_archetype: shipArchetype,
-        include_overheads: includeOverheads,
       };
 
       if (commodity === 'fuel') {
@@ -489,11 +472,11 @@
         // Add food-specific keys
         Object.assign(userInputs, {
           food_type: document.getElementById('food_type').value,
-          marine_fuel_choice: document.getElementById('marineFuelChoice').value,
-          shipment_size_containers: parseInt(document.getElementById('shipmentSizeContainers').value)
+          marine_fuel_choice: document.getElementById('marineFuelChoice').value, // Also needed for food
         });
-      }        
+      }
 
+      // Add custom ship details if selected (works for both)
       if (shipArchetype === 'custom') {
         Object.assign(userInputs, {
           total_ship_volume: parseFloat(document.getElementById('totalShipVolume').value),
