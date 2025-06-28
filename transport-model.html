@@ -213,7 +213,7 @@
         </div>
         <div class="input-group">
             <label class="input-inline" style="display: flex; align-items: center; gap: 0.5rem;">
-                <input type="checkbox" id="includeOverheads" name="includeOverheads" style="width: auto;">
+                <input type="checkbox" id="includeOverheads" name="includeOverheads" checked style="width: auto;">
                 <span style="font-weight: normal;">
                     Include All Non-Energy Costs (Infrastructure CAPEX & Voyage Overheads)?
                     <a href="transport-model-documentation.html#overhead-assumptions" target="_blank" style="color: #007BFF; text-decoration: underline;">
@@ -223,7 +223,7 @@
             </label>
         </div>        
         <div class="input-group" id="capacity-input-group">
-          <label id="capacity-label" for="lh2PlantCapacity">LH2 Plant Capacity (Tons/Day):</label>
+          <label id="capacity-label" for="lh2PlantCapacity">LH2 Plant Capacity (TPD):</label>
           <input type="number" id="lh2PlantCapacity" value="24">
         </div>
         <div class="input-group">
@@ -518,7 +518,7 @@
         if (results.status === 'error') throw new Error(results.message);
         logStatus("Calculation complete. Rendering results...");
         
-        const routeBounds = displayMap(results.map_data);
+        const routeBounds = displayMap(results.map_data, results.food_type); 
         displayTables(results.table_data, commodity);
         completeResultsForCsv = results.csv_data; 
         if (results.charts) {
@@ -572,98 +572,138 @@
       }
     }
 
-    function displayMap(mapData) {
-      console.log("displayMap called with data:", mapData);
-      if (map) { // 'map' is your global Leaflet instance
-        map.remove();
-        console.log("Previous map instance removed.");
-      }
-
-      if (!mapData || !mapData.coor_start || typeof mapData.coor_start.lat !== 'number' || typeof mapData.coor_start.lng !== 'number') {
-        console.error("Map data or coor_start is invalid or missing. Cannot render map.", mapData);
-        document.getElementById('map').innerHTML = '<p style="padding:20px; text-align:center;">Map data is unavailable or start coordinates are missing.</p>';
-        return;
-      }
-
-      try {
-        let initialLat = mapData.coor_start.lat;
-        let initialLng = mapData.coor_start.lng;
-        let initialZoom = 6;
-
-        if (mapData.coor_end && typeof mapData.coor_end.lat === 'number' && typeof mapData.coor_end.lng === 'number') {
-          initialLat = (mapData.coor_start.lat + mapData.coor_end.lat) / 2;
-          initialLng = (mapData.coor_start.lng + mapData.coor_end.lng) / 2;
-          initialZoom = 3;
+    function displayMap(mapData, foodType) {
+        console.log("displayMap called with data:", mapData);
+        if (map) { // 'map' is your global Leaflet instance
+            map.remove();
+            console.log("Previous map instance removed.");
         }
-        
-        map = L.map('map').setView([initialLat, initialLng], initialZoom);
-        console.log("Leaflet map instance created and size invalidated.");
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
-        console.log("Tile layer added.");
+        if (!mapData || !mapData.coor_start || typeof mapData.coor_start.lat !== 'number' || typeof mapData.coor_start.lng !== 'number') {
+            console.error("Map data or coor_start is invalid or missing. Cannot render map.", mapData);
+            document.getElementById('map').innerHTML = '<p style="padding:20px; text-align:center;">Map data is unavailable or start coordinates are missing.</p>';
+            return;
+        }
 
-        bounds = L.latLngBounds();
+        try {
+            let initialLat = mapData.coor_start.lat;
+            let initialLng = mapData.coor_start.lng;
+            let initialZoom = 6;
 
-        function addMarkerToMap(coords, name, iconUrl) {
-          if (coords && typeof coords.lat === 'number' && typeof coords.lng === 'number') {
-            let markerOptions = {};
-            if (iconUrl) {
-              markerOptions.icon = L.icon({
-                iconUrl: iconUrl,
-                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
-              });
+            if (mapData.coor_end && typeof mapData.coor_end.lat === 'number' && typeof mapData.coor_end.lng === 'number') {
+                initialLat = (mapData.coor_start.lat + mapData.coor_end.lat) / 2;
+                initialLng = (mapData.coor_start.lng + mapData.coor_end.lng) / 2;
+                initialZoom = 3;
             }
-            L.marker([coords.lat, coords.lng], markerOptions).addTo(map).bindPopup(name);
-            bounds.extend([coords.lat, coords.lng]);
-            // console.log("Marker added for:", name); // Already confirmed this works
-          } else {
-            console.warn("Invalid or missing coordinates for marker:", name, coords);
-          }
-        }
+            
+            map = L.map('map').setView([initialLat, initialLng], initialZoom);
+            console.log("Leaflet map instance created and size invalidated.");
 
-        addMarkerToMap(mapData.coor_start, 'Start Location');
-        addMarkerToMap(mapData.coor_end, 'End Location');
-        addMarkerToMap(mapData.start_port, `Origin Port: ${mapData.start_port ? mapData.start_port.name : 'N/A'}`, 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png');
-        addMarkerToMap(mapData.end_port, `Destination Port: ${mapData.end_port ? mapData.end_port.name : 'N/A'}`, 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png');
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            console.log("Tile layer added.");
 
-        function addPolylineToMap(coordsArray, color) {
-          if (coordsArray && Array.isArray(coordsArray) && coordsArray.length > 0) {
-            const validCoords = coordsArray.filter(p => Array.isArray(p) && p.length === 2 && typeof p[0] === 'number' && typeof p[1] === 'number');
-            if (validCoords.length > 0) {
-              L.polyline(validCoords, { color: color, weight: 3 }).addTo(map);
-              validCoords.forEach(p => bounds.extend(p));
-              // console.log(`Polyline added with color ${color}. Points: ${validCoords.length}`); // Already confirmed
+            bounds = L.latLngBounds();
+
+            function addMarkerToMap(coords, name, iconUrl) {
+                if (coords && typeof coords.lat === 'number' && typeof coords.lng === 'number') {
+                    let markerOptions = {};
+                    if (iconUrl) {
+                        markerOptions.icon = L.icon({
+                            iconUrl: iconUrl,
+                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+                        });
+                    }
+                    L.marker([coords.lat, coords.lng], markerOptions).addTo(map).bindPopup(name);
+                    bounds.extend([coords.lat, coords.lng]);
+                } else {
+                    console.warn("Invalid or missing coordinates for marker:", name, coords);
+                }
+            }
+
+            addMarkerToMap(mapData.coor_start, 'Start Location');
+            addMarkerToMap(mapData.coor_end, 'End Location');
+            addMarkerToMap(mapData.start_port, `Origin Port: ${mapData.start_port ? mapData.start_port.name : 'N/A'}`, 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png');
+            addMarkerToMap(mapData.end_port, `Destination Port: ${mapData.end_port ? mapData.end_port.name : 'N/A'}`, 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png');
+
+            function addPolylineToMap(coordsArray, color, options = {}) {
+                if (coordsArray && Array.isArray(coordsArray) && coordsArray.length > 0) {
+                    const validCoords = coordsArray.filter(p => Array.isArray(p) && p.length === 2 && typeof p[0] === 'number' && typeof p[1] === 'number');
+                    if (validCoords.length > 0) {
+                        L.polyline(validCoords, { color: color, weight: 3, ...options }).addTo(map);
+                        validCoords.forEach(p => bounds.extend(p));
+                    } else {
+                        console.warn(`Polyline with color ${color} had no valid coordinates.`);
+                    }
+                } else {
+                    console.warn(`No data or empty array for polyline with color ${color}.`);
+                }
+            }       
+            
+            // --- START OF MODIFIED SECTION ---
+
+            // Create a map of food types to their corresponding emoji.
+            const foodEmojis = {
+                'strawberry': '🍓',
+                'hass_avocado': '🥑',
+                'banana': '🍌'
+            };
+
+            // Check if the current foodType has an emoji defined in our map.
+            if (foodEmojis[foodType] && mapData.sea_route_coords && Array.isArray(mapData.sea_route_coords)) {
+                
+                // 1. Get the correct emoji for the selected food.
+                const emoji = foodEmojis[foodType];
+
+                // 2. Define the custom icon using the selected emoji.
+                const foodIcon = L.divIcon({
+                    html: emoji,
+                    className: 'emoji-icon',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+
+                // 3. Add markers at intervals along the route to avoid clutter.
+                // This will aim for a maximum of 25 markers along the route.
+                const markerInterval = Math.max(1, Math.floor(mapData.sea_route_coords.length / 25));
+                mapData.sea_route_coords.forEach((point, index) => {
+                    if (index > 0 && index % markerInterval === 0) { // Start from the second point
+                        L.marker(point, { icon: foodIcon }).addTo(map);
+                    }
+                });
+
+                // 4. Draw a lighter, dashed line to still show the path for all emoji routes.
+                addPolylineToMap(mapData.road_route_start_coords, 'blue');
+                addPolylineToMap(mapData.road_route_end_coords, 'blue');
+                addPolylineToMap(mapData.sea_route_coords, 'rgba(0, 128, 0, 0.6)', { dashArray: '8, 8' });
+
             } else {
-              console.warn(`Polyline with color ${color} had no valid coordinates.`);
+                // If the food type is not in our emoji map, draw the normal solid lines.
+                addPolylineToMap(mapData.road_route_start_coords, 'blue');
+                addPolylineToMap(mapData.road_route_end_coords, 'blue');
+                addPolylineToMap(mapData.sea_route_coords, 'green');
             }
-          } else {
-            console.warn(`No data or empty array for polyline with color ${color}.`);
-          }
-        }
-        
-        addPolylineToMap(mapData.road_route_start_coords, 'blue');
-        addPolylineToMap(mapData.road_route_end_coords, 'blue');
-        addPolylineToMap(mapData.sea_route_coords, 'green');
-        
-        if (bounds.isValid()) {
-          console.log("Fitting map to valid bounds. MinLat:", bounds.getSouthWest().lat, "MinLng:", bounds.getSouthWest().lng, "MaxLat:", bounds.getNorthEast().lat, "MaxLng:", bounds.getNorthEast().lng);
-          console.log("Map bounds fitted.");
-        } else if (mapData.coor_start && typeof mapData.coor_start.lat === 'number') {
-          map.setView([mapData.coor_start.lat, mapData.coor_start.lng], 6);
-          console.log("Map view set to start coordinate as bounds were invalid.");
-        } else {
-          console.warn("No valid bounds to fit map.");
-        }
+            
+            // --- END OF MODIFIED SECTION ---
 
-      } catch (e) {
-        console.error("Error occurred within displayMap function:", e);
-        document.getElementById('map').innerHTML = `<p style="padding:20px; text-align:center;">An error occurred while rendering the map.</p>`;
-      }
-      return bounds;
-    }
+            if (bounds.isValid()) {
+                console.log("Fitting map to valid bounds. MinLat:", bounds.getSouthWest().lat, "MinLng:", bounds.getSouthWest().lng, "MaxLat:", bounds.getNorthEast().lat, "MaxLng:", bounds.getNorthEast().lng);
+                console.log("Map bounds fitted.");
+            } else if (mapData.coor_start && typeof mapData.coor_start.lat === 'number') {
+                map.setView([mapData.coor_start.lat, mapData.coor_start.lng], 6);
+                console.log("Map view set to start coordinate as bounds were invalid.");
+            } else {
+                console.warn("No valid bounds to fit map.");
+            }
+
+        } catch (e) {
+            console.error("Error occurred within displayMap function:", e);
+            document.getElementById('map').innerHTML = `<p style="padding:20px; text-align:center;">An error occurred while rendering the map.</p>`;
+        }
+        return bounds;
+    }    
 
     function createTableHtml(headers, dataArray, isDetailed = false) {
       // Start with the table header
