@@ -265,13 +265,13 @@
 
       <h4 id="overhead-assumptions">3.3. Voyage Overhead Cost Parameters</h4>
       <p>
-        To provide a more comprehensive and realistic transport cost, the model includes an option to incorporate major non-fuel overhead costs. These values are industry-average estimates, informed by reports from leading maritime research firms such as <strong>Drewry Maritime Research</strong> and <strong>Clarkson Research</strong>.
+        To provide a more comprehensive and realistic transport cost, the model includes an option to incorporate major non-fuel overhead costs. These values are industry-average estimates, informed by reports from leading maritime research firms.
       </p>
-      <p>The total overhead cost is comprised of four key components:</p>
+      <p>The total voyage overhead is comprised of four key components:</p>
       <ul>
           <li><strong>Daily Operating Costs (OPEX):</strong> A fixed daily cost that includes crew salaries, maintenance, insurance, and supplies.</li>
           <li><strong>Daily Capital Costs (CAPEX):</strong> Represents the amortized cost (depreciation and financing) of the vessel itself.</li>
-          <li><strong>Port Fees:</strong> Fees charged by port authorities. The model calculates this dynamically based on the vessel's Gross Tonnage (GT) and a regional fee estimate (in $/GT) for both the origin and destination ports.</li>
+          <li><strong>Port Fees:</strong> A fixed fee charged by port authorities at both the origin and destination ports.</li>
           <li><strong>Canal Transit Fees:</strong> A significant cost for passing through major waterways. The model dynamically detects Suez or Panama Canal transits and calculates the toll based on the vessel's Gross Tonnage and a representative tariff (in $/GT).</li>
       </ul>
       <div style="overflow-x: auto;">
@@ -282,30 +282,25 @@
               <th>Gross Tonnage (GT)</th>
               <th>Daily OPEX ($)</th>
               <th>Daily CAPEX ($)</th>
+              <th>Port Fee (per port, $)</th>
               <th>Suez Toll (est. $/GT)</th>
               <th>Panama Toll (est. $/GT)</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td>Small (20k m³)</td><td>25,000</td><td>15,000</td><td>10,000</td><td>4.50</td><td>4.00</td></tr>
-            <tr style="background-color: #f2f2f2;"><td>Midsized (90k m³)</td><td>95,000</td><td>20,000</td><td>25,000</td><td>4.50</td><td>4.00</td></tr>
-            <tr><td>Standard (174k m³)</td><td>165,000</td><td>25,000</td><td>45,000</td><td>4.25</td><td>3.75</td></tr>
-            <tr style="background-color: #f2f2f2;"><td>Q-Flex (210k m³)</td><td>190,000</td><td>28,000</td><td>55,000</td><td>4.25</td><td>3.75</td></tr>
-            <tr><td>Q-Max (266k m³)</td><td>215,000</td><td>30,000</td><td>65,000</td><td>4.10</td><td>3.60</td></tr>
+            <tr><td>Small (20k m³)</td><td>25,000</td><td>8,500</td><td>10,000</td><td>30,000</td><td>9.00</td><td>9.00</td></tr>
+            <tr><td>Midsized (90k m³)</td><td>95,000</td><td>15,500</td><td>20,000</td><td>50,000</td><td>8.50</td><td>9.50</td></tr>
+            <tr><td>Standard (174k m³)</td><td>165,000</td><td>22,000</td><td>35,000</td><td>60,000</td><td>8.00</td><td>9.00</td></tr>
+            <tr><td>Q-Flex (210k m³)</td><td>190,000</td><td>20,000</td><td>55,000</td><td>80,000</td><td>7.50</td><td>8.00</td></tr>
+            <tr><td>Q-Max (266k m³)</td><td>215,000</td><td>25,000</td><td>75,000</td><td>90,000</td><td>7.00</td><td>7.50</td></tr>
           </tbody>
         </table>
       </div>
-            <h4>3.4. Infrastructure Capital Cost (CAPEX) Assumptions</h4>
+
+      <h4>3.4. Infrastructure Capital Cost (CAPEX) Assumptions</h4>
       <p>
-        In addition to voyage overheads, the model includes an estimation of the amortized capital cost (CAPEX) for major land-based infrastructure. This captures the significant cost of building facilities like liquefaction plants, freezers, and storage terminals. The methodology involves:
+        When selected, the model includes an estimation of the amortized capital cost (CAPEX) for major land-based infrastructure. This captures the significant cost of building facilities. The methodology involves estimating the total construction cost based on facility type and capacity (using power-law scaling for economies of scale), amortizing this cost over a facility lifetime, and dividing by the annual throughput to arrive at a final **CAPEX cost per kilogram ($/kg)**.
       </p>
-      <ul>
-        <li>Estimating the total "overnight" construction cost of a facility based on its type and capacity, using power-law scaling (`Cost = BaseCost * (Capacity / BaseCapacity) ^ Exponent`) to account for economies of scale.</li>
-        <li>Amortizing this total cost over an assumed facility lifetime (20-25 years) with a fixed cost of capital to derive an annualized CAPEX.</li>
-        <li>Calculating the facility's total annual throughput in kilograms based on its daily capacity and assumed operational days per year (330 days).</li>
-        <li>Dividing the annualized CAPEX by the annual throughput to arrive at a final **CAPEX cost per kilogram ($/kg)**, which is added to the operational cost of that process step.</li>
-      </ul>
-      <p>The cost models are based on figures from techno-economic analyses by institutions like NREL and the IEA, as well as general industry reports on cold chain logistics.</p>
       
       <h5>Fuel Infrastructure CAPEX Models</h5>
       <table class="parameter-table">
@@ -313,15 +308,14 @@
             <tr>
               <th>Facility Type</th>
               <th>Base CAPEX (Millions USD)</th>
-              <th>Base Capacity (Tons/Day)</th>
+              <th>Reference Capacity (Tons/Day)</th>
               <th>Scaling Exponent</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td>LH₂ Liquefaction Plant</td><td>3,000</td><td>1,000</td><td>0.7</td></tr>
-            <tr style="background-color: #f2f2f2;"><td>Ammonia Synthesis Plant</td><td>1,500</td><td>1,000</td><td>0.7</td></tr>
-            <tr><td>Cryogenic Storage (LH₂)</td><td>200</td><td>1,000</td><td>0.7</td></tr>
-            <tr style="background-color: #f2f2f2;"><td>Refrigerated Storage (NH₃)</td><td>100</td><td>1,000</td><td>0.7</td></tr>
+            <tr><td>LH₂ Liquefaction Plant</td><td>160</td><td>27</td><td>0.79</td></tr>
+            <tr style="background-color: #f2f2f2;"><td>NH₃ Synthesis Plant</td><td>350</td><td>1,000</td><td>0.65</td></tr>
+            <tr><td>Cryogenic Storage (LH₂/NH₃)</td><td>200</td><td>1,000</td><td>0.70</td></tr>
           </tbody>
       </table>
 
@@ -331,16 +325,17 @@
           <tr>
             <th>Facility Type</th>
             <th>Base CAPEX (Millions USD)</th>
-            <th>Base Capacity (Tons/Day)</th>
+            <th>Reference Capacity</th>
             <th>Scaling Exponent</th>
           </tr>
         </thead>
         <tbody>
-          <tr><td>Pre-cooling Facility</td><td>5</td><td>500</td><td>0.6</td></tr>
-          <tr style="background-color: #f2f2f2;"><td>Industrial Freezing Plant</td><td>15</td><td>500</td><td>0.65</td></tr>
-          <tr><td>Cold Storage Warehouse</td><td>10</td><td>500</td><td>0.7</td></tr>
+          <tr><td>Pre-cooling Facility</td><td>1.5</td><td>50 Tons/Day</td><td>0.60</td></tr>
+          <tr style="background-color: #f2f2f2;"><td>Industrial Freezing Plant</td><td>3.0</td><td>30 Tons/Day</td><td>0.65</td></tr>
+          <tr><td>Cold Storage Warehouse</td><td>0.82</td><td>5,000,000 kg</td><td>0.70</td></tr>
         </tbody>
       </table>
+
       <h3>4. References</h3>
       <ol>
         <li>Bossel, U., & Eliasson, B. (2006). Does a Hydrogen Economy Make Sense?</li>
