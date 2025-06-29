@@ -1826,49 +1826,7 @@ def run_lca_model(inputs):
             
         capex_per_kg = annualized_capex / annual_throughput_kg
         return capex_per_kg
-    
-    def calculate_fuel_infra_capex(process_name, capacity_tpd, fuel_type):
-        """
-        Estimates the amortized capital cost per kg for fuel infrastructure.
-        Source: Based on techno-economic analyses from NREL, IEA, and hydrogen industry reports.
-        """
-        # Simplified CAPEX models for different fuel types
-        cost_models = {
-            # Cost to build a liquefaction plant in millions USD
-            "liquefaction": {0: 160, 1: 350, 2: 0}, # LH2, NH3, Methanol (0)
-            # Cost to build a large-scale cryogenic storage tank facility in millions USD
-            "storage": {0: 200, 1: 100, 2: 20}
-        }
         
-        base_capex_M_usd = cost_models.get(process_name, {}).get(fuel_type, 0)
-        if base_capex_M_usd == 0:
-            return 0
-        if fuel_type == 0:
-            denominator = 27  
-            exponent = 0.79  # Power law exponent for LH2
-        elif fuel_type == 1:
-            denominator = 1000  
-            exponent = 0.65  # Power law exponent for LH2
-        else:
-            denominator = 1  
-            exponent = 1
-        # Calculate total capital cost using a power law (e.g., 0.7 exponent)
-        total_capex_usd = (base_capex_M_usd * 1000000) * (capacity_tpd / denominator) ** exponent
-        if process_name == "storage":
-            # For storage, we assume a different amortization factor
-            total_capex_usd = base_capex_M_usd * 1000000
-        # Amortize over 25 years with an 8% cost of capital (simplified to an annual factor)
-        annualized_capex = total_capex_usd * 0.09
-        
-        # Calculate annual throughput
-        annual_throughput_kg = capacity_tpd * 1000 * 330
-        
-        if annual_throughput_kg == 0:
-            return 0
-            
-        capex_per_kg = annualized_capex / annual_throughput_kg
-        return capex_per_kg
-    
     # This is the 'base' function that runs the main sequence of calculations
     def total_chem_base(A_optimized_chem_weight, B_fuel_type_tc, C_recirculation_BOG_tc, 
                         D_truck_apply_tc, E_storage_apply_tc, F_maritime_apply_tc):
@@ -2558,7 +2516,7 @@ def run_lca_model(inputs):
                     },
                     'general_params': { # Parameters used across multiple stages of the supply chain.
                         'density_kg_per_m3': 600, # The bulk density of whole strawberries in a container. Source: Food engineering databases.
-                        'target_temp_celsius': -18.0, # Standard international temperature for frozen goods. Source: ISO standards, food logistics guides.
+                        'target_temp_celsius': -24.0, # Standard international temperature for frozen goods. Source: ISO standards, food logistics guides.
                         'spoilage_rate_per_day': 0.0001, # Estimated degradation/loss rate for frozen products, representing handling/quality loss. Source: Shelf-life studies.
                         'reefer_container_power_kw': 3.5, # Average power draw for a reefer container holding frozen goods. Source: Reefer manufacturer specifications (e.g., Carrier, Thermo King).
                         'cargo_per_truck_kg': 20000, # Standard maximum payload for a 40ft refrigerated container. Source: Freight and logistics industry standards.
