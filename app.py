@@ -2278,7 +2278,7 @@ def run_lca_model(inputs):
         cost_models = {
             "precool": {"base_cost_M_usd": 5, "power_law_exp": 0.6, "reference_capacity": 500},
             "freezing": {"base_cost_M_usd": 15, "power_law_exp": 0.65, "reference_capacity": 500},
-            "cold_storage": {"base_cost_M_usd": 1.5, "power_law_exp": 0.7, "reference_capacity": 5000000}  # 5,000 tons = 5M kg
+            "cold_storage": {"base_cost_M_usd": 0.82, "power_law_exp": 0.7, "reference_capacity": 5000000}  # 5,000 tons = 5M kg
         }
         
         model = cost_models.get(process_name)
