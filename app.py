@@ -2122,6 +2122,7 @@ def run_lca_model(inputs):
             results_list.append([label, money, energy, emissions, current_weight, loss])
             
         return results_list
+    
     def openai_get_food_price(food_name, location_name):
         """
         Uses an AI model to find, parse, and convert the retail price of a
@@ -2276,8 +2277,8 @@ def run_lca_model(inputs):
             storage_days: Average storage duration in days
         """
         cost_models = {
-            "precool": {"base_cost_M_usd": 5, "power_law_exp": 0.6, "reference_capacity": 500},
-            "freezing": {"base_cost_M_usd": 15, "power_law_exp": 0.65, "reference_capacity": 500},
+            "precool": {"base_cost_M_usd": 1.5, "power_law_exp": 0.6, "reference_capacity": 50},
+            "freezing": {"base_cost_M_usd": 3, "power_law_exp": 0.65, "reference_capacity": 30},
             "cold_storage": {"base_cost_M_usd": 0.82, "power_law_exp": 0.7, "reference_capacity": 5000000}  # 5,000 tons = 5M kg
         }
         
@@ -2975,7 +2976,7 @@ def run_lca_model(inputs):
             total_overhead_cost = calculate_voyage_overheads(voyage_duration_days, selected_ship_params, canal_transits, port_regions)
 
         # Calculate the BASE COST PER DRY SLOT on the ship
-        total_base_voyage_cost = propulsion_cost + total_overhead_cost
+        total_base_voyage_cost = propulsion_cost
         base_cost_per_slot = total_base_voyage_cost / total_ship_container_capacity if total_ship_container_capacity > 0 else 0
 
         # Calculate the ADDITIONAL cost for the REEFER SERVICE for ONE container
