@@ -2229,14 +2229,12 @@ def run_lca_model(inputs):
                 if (PANAMA_CANAL_BBOX[0] <= lon <= PANAMA_CANAL_BBOX[2] and
                     PANAMA_CANAL_BBOX[1] <= lat <= PANAMA_CANAL_BBOX[3]):
                     transits["panama"] = True
-                    print("DEBUG: Panama Canal transit detected by geographic check.")
                     break  # Exit the loop once a transit is confirmed
 
                 # Check for Suez Canal transit
                 if (SUEZ_CANAL_BBOX[0] <= lon <= SUEZ_CANAL_BBOX[2] and
                     SUEZ_CANAL_BBOX[1] <= lat <= SUEZ_CANAL_BBOX[3]):
                     transits["suez"] = True
-                    print("DEBUG: Suez Canal transit detected by geographic check.")
                     break # Exit the loop once a transit is confirmed
 
             # If we finished the loop and found a transit, we don't need to do the old check.
@@ -2245,7 +2243,6 @@ def run_lca_model(inputs):
                 
             # Fallback to the old method just in case, though less likely to be needed.
             # This part can be removed if you trust the geographic check completely.
-            print("DEBUG: No canal transit found by geographic check. Trying old text method as fallback.")
             route_info_string = json.dumps(route_object.properties).lower()
             if "suez" in route_info_string:
                 transits["suez"] = True
@@ -2258,41 +2255,23 @@ def run_lca_model(inputs):
         return transits                
 
     def calculate_voyage_overheads(voyage_duration_days, ship_params, canal_transits, port_regions):
-        # Header to make the output easy to find in the logs
-        print("\n--- Calculating Voyage Overheads Breakdown ---")
-
         ship_gt = ship_params['gross_tonnage']
         overheads = VOYAGE_OVERHEADS_DATA.get(ship_params.get('key', 'standard'), VOYAGE_OVERHEADS_DATA['standard'])
-
-        # 1. Daily Operating Cost (OPEX)
+       # 1. Daily Operating Cost (OPEX)
         opex_cost = overheads['daily_operating_cost_usd'] * voyage_duration_days
-        print(f"Daily Operating Cost (OPEX): ${opex_cost:,.2f}")
-
         # 2. Daily Capital Cost (CAPEX)
         capex_cost = overheads['daily_capital_cost_usd'] * voyage_duration_days
-        print(f"Daily Capital Cost (CAPEX): ${capex_cost:,.2f}")
-        
         # 3. Port Fees (assumed for 2 ports: origin and destination)
         port_fees_cost = overheads['port_fee_usd'] * 2
-        print(f"Port Fees (2 ports): ${port_fees_cost:,.2f}")
-
         # 4. Canal Transit Fees
         canal_fees_cost = 0
         if canal_transits.get("suez"):
             canal_fees_cost = ship_gt * overheads['suez_toll_per_gt_usd']
-            print(f"Suez Canal Fees: ${canal_fees_cost:,.2f}")
         elif canal_transits.get("panama"):
             canal_fees_cost = ship_gt * overheads['panama_toll_per_gt_usd']
-            print(f"Panama Canal Fees: ${canal_fees_cost:,.2f}")
-        else:
-            # It's good practice to log when no canal fees are applied
-            print("Canal Fees: $0.00 (No major canal transit detected)")
         
         # 5. Total Overhead Calculation
         total_overheads = opex_cost + capex_cost + port_fees_cost + canal_fees_cost
-        print(f"TOTAL VOYAGE OVERHEADS: ${total_overheads:,.2f}")
-        print("--------------------------------------------\n")
-
         return total_overheads
     
     def calculate_single_reefer_service_cost(duration_hrs, food_params):
