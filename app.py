@@ -1729,6 +1729,104 @@ def run_lca_model(inputs):
         """Ensures the optimized weight is not less than the target weight."""
         return A[0] - target_weight # This must be >= 0
     
+    def calculate_liquefaction_capex(capacity_tpd, fuel_type):
+        """
+        Estimates the amortized capital cost per kg for liquefaction of hydrogen, ammonia, or methanol.
+        Source: Based on industry data for hydrogen and ammonia liquefaction costs; methanol assumed zero.
+        Parameters:
+            capacity_tpd: Daily throughput in tons
+            fuel_type: 0 for hydrogen, 1 for ammonia, 2 for methanol
+        Returns:
+            Amortized CAPEX per kg in USD
+        """
+        # Cost models for different fuels
+        cost_models = {
+            0: {  # Hydrogen
+                "small_scale": {"base_capex_M_usd": 138.6, "base_capacity": 27, "power_law_exp": 0.66},  # <100 TPD
+                "large_scale": {"base_capex_M_usd": 762.67, "base_capacity": 800, "power_law_exp": 0.62}  # >100 TPD
+            },
+            1: {  # Ammonia
+                "default": {"base_capex_M_usd": 36.67, "base_capacity": 100, "power_law_exp": 0.7}
+            },
+            2: {  # Methanol
+                "default": {"base_capex_M_usd": 0, "base_capacity": 1, "power_law_exp": 0}  # No liquefaction
+            }
+        }
+        
+        # Select model based on fuel type
+        if fuel_type not in cost_models:
+            return 0
+        
+        if fuel_type == 0:  # Hydrogen
+            model = cost_models[0]["large_scale"] if capacity_tpd > 100 else cost_models[0]["small_scale"]
+        else:  # Ammonia or Methanol
+            model = cost_models[fuel_type]["default"]
+        
+        # Calculate total capital cost using power law
+        total_capex_usd = (model['base_capex_M_usd'] * 1000000) * (capacity_tpd / model['base_capacity']) ** model['power_law_exp']
+        
+        # Amortize over 20 years with 8% cost of capital
+        annualized_capex = total_capex_usd * 0.09
+        
+        # Calculate annual throughput
+        annual_throughput_kg = capacity_tpd * 1000 * 330
+        
+        if annual_throughput_kg == 0:
+            return 0
+            
+        capex_per_kg = annualized_capex / annual_throughput_kg
+        return capex_per_kg
+
+    def calculate_storage_capex(fuel_type, capacity_tpd, A, storage_days):
+        """
+        Estimates the amortized capital cost per kg for large-scale storage of hydrogen, ammonia, or methanol.
+        Source: Based on industry data for cryogenic and chemical storage costs.
+        Parameters:
+            fuel_type: 0 for hydrogen, 1 for ammonia, 2 for methanol
+            capacity_tpd: Daily throughput in tons
+            A: Storage capacity in kg
+            storage_days: Average storage duration in days
+        Returns:
+            Amortized CAPEX per kg in USD
+        """
+        cost_models = {
+            0: {  # Hydrogen
+                "base_capex_M_usd": 35, "base_capacity": 335000, "power_law_exp": 0.7
+            },
+            1: {  # Ammonia
+                "base_capex_M_usd": 15, "base_capacity": 6650000, "power_law_exp": 0.7
+            },
+            2: {  # Methanol
+                "base_capex_M_usd": 0, "base_capacity": 1, "power_law_exp": 0
+            }
+        }
+        
+        if fuel_type not in cost_models:
+            return 0
+        
+        model = cost_models[fuel_type]
+        
+        # Calculate total capital cost using power law
+        total_capex_usd = (model['base_capex_M_usd'] * 1000000) * (A / model['base_capacity']) ** model['power_law_exp']
+        
+        # Amortize over 20 years with 8% cost of capital
+        annualized_capex = total_capex_usd * 0.09
+        
+        # Calculate annual throughput
+        if fuel_type in [0, 1]:  # Hydrogen or Ammonia
+            if storage_days == 0:
+                return 0
+            cycles_per_year = 330 / storage_days
+            annual_throughput_kg = A * cycles_per_year
+        else:  # Methanol
+            annual_throughput_kg = capacity_tpd * 1000 * 330
+        
+        if annual_throughput_kg == 0:
+            return 0
+            
+        capex_per_kg = annualized_capex / annual_throughput_kg
+        return capex_per_kg
+    
     def calculate_fuel_infra_capex(process_name, capacity_tpd, fuel_type):
         """
         Estimates the amortized capital cost per kg for fuel infrastructure.
@@ -2459,7 +2557,7 @@ def run_lca_model(inputs):
                         'needs_controlled_atmosphere': False, # Typically not required for frozen products. Source: CA storage guides.
                     },
                     'general_params': { # Parameters used across multiple stages of the supply chain.
-                        'density_kg_per_m3': 450, # The bulk density of whole strawberries in a container. Source: Food engineering databases.
+                        'density_kg_per_m3': 600, # The bulk density of whole strawberries in a container. Source: Food engineering databases.
                         'target_temp_celsius': -18.0, # Standard international temperature for frozen goods. Source: ISO standards, food logistics guides.
                         'spoilage_rate_per_day': 0.0001, # Estimated degradation/loss rate for frozen products, representing handling/quality loss. Source: Shelf-life studies.
                         'reefer_container_power_kw': 3.5, # Average power draw for a reefer container holding frozen goods. Source: Reefer manufacturer specifications (e.g., Carrier, Thermo King).
@@ -2733,8 +2831,7 @@ def run_lca_model(inputs):
 
             # --- 2. Calculate Prorated Infrastructure CAPEX ---
             # Get the amortized $/kg rates for the facilities
-            liquefaction_capex_per_kg = calculate_fuel_infra_capex("liquefaction", LH2_plant_capacity, fuel_type)
-            storage_capex_per_kg = calculate_fuel_infra_capex("storage", LH2_plant_capacity, fuel_type)
+            liquefaction_capex_per_kg = calculate_liquefaction_capex(LH2_plant_capacity, fuel_type)
 
             # Calculate the CAPEX cost for this specific shipment
             # Liquefaction happens once at the start with the initial weight
@@ -2745,11 +2842,14 @@ def run_lca_model(inputs):
             storage_A_weight = next((row[4] for row in data_raw if row[0] == "chem_storage_at_port_A"), 0)
             storage_B_weight = next((row[4] for row in data_raw if row[0] == "chem_storage_at_port_B"), 0)
             storage_C_weight = next((row[4] for row in data_raw if row[0] == "chem_storage_at_site_B"), 0)
-            
-            total_storage_capex += storage_capex_per_kg * storage_A_weight
-            total_storage_capex += storage_capex_per_kg * storage_B_weight
-            total_storage_capex += storage_capex_per_kg * storage_C_weight
-            
+            storage_capex_A_per_kg = calculate_storage_capex(fuel_type, LH2_plant_capacity, storage_A_weight, storage_time_A)
+            storage_capex_B_per_kg = calculate_storage_capex(fuel_type, LH2_plant_capacity, storage_B_weight, storage_time_B)
+            storage_capex_C_per_kg = calculate_storage_capex(fuel_type, LH2_plant_capacity, storage_C_weight, storage_time_C)
+
+            total_storage_capex += storage_capex_A_per_kg * storage_A_weight
+            total_storage_capex += storage_capex_B_per_kg * storage_B_weight
+            total_storage_capex += storage_capex_C_per_kg * storage_C_weight
+
             # --- 3. Add Costs to Final Totals and Insert Rows for Display ---
             # Add the calculated overhead and CAPEX to the final total cost
             final_results_raw[0] += total_voyage_overheads
