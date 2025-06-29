@@ -2203,28 +2203,59 @@ def run_lca_model(inputs):
         except Exception as e:
             print(f"AI farm region lookup failed: {e}")
             return None
-                
+
     def detect_canal_transit(route_object):
         """
-        Inspects the searoute object's properties to detect major canal transits.
+        Inspects the route's geographic coordinates to detect major canal transits.
+        This is more reliable than checking text-based properties.
         Returns a dictionary with flags for each major canal.
         """
         transits = {
             "suez": False,
             "panama": False
-            # Future canals like Kiel can be added here
         }
+
+        # Define the geographic bounding boxes for the canals.
+        # Format is (min_longitude, min_latitude, max_longitude, max_latitude)
+        PANAMA_CANAL_BBOX = (-80.5, 8.5, -78.5, 9.5)
+        SUEZ_CANAL_BBOX = (32.0, 29.5, 33.0, 31.5)
+
         try:
-            # The route properties often contain a name or metadata string
+            # The coordinates from searoute are in [longitude, latitude] format.
+            route_coords = route_object.geometry['coordinates']
+            
+            for lon, lat in route_coords:
+                # Check for Panama Canal transit
+                if (PANAMA_CANAL_BBOX[0] <= lon <= PANAMA_CANAL_BBOX[2] and
+                    PANAMA_CANAL_BBOX[1] <= lat <= PANAMA_CANAL_BBOX[3]):
+                    transits["panama"] = True
+                    print("DEBUG: Panama Canal transit detected by geographic check.")
+                    break  # Exit the loop once a transit is confirmed
+
+                # Check for Suez Canal transit
+                if (SUEZ_CANAL_BBOX[0] <= lon <= SUEZ_CANAL_BBOX[2] and
+                    SUEZ_CANAL_BBOX[1] <= lat <= SUEZ_CANAL_BBOX[3]):
+                    transits["suez"] = True
+                    print("DEBUG: Suez Canal transit detected by geographic check.")
+                    break # Exit the loop once a transit is confirmed
+
+            # If we finished the loop and found a transit, we don't need to do the old check.
+            if transits["panama"] or transits["suez"]:
+                return transits
+                
+            # Fallback to the old method just in case, though less likely to be needed.
+            # This part can be removed if you trust the geographic check completely.
+            print("DEBUG: No canal transit found by geographic check. Trying old text method as fallback.")
             route_info_string = json.dumps(route_object.properties).lower()
             if "suez" in route_info_string:
                 transits["suez"] = True
             if "panama" in route_info_string:
                 transits["panama"] = True
+                
         except Exception as e:
             print(f"Could not parse route properties for canal detection: {e}")
         
-        return transits
+        return transits                
 
     def calculate_voyage_overheads(voyage_duration_days, ship_params, canal_transits, port_regions):
         # Header to make the output easy to find in the logs
