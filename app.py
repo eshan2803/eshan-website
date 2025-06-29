@@ -3120,6 +3120,9 @@ def run_lca_model(inputs):
                 "emissions_per_kg": local_total_emissions / comparison_weight if comparison_weight > 0 else 0
             }        
 
+            if price_farm is None:
+                price_farm = price_end # Use the national UK price as a fallback
+
             green_premium_data = None
             # Only proceed if we have valid prices for comparison
             if price_farm is not None and price_start is not None and final_commodity_kg > 0 and comparison_weight > 0:
