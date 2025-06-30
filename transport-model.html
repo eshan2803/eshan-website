@@ -117,6 +117,14 @@
       </div>
       <form id="lcaForm">
         <div class="input-group">
+          <label for="commodity-type">1. Select Commodity Category:</label>
+          <select id="commodity-type" name="commodity-type" class="form-control">
+            <option value="fuel" selected>Fuel</option>
+            <option value="food">Food</option>
+          </select>
+        </div>
+
+        <div class="input-group">
           <label for="startLocation">Start Location</label>
           <input type="text" id="startLocation" value="Los Angeles, CA">
         </div>
@@ -125,13 +133,6 @@
           <input type="text" id="endLocation" value="Rotterdam, Netherlands">
         </div>
 
-        <div class="input-group">
-          <label for="commodity-type">1. Select Commodity Category:</label>
-          <select id="commodity-type" name="commodity-type" class="form-control">
-            <option value="fuel" selected>Fuel</option>
-            <option value="food">Food</option>
-          </select>
-        </div>
 
         <div id="fuel-options">
           <div class="input-group">
