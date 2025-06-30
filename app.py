@@ -3270,8 +3270,8 @@ def run_lca_model(inputs):
             ratio_emission = emissions_per_kg / production_co2e
             emission_overlay_text = (
                 f"Context:\n"
-                f"• Logistics Emissions: {emissions_per_kg:.2f} kg CO₂eq/kg\n"
-                f"• Farming Emissions alone for {current_food_params['name']}: {production_co2e:.2f} kg CO₂eq/kg\n"
+                f"• Logistics Emissions: {emissions_per_kg:.2f} kg CO2eq/kg\n"
+                f"• Farming Emissions alone for {current_food_params['name']}: {production_co2e:.2f} kg CO2eq/kg\n"
                 f"• Logistics add {ratio_emission:.1f}X the farming emissions."
             )
         cost_chart_base64 = create_breakdown_chart(data_for_display, cost_per_kg_index, f'Cost Breakdown per kg of Delivered {current_food_params["name"]}', 'Cost ($/kg)', overlay_text=cost_overlay_text)
