@@ -2522,6 +2522,7 @@ def run_lca_model(inputs):
                         'cargo_per_truck_kg': 20000, # Standard maximum payload for a 40ft refrigerated container. Source: Freight and logistics industry standards.
                         'specific_heat_fresh_mj_kgK': 0.0039, # Thermodynamic property based on high water content (~91%). Source: Food science literature, ASHRAE handbooks.
                         'reefer_truck_fuel_consumption_L_hr': 1.5,
+                        'production_CO2e_kg_per_kg': 0.747, # Average CO2 emissions from strawberry production per kg. Source: Reducing food’s environmental impacts through producers and consumers.
                     },
                     'precooling_params': { # Parameters for the initial pre-cooling process.
                         'initial_field_heat_celsius': 28.0, # Represents a typical ambient temperature during a summer harvest season in a region like California. Source: Agricultural and meteorological data.
@@ -2551,6 +2552,7 @@ def run_lca_model(inputs):
                         'cargo_per_truck_kg': 20000, # Standard maximum payload for a 40ft refrigerated container. Source: Freight and logistics industry standards.
                         'specific_heat_fresh_mj_kgK': 0.0035, # Thermodynamic property based on the fruit's composition. Source: Food science literature.
                         'reefer_truck_fuel_consumption_L_hr': 1.5,
+                        'production_CO2e_kg_per_kg': 1.725, # Average CO2 emissions from strawberry production per kg. Source: Carbon Cloud.
                     },
                     'precooling_params': { # Parameters for the initial pre-cooling process.
                         'initial_field_heat_celsius': 25.0, # A typical field heat for avocados from subtropical/tropical climates. Source: Agricultural data.
@@ -2586,6 +2588,7 @@ def run_lca_model(inputs):
                         'cargo_per_truck_kg': 20000, # Standard maximum payload. Source: Freight and logistics industry standards.
                         'specific_heat_fresh_mj_kgK': 0.0033, # Thermodynamic property. Source: Food science literature.
                         'reefer_truck_fuel_consumption_L_hr': 1.5,
+                        'production_CO2e_kg_per_kg': 0.241, # Average CO2 emissions from banana production per kg. Source: Reducing food’s environmental impacts through producers and consumers.
                     },
                     'precooling_params': { # Parameters for the initial pre-cooling process.
                         'initial_field_heat_celsius': 30.0, # Represents a typical field heat in a tropical harvesting environment. Source: Agricultural and meteorological data.
@@ -3253,17 +3256,26 @@ def run_lca_model(inputs):
 
         # --- 5. CREATE CHARTS AND CONTEXT ---
 
+# --- 5. CREATE CHARTS AND CONTEXT ---
         cost_overlay_text = (
             f"Context:\n"
             f"• Retail price in {start_country}: {price_start_text}\n"
             f"• Retail price in {end_country}: {price_end_text}"
         )
-        cost_chart_base64 = create_breakdown_chart(data_for_display, cost_per_kg_index, f'Cost Breakdown per kg of Delivered {current_food_params["name"]}', 'Cost ($/kg)', overlay_text=cost_overlay_text)
-        emission_chart_base64 = create_breakdown_chart(data_for_display, eco2_per_kg_index, f'CO2eq Breakdown per kg of Delivered {current_food_params["name"]}', 'CO2eq (kg/kg)')
+        
+        emission_overlay_text = ""
+        production_co2e = current_food_params.get('general_params', {}).get('production_CO2e_kg_per_kg', 0)
 
-        # Find a nearby farm region using our new AI function
-        # This line is redundant as end_country is already defined above
-        # end_country = get_country_from_coords(coor_end_lat, coor_end_lng) or end
+        if production_co2e > 0:
+            ratio_emission = emissions_per_kg / production_co2e
+            emission_overlay_text = (
+                f"Context:\n"
+                f"• Logistics Emissions: {emissions_per_kg:.2f} kg CO₂eq/kg\n"
+                f"• Farming Emissions alone for {current_food_params['name']}: {production_co2e:.2f} kg CO₂eq/kg\n"
+                f"• Logistics add {ratio_emission:.1f}X the farming emissions."
+            )
+        cost_chart_base64 = create_breakdown_chart(data_for_display, cost_per_kg_index, f'Cost Breakdown per kg of Delivered {current_food_params["name"]}', 'Cost ($/kg)', overlay_text=cost_overlay_text)
+        emission_chart_base64 = create_breakdown_chart(data_for_display, eco2_per_kg_index, f'CO2eq Breakdown per kg of Delivered {current_food_params["name"]}', 'CO2eq (kg/kg)', overlay_text=emission_overlay_text)
             
         response = {
             "status": "success",
