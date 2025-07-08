@@ -1827,15 +1827,14 @@ def run_lca_model(inputs):
         capex_per_kg = annualized_capex / annual_throughput_kg
         return capex_per_kg
         
-    def calculate_loading_unloading_capex(fuel_type, A_shipment_kg):
+    def calculate_loading_unloading_capex(fuel_type): # Removed A_shipment_kg from parameters
             """
             Estimates the amortized capital cost per kg for loading/unloading infrastructure (arms, jetties).
             Prorated based on assumed annual throughput of a typical terminal.
             Parameters:
                 fuel_type: 0 for hydrogen, 1 for ammonia, 2 for methanol
-                A_shipment_kg: The mass of the current shipment in kg.
             Returns:
-                Amortized CAPEX for this shipment in USD.
+                Amortized CAPEX per kg of throughput (USD/kg).
             """
             capex_model = loading_unloading_capex_params.get(fuel_type)
             ref_throughput_tons_per_year = reference_annual_throughput_tons.get(fuel_type)
@@ -1846,17 +1845,11 @@ def run_lca_model(inputs):
             total_facility_capex_usd = capex_model['total_capex_M_usd'] * 1_000_000
             annualized_capex = total_facility_capex_usd * capex_model['annualization_factor']
 
-            # Convert reference annual throughput to kg
             annual_throughput_kg = ref_throughput_tons_per_year * 1000
 
-            # Calculate CAPEX per kg of throughput
             capex_per_kg_throughput = annualized_capex / annual_throughput_kg if annual_throughput_kg > 0 else 0
 
-            # Apply to the current shipment (assumes shipment is a small fraction of annual throughput)
-            # This cost is incurred twice per shipment (loading at origin port, unloading at destination port)
-            cost_for_this_shipment = capex_per_kg_throughput * A_shipment_kg * 2 # Multiply by 2 for both ends
-
-            return cost_for_this_shipment        
+            return capex_per_kg_throughput # Now returns a rate   
         
     # This is the 'base' function that runs the main sequence of calculations
     def total_chem_base(A_optimized_chem_weight, B_fuel_type_tc, C_recirculation_BOG_tc, 
@@ -2863,8 +2856,13 @@ def run_lca_model(inputs):
                 1: 5000000, # 5 Million tons/year Ammonia terminal
                 2: 10000000 # 10 Million tons/year Methanol terminal
             }
+            capex_rate_loading_unloading_per_kg = calculate_loading_unloading_capex(fuel_type)
+            amount_loaded_onto_ship = next((row[4] for row in data_raw if row[0] == "chem_loading_to_ship"), 0)
+            amount_unloaded_from_ship = next((row[4] for row in data_raw if row[0] == "chem_unloading_from_ship"), 0)
+            capex_loading_origin = capex_rate_loading_unloading_per_kg * amount_loaded_onto_ship
+            capex_unloading_destination = capex_rate_loading_unloading_per_kg * amount_unloaded_from_ship
+            total_loading_unloading_capex = capex_loading_origin + capex_unloading_destination
 
-            total_loading_unloading_capex = calculate_loading_unloading_capex(fuel_type, chem_weight)
             # To prorate by distance and number of trucks/trips:
             # We need the number of trucks for each leg, and their daily utilization/throughput.
             # A common way to allocate truck CAPEX is per tonne-km or per trip.
