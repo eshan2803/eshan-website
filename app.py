@@ -627,7 +627,7 @@ def run_lca_model(inputs):
         CO2e_start_arg, GWP_chem_list_arg, calculated_storage_area_arg, ship_tank_metal_thick_arg, 
         ship_tank_insulation_thick_arg, ship_tank_metal_density_arg, ship_tank_insulation_density_arg, 
         ship_tank_metal_specific_heat_arg, ship_tank_insulation_specific_heat_arg, 
-        COP_cooldown_arg, COP_refrig_arg, ship_number_of_tanks_arg) = process_args_tuple
+        COP_cooldown_arg, COP_refrig_arg, ship_number_of_tanks_arg, pipe_metal_specific_heat_arg) = process_args_tuple
 
         # --- Existing Calculations ---
         duration = A / (V_flowrate_arg[B_fuel_type]) / number_of_cryo_pump_load_ship_port_A_arg
@@ -648,7 +648,6 @@ def run_lca_model(inputs):
         if pipe_refrig_cop > 0:
             ener_consumed_pipe_refrig = (q_pipe / (pipe_refrig_cop * (EIM_refrig_eff_arg / 100))) / 1000000 * duration * 3600
 
-        # --- NEW COOLDOWN CALCULATION ---
         ener_consumed_cooldown = 0
         if B_fuel_type in [0, 1]: # Cooldown only needed for cryogenic fuels
             mass_metal = calculated_storage_area_arg * ship_tank_metal_thick_arg * ship_tank_metal_density_arg * ship_number_of_tanks_arg
@@ -663,9 +662,31 @@ def run_lca_model(inputs):
             cooldown_cop = COP_cooldown_arg[B_fuel_type]
             if cooldown_cop > 0:
                 ener_consumed_cooldown = Q_cooling / cooldown_cop
+                
+        ener_consumed_cooldown_pipes = 0
+        if B_fuel_type in [0, 1]: # Cooldown only for cryogenic fuels (LH2, NH3)
+            # Calculate volume of pipe metal: (Outer Area - Inner Area) * Length
+            pipe_outer_D = pipe_inner_D_arg + 2 * pipe_thick_arg
+            pipe_metal_volume = (np.pi * (pipe_outer_D/2)**2 - np.pi * (pipe_inner_D_arg/2)**2) * pipe_length_arg
+            
+            # Assuming pipe_metal_density is similar to ship_tank_metal_density for stainless steel
+            pipe_metal_density = ship_tank_metal_density # Using existing parameter for consistency
+            
+            mass_metal_pipes = pipe_metal_volume * pipe_metal_density
+            
+            # Delta T from ambient to boiling point of the chemical
+            delta_T_pipes = (start_local_temperature_arg + 273.15) - boiling_point_chem_arg[B_fuel_type]
+
+            Q_cooling_pipes = mass_metal_pipes * pipe_metal_specific_heat_arg * delta_T_pipes
+
+            # Use the same cooldown COP as for tanks for simplicity
+            cooldown_cop_pipes = COP_cooldown_arg[B_fuel_type]
+            if cooldown_cop_pipes > 0:
+                ener_consumed_cooldown_pipes = Q_cooling_pipes / cooldown_cop_pipes
+                
         
         # --- Final Totals for this step ---
-        ener_consumed = ener_consumed_pumping + ener_consumed_pipe_refrig + ener_consumed_cooldown
+        ener_consumed = ener_consumed_pumping + ener_consumed_pipe_refrig + ener_consumed_cooldown + ener_consumed_cooldown_pipes
         A_after_loss = A - BOG_loss
         
         money = ener_consumed * start_electricity_price_tuple_arg[2]
@@ -1611,7 +1632,7 @@ def run_lca_model(inputs):
         dBOR_dT_opt, BOR_loading_opt, BOR_unloading_opt, # Added BOR_unloading
         head_pump_opt, pump_power_factor_opt, EIM_cryo_pump_opt,
         ss_therm_cond_opt, pipe_length_opt, pipe_inner_D_opt, pipe_thick_opt,
-        COP_refrig_opt, EIM_refrig_eff_opt,
+        COP_refrig_opt, EIM_refrig_eff_opt, pipe_metal_specific_heat_opt, COP_cooldown_opt,
         road_delivery_ener_opt, HHV_chem_opt, distance_A_to_port_opt,
         chem_in_truck_weight_opt, truck_economy_opt, truck_tank_radius_opt, truck_tank_length_opt,
         truck_tank_metal_thickness_opt, metal_thermal_conduct_opt,
@@ -1623,7 +1644,7 @@ def run_lca_model(inputs):
         fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem_opt,
         storage_time_A_opt, liquid_chem_density_opt, storage_volume_opt,
         storage_radius_opt, BOR_land_storage_opt, tank_metal_thickness_opt,
-        tank_insulator_thickness_opt, BOG_recirculation_storage_opt # BOG_recirculation_storage_percentage
+        tank_insulator_thickness_opt, BOG_recirculation_storage_opt
         ) = all_shared_params_tuple
 
         X = A_initial_guess[0]  # Current chemical weight being optimized
@@ -1705,7 +1726,7 @@ def run_lca_model(inputs):
                     CO2e_start_opt, GWP_chem_opt, storage_area, ship_tank_metal_thickness, 
                     ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density, 
                     ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat, 
-                    COP_cooldown, COP_refrig, ship_number_of_tanks
+                    COP_cooldown, COP_refrig, ship_number_of_tanks, pipe_metal_specific_heat_opt
                 )
             # Call the current process function with its tailored arguments
             # user_define_params[0] is the initial placeholder for chem_weight (or target_weight later)
@@ -1887,7 +1908,7 @@ def run_lca_model(inputs):
             elif func_to_call.__name__ == "chem_storage_at_port_A":
                 process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, start_local_temperature, BOR_land_storage, storage_time_A, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
             elif func_to_call.__name__ == "chem_loading_to_ship":
-                process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_ship_port_A, dBOR_dT, start_local_temperature, BOR_loading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, boiling_point_chem, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, storage_area, ship_tank_metal_thickness, ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density, ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat, COP_cooldown, COP_refrig, ship_number_of_tanks)
+                process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_ship_port_A, dBOR_dT, start_local_temperature, BOR_loading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, boiling_point_chem, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, storage_area, ship_tank_metal_thickness, ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density, ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat, COP_cooldown, COP_refrig, ship_number_of_tanks, pipe_metal_specific_heat_opt)
             elif func_to_call.__name__ == "port_to_port":
                 process_args_for_this_call_tc = (
                     start_local_temperature, end_local_temperature, OHTC_ship,
@@ -2709,7 +2730,7 @@ def run_lca_model(inputs):
         ship_tank_insulation_specific_heat = 1.5 / 1000 # MJ/kg-K
         ship_tank_metal_density = 7900  # kg/m^3
         ship_tank_insulation_density = 100 # kg/m^3
-        
+        pipe_metal_specific_heat = 0.5 / 1000  # MJ/kg-K (for stainless steel)
         # Sourced from the study's text and Table 6 
         ship_tank_metal_thickness = 0.05 # m
         # Using onshore storage insulation thickness as a proxy from the study 
@@ -2750,7 +2771,8 @@ def run_lca_model(inputs):
             dBOR_dT, BOR_loading, BOR_unloading,     # BOR types
             head_pump, pump_power_factor, EIM_cryo_pump,
             ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick,
-            COP_refrig, EIM_refrig_eff,
+            COP_refrig, EIM_refrig_eff, pipe_metal_specific_heat,
+            COP_cooldown,
 
             # Parameters for site_A_to_port_A (truck transport)
             road_delivery_ener, HHV_chem, distance_A_to_port,
