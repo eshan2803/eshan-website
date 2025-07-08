@@ -3057,8 +3057,17 @@ def run_lca_model(inputs):
         # This filter will now work correctly because the placeholder is in the map.
         detailed_data_formatted = [row for row in relabeled_data if row[0] != label_map.get("site_A_chem_production")]
 
+        emission_chart_exclusions = [
+            "Voyage Overheads",
+            "Liquefaction Facility CAPEX",
+            "Trucking System CAPEX (Total)",
+            "Loading/Unloading Infrastructure CAPEX",
+            "Storage Facilities CAPEX (Total)",
+            "TOTAL" # Still exclude the total row for the chart
+        ]
+        
         # Filter for the charts (removes the placeholder AND the TOTAL row)
-        data_for_display = [row for row in detailed_data_formatted if row[0] != "TOTAL"]
+        data_for_display = [row for row in detailed_data_formatted if row[0] not in emission_chart_exclusions]
 
         # --- PREPARE CONTEXTUAL OVERLAY TEXT FOR CHARTS ---
         cost_overlay_text = ""
