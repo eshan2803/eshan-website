@@ -91,7 +91,7 @@
       <h1 style="font-size: 3rem; font-weight: 600; margin: 0;">Dr. Eshan Singh</h1>
     </div>
     <div class="header-animation">
-      <lottie-player 
+      <lottie-player
         src="assets/wind-turbine.json"
         background="transparent"
         speed="1"
@@ -224,7 +224,7 @@
                     </a>
                 </span>
             </label>
-        </div>        
+        </div>
         <div class="input-group" id="capacity-input-group">
           <label id="capacity-label" for="lh2PlantCapacity">LH2 Plant Capacity (TPD):</label>
           <input type="number" id="lh2PlantCapacity" value="24">
@@ -241,7 +241,7 @@
           <label for="storageTimeC">Storage Time at the Destination (days)</label>
           <input type="number" id="storageTimeC" value="3">
         </div>
-        
+
         <div id="ship-details-wrapper">
           <div class="input-group">
             <label for="shipArchetypeSelect">Select Ship Archetype</label>
@@ -280,7 +280,7 @@
             </div>
           </div>
         </div>
-                
+
         <div class="input-group">
           <button type="submit" class="button">Calculate</button>
         </div>
@@ -292,12 +292,12 @@
       <div id="statusMessages" class="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700 min-h-[50px]">Waiting for input...</div>
         <div id="outputs" class="hidden">
             <h2 class="text-xl font-semibold mb-4 text-gray-700">Results</h2>
-            
+
             <div id="map" class="mb-6 shadow-md" style="height: 400px;"></div>
-            
+
             <h3 class="text-lg font-semibold mb-3 text-gray-600">Summary Metrics (per kg fuel/food):</h3>
             <div id="summaryTableContainer" class="table-container mb-6 shadow-md"></div>
-            
+
             <h3 class="text-lg font-semibold mb-3 text-gray-600">Summary Metrics (per GJ):</h3>
             <div id="summaryTableContainer2" class="table-container mb-6 shadow-md"></div>
 
@@ -327,12 +327,13 @@
                 <img id="emissionChartImg" src="" alt="Emissions Breakdown Chart" style="max-width: 100%;"/>
             </div>
             </div>
-            
+
             <div class="text-center mt-6">
-            <button id="downloadCsvButton" class="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out">Download Results (CSV)</button>
+                <button id="downloadCsvButton" class="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out">Download Results (CSV)</button>
+                <button id="shareLinkedInButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out ml-4">Share on LinkedIn</button>
             </div>
 
-        </div>      
+        </div>
       <div id="messageModal" class="modal">
         <div class="modal-content" style="text-align: center;">
           <p id="modalMessageText" style="margin-bottom: 1rem;"></p>
@@ -369,7 +370,7 @@
 
     // --- UI Element References ---
     const commoditySelector = document.getElementById('commodity-type');
-    const capacityInputGroup = document.getElementById('capacity-input-group'); 
+    const capacityInputGroup = document.getElementById('capacity-input-group');
     const fuelOptionsDiv = document.getElementById('fuel-options');
     const foodOptionsDiv = document.getElementById('food-options');
     const capacityLabel = document.getElementById('capacity-label');
@@ -378,40 +379,40 @@
     const shipDetailsWrapper = document.getElementById('ship-details-wrapper');
     const customShipDetailsPanel = document.getElementById('customShipDetails');
     const shipArchetypeSelect = document.getElementById('shipArchetypeSelect');
-    
+
     // --- Main Function to Control UI Visibility ---
     function updateFormVisibility() {
       const selectedCommodity = commoditySelector.value;
-    
+
       // Get all the option elements from the ship archetype dropdown
       const shipOptions = shipArchetypeSelect.options;
-    
+
       if (selectedCommodity === 'fuel') {
         // --- SHOW FUEL SECTIONS ---
         fuelOptionsDiv.classList.remove('hidden');
         foodOptionsDiv.classList.add('hidden');
         shipDetailsWrapper.classList.remove('hidden');
-        capacityInputGroup.classList.remove('hidden'); 
-    
+        capacityInputGroup.classList.remove('hidden');
+
         capacityLabel.textContent = 'LH2 Plant Capacity (TPD):';
         shipOptions[1].textContent = 'Small-Scale Carrier (20,000 m³)';
         shipOptions[2].textContent = 'Midsized Carrier (90,000 m³)';
         shipOptions[3].textContent = 'Standard Modern Carrier (174,000 m³)';
         shipOptions[4].textContent = 'Q-Flex Carrier (210,000 m³)';
-        shipOptions[5].textContent = 'Q-Max Carrier (266,000 m³)';        
+        shipOptions[5].textContent = 'Q-Max Carrier (266,000 m³)';
         // Handle BOG panel visibility
         if (bogRecirculationRadio.checked) {
           bogRecirculationDetailsPanel.classList.remove('hidden');
         } else {
           bogRecirculationDetailsPanel.classList.add('hidden');
         }
-    
+
       } else if (selectedCommodity === 'food') {
         // --- SHOW FOOD SECTIONS ---
         fuelOptionsDiv.classList.add('hidden');
         foodOptionsDiv.classList.remove('hidden');
         shipDetailsWrapper.classList.remove('hidden');
-    
+
         capacityLabel.textContent = 'Processing & Freezing Facility Capacity (Tons/Day):';
         shipOptions[1].textContent = 'Feeder Vessel (~2,000 Containers)';
         shipOptions[2].textContent = 'Midsized Vessel (~6,000 Containers)';
@@ -419,7 +420,7 @@
         shipOptions[4].textContent = 'New-Panamax Vessel (~14,000 Containers)';
         shipOptions[5].textContent = 'Ultra-Large Vessel (20,000+ Containers)';
       }
-    
+
       // Handle custom ship panel visibility (this works for both fuel and food)
       if (shipArchetypeSelect.value === 'custom') {
         customShipDetailsPanel.classList.remove('hidden');
@@ -437,11 +438,58 @@
       shipArchetypeSelect.addEventListener('change', updateFormVisibility);
       // Set the initial state of the form when the page loads
       updateFormVisibility();
+
+      // Attach event listeners for buttons AFTER they are in the DOM and unique
+      document.getElementById('downloadCsvButton').addEventListener('click', downloadCSV);
+      document.getElementById('shareLinkedInButton').addEventListener('click', shareOnLinkedIn);
+      document.getElementById('lcaForm').addEventListener('submit', handleCalculation);
     });
 
     document.getElementById('lcaForm').addEventListener('submit', handleCalculation);
-    document.getElementById('downloadCsvButton').addEventListener('click', downloadCSV);
-    
+
+    // This function needs to be defined globally or within a scope accessible by the event listener
+    function downloadCSV() {
+        if (completeResultsForCsv.length === 0) {
+            showModal("No data to download. Please run a calculation first.");
+            return;
+        }
+
+        let csvContent = "";
+        completeResultsForCsv.forEach(row => {
+            csvContent += row.map(item => {
+                // Ensure commas within data are handled by enclosing in quotes
+                if (typeof item === 'string' && item.includes(',')) {
+                    return `"${item}"`;
+                }
+                return item;
+            }).join(",") + "\n";
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        if (link.download !== undefined) { // Feature detection for HTML5 download attribute
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'lca_results.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else {
+            // Fallback for older browsers
+            window.open('data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent));
+        }
+    }
+
+
+    function shareOnLinkedIn() {
+        const pageUrl = window.location.href; // Get the current page URL
+        const shareText = encodeURIComponent("Check out my commodity transport LCA results! Generated using Eshan Singh's awesome tool: " + pageUrl);
+        const linkedInShareUrl = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(pageUrl)}&title=${encodeURIComponent("Commodity Transport LCA Results")}&summary=${shareText}&source=${encodeURIComponent("Eshan Singh's Transport Model")}`;
+        window.open(linkedInShareUrl, '_blank', 'width=600,height=400');
+        showModal("Your results page link has been prepared for sharing on LinkedIn. Please add a screenshot of your results manually!");
+    }
+
     async function handleCalculation(e) {
       e.preventDefault();
       const calculateButton = this.querySelector('button[type="submit"]');
@@ -500,7 +548,7 @@
           marine_fuel_choice: document.getElementById('marineFuelChoice').value,
           shipment_size_containers: parseInt(document.getElementById('shipmentSizeContainers').value)
         });
-      }        
+      }
 
       if (shipArchetype === 'custom') {
         Object.assign(userInputs, {
@@ -521,10 +569,10 @@
         const results = await response.json();
         if (results.status === 'error') throw new Error(results.message);
         logStatus("Calculation complete. Rendering results...");
-        
-        const routeBounds = displayMap(results.map_data, results.food_type); 
+
+        const routeBounds = displayMap(results.map_data, results.food_type);
         displayTables(results.table_data, commodity);
-        completeResultsForCsv = results.csv_data; 
+        completeResultsForCsv = results.csv_data;
         if (results.charts) {
           document.getElementById('costChartImg').src = "data:image/png;base64," + results.charts.cost_chart_base64;
           document.getElementById('emissionChartImg').src = "data:image/png;base64," + results.charts.emission_chart_base64;
@@ -535,13 +583,13 @@
             const localData = results.local_sourcing_comparison;
             const shipmentCostPerKg = results.table_data.summary1_data[0][1]; // Get shipment cost from existing summary
             const shipmentEmissionsPerKg = results.table_data.summary1_data[2][1]; // Get shipment emissions
-    
+
             const comparisonHeaders = ['', 'International Shipment', `Local Sourcing (from ${localData.source_name})`];
             const comparisonData = [
                 ['Transport Cost ($/kg)', parseFloat(shipmentCostPerKg).toFixed(2), localData.cost_per_kg.toFixed(2)],
                 ['Transport Emissions (kg CO2e/kg)', parseFloat(shipmentEmissionsPerKg).toFixed(2), localData.emissions_per_kg.toFixed(2)]
             ];
-    
+
             comparisonContainer.innerHTML = createTableHtml(comparisonHeaders, comparisonData);
             comparisonSection.classList.remove('hidden');
         } else {
@@ -558,7 +606,7 @@
             greenPremiumSection.classList.remove('hidden');
         } else {
             greenPremiumSection.classList.add('hidden');
-        }        
+        }
 
         outputsDiv.classList.remove('hidden');
         setTimeout(() => {
@@ -567,7 +615,7 @@
             map.fitBounds(routeBounds.pad(0.1));
           }
         }, 1);
-      } catch (error) {
+      } catches (error) {
         logStatus(`Error: ${error.message}`);
         showModal(`An error occurred: ${error.message}.`);
       } finally {
@@ -599,7 +647,7 @@
                 initialLng = (mapData.coor_start.lng + mapData.coor_end.lng) / 2;
                 initialZoom = 3;
             }
-            
+
             map = L.map('map').setView([initialLat, initialLng], initialZoom);
             console.log("Leaflet map instance created and size invalidated.");
 
@@ -644,8 +692,8 @@
                 } else {
                     console.warn(`No data or empty array for polyline with color ${color}.`);
                 }
-            }       
-            
+            }
+
             // --- START OF MODIFIED SECTION ---
 
             // Create a map of food types to their corresponding emoji.
@@ -657,7 +705,7 @@
 
             // Check if the current foodType has an emoji defined in our map.
             if (foodEmojis[foodType] && mapData.sea_route_coords && Array.isArray(mapData.sea_route_coords)) {
-                
+
                 // 1. Get the correct emoji for the selected food.
                 const emoji = foodEmojis[foodType];
 
@@ -689,7 +737,7 @@
                 addPolylineToMap(mapData.road_route_end_coords, 'blue');
                 addPolylineToMap(mapData.sea_route_coords, 'green');
             }
-            
+
             // --- END OF MODIFIED SECTION ---
 
             if (bounds.isValid()) {
@@ -707,29 +755,29 @@
             document.getElementById('map').innerHTML = `<p style="padding:20px; text-align:center;">An error occurred while rendering the map.</p>`;
         }
         return bounds;
-    }    
+    }
 
     function createTableHtml(headers, dataArray, isDetailed = false) {
       // Start with the table header
       let html = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead>';
-      
+
       // Start the table body
       html += '<tbody>';
-      
+
       // Loop through each ROW in the data array
       dataArray.forEach(row => {
         html += '<tr>'; // Start a new table row for each data row
-        
+
         // Loop through each CELL in the current row
         row.forEach((cell, index) => {
           let cellContent = cell;
-          
+
           // Apply special number formatting only for the detailed table
           if (isDetailed) {
             if (index === 0) { // First column (Process Step) is always text
               cellContent = cell;
             } else if (index >= 6) { // "Per unit" columns get 4 decimal places
-              cellContent = isNaN(Number(cell)) ? cell : Number(cell).toFixed(4); 
+              cellContent = isNaN(Number(cell)) ? cell : Number(cell).toFixed(4);
             } else { // Raw data columns (Cost, Energy, etc.) get scientific notation
               cellContent = isNaN(Number(cell)) ? cell : Number(cell).toExponential(2);
             }
@@ -737,19 +785,19 @@
           // Add the individual table cell
           html += `<td>${cellContent}</td>`;
         });
-        
+
         html += '</tr>'; // End the table row
       });
-      
+
       html += '</tbody>'; // End the table body
       return '<table>' + html + '</table>'; // Wrap everything in a <table> tag
     }
-    
+
     function displayTables(tableData, commodity) {
         // --- 1. DETAILED TABLE LOGIC ---
         let detailedHeaders = tableData.detailed_headers || [];
         let detailedData = tableData.detailed_data || [];
-    
+
         if (commodity === 'food') {
             // If the commodity is food, filter out the GJ columns
             const columnsToRemove = [7, 9]; // Indices for 'Cost/GJ' and 'eCO2/GJ'
@@ -758,18 +806,18 @@
         }
         // Render the detailed table with the (potentially filtered) data
         document.getElementById('detailedTableContainer').innerHTML = createTableHtml(detailedHeaders, detailedData, true);
-    
-    
+
+
         // --- 2. SUMMARY TABLE 1 LOGIC (No changes here) ---
         const summary1Headers = tableData.summary1_headers || [];
         const summary1Data = tableData.summary1_data || [];
         document.getElementById('summaryTableContainer').innerHTML = createTableHtml(summary1Headers, summary1Data);
-    
-    
+
+
         // --- 3. SUMMARY TABLE 2 (PER GJ) LOGIC ---
         const summary2Container = document.getElementById('summaryTableContainer2');
         const summary2Title = summary2Container.previousElementSibling; // The H3 title
-    
+
         if (commodity === 'fuel' && tableData.summary2_data && tableData.summary2_data.length > 0) {
             // ONLY show this table if the commodity is 'fuel'
             summary2Container.innerHTML = createTableHtml(tableData.summary2_headers, tableData.summary2_data);
@@ -781,7 +829,7 @@
             summary2Container.classList.add('hidden');
             summary2Title.classList.add('hidden');
         }
-    
+
         // --- 4. ASSUMPTION TABLE LOGIC (No changes here) ---
         const assumptionHeaders = tableData.assumed_prices_headers || [];
         const assumptionData = tableData.assumed_prices_data || [];
@@ -790,7 +838,7 @@
             assumptionContainer.innerHTML = createTableHtml(assumptionHeaders, assumptionData);
         }
     }
-    
+
 
   </script>
 
