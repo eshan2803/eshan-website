@@ -489,8 +489,10 @@
     }
 
     async function handleCalculation(e) {
-      e.preventDefault();
-      const calculateButton = this.querySelector('button[type="submit"]');
+      e.preventDefault(); // This is crucial to stop the default form submission behavior
+
+      const lcaForm = document.getElementById('lcaForm'); // Get the form element explicitly
+      const calculateButton = lcaForm.querySelector('button[type="submit"]'); // Get the button from the form
       const statusMessagesDiv = document.getElementById('statusMessages');
       const outputsDiv = document.getElementById('outputs');
 
@@ -613,7 +615,7 @@
             map.fitBounds(routeBounds.pad(0.1));
           }
         }, 1);
-      } catches (error) {
+      } catch (error) {
         logStatus(`Error: ${error.message}`);
         showModal(`An error occurred: ${error.message}.`);
       } finally {
