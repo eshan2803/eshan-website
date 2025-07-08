@@ -2780,7 +2780,7 @@ def run_lca_model(inputs):
         
         final_results_raw, data_raw = total_chem_base(chem_weight, user_define[1], user_define[2], 
                                                     user_define[3], user_define[4], user_define[5])
-        
+
         # --- Correctly Handle Overheads and Infrastructure CAPEX ---
         if include_overheads:
             # --- 1. Calculate Voyage Overheads (Non-Fuel Ship Costs) ---
@@ -2790,7 +2790,7 @@ def run_lca_model(inputs):
             voyage_duration_days = port_to_port_duration / 24.0
             total_voyage_overheads = calculate_voyage_overheads(voyage_duration_days, selected_ship_params, canal_transits, port_regions)
 
-            # --- 2. Calculate Prorated Infrastructure CAPEX ---
+            # --- 2. Calculate Prorated Infrastructure CAPEX (Liquefaction & Storage) ---
             # Get the amortized $/kg rates for the facilities
             liquefaction_capex_per_kg = calculate_liquefaction_capex(LH2_plant_capacity, fuel_type)
 
@@ -2811,17 +2811,65 @@ def run_lca_model(inputs):
             total_storage_capex += storage_capex_B_per_kg * storage_B_weight
             total_storage_capex += storage_capex_C_per_kg * storage_C_weight
 
-            # --- 3. Add Costs to Final Totals and Insert Rows for Display ---
-            # Add the calculated overhead and CAPEX to the final total cost
+            # --- NEW: Calculate Trucking System CAPEX ---
+            truck_capex_params = {
+                0: {'cost_usd_per_truck': 1500000, 'useful_life_years': 10, 'annualization_factor': 0.15}, # LH2 specialized cryogenic
+                1: {'cost_usd_per_truck': 800000,  'useful_life_years': 10, 'annualization_factor': 0.15}, # Ammonia specialized pressurized/cryogenic
+                2: {'cost_usd_per_truck': 200000,  'useful_life_years': 10, 'annualization_factor': 0.15}  # Methanol standard chemical tanker
+            }
+
+            truck_model = truck_capex_params.get(fuel_type, truck_capex_params[0]) # Default to LH2 if not found
+            annual_truck_cost_usd = truck_model['cost_usd_per_truck'] * truck_model['annualization_factor']
+
+            # To prorate by distance and number of trucks/trips:
+            # We need the number of trucks for each leg, and their daily utilization/throughput.
+            # A common way to allocate truck CAPEX is per tonne-km or per trip.
+            # For simplicity in an LCA, we can estimate based on number of trucks * number of trips annually
+            # or based on the total mass moved and distance.
+
+            # We'll use the 'number_of_trucks' values from the respective transport steps.
+            # Assuming these trucks are utilized for 330 days/year, handling capacity_tpd
+            # This is an estimate, a detailed fleet model would be more precise.
+
+            # Get truck data for site_A_to_port_A
+            # We need to re-calculate number_of_trucks specific to the initial_weight in the context of chem_in_truck_weight
+            # and then amortize the truck for that specific delivery.
+            # Instead of daily amortization, let's consider the cost per *trip* based on capacity.
+
+            # Re-calculate number of trucks for initial leg A->Port A based on initial chem_weight
+            num_trucks_A_to_PortA = math.ceil(chem_weight / chem_in_truck_weight[fuel_type])
+            # Re-calculate number of trucks for final leg Port B->B based on final delivered weight (final_results_raw[3])
+            final_delivered_weight = final_results_raw[3] # This is the final remaining chemical
+            num_trucks_PortB_to_B = math.ceil(final_delivered_weight / chem_in_truck_weight[fuel_type])
+
+            # Calculate the amortized cost per truck trip. Assume trucks average 100,000 km/year, useful life 10 years.
+            # A more direct way: Annual cost of truck / (Annual km / avg_trip_km) / truck_capacity
+            # Simpler: Amortized cost per truck trip = Annual truck cost / (Annual operating days * Trips per day)
+            # Let's assume a truck can make 1 round trip per day for this distance.
+            # Annual trips per truck = 330 days * 1 trip/day = 330 trips
+            annual_trips_per_truck = 330
+
+            capex_per_truck_trip_usd = annual_truck_cost_usd / annual_trips_per_truck if annual_trips_per_truck > 0 else 0
+
+            # Total trucking CAPEX for this single shipment
+            # Assuming each truck contributes its amortized cost per trip it makes for THIS specific shipment
+            total_trucking_capex = 0
+            if num_trucks_A_to_PortA > 0:
+                total_trucking_capex += capex_per_truck_trip_usd * num_trucks_A_to_PortA
+            if num_trucks_PortB_to_B > 0:
+                total_trucking_capex += capex_per_truck_trip_usd * num_trucks_PortB_to_B
+
+            # --- 3. Add All Calculated CAPEX and Overheads to Final Totals and Insert Rows for Display ---
             final_results_raw[0] += total_voyage_overheads
             final_results_raw[0] += total_liquefaction_capex
             final_results_raw[0] += total_storage_capex
+            final_results_raw[0] += total_trucking_capex # Add trucking CAPEX here
 
             # Create and insert display rows into the detailed data list
             # Insert Voyage Overheads row after marine transport
             marine_transport_index = next((i for i, row in enumerate(data_raw) if row[0] == "port_to_port"), -1)
             if marine_transport_index != -1:
-                overhead_row = ["voyage_overheads", total_voyage_overheads, 0, 0, data_raw[marine_transport_index][4], 0]
+                overhead_row = ["Voyage Overheads", total_voyage_overheads, 0, 0, data_raw[marine_transport_index][4], 0]
                 data_raw.insert(marine_transport_index + 1, overhead_row)
 
             # Insert Liquefaction CAPEX row after liquefaction OPEX
@@ -2831,10 +2879,19 @@ def run_lca_model(inputs):
                 data_raw.insert(liquefaction_index + 1, liquefaction_capex_row)
             
             # Insert Storage CAPEX row (we'll add one consolidated row for simplicity)
+            # Find the index of the last storage step to insert after it
             last_storage_index = next((i for i, row in reversed(list(enumerate(data_raw))) if "chem_storage_at" in row[0]), -1)
             if last_storage_index != -1:
                 storage_capex_row = ["Storage Facilities CAPEX (Total)", total_storage_capex, 0, 0, data_raw[last_storage_index][4], 0]
-                data_raw.insert(last_storage_index + 1, storage_capex_row)        
+                data_raw.insert(last_storage_index + 1, storage_capex_row)
+            
+            # NEW: Insert Trucking CAPEX row
+            # Best place to insert is after the first road transport or consolidated.
+            # Let's insert it after the first road transport for chronological order.
+            road_transport_A_index = next((i for i, row in enumerate(data_raw) if row[0] == "site_A_to_port_A"), -1)
+            if road_transport_A_index != -1:
+                trucking_capex_row = ["Trucking System CAPEX (Total)", total_trucking_capex, 0, 0, data_raw[road_transport_A_index][4], 0]
+                data_raw.insert(road_transport_A_index + 1, trucking_capex_row)
         
         # 2. If the fuel is not H2, run the conversion step and update the raw results
         if user_define[1] != 0:
