@@ -1726,7 +1726,7 @@ def run_lca_model(inputs):
                     CO2e_start_opt, GWP_chem_opt, storage_area, ship_tank_metal_thickness, 
                     ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density, 
                     ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat, 
-                    COP_cooldown, COP_refrig, ship_number_of_tanks, pipe_metal_specific_heat_opt
+                    COP_cooldown, COP_refrig, ship_number_of_tanks, pipe_metal_specific_heat
                 )
             # Call the current process function with its tailored arguments
             # user_define_params[0] is the initial placeholder for chem_weight (or target_weight later)
