@@ -3056,6 +3056,7 @@ def run_lca_model(inputs):
         # Apply filtering correctly for table and charts
         # This filter will now work correctly because the placeholder is in the map.
         detailed_data_formatted = [row for row in relabeled_data if row[0] != label_map.get("site_A_chem_production")]
+        data_for_display_common = [row for row in detailed_data_formatted if row[0] != "TOTAL"]
 
         emission_chart_exclusions = [
             "Voyage Overheads",
@@ -3067,7 +3068,7 @@ def run_lca_model(inputs):
         ]
         
         # Filter for the charts (removes the placeholder AND the TOTAL row)
-        data_for_display = [row for row in detailed_data_formatted if row[0] not in emission_chart_exclusions]
+        data_for_emission_chart = [row for row in data_for_display_common if row[0] not in emission_chart_exclusions]
 
         # --- PREPARE CONTEXTUAL OVERLAY TEXT FOR CHARTS ---
         cost_overlay_text = ""
@@ -3099,14 +3100,14 @@ def run_lca_model(inputs):
         eco2_per_kg_index = new_detailed_headers.index("CO2eq/kg (kg/kg)")
 
         cost_chart_base64 = create_breakdown_chart(
-            data_for_display,
+            data_for_display_common,
             cost_per_kg_index,
             'Cost Breakdown per kg of Delivered Fuel',
             'Cost ($/kg)',
             overlay_text=cost_overlay_text
         )
         emission_chart_base64 = create_breakdown_chart(
-            data_for_display,
+            data_for_emission_chart,
             eco2_per_kg_index,
             'CO2eq Breakdown per kg of Delivered Fuel',
             'CO2eq (kg/kg)',
@@ -3355,7 +3356,11 @@ def run_lca_model(inputs):
             data_with_all_columns.append(new_row)
             
         detailed_data_formatted = data_with_all_columns
-        data_for_display = [row for row in detailed_data_formatted if row[0] != "TOTAL"]
+        data_for_display_common = [row for row in detailed_data_formatted if row[0] != "TOTAL"]
+        emission_chart_exclusions_food = [
+            "Voyage Overheads (Prorated)", # For food, this is 'Prorated'
+        ]
+        data_for_emission_chart = [row for row in data_for_display_common if row[0] not in emission_chart_exclusions_food]
         new_detailed_headers = ["Process Step", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Commodity (kg)", "Spoilage (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
         cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
         eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)")
@@ -3410,8 +3415,8 @@ def run_lca_model(inputs):
                 f"• Farming Emissions alone for {current_food_params['name']}: {production_co2e:.2f} kg CO2eq/kg\n"
                 f"• Logistics add {ratio_emission:.1f}X the farming emissions."
             )
-        cost_chart_base64 = create_breakdown_chart(data_for_display, cost_per_kg_index, f'Cost Breakdown per kg of Delivered {current_food_params["name"]}', 'Cost ($/kg)', overlay_text=cost_overlay_text)
-        emission_chart_base64 = create_breakdown_chart(data_for_display, eco2_per_kg_index, f'CO2eq Breakdown per kg of Delivered {current_food_params["name"]}', 'CO2eq (kg/kg)', overlay_text=emission_overlay_text)
+        cost_chart_base64 = create_breakdown_chart(data_for_display_common, cost_per_kg_index, f'Cost Breakdown per kg of Delivered {current_food_params["name"]}', 'Cost ($/kg)', overlay_text=cost_overlay_text)
+        emission_chart_base64 = create_breakdown_chart(data_for_emission_chart, eco2_per_kg_index, f'CO2eq Breakdown per kg of Delivered {current_food_params["name"]}', 'CO2eq (kg/kg)', overlay_text=emission_overlay_text)
             
         response = {
             "status": "success",
