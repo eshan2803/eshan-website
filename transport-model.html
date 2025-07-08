@@ -438,14 +438,48 @@
       shipArchetypeSelect.addEventListener('change', updateFormVisibility);
       // Set the initial state of the form when the page loads
       updateFormVisibility();
+
+      // Attach event listeners for buttons AFTER they are in the DOM and unique
+      document.getElementById('downloadCsvButton').addEventListener('click', downloadCSV);
+      document.getElementById('shareLinkedInButton').addEventListener('click', shareOnLinkedIn);
     });
 
     document.getElementById('lcaForm').addEventListener('submit', handleCalculation);
-    // Corrected ID for CSV download button to avoid duplication
-    document.getElementById('downloadCsvButton').addEventListener('click', downloadCSV);
 
-    // Corrected event listener for LinkedIn button
-    document.getElementById('shareLinkedInButton').addEventListener('click', shareOnLinkedIn);
+    // This function needs to be defined globally or within a scope accessible by the event listener
+    function downloadCSV() {
+        if (completeResultsForCsv.length === 0) {
+            showModal("No data to download. Please run a calculation first.");
+            return;
+        }
+
+        let csvContent = "";
+        completeResultsForCsv.forEach(row => {
+            csvContent += row.map(item => {
+                // Ensure commas within data are handled by enclosing in quotes
+                if (typeof item === 'string' && item.includes(',')) {
+                    return `"${item}"`;
+                }
+                return item;
+            }).join(",") + "\n";
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        if (link.download !== undefined) { // Feature detection for HTML5 download attribute
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'lca_results.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else {
+            // Fallback for older browsers
+            window.open('data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent));
+        }
+    }
+
 
     function shareOnLinkedIn() {
         const pageUrl = window.location.href; // Get the current page URL
@@ -580,7 +614,7 @@
             map.fitBounds(routeBounds.pad(0.1));
           }
         }, 1);
-      } catch (error) {
+      } catches (error) {
         logStatus(`Error: ${error.message}`);
         showModal(`An error occurred: ${error.message}.`);
       } finally {
