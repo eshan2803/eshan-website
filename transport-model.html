@@ -331,6 +331,12 @@
             <div class="text-center mt-6">
             <button id="downloadCsvButton" class="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out">Download Results (CSV)</button>
             </div>
+
+            <div class="text-center mt-6">
+                <button id="downloadCsvButton" class="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out">Download Results (CSV)</button>
+                <button id="shareLinkedInButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out ml-4">Share on LinkedIn</button>
+            </div>
+            
         </div>      
       <div id="messageModal" class="modal">
         <div class="modal-content" style="text-align: center;">
@@ -441,6 +447,16 @@
     document.getElementById('lcaForm').addEventListener('submit', handleCalculation);
     document.getElementById('downloadCsvButton').addEventListener('click', downloadCSV);
 
+    document.getElementById('shareLinkedInButton').addEventListener('click', shareOnLinkedIn);
+
+    function shareOnLinkedIn() {
+        const pageUrl = window.location.href; // Get the current page URL
+        const shareText = encodeURIComponent("Check out my commodity transport LCA results! Generated using Eshan Singh's awesome tool: " + pageUrl);
+        const linkedInShareUrl = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(pageUrl)}&title=${encodeURIComponent("Commodity Transport LCA Results")}&summary=${shareText}&source=${encodeURIComponent("Eshan Singh's Transport Model")}`;
+        window.open(linkedInShareUrl, '_blank', 'width=600,height=400');
+        showModal("Your results page link has been prepared for sharing on LinkedIn. Please add a screenshot of your results manually!");
+    }
+    
     async function handleCalculation(e) {
       e.preventDefault();
       const calculateButton = this.querySelector('button[type="submit"]');
