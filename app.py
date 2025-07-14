@@ -424,7 +424,8 @@ def run_lca_model(inputs):
         CO2e_diesel_arg, GWP_chem_arg, \
         BOG_recirculation_truck_percentage_arg, \
         LH2_plant_capacity_arg, EIM_liquefication_arg, \
-        fuel_cell_eff_arg, EIM_fuel_cell_arg, LHV_chem_arg = process_args_tuple
+        fuel_cell_eff_arg, EIM_fuel_cell_arg, LHV_chem_arg, \
+        driver_daily_salary_start_arg, annual_working_days_arg = process_args_tuple # ADDED DRIVER SALARY ARGS
 
         # Original logic of the function, using the unpacked '_arg' variables
         number_of_trucks = math.ceil(A / chem_in_truck_weight_arg[B_fuel_type])
@@ -432,7 +433,7 @@ def run_lca_model(inputs):
         #trans_energy_required = truck_energy_consumed * distance_A_to_port_arg * A
         trans_energy_required = number_of_trucks * distance_A_to_port_arg * HHV_diesel_arg * diesel_density_arg / truck_economy_arg[B_fuel_type]
         diesel_money = trans_energy_required / HHV_diesel_arg / diesel_density_arg * diesel_price_start_arg
-        
+
         storage_area_truck = 2 * np.pi * truck_tank_radius_arg * truck_tank_length_arg
         if B_fuel_type == 0:
             thermal_resist = truck_tank_metal_thickness_arg / metal_thermal_conduct_arg + \
@@ -443,16 +444,16 @@ def run_lca_model(inputs):
 
         heat_required = OHTC * storage_area_truck * (start_local_temperature_arg + 273 - 20) # Assuming 20K is target temp
         refrig_ener_consumed = (heat_required / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * 60 * duration_A_to_port_arg * number_of_trucks
-        
+
         local_BOR_truck_trans = dBOR_dT_arg[B_fuel_type] * (start_local_temperature_arg - 25) + BOR_truck_trans_arg[B_fuel_type]
         current_BOG_loss = A * local_BOR_truck_trans / (24 * 60) * duration_A_to_port_arg # Renamed to avoid conflict in recirculation
 
         refrig_money = (refrig_ener_consumed / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / diesel_density_arg * diesel_price_start_arg
         money = diesel_money + refrig_money
         total_energy = trans_energy_required + refrig_ener_consumed
-        
+
         A_after_loss = A - current_BOG_loss # Initial state before recirculation
-        
+
         G_emission_energy = (total_energy * CO2e_diesel_arg) / (HHV_diesel_arg * diesel_density_arg)
         G_emission = G_emission_energy + current_BOG_loss * GWP_chem_arg[B_fuel_type]
 
@@ -468,15 +469,15 @@ def run_lca_model(inputs):
                 # liquification_data_fitting is a global helper, needs LH2_plant_capacity_arg
                 reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
                 reliq_ener_consumed = reliq_ener_required * usable_BOG
-                
+
                 total_energy += reliq_ener_consumed # Add energy for re-liquefaction
-                
+
                 reliq_money = (reliq_ener_consumed / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / diesel_density_arg * diesel_price_start_arg
                 money += reliq_money # Add cost for re-liquefaction
-                
+
                 A_after_loss += usable_BOG # Add back re-liquefied BOG
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_truck_percentage_arg * 0.01)
-                
+
                 # Recalculate G_emission_energy with new total_energy
                 G_emission_energy = (total_energy * CO2e_diesel_arg) / (HHV_diesel_arg * diesel_density_arg)
                 G_emission = G_emission_energy + net_BOG_loss * GWP_chem_arg[B_fuel_type]
@@ -484,22 +485,27 @@ def run_lca_model(inputs):
             elif D_truck_apply == 2: # 2) Use BOG as another energy source (e.g., fuel cell)
                 usable_BOG = current_BOG_loss * BOG_recirculation_truck_percentage_arg * 0.01
                 usable_ener = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
-                
+
                 # Energy saved from refrigeration, capped at refrig_ener_consumed
                 energy_saved_from_refrig = min(usable_ener, refrig_ener_consumed)
                 money_saved_from_refrig = (energy_saved_from_refrig / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / diesel_density_arg * diesel_price_start_arg
-                
+
                 total_energy = trans_energy_required + (refrig_ener_consumed - energy_saved_from_refrig)
                 money = diesel_money + (refrig_money - money_saved_from_refrig)
-                
+
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_truck_percentage_arg * 0.01)
                 # A_after_loss remains A - current_BOG_loss because the BOG is consumed, not added back as liquid
-                
+
                 G_emission_energy = (total_energy * CO2e_diesel_arg) / (HHV_diesel_arg * diesel_density_arg)
                 G_emission = G_emission_energy + net_BOG_loss * GWP_chem_arg[B_fuel_type]
-        
+
+        trip_days = max(1, math.ceil(duration_A_to_port_arg / 1440)) # At least 1 day, round up
+        driver_cost_per_truck = (driver_daily_salary_start_arg / annual_working_days_arg) * trip_days
+        total_driver_cost = driver_cost_per_truck * number_of_trucks
+        money += total_driver_cost # Add to total money
+
         return money, total_energy, G_emission, A_after_loss, net_BOG_loss
-    
+
     def port_A_unloading_to_storage(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
 
         V_flowrate_arg, \
@@ -965,7 +971,8 @@ def run_lca_model(inputs):
         CO2e_diesel_arg, GWP_chem_list_arg, \
         BOG_recirculation_truck_percentage_arg, \
         LH2_plant_capacity_arg, EIM_liquefication_arg, \
-        fuel_cell_eff_arg, EIM_fuel_cell_arg, LHV_chem_arg = process_args_tuple
+        fuel_cell_eff_arg, EIM_fuel_cell_arg, LHV_chem_arg, \
+        driver_daily_salary_end_arg, annual_working_days_arg = process_args_tuple # ADDED DRIVER SALARY ARGS
 
         # Original logic of the function, using the unpacked '_arg' variables
         number_of_trucks = A / chem_in_truck_weight_arg[B_fuel_type] # Local variable
@@ -973,9 +980,9 @@ def run_lca_model(inputs):
         #trans_energy_required = truck_energy_consumed * distance_port_to_B_arg * A # Using distance_port_to_B
         trans_energy_required = number_of_trucks * distance_port_to_B_arg * HHV_diesel_arg * diesel_density_arg / truck_economy_arg[B_fuel_type]
         diesel_money = trans_energy_required / HHV_diesel_arg / diesel_density_arg * diesel_price_end_arg
-        
+
         storage_area_truck = 2 * np.pi * truck_tank_radius_arg * truck_tank_length_arg
-        
+
         # Consistent OHTC calculation for trucks, similar to site_A_to_port_A
         if B_fuel_type == 0:
             thermal_resist_val = truck_tank_metal_thickness_arg / metal_thermal_conduct_arg + \
@@ -990,7 +997,7 @@ def run_lca_model(inputs):
         heat_required_val = OHTC * storage_area_truck * (end_local_temperature_arg + 273 - 20) # Using end_local_temperature
         refrig_ener_consumed = (heat_required_val / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / \
                             1000000 * 60 * duration_port_to_B_arg * number_of_trucks # Using duration_port_to_B
-        
+
         local_BOR_truck_trans_val = dBOR_dT_arg[B_fuel_type] * (end_local_temperature_arg - 25) + BOR_truck_trans_arg[B_fuel_type] # Using end_local_temperature
         current_BOG_loss = A * local_BOR_truck_trans_val / (24 * 60) * duration_port_to_B_arg # Using duration_port_to_B
 
@@ -998,49 +1005,54 @@ def run_lca_model(inputs):
                     diesel_density_arg * diesel_price_end_arg
         money = diesel_money + refrig_money
         total_energy_consumed = trans_energy_required + refrig_ener_consumed
-        
+
         A_after_loss = A - current_BOG_loss
-        
+
         G_emission_energy = (total_energy_consumed * CO2e_diesel_arg) / (HHV_diesel_arg * diesel_density_arg)
         G_emission = G_emission_energy + current_BOG_loss * GWP_chem_list_arg[B_fuel_type]
         net_BOG_loss = current_BOG_loss
-
         # Recirculation logic (C_recirculation_BOG is user_define[2], D_truck_apply is user_define[3])
         if C_recirculation_BOG == 2:
             if D_truck_apply == 1: # Re-liquefy BOG
                 usable_BOG = current_BOG_loss * BOG_recirculation_truck_percentage_arg * 0.01
                 BOG_flowrate = usable_BOG / duration_port_to_B_arg * 60 # kg/hr
-                
+
                 reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
                 reliq_ener_consumed = reliq_ener_required * usable_BOG
-                
+
                 total_energy_consumed += reliq_ener_consumed
                 reliq_money = (reliq_ener_consumed / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / \
                             diesel_density_arg * diesel_price_end_arg
                 money = diesel_money + reliq_money + refrig_money
-                
+
                 A_after_loss += usable_BOG
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_truck_percentage_arg * 0.01)
-                
+
                 G_emission_energy = (total_energy_consumed * CO2e_diesel_arg) / (HHV_diesel_arg * diesel_density_arg)
                 G_emission = G_emission_energy + net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
 
             elif D_truck_apply == 2: # Use BOG as another energy source
                 usable_BOG = current_BOG_loss * BOG_recirculation_truck_percentage_arg * 0.01
                 usable_ener = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
-                
+
                 energy_saved_from_refrig = min(usable_ener, refrig_ener_consumed)
                 money_saved_from_refrig = (energy_saved_from_refrig / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / \
                                         diesel_density_arg * diesel_price_end_arg
-                
+
                 total_energy_consumed = trans_energy_required + (refrig_ener_consumed - energy_saved_from_refrig)
                 money = diesel_money + (refrig_money - money_saved_from_refrig)
-                
+
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_truck_percentage_arg * 0.01)
-                
+
                 G_emission_energy = (total_energy_consumed * CO2e_diesel_arg) / (HHV_diesel_arg * diesel_density_arg)
                 G_emission = G_emission_energy + net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
-        
+
+        # ADDITION: Calculate and add driver salary cost
+        trip_days = max(1, math.ceil(duration_port_to_B_arg / 1440)) # At least 1 day, round up
+        driver_cost_per_truck = (driver_daily_salary_end_arg / annual_working_days_arg) * trip_days
+        total_driver_cost = driver_cost_per_truck * number_of_trucks
+        money += total_driver_cost # Add to total money
+
         return money, total_energy_consumed, G_emission, A_after_loss, net_BOG_loss
 
     def chem_site_B_unloading_from_truck(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
@@ -1644,9 +1656,11 @@ def run_lca_model(inputs):
         fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem_opt,
         storage_time_A_opt, liquid_chem_density_opt, storage_volume_opt,
         storage_radius_opt, BOR_land_storage_opt, tank_metal_thickness_opt,
-        tank_insulator_thickness_opt, BOG_recirculation_storage_opt
+        tank_insulator_thickness_opt, BOG_recirculation_storage_opt,
+        driver_daily_salary_start_opt, annual_working_days_opt # ADDED FOR OPTIMIZER
         ) = all_shared_params_tuple
 
+  
         X = A_initial_guess[0]  # Current chemical weight being optimized
 
         # Loop through the first 7 process functions
@@ -1679,19 +1693,20 @@ def run_lca_model(inputs):
             elif func_to_call.__name__ == "site_A_to_port_A":
                 process_args_for_current_func = (
                     road_delivery_ener_opt, HHV_chem_opt, chem_in_truck_weight_opt, truck_economy_opt,
-                    distance_A_to_port_opt, HHV_diesel_opt, diesel_density_opt, 
-                    diesel_price_start_opt, truck_tank_radius_opt, truck_tank_length_opt, 
-                    truck_tank_metal_thickness_opt, metal_thermal_conduct_opt, 
-                    truck_tank_insulator_thickness_opt, insulator_thermal_conduct_opt, 
-                    OHTC_ship_opt, start_local_temperature_opt, COP_refrig_opt, 
-                    EIM_refrig_eff_opt, duration_A_to_port_opt, dBOR_dT_opt, 
-                    BOR_truck_trans_opt, diesel_engine_eff_opt, EIM_truck_eff_opt, 
+                    distance_A_to_port_opt, HHV_diesel_opt, diesel_density_opt,
+                    diesel_price_start_opt, truck_tank_radius_opt, truck_tank_length_opt,
+                    truck_tank_metal_thickness_opt, metal_thermal_conduct_opt,
+                    truck_tank_insulator_thickness_opt, insulator_thermal_conduct_opt,
+                    OHTC_ship_opt, start_local_temperature_opt, COP_refrig_opt,
+                    EIM_refrig_eff_opt, duration_A_to_port_opt, dBOR_dT_opt,
+                    BOR_truck_trans_opt, diesel_engine_eff_opt, EIM_truck_eff_opt,
                     CO2e_diesel_opt, GWP_chem_opt,
                     BOG_recirculation_truck_opt, # This is the BOG_recirculation_truck_percentage
                     LH2_plant_capacity_opt, EIM_liquefication_opt,
-                    fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem_opt
+                    fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem_opt,
+                    driver_daily_salary_start_opt, annual_working_days_opt # ADDED
                 )
-            
+
             elif func_to_call.__name__ == "port_A_unloading_to_storage":
                 process_args_for_current_func = (
                     V_flowrate_opt, 
@@ -1902,7 +1917,7 @@ def run_lca_model(inputs):
             elif func_to_call.__name__ == "chem_site_A_loading_to_truck":
                 process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_truck_site_A, dBOR_dT, start_local_temperature, BOR_loading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem)
             elif func_to_call.__name__ == "site_A_to_port_A":
-                process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_A_to_port, HHV_diesel, diesel_density, diesel_price_start, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, start_local_temperature, COP_refrig, EIM_refrig_eff, duration_A_to_port, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
+                process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_A_to_port, HHV_diesel, diesel_density, diesel_price_start, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, start_local_temperature, COP_refrig, EIM_refrig_eff, duration_A_to_port, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem, driver_daily_salary_start, annual_working_days)
             elif func_to_call.__name__ == "port_A_unloading_to_storage":
                 process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_port_A, dBOR_dT, start_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem)
             elif func_to_call.__name__ == "chem_storage_at_port_A":
@@ -1928,7 +1943,7 @@ def run_lca_model(inputs):
             elif func_to_call.__name__ == "port_B_unloading_from_storage":
                 process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_truck_port_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
             elif func_to_call.__name__ == "port_B_to_site_B":
-                process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_port_to_B, HHV_diesel, diesel_density, diesel_price_end, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, end_local_temperature, COP_refrig, EIM_refrig_eff, duration_port_to_B, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
+                process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_port_to_B, HHV_diesel, diesel_density, diesel_price_end, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, end_local_temperature, COP_refrig, EIM_refrig_eff, duration_port_to_B, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem, driver_daily_salary_end, annual_working_days)
             elif func_to_call.__name__ == "chem_site_B_unloading_from_truck":
                 process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_site_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
             elif func_to_call.__name__ == "chem_storage_at_site_B":
@@ -1976,12 +1991,12 @@ def run_lca_model(inputs):
         return total_money, energy, emissions, A - loss, loss
 
     def food_road_transport(A, args):
-        params, distance, duration_mins, diesel_price, hh_diesel, dens_diesel, co2_diesel, ambient_temp = args
+        params, distance, duration_mins, diesel_price, hh_diesel, dens_diesel, co2_diesel, ambient_temp, driver_daily_salary_arg, annual_working_days_arg = args # ADDED DRIVER SALARY ARGS
         base_spoilage_rate = params['general_params']['spoilage_rate_per_day']
 
         # Increase spoilage rate by 20% for every 5 degrees above the ideal temp
         temp_sensitivity_factor = 1 + (0.20 * ((ambient_temp - params['general_params']['target_temp_celsius']) / 5))
-        if temp_sensitivity_factor < 1: 
+        if temp_sensitivity_factor < 1:
             temp_sensitivity_factor = 1 # Spoilage doesn't slow down below target
         dynamic_spoilage_rate = base_spoilage_rate * temp_sensitivity_factor
         LITERS_PER_GALLON = 3.78541
@@ -1997,6 +2012,13 @@ def run_lca_model(inputs):
         emissions = total_diesel_gal * co2_diesel
         duration_days = duration_hr / 24.0
         loss = A * dynamic_spoilage_rate * duration_days
+
+        # ADDITION: Calculate and add driver salary cost
+        trip_days = max(1, math.ceil(duration_mins / 1440)) # At least 1 day, round up
+        driver_cost_per_truck = (driver_daily_salary_arg / annual_working_days_arg) * trip_days
+        total_driver_cost = driver_cost_per_truck * num_trucks
+        money += total_driver_cost # Add to total money
+
         return money, energy, emissions, A - loss, loss
 
     def food_precooling_process(A, args):
@@ -2202,10 +2224,10 @@ def run_lca_model(inputs):
                 args_for_func = (freezing_full_params, start_local_temperature, start_electricity_price, CO2e_start)
             elif func == food_road_transport and start_port_name in label:
                 # This is the first leg: from start city TO start port
-                args_for_func = (food_params, distance_A_to_port, duration_A_to_port, diesel_price_start, HHV_diesel, diesel_density, CO2e_diesel, start_local_temperature)
+                args_for_func = (food_params, distance_A_to_port, duration_A_to_port, diesel_price_start, HHV_diesel, diesel_density, CO2e_diesel, start_local_temperature, driver_daily_salary_start, annual_working_days)
             elif func == food_road_transport and end_port_name in label:
                 # This is the second leg: from end port TO end city
-                args_for_func = (food_params, distance_port_to_B, duration_port_to_B, diesel_price_end, HHV_diesel, diesel_density, CO2e_diesel, end_local_temperature)                
+                args_for_func = (food_params, distance_port_to_B, duration_port_to_B, diesel_price_end, HHV_diesel, diesel_density, CO2e_diesel, end_local_temperature, driver_daily_salary_end, annual_working_days)
             elif func == food_sea_transport:
                 args_for_func = (food_params, port_to_port_duration, selected_marine_fuel_params, avg_ship_power_kw)
             elif func == food_cold_storage and "at " + start_port_name in label:
@@ -2485,10 +2507,408 @@ def run_lca_model(inputs):
 
     road_route_start_coords = extract_route_coor((coor_start_lat, coor_start_lng), (start_port_lat, start_port_lng))
     road_route_end_coords = extract_route_coor((end_port_lat, end_port_lng), (coor_end_lat, end_port_lng))
-
-    diesel_price_country = {"Venezuela": 0.016, "Iran": 0.022, "Libya": 0.104, "Algeria": 0.834, "Turkmenistan": 1.082, "Egypt": 1.181, "Angola": 1.238, "Kuwait": 1.419, "Saudi Arabia": 1.675, "Ecuador": 1.798, "Bahrain": 1.807, "Qatar": 2.027, "Bolivia": 2.038, "Kazakhstan": 2.145, "Nigeria": 2.222, "Azerbaijan": 2.227, "Syria": 2.389, "Trinidad & Tobago": 2.46, "Malaysia": 2.47, "Sudan": 2.482, "UAE": 2.525, "Oman": 2.54, "Vietnam": 2.553, "Colombia": 2.553, "Bhutan": 2.58, "Lebanon": 2.673, "Tunisia": 2.797, "Burma": 2.907, "Panama": 2.917, "Puerto Rico": 2.949, "Belarus": 3.006, "Guyana": 3.044, "Honduras": 3.059, "Indonesia": 3.07, "Afghanistan": 3.101, "Taiwan": 3.128, "Bangladesh": 3.158, "Laos": 3.185, "Kyrgyzstan": 3.189, "Ethiopia": 3.228, "Paraguay": 3.278, "El Salvador": 3.3, "Cambodia": 3.304, "Curacao": 3.379, "Russia": 3.404, "Pakistan": 3.405, "Maldives": 3.408, "Guatemala": 3.412, "China": 3.442, "USA": 3.452, "United States": 3.452, "Jordan": 3.47, "Philippines": 3.502, "Zambia": 3.54, "Liberia": 3.546, "Uzbekistan": 3.59, "Peru": 3.648, "Fiji": 3.677, "Thailand": 3.703, "Dom. Rep.": 3.751, "Gabon": 3.78, "Chile": 3.839, "DR Congo": 3.882, "Georgia": 3.91, "Canada": 3.934, "Nepal": 3.947, "Aruba": 3.951, "Brazil": 3.977, "Grenada": 3.978, "Australia": 3.988, "India": 3.998, "Cape Verde": 4.032, "Tanzania": 4.036, "Costa Rica": 4.051, "Moldova": 4.071, "Sri Lanka": 4.108, "Japan": 4.143, "Cuba": 4.147, "Lesotho": 4.194, "Botswana": 4.212, "Mongolia": 4.229, "Argentina": 4.24, "Madagascar": 4.246, "Uruguay": 4.268, "New Zealand": 4.271, "South Korea": 4.31, "Suriname": 4.315, "Namibia": 4.357, "Jamaica": 4.389, "Rwanda": 4.404, "Burkina Faso": 4.438, "Nicaragua": 4.444, "Turkey": 4.462, "South Africa": 4.473, "Swaziland": 4.523, "N. Maced.": 4.548, "Togo": 4.569, "Dominica": 4.58, "Ivory Coast": 4.602, "Morocco": 4.633, "Haiti": 4.734, "Benin": 4.734, "Mali": 4.767, "Uganda": 4.788, "Kenya": 4.793, "Ghana": 4.801, "Armenia": 4.832, "Bahamas": 4.869, "Mauritius": 4.912, "Bosnia & Herz.": 4.917, "Ukraine": 4.94, "Senegal": 4.964, "Burundi": 4.989, "Cayman Islands": 5.023, "Mexico": 5.056, "Saint Lucia": 5.084, "Seychelles": 5.094, "Andorra": 5.105, "Mozambique": 5.141, "Malta": 5.208, "Guinea": 5.239, "Sierra Leone": 5.271, "Bulgaria": 5.328, "Cameroon": 5.444, "Montenegro": 5.509, "Belize": 5.606, "Czech Republic": 5.631, "Zimbabwe": 5.754, "Poland": 5.789, "Spain": 5.817, "Luxembourg": 5.871, "Estonia": 5.914, "Malawi": 5.966, "Mayotte": 5.983, "Cyprus": 6.0, "Slovakia": 6.039, "Romania": 6.058, "Lithuania": 6.09, "Croatia": 6.142, "Latvia": 6.159, "Slovenia": 6.168, "Hungary": 6.195, "Sweden": 6.266, "Austria": 6.314, "San Marino": 6.318, "Greece": 6.344, "Barbados": 6.374, "Portugal": 6.512, "Germany": 6.615, "Monaco": 6.624, "France": 6.655, "Belgium": 6.787, "Serbia": 6.866, "Italy": 6.892, "Netherlands": 6.912, "Finland": 7.011, "Norway": 7.026, "UK": 7.067, "Ireland": 7.114, "Wallis and Futuna": 7.114, "Singapore": 7.195, "Israel": 7.538, "Albania": 7.597, "Denmark": 7.649, "Switzerland": 8.213, "C. Afr. Rep.": 8.218, "Liechtenstein": 8.36, "Iceland": 9.437, "Hong Kong": 12.666}
+    diesel_price_country = {
+        "Venezuela": 0.016,
+        "Iran": 0.022,
+        "Libya": 0.104,
+        "Algeria": 0.834,
+        "Turkmenistan": 1.082,
+        "Egypt": 1.181,
+        "Angola": 1.238,
+        "Kuwait": 1.419,
+        "Saudi Arabia": 1.675,
+        "Ecuador": 1.798,
+        "Bahrain": 1.807,
+        "Qatar": 2.027,
+        "Bolivia": 2.038,
+        "Kazakhstan": 2.145,
+        "Nigeria": 2.222,
+        "Azerbaijan": 2.227,
+        "Syria": 2.389,
+        "Trinidad and Tobago": 2.46,
+        "Trinidad & Tobago": 2.46,
+        "Malaysia": 2.47,
+        "Sudan": 2.482,
+        "United Arab Emirates": 2.525,
+        "UAE": 2.525,
+        "Oman": 2.54,
+        "Vietnam": 2.553,
+        "Colombia": 2.553,
+        "Bhutan": 2.58,
+        "Lebanon": 2.673,
+        "Tunisia": 2.797,
+        "Myanmar": 2.907,
+        "Burma": 2.907,
+        "Panama": 2.917,
+        "Puerto Rico": 2.949,
+        "Belarus": 3.006,
+        "Guyana": 3.044,
+        "Honduras": 3.059,
+        "Indonesia": 3.07,
+        "Afghanistan": 3.101,
+        "Taiwan": 3.128,
+        "Bangladesh": 3.158,
+        "Laos": 3.185,
+        "Kyrgyzstan": 3.189,
+        "Ethiopia": 3.228,
+        "Paraguay": 3.278,
+        "El Salvador": 3.3,
+        "Cambodia": 3.304,
+        "Curacao": 3.379,
+        "Russia": 3.404,
+        "Pakistan": 3.405,
+        "Maldives": 3.408,
+        "Guatemala": 3.412,
+        "China": 3.442,
+        "United States": 3.452,
+        "USA": 3.452,
+        "Jordan": 3.47,
+        "Philippines": 3.502,
+        "Zambia": 3.54,
+        "Liberia": 3.546,
+        "Uzbekistan": 3.59,
+        "Peru": 3.648,
+        "Fiji": 3.677,
+        "Thailand": 3.703,
+        "Dominican Republic": 3.751,
+        "Dom. Rep.": 3.751,
+        "Gabon": 3.78,
+        "Chile": 3.839,
+        "Congo, Dem. Rep.": 3.882,
+        "DR Congo": 3.882,
+        "Georgia": 3.91,
+        "Canada": 3.934,
+        "Nepal": 3.947,
+        "Aruba": 3.951,
+        "Brazil": 3.977,
+        "Grenada": 3.978,
+        "Australia": 3.988,
+        "India": 3.998,
+        "Cape Verde": 4.032,
+        "Tanzania": 4.036,
+        "Costa Rica": 4.051,
+        "Moldova": 4.071,
+        "Sri Lanka": 4.108,
+        "Japan": 4.143,
+        "Cuba": 4.147,
+        "Lesotho": 4.194,
+        "Botswana": 4.212,
+        "Mongolia": 4.229,
+        "Argentina": 4.24,
+        "Madagascar": 4.246,
+        "Uruguay": 4.268,
+        "New Zealand": 4.271,
+        "South Korea": 4.31,
+        "Suriname": 4.315,
+        "Namibia": 4.357,
+        "Jamaica": 4.389,
+        "Rwanda": 4.404,
+        "Burkina Faso": 4.438,
+        "Nicaragua": 4.444,
+        "Turkey": 4.462,
+        "South Africa": 4.473,
+        "Eswatini": 4.523,
+        "Swaziland": 4.523,
+        "North Macedonia": 4.548,
+        "N. Maced.": 4.548,
+        "Togo": 4.569,
+        "Dominica": 4.58,
+        "Ivory Coast": 4.602,
+        "Côte d'Ivoire": 4.602,
+        "Morocco": 4.633,
+        "Haiti": 4.734,
+        "Benin": 4.734,
+        "Mali": 4.767,
+        "Uganda": 4.788,
+        "Kenya": 4.793,
+        "Ghana": 4.801,
+        "Armenia": 4.832,
+        "Bahamas": 4.869,
+        "Mauritius": 4.912,
+        "Bosnia and Herzegovina": 4.917,
+        "Bosnia-Herzegovina": 4.917,
+        "Ukraine": 4.94,
+        "Senegal": 4.964,
+        "Burundi": 4.989,
+        "Cayman Islands": 5.023,
+        "Mexico": 5.056,
+        "Saint Lucia": 5.084,
+        "Seychelles": 5.094,
+        "Andorra": 5.105,
+        "Mozambique": 5.141,
+        "Malta": 5.208,
+        "Guinea": 5.239,
+        "Sierra Leone": 5.271,
+        "Bulgaria": 5.328,
+        "Cameroon": 5.444,
+        "Montenegro": 5.509,
+        "Belize": 5.606,
+        "Czech Republic": 5.631,
+        "Zimbabwe": 5.754,
+        "Poland": 5.789,
+        "Spain": 5.817,
+        "Luxembourg": 5.871,
+        "Estonia": 5.914,
+        "Malawi": 5.966,
+        "Mayotte": 5.983,
+        "Cyprus": 6.0,
+        "Slovakia": 6.039,
+        "Romania": 6.058,
+        "Lithuania": 6.09,
+        "Croatia": 6.142,
+        "Latvia": 6.159,
+        "Slovenia": 6.168,
+        "Hungary": 6.195,
+        "Sweden": 6.266,
+        "Austria": 6.314,
+        "San Marino": 6.318,
+        "Greece": 6.344,
+        "Barbados": 6.374,
+        "Portugal": 6.512,
+        "Germany": 6.615,
+        "Monaco": 6.624,
+        "France": 6.655,
+        "Belgium": 6.787,
+        "Serbia": 6.866,
+        "Italy": 6.892,
+        "Netherlands": 6.912,
+        "Finland": 7.011,
+        "Norway": 7.026,
+        "United Kingdom": 7.067,
+        "UK": 7.067,
+        "Ireland": 7.114,
+        "Wallis and Futuna": 7.114,
+        "Singapore": 7.195,
+        "Israel": 7.538,
+        "Albania": 7.597,
+        "Denmark": 7.649,
+        "Switzerland": 8.213,
+        "Central African Republic": 8.218,
+        "C. Afr. Rep.": 8.218,
+        "Liechtenstein": 8.36,
+        "Iceland": 9.437,
+        "Hong Kong": 12.666
+    }
     diesel_price_start = get_diesel_price(coor_start_lat, coor_start_lng, diesel_price_country)
     diesel_price_end = get_diesel_price(end_port_lat, end_port_lng, diesel_price_country)
+
+    truck_driver_annual_salaries = {
+        "Afghanistan": 3535.00,
+        "Albania": 9366.00,
+        "Algeria": 9366.00,
+        "Andorra": 49000.00,
+        "Angola": 9366.00,
+        "Antigua and Barbuda": 14895.00,
+        "Argentina": 7466.00,
+        "Armenia": 8022.00,
+        "Australia": 67568.00,
+        "Austria": 52886.00,
+        "Azerbaijan": 8022.00,
+        "Bahamas": 35452.00,
+        "Bahrain": 27627.00,
+        "Bangladesh": 3535.00,
+        "Barbados": 14895.00,
+        "Belarus": 5040.00,
+        "Belgium": 55097.00,
+        "Belize": 10243.00,
+        "Benin": 9366.00,
+        "Bhutan": 3535.00,
+        "Bolivia": 10243.00,
+        "Bosnia and Herzegovina": 12812.00,
+        "Bosnia-Herzegovina": 12812.00,
+        "Botswana": 9366.00,
+        "Brazil": 10875.00,
+        "Trinidad and Tobago": 12800.00,
+        "Trinidad & Tobago": 12800.00,
+        "Brunei": 40149.00,
+        "Bulgaria": 14901.00,
+        "Burkina Faso": 9366.00,
+        "Burundi": 3535.00,
+        "Cambodia": 4652.00,
+        "Cameroon": 9366.00,
+        "Canada": 46276.00,
+        "Cape Verde": 9366.00,
+        "Central African Republic": 9366.00,
+        "C. Afr. Rep.": 9366.00,
+        "Chad": 9366.00,
+        "Chile": 14675.00,
+        "China": 16881.00,
+        "Colombia": 10494.00,
+        "Comoros": 9366.00,
+        "Congo, Dem. Rep.": 9366.00,
+        "DR Congo": 9366.00,
+        "Congo, Rep.": 9366.00,
+        "Costa Rica": 18581.00,
+        "Croatia": 19858.00,
+        "Cuba": 10243.00,
+        "Cyprus": 27225.00,
+        "Czech Republic": 22545.00,
+        "Denmark": 64323.00,
+        "Djibouti": 9366.00,
+        "Dominica": 14895.00,
+        "Dominican Republic": 6623.00,
+        "Dom. Rep.": 6623.00,
+        "Ecuador": 13737.00,
+        "Egypt": 3363.00,
+        "El Salvador": 10243.00,
+        "Equatorial Guinea": 9366.00,
+        "Eritrea": 9366.00,
+        "Estonia": 20789.00,
+        "Eswatini": 9366.00,
+        "Swaziland": 9366.00,
+        "Ethiopia": 9366.00,
+        "Fiji": 10243.00,
+        "Finland": 52822.00,
+        "France": 39047.00,
+        "Gabon": 9366.00,
+        "Gambia": 9366.00,
+        "Georgia": 8022.00,
+        "Germany": 49000.00,
+        "Ghana": 9366.00,
+        "Greece": 27225.00,
+        "Grenada": 14895.00,
+        "Guatemala": 11533.00,
+        "Guinea": 9366.00,
+        "Guinea-Bissau": 9366.00,
+        "Guyana": 10243.00,
+        "Haiti": 10243.00,
+        "Honduras": 10243.00,
+        "Hong Kong": 40678.00,
+        "Hungary": 17505.00,
+        "Iceland": 66184.00,
+        "India": 7116.00,
+        "Indonesia": 12778.00,
+        "Iran": 14022.00,
+        "Iraq": 14022.00,
+        "Ireland": 51465.00,
+        "Israel": 32004.00,
+        "Italy": 37483.00,
+        "Ivory Coast": 9366.00,
+        "Côte d'Ivoire": 9366.00,
+        "Jamaica": 12018.00,
+        "Japan": 30959.00,
+        "Jordan": 9366.00,
+        "Kazakhstan": 12955.00,
+        "Kenya": 9366.00,
+        "Kiribati": 10243.00,
+        "Kuwait": 27627.00,
+        "Kyrgyzstan": 5040.00,
+        "Laos": 4652.00,
+        "Latvia": 17458.00,
+        "Lebanon": 9366.00,
+        "Lesotho": 9366.00,
+        "Liberia": 9366.00,
+        "Libya": 9366.00,
+        "Liechtenstein": 82171.00,
+        "Lithuania": 21632.00,
+        "Luxembourg": 62117.00,
+        "Madagascar": 9366.00,
+        "Malawi": 9366.00,
+        "Malaysia": 11903.00,
+        "Maldives": 12778.00,
+        "Mali": 9366.00,
+        "Malta": 25803.00,
+        "Marshall Islands": 10243.00,
+        "Mauritania": 9366.00,
+        "Mauritius": 9366.00,
+        "Mexico": 11622.00,
+        "Micronesia": 10243.00,
+        "Moldova": 5040.00,
+        "Monaco": 82171.00,
+        "Mongolia": 5040.00,
+        "Montenegro": 12812.00,
+        "Morocco": 11351.00,
+        "Mozambique": 9366.00,
+        "Myanmar": 3535.00,
+        "Burma": 3535.00,
+        "Namibia": 9366.00,
+        "Nauru": 10243.00,
+        "Nepal": 3535.00,
+        "Netherlands": 49758.00,
+        "New Zealand": 43970.00,
+        "Nicaragua": 10243.00,
+        "Niger": 9366.00,
+        "Nigeria": 9366.00,
+        "North Korea": 5000.00,
+        "North Macedonia": 12812.00,
+        "N. Maced.": 12812.00,
+        "Norway": 48295.00,
+        "Oman": 27627.00,
+        "Pakistan": 3537.00,
+        "Palau": 10243.00,
+        "Panama": 19593.00,
+        "Papua New Guinea": 10243.00,
+        "Paraguay": 10243.00,
+        "Peru": 10149.00,
+        "Philippines": 6312.00,
+        "Poland": 23511.00,
+        "Portugal": 26116.00,
+        "Qatar": 27627.00,
+        "Romania": 21847.00,
+        "Russia": 9382.00,
+        "Rwanda": 9366.00,
+        "Saint Kitts and Nevis": 14895.00,
+        "Saint Lucia": 14895.00,
+        "Saint Vincent and the Grenadines": 14895.00,
+        "Samoa": 10243.00,
+        "San Marino": 37483.00,
+        "Sao Tome and Principe": 9366.00,
+        "Saudi Arabia": 27627.00,
+        "Senegal": 9366.00,
+        "Serbia": 12812.00,
+        "Seychelles": 9366.00,
+        "Sierra Leone": 9366.00,
+        "Singapore": 40104.00,
+        "Slovakia": 22517.00,
+        "Slovenia": 27225.00,
+        "Solomon Islands": 10243.00,
+        "Somalia": 3535.00,
+        "South Africa": 14510.00,
+        "South Korea": 31721.00,
+        "South Sudan": 9366.00,
+        "Spain": 35413.00,
+        "Sri Lanka": 3535.00,
+        "Sudan": 9366.00,
+        "Suriname": 10243.00,
+        "Sweden": 46322.00,
+        "Switzerland": 82171.00,
+        "Syria": 9366.00,
+        "Taiwan": 26178.00,
+        "Tajikistan": 5040.00,
+        "Tanzania": 9366.00,
+        "Thailand": 10455.00,
+        "Timor-Leste": 10243.00,
+        "Togo": 9366.00,
+        "Tonga": 10243.00,
+        "Tunisia": 9366.00,
+        "Turkey": 17788.00,
+        "Turkmenistan": 5040.00,
+        "Tuvalu": 10243.00,
+        "Uganda": 9366.00,
+        "Ukraine": 6539.00,
+        "United Arab Emirates": 35608.00,
+        "UAE": 35608.00,
+        "United Kingdom": 47179.00,
+        "UK": 47179.00,
+        "United States": 72415.00,
+        "USA": 72415.00,
+        "Uruguay": 14959.00,
+        "Uzbekistan": 5040.00,
+        "Vanuatu": 10243.00,
+        "Venezuela": 10243.00,
+        "Vietnam": 4652.00,
+        "Yemen": 9366.00,
+        "Zambia": 9366.00,
+        "Zimbabwe": 9366.00
+    }
+    
+    start_country_name = get_country_from_coords(coor_start_lat, coor_start_lng)
+    end_country_name = get_country_from_coords(coor_end_lat, coor_end_lng)
+
+    driver_daily_salary_start = truck_driver_annual_salaries.get(start_country_name, 30000) / 330 # Default to 30k if not found
+    driver_daily_salary_end = truck_driver_annual_salaries.get(end_country_name, 30000) / 330 # Default to 30k if not found
+    annual_working_days = 330 # Standard assumption for working days in a year for a truck driver
+
 
     _, dynamic_price = openai_get_marine_fuel_price(marine_fuel_choice, (start_port_lat, start_port_lng), start_port_name)
 
@@ -2788,14 +3208,15 @@ def run_lca_model(inputs):
             # Parameters for BOG recirculation (if used in first 7 funcs)
             fuel_cell_eff, EIM_fuel_cell, LHV_chem, 
             # LH2_plant_capacity, EIM_liquefication are already above for site_A_chem_liquification
-
             # Parameters for chem_storage_at_port_A
-            storage_time_A, liquid_chem_density, storage_volume, 
-            storage_radius, BOR_land_storage, tank_metal_thickness, 
+            storage_time_A, liquid_chem_density, storage_volume,
+            storage_radius, BOR_land_storage, tank_metal_thickness,
             tank_insulator_thickness, # metal_thermal_conduct, insulator_thermal_conduct already above
-            BOG_recirculation_storage # This is the percentage from inputs
+            BOG_recirculation_storage, # This is the percentage from inputs
             # COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem,
             # LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem are already above
+            driver_daily_salary_start, annual_working_days # ADDED FOR OPTIMIZER
+
         )
 
         # This is the tuple that will be passed to scipy.optimize.minimize
