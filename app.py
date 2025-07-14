@@ -1134,32 +1134,31 @@ def run_lca_model(inputs):
         # Unpack ALL shared parameters that ANY of the first 7 functions might need.
         # The order here MUST MATCH how they were packed into all_shared_params_tuple
         # in run_lca_model.
-        (LH2_plant_capacity_opt, EIM_liquefication_opt, specific_heat_chem_opt,
-        start_local_temperature_opt, boiling_point_chem_opt, latent_H_chem_opt,
-        COP_liq_opt, start_electricity_price_opt, CO2e_start_opt, GWP_chem_opt,
-        V_flowrate_opt,
-        number_of_cryo_pump_load_truck_site_A_opt, # For loading truck at Site A
-        number_of_cryo_pump_load_storage_port_A_opt, # For unloading to storage at Port A
-        number_of_cryo_pump_load_ship_port_A_opt, # For loading ship at Port A
-        dBOR_dT_opt, BOR_loading_opt, BOR_unloading_opt, # BOR types
+        (LH2_plant_capacity_opt, EIM_liquefication_opt, specific_heat_chem, # specific_heat_chem is a list
+        start_local_temperature_opt, boiling_point_chem, latent_H_chem, # boiling_point_chem, latent_H_chem are lists
+        COP_liq, start_electricity_price_opt, CO2e_start_opt, GWP_chem, # COP_liq, GWP_chem are lists
+        V_flowrate, # V_flowrate is a list
+        number_of_cryo_pump_load_truck_site_A_opt,
+        number_of_cryo_pump_load_storage_port_A_opt,
+        number_of_cryo_pump_load_ship_port_A_opt,
+        dBOR_dT, BOR_loading, BOR_unloading, # dBOR_dT, BOR_loading, BOR_unloading are lists
         head_pump_opt, pump_power_factor_opt, EIM_cryo_pump_opt,
         ss_therm_cond_opt, pipe_length_opt, pipe_inner_D_opt, pipe_thick_opt,
-        COP_refrig_opt, EIM_refrig_eff_opt, pipe_metal_specific_heat_opt, COP_cooldown_opt,
-        road_delivery_ener_opt, HHV_chem_opt,
-        chem_in_truck_weight_opt, truck_economy_opt, truck_tank_radius_opt, truck_tank_length_opt,
+        COP_refrig, EIM_refrig_eff_opt, pipe_metal_specific_heat_opt, COP_cooldown, # COP_refrig, COP_cooldown are lists
+        road_delivery_ener, HHV_chem, # road_delivery_ener, HHV_chem are lists
+        chem_in_truck_weight, truck_economy, truck_tank_radius_opt, truck_tank_length_opt, # chem_in_truck_weight, truck_economy are lists
         truck_tank_metal_thickness_opt, metal_thermal_conduct_opt,
         truck_tank_insulator_thickness_opt, insulator_thermal_conduct_opt,
-        OHTC_ship_opt, BOR_truck_trans_opt,
+        OHTC_ship, BOR_truck_trans, # OHTC_ship, BOR_truck_trans are lists
         HHV_diesel_opt, diesel_engine_eff_opt, EIM_truck_eff_opt,
         diesel_density_opt, CO2e_diesel_opt,
-        BOG_recirculation_truck_opt, # This is the BOG_recirculation_truck_percentage
-        fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem_opt,
-        storage_time_A_opt, liquid_chem_density_opt, storage_volume_opt,
-        storage_radius_opt, BOR_land_storage_opt, tank_metal_thickness_opt,
+        BOG_recirculation_truck_opt,
+        fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem, # LHV_chem is a list
+        storage_time_A_opt, liquid_chem_density, storage_volume, # liquid_chem_density, storage_volume are lists
+        storage_radius, BOR_land_storage, tank_metal_thickness_opt, # storage_radius, BOR_land_storage are lists
         tank_insulator_thickness_opt, BOG_recirculation_storage_opt,
-        distance_A_to_port_opt, duration_A_to_port_opt, diesel_price_start_opt, driver_daily_salary_start_opt, annual_working_days_opt # ADDED FOR OPTIMIZER
+        distance_A_to_port_opt, duration_A_to_port_opt, diesel_price_start_opt, driver_daily_salary_start_opt, annual_working_days_opt
         ) = all_shared_params_tuple
-
 
         X = A_initial_guess[0]  # Current chemical weight being optimized
 
@@ -2724,46 +2723,41 @@ def run_lca_model(inputs):
         # Bundle ALL shared parameters that ANY of the first 7 functions might need.
         # The order here MUST MATCH the unpacking order in optimization_chem_weight.
         all_shared_params_tuple = (
-            # Parameters for site_A_chem_liquification
             LH2_plant_capacity, EIM_liquefication, specific_heat_chem,
             start_local_temperature, boiling_point_chem, latent_H_chem,
-            COP_liq, start_electricity_price, CO2e_start, GWP_chem,
-
-            # Parameters for fuel_pump_transfer (all possible parameters for all contexts)
-            V_flowrate,
+            COP_liq, start_electricity_price, CO2e_start, GWP_chem, # GWP_chem must be the full list
+            V_flowrate, # Full list
             number_of_cryo_pump_load_truck_site_A,
-            number_of_cryo_pump_load_storage_port_A, # Used for portA_to_storage context
-            number_of_cryo_pump_load_ship_port_A, # Not used in optimizer's pump transfer, but kept for consistency
-            dBOR_dT, BOR_loading, BOR_unloading, # BOR_loading for siteA_to_truck, BOR_unloading for portA_to_storage
+            number_of_cryo_pump_load_storage_port_A,
+            number_of_cryo_pump_load_ship_port_A,
+            dBOR_dT, # Full list
+            BOR_loading, # Full list
+            BOR_unloading, # Full list
             head_pump, pump_power_factor, EIM_cryo_pump,
             ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick,
-            COP_refrig, EIM_refrig_eff,
-
-            # Parameters for fuel_road_transport (all possible parameters for both legs)
-            road_delivery_ener, HHV_chem,
-            chem_in_truck_weight, truck_economy, truck_tank_radius, truck_tank_length,
+            COP_refrig, # Full list
+            EIM_refrig_eff, pipe_metal_specific_heat, COP_cooldown, # COP_cooldown is also a list
+            road_delivery_ener, # Full list
+            HHV_chem, # Full list
+            chem_in_truck_weight, # Full list
+            truck_economy, # Full list
+            truck_tank_radius, truck_tank_length,
             truck_tank_metal_thickness, metal_thermal_conduct,
             truck_tank_insulator_thickness, insulator_thermal_conduct,
-            OHTC_ship, BOR_truck_trans,
+            OHTC_ship, # Full list
+            BOR_truck_trans, # Full list
             HHV_diesel, diesel_engine_eff, EIM_truck_eff,
             diesel_density, CO2e_diesel,
-            BOG_recirculation_truck, # This is the percentage from inputs
-
-            # Parameters for BOG recirculation (if used in first 7 funcs)
-            fuel_cell_eff, EIM_fuel_cell, LHV_chem,
-
-            # Parameters for fuel_storage (all possible parameters for all contexts)
-            storage_time_A, liquid_chem_density, storage_volume,
-            storage_radius, BOR_land_storage, tank_metal_thickness,
+            BOG_recirculation_truck,
+            fuel_cell_eff, EIM_fuel_cell, LHV_chem, # Full list
+            storage_time_A, liquid_chem_density, # Full list
+            storage_volume, # Full list
+            storage_radius, # Full list
+            BOR_land_storage, # Full list
+            tank_metal_thickness,
             tank_insulator_thickness, BOG_recirculation_storage,
-
-            # Parameters for chem_loading_to_ship (unique parameters)
-            pipe_metal_specific_heat, COP_cooldown, # COP_cooldown is also in global COP_cooldown list
-
-            # Specific parameters for the first leg of road transport (used in optimizer)
             distance_A_to_port, duration_A_to_port, diesel_price_start, driver_daily_salary_start, annual_working_days
         )
-
         # This is the tuple that will be passed to scipy.optimize.minimize
         args_for_optimizer_tuple = (
             user_define,                      # Contains B,C,D,E,F parameters
