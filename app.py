@@ -56,7 +56,8 @@ def run_lca_model(inputs):
         return latlng.get("lat"), latlng.get("lng"), state_name
 
     def decode_polyline(polyline_str):
-        index, lat, lng, coordinates = 0, 0, 0, 0
+        index, lat, lng = 0, 0, 0
+        coordinates = []
         while index < len(polyline_str):
             shift, result, lat_change, lng_change = 0, 0, 0, 0
             for unit in ['lat', 'lng']:
