@@ -1187,7 +1187,7 @@ def run_lca_model(inputs):
             elif func_to_call.__name__ == "site_A_chem_liquification":
                 process_args_for_current_func = (
                     LH2_plant_capacity_opt, EIM_liquefication_opt, specific_heat_chem, # Changed from specific_heat_chem_opt
-                    start_local_temperature_opt, boiling_point_chem, latent_H_chem, # Changed from boiling_point_chem_opt, latent_H_chem_opt
+                    start_local_temperature, boiling_point_chem, latent_H_chem, # Changed from boiling_point_chem_opt, latent_H_chem_opt
                     COP_liq, start_electricity_price_opt, CO2e_start_opt, GWP_chem # Changed from COP_liq_opt, GWP_chem_opt
                 )
 
@@ -1244,7 +1244,7 @@ def run_lca_model(inputs):
                     BOG_recirculation_storage_opt,
                     LH2_plant_capacity_opt, EIM_liquefication_opt,
                     fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem, # Changed from LHV_chem_opt
-                    start_local_temperature_opt # Local temperature for Port A
+                    start_local_temperature # Local temperature for Port A
                 )
 
             elif func_to_call.__name__ == "chem_loading_to_ship":
