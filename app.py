@@ -14,9 +14,9 @@ import os
 import json
 import matplotlib
 matplotlib.use('Agg')
-import matplotlib.pyplot as plt 
-import io                         
-import base64                     
+import matplotlib.pyplot as plt
+import io
+import base64
 
 # --- Initialize Flask App ---
 app = Flask(__name__)
@@ -56,7 +56,7 @@ def run_lca_model(inputs):
         return latlng.get("lat"), latlng.get("lng"), state_name
 
     def decode_polyline(polyline_str):
-        index, lat, lng, coordinates = 0, 0, 0, []
+        index, lat, lng, coordinates = 0, 0, 0, 0
         while index < len(polyline_str):
             shift, result, lat_change, lng_change = 0, 0, 0, 0
             for unit in ['lat', 'lng']:
@@ -111,7 +111,7 @@ def run_lca_model(inputs):
             print(f"DEBUG: Could not convert latitude '{lat_str}' or longitude '{lon_str}' to float.")
             return None, None, None # Return None for all if conversion fails for either
 
-        return lat, lon, port_name        
+        return lat, lon, port_name
 
     def inland_routes_cal(start_coords, end_coords):
         endpoint = f'https://maps.googleapis.com/maps/api/distancematrix/json'
@@ -186,12 +186,12 @@ def run_lca_model(inputs):
         from openai import OpenAI
         client = OpenAI(api_key=api_key_openAI)
         default_price_usd_per_kg = 6.5
-        
+
         try:
             prompt = f"""
             You are an expert in hydrogen markets with access to real-time data as of June 27, 2025. Provide the latest delivered hydrogen cost in USD per kilogram (USD/kg) for the location specified by the coordinates {coords_str} (latitude, longitude). The cost should include production, compression, storage, and distribution expenses, as relevant for transportation applications (e.g., fuel cell vehicles). Use reliable sources such as S&P Global, IEA, Hydrogen Council, or Argus Media for current prices. If specific data for the location or delivered cost is unavailable, estimate the price based on regional or global averages for the most relevant hydrogen type (grey, blue, or green) and indicate the estimation basis. Return only the price in USD/kg as a float, without additional text or explanation.
             """
-            
+
             response = client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
@@ -201,18 +201,18 @@ def run_lca_model(inputs):
                 max_tokens=50,
                 temperature=0.3
             )
-            
+
             price = float(response.choices[0].message.content.strip())
             return coords_str, price
         except Exception:
             return coords_str, default_price_usd_per_kg
-            
+
     def openai_get_marine_fuel_price(fuel_name, port_coords_tuple, port_name_str):
         from openai import OpenAI
         client = OpenAI(api_key=api_key_openAI)
         default_prices = {'VLSFO': 650.0, 'LNG': 550.0, 'Methanol': 700.0, 'Ammonia': 800.0}
         default_price_usd_per_mt = default_prices.get(fuel_name, 650.0)
-        
+
         try:
             prompt = f"""
             You are an expert in marine fuel markets with access to real-time data as of June 27, 2025. Provide the latest bunker fuel price in USD per metric ton (USD/mt) for {fuel_name} at the port of {port_name_str} (coordinates: {port_coords_tuple[0]}, {port_coords_tuple[1]}). Use reliable sources such as Ship & Bunker, Argus Media, or S&P Global for current prices. If specific data for {port_name_str} or {fuel_name} is unavailable, estimate the price based on global averages or trends for similar ports and fuel types, and indicate the estimation basis. Return only the price in USD/mt as a float, without additional text or explanation.
@@ -226,12 +226,12 @@ def run_lca_model(inputs):
                 max_tokens=50,
                 temperature=0.3
             )
-            
+
             price = float(response.choices[0].message.content.strip())
             return port_name_str, price
         except Exception:
             return port_name_str, default_price_usd_per_mt
-        
+
     def calculate_ship_power_kw(ship_volume_m3):
         power_scaling_data = [(20000, 7000), (90000, 15000), (174000, 19900), (210000, 25000), (266000, 43540)]
         volumes_m3 = [p[0] for p in power_scaling_data]
@@ -253,7 +253,7 @@ def run_lca_model(inputs):
                     print(f"Warning: Could not convert value '{row[column_index]}' to a number for chart '{title}'. Defaulting to 0.")
             plt.style.use('seaborn-v0_8-whitegrid')
             fig, ax = plt.subplots(figsize=(10, len(labels) * 0.5))
-            
+
             y_pos = np.arange(len(labels))
             ax.barh(y_pos, values, align='center', color='#4CAF50', edgecolor='black')
             ax.set_yticks(y_pos)
@@ -261,12 +261,12 @@ def run_lca_model(inputs):
             ax.invert_yaxis()  # labels read top-to-bottom
             ax.set_xlabel(x_label, fontsize=14, weight='bold')
             ax.set_title(title, fontsize=16, weight='bold', pad=20)
-            
+
             for i, v in enumerate(values):
                 ax.text(v, i, f' {v:,.2f}', color='black', va='center', fontweight='bold')
-                
+
             plt.tight_layout(pad=2.0)
-            
+
             if overlay_text:
                 fig.text(0.95, 0.15, overlay_text,
                         ha='right', va='bottom', size=10,
@@ -278,7 +278,7 @@ def run_lca_model(inputs):
             buf.seek(0)
             img_base64 = base64.b64encode(buf.read()).decode('utf-8')
             plt.close(fig) # Explicitly close the figure to free up memory
-            
+
             return img_base64
 
         # --- NEW: Catch any exception during chart creation ---
@@ -294,7 +294,7 @@ def run_lca_model(inputs):
     # =================================================================
     # <<<                   FUEL PROCESS FUNCTIONS                  >>>
     # =================================================================
-    
+
     def PH2_pressure_fnc(density): return density * 1.2 # Simplified placeholder
     def multistage_compress(pressure): return pressure * 0.05 # Simplified placeholder
     def kinematic_viscosity_PH2(pressure): return 1e-5 / (pressure/10) # Simplified placeholder
@@ -314,7 +314,7 @@ def run_lca_model(inputs):
         # Even if currently minimal, this maintains the pattern.
         # For this function, based on its simple return, only GWP_chem might be relevant
         # if BOG_loss was non-zero and its GWP impact needed to be calculated.
-        
+
         (GWP_chem_list_arg,) = process_args_tuple # Unpacking a tuple with one element
 
         # Original logic from your snippet:
@@ -322,7 +322,7 @@ def run_lca_model(inputs):
         convert_energy_consumed = 0 # Or just ener_consumed if preferred
         G_emission = 0
         BOG_loss = 0
-        
+
         # If BOG_loss were potentially non-zero in a more detailed version of this function,
         # you would calculate G_emission like this:
         # G_emission = (convert_energy_consumed * 0.2778 * CO2e_start_arg * 0.001) + (BOG_loss * GWP_chem_list_arg[B_fuel_type])
@@ -358,10 +358,10 @@ def run_lca_model(inputs):
         G_emission_from_energy = liquify_ener_consumed * 0.2778 * CO2e_start_arg * 0.001
         BOG_loss = 0.016 * A
         A_after_loss = A - BOG_loss
-        G_emission_from_bog = BOG_loss * GWP_chem_list_arg[B_fuel_type] 
+        G_emission_from_bog = BOG_loss * GWP_chem_list_arg[B_fuel_type]
         G_emission = G_emission_from_energy + G_emission_from_bog
         return total_money, liquify_ener_consumed, G_emission, A_after_loss, BOG_loss
-    
+
     def chem_site_A_loading_to_truck(A, B, C, D, E, F, process_args_tuple):
         # Unpack the specific arguments this function needs from the passed-in tuple.
         # The order of variables here MUST EXACTLY MATCH the order they are packed
@@ -390,121 +390,113 @@ def run_lca_model(inputs):
         duration = A / (V_flowrate_arg[B]) / number_of_cryo_pump_load_arg  # hr = kg/(kg/hr)
         local_BOR_loading = dBOR_dT_arg[B] * (start_local_temperature_arg - 25) + BOR_loading_arg[B]  # dBOR/dT = (BOR_local - BOR_default)/(T_local - 25)
         BOG_loss = local_BOR_loading * (1 / 24) * duration * A  # kg = %/day * day/hr *hr * kg
-        
+
         pumping_power = liquid_chem_density_arg[B] * V_flowrate_arg[B] * (1 / 3600) * head_pump_arg * 9.8 / (367 * pump_power_factor_arg) / (EIM_cryo_pump_arg / 100) # W
-        
+
         # Ensure log10 argument is > 0. If pipe_inner_D is very small or equal to pipe_thick, this could be an issue.
         log_arg = (pipe_inner_D_arg + 2 * pipe_thick_arg) / pipe_inner_D_arg
         if log_arg <= 0:
             q_pipe = 0 # Or handle error appropriately
         else:
             q_pipe = 2 * np.pi * ss_therm_cond_arg * pipe_length_arg * (start_local_temperature_arg - (-253)) / (2.3 * np.log10(log_arg))  # W
-        
+
         ener_consumed_refrig = (q_pipe / (COP_refrig_arg[B] * EIM_refrig_eff_arg / 100)) / 1000000 * duration * 3600  # MJ
         ener_consumed = pumping_power * duration * 3600 * 1 / 1000000 + ener_consumed_refrig  # MJ
-        
+
         A_after_loss = A - BOG_loss # Calculate net amount
-        
+
         money = ener_consumed * start_electricity_price_tuple_arg[2]  # MJ*$/MJ = $
         G_emission = ener_consumed * 0.2778 * CO2e_start_arg * 0.001 + BOG_loss * GWP_chem_list_arg[B]  # kgCO2
 
         return money, ener_consumed, G_emission, A_after_loss, BOG_loss
-    
-    def site_A_to_port_A(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
-        # Unpack the specific arguments this function needs from the passed-in tuple.
-        # The order of variables here MUST EXACTLY MATCH the order they are packed
-        # into the tuple when this function is called.
 
-        road_delivery_ener_arg, HHV_chem_arg, chem_in_truck_weight_arg, truck_economy_arg, distance_A_to_port_arg, \
-        HHV_diesel_arg, diesel_density_arg, diesel_price_start_arg, truck_tank_radius_arg, \
-        truck_tank_length_arg, truck_tank_metal_thickness_arg, metal_thermal_conduct_arg, \
-        truck_tank_insulator_thickness_arg, insulator_thermal_conduct_arg, OHTC_ship_arg, \
-        start_local_temperature_arg, COP_refrig_arg, EIM_refrig_eff_arg, duration_A_to_port_arg, \
-        dBOR_dT_arg, BOR_truck_trans_arg, diesel_engine_eff_arg, EIM_truck_eff_arg, \
-        CO2e_diesel_arg, GWP_chem_arg, \
-        BOG_recirculation_truck_percentage_arg, \
-        LH2_plant_capacity_arg, EIM_liquefication_arg, \
+    # NEW: Unified fuel_road_transport function
+    def fuel_road_transport(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
+        """
+        Calculates cost, energy, and emissions for road transport of fuel.
+        This function replaces site_A_to_port_A and port_B_to_site_B.
+        """
+        # Unpack all arguments, including those that vary by leg (start vs. end)
+        road_delivery_ener_arg, HHV_chem_arg, chem_in_truck_weight_arg, truck_economy_arg, \
+        distance_arg, HHV_diesel_arg, diesel_density_arg, diesel_price_arg, \
+        truck_tank_radius_arg, truck_tank_length_arg, truck_tank_metal_thickness_arg, \
+        metal_thermal_conduct_arg, truck_tank_insulator_thickness_arg, insulator_thermal_conduct_arg, \
+        OHTC_ship_arg, local_temperature_arg, COP_refrig_arg, EIM_refrig_eff_arg, \
+        duration_arg, dBOR_dT_arg, BOR_truck_trans_arg, diesel_engine_eff_arg, \
+        EIM_truck_eff_arg, CO2e_diesel_arg, GWP_chem_arg, \
+        BOG_recirculation_truck_percentage_arg, LH2_plant_capacity_arg, EIM_liquefication_arg, \
         fuel_cell_eff_arg, EIM_fuel_cell_arg, LHV_chem_arg, \
-        driver_daily_salary_start_arg, annual_working_days_arg = process_args_tuple # ADDED DRIVER SALARY ARGS
+        driver_daily_salary_arg, annual_working_days_arg = process_args_tuple
 
-        # Original logic of the function, using the unpacked '_arg' variables
         number_of_trucks = math.ceil(A / chem_in_truck_weight_arg[B_fuel_type])
-        truck_energy_consumed = road_delivery_ener_arg[B_fuel_type] * HHV_chem_arg[B_fuel_type]
-        #trans_energy_required = truck_energy_consumed * distance_A_to_port_arg * A
-        trans_energy_required = number_of_trucks * distance_A_to_port_arg * HHV_diesel_arg * diesel_density_arg / truck_economy_arg[B_fuel_type]
-        diesel_money = trans_energy_required / HHV_diesel_arg / diesel_density_arg * diesel_price_start_arg
+        
+        # Energy for propulsion
+        trans_energy_required = number_of_trucks * distance_arg * HHV_diesel_arg * diesel_density_arg / truck_economy_arg[B_fuel_type]
+        diesel_money = trans_energy_required / HHV_diesel_arg / diesel_density_arg * diesel_price_arg
 
+        # Refrigeration for cryogenic/refrigerated fuels
         storage_area_truck = 2 * np.pi * truck_tank_radius_arg * truck_tank_length_arg
-        if B_fuel_type == 0:
+        if B_fuel_type == 0: # LH2
             thermal_resist = truck_tank_metal_thickness_arg / metal_thermal_conduct_arg + \
                             truck_tank_insulator_thickness_arg / insulator_thermal_conduct_arg
-            OHTC = 1 / thermal_resist if thermal_resist > 0 else float('inf') # Avoid division by zero
-        else:
+            OHTC = 1 / thermal_resist if thermal_resist > 0 else float('inf')
+        else: # Ammonia, Methanol (using ship OHTC as proxy for truck if not LH2)
             OHTC = OHTC_ship_arg[B_fuel_type]
 
-        heat_required = OHTC * storage_area_truck * (start_local_temperature_arg + 273 - 20) # Assuming 20K is target temp
-        refrig_ener_consumed = (heat_required / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * 60 * duration_A_to_port_arg * number_of_trucks
+        heat_required = OHTC * storage_area_truck * (local_temperature_arg + 273 - 20) # Assuming 20K target temp
+        refrig_ener_consumed = (heat_required / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * 60 * duration_arg * number_of_trucks
 
-        local_BOR_truck_trans = dBOR_dT_arg[B_fuel_type] * (start_local_temperature_arg - 25) + BOR_truck_trans_arg[B_fuel_type]
-        current_BOG_loss = A * local_BOR_truck_trans / (24 * 60) * duration_A_to_port_arg # Renamed to avoid conflict in recirculation
+        # BOG loss during transit
+        local_BOR_truck_trans = dBOR_dT_arg[B_fuel_type] * (local_temperature_arg - 25) + BOR_truck_trans_arg[B_fuel_type]
+        current_BOG_loss = A * local_BOR_truck_trans / (24 * 60) * duration_arg
 
-        refrig_money = (refrig_ener_consumed / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / diesel_density_arg * diesel_price_start_arg
+        refrig_money = (refrig_ener_consumed / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / diesel_density_arg * diesel_price_arg
         money = diesel_money + refrig_money
         total_energy = trans_energy_required + refrig_ener_consumed
 
-        A_after_loss = A - current_BOG_loss # Initial state before recirculation
-
+        A_after_loss = A - current_BOG_loss
         G_emission_energy = (total_energy * CO2e_diesel_arg) / (HHV_diesel_arg * diesel_density_arg)
         G_emission = G_emission_energy + current_BOG_loss * GWP_chem_arg[B_fuel_type]
-
-        net_BOG_loss = current_BOG_loss # This will be updated if recirculation occurs
+        net_BOG_loss = current_BOG_loss
 
         # Recirculation logic
-        # C_recirculation_BOG (user_define[2]) enables overall BOG recirculation
-        # D_truck_apply (user_define[3]) is the type of BOG use for trucks
-        if C_recirculation_BOG == 2: # If BOG recirculation is active
-            if D_truck_apply == 1: # 1) Re-liquefy BOG
+        if C_recirculation_BOG == 2:
+            if D_truck_apply == 1: # Re-liquefy BOG
                 usable_BOG = current_BOG_loss * BOG_recirculation_truck_percentage_arg * 0.01
-                BOG_flowrate = usable_BOG / duration_A_to_port_arg * 60 # kg/hr
-                # liquification_data_fitting is a global helper, needs LH2_plant_capacity_arg
                 reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
                 reliq_ener_consumed = reliq_ener_required * usable_BOG
 
-                total_energy += reliq_ener_consumed # Add energy for re-liquefaction
+                total_energy += reliq_ener_consumed
+                reliq_money = (reliq_ener_consumed / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / diesel_density_arg * diesel_price_arg
+                money += reliq_money
 
-                reliq_money = (reliq_ener_consumed / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / diesel_density_arg * diesel_price_start_arg
-                money += reliq_money # Add cost for re-liquefaction
-
-                A_after_loss += usable_BOG # Add back re-liquefied BOG
+                A_after_loss += usable_BOG
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_truck_percentage_arg * 0.01)
-
-                # Recalculate G_emission_energy with new total_energy
                 G_emission_energy = (total_energy * CO2e_diesel_arg) / (HHV_diesel_arg * diesel_density_arg)
                 G_emission = G_emission_energy + net_BOG_loss * GWP_chem_arg[B_fuel_type]
 
-            elif D_truck_apply == 2: # 2) Use BOG as another energy source (e.g., fuel cell)
+            elif D_truck_apply == 2: # Use BOG as another energy source
                 usable_BOG = current_BOG_loss * BOG_recirculation_truck_percentage_arg * 0.01
                 usable_ener = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
 
-                # Energy saved from refrigeration, capped at refrig_ener_consumed
                 energy_saved_from_refrig = min(usable_ener, refrig_ener_consumed)
-                money_saved_from_refrig = (energy_saved_from_refrig / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / diesel_density_arg * diesel_price_start_arg
+                money_saved_from_refrig = (energy_saved_from_refrig / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / diesel_density_arg * diesel_price_arg
 
                 total_energy = trans_energy_required + (refrig_ener_consumed - energy_saved_from_refrig)
                 money = diesel_money + (refrig_money - money_saved_from_refrig)
 
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_truck_percentage_arg * 0.01)
-                # A_after_loss remains A - current_BOG_loss because the BOG is consumed, not added back as liquid
-
                 G_emission_energy = (total_energy * CO2e_diesel_arg) / (HHV_diesel_arg * diesel_density_arg)
                 G_emission = G_emission_energy + net_BOG_loss * GWP_chem_arg[B_fuel_type]
 
-        trip_days = max(1, math.ceil(duration_A_to_port_arg / 1440)) # At least 1 day, round up
-        driver_cost_per_truck = (driver_daily_salary_start_arg / annual_working_days_arg) * trip_days
+        # Calculate and add driver salary cost
+        trip_days = max(1, math.ceil(duration_arg / 1440)) # At least 1 day, round up
+        driver_cost_per_truck = (driver_daily_salary_arg / annual_working_days_arg) * trip_days
         total_driver_cost = driver_cost_per_truck * number_of_trucks
-        money += total_driver_cost # Add to total money
+        money += total_driver_cost
 
         return money, total_energy, G_emission, A_after_loss, net_BOG_loss
+
 
     def port_A_unloading_to_storage(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
 
@@ -532,31 +524,30 @@ def run_lca_model(inputs):
 
         # Original logic of the function, using the unpacked '_arg' variables
         duration = A / (V_flowrate_arg[B_fuel_type]) / number_of_cryo_pump_load_storage_port_A_arg  # hr
-        
-        # Using BOR_unloading_arg as per unpacking
+
         local_BOR_unloading_or_loading = dBOR_dT_arg[B_fuel_type] * (start_local_temperature_arg - 25) + BOR_unloading_arg[B_fuel_type]
         BOG_loss = local_BOR_unloading_or_loading * (1 / 24) * duration * A  # kg
-        
+
         pumping_power = liquid_chem_density_arg[B_fuel_type] * V_flowrate_arg[B_fuel_type] * (1 / 3600) * \
                         head_pump_arg * 9.8 / (367 * pump_power_factor_arg) / (EIM_cryo_pump_arg / 100) # W
-        
+
         log_arg = (pipe_inner_D_arg + 2 * pipe_thick_arg) / pipe_inner_D_arg
         if log_arg <= 0:
-            q_pipe = 0 
+            q_pipe = 0
         else:
             q_pipe = 2 * np.pi * ss_therm_cond_arg * pipe_length_arg * \
                     (start_local_temperature_arg - (-253)) / (2.3 * np.log10(log_arg))  # W
-        
+
         ener_consumed_refrig = (q_pipe / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * duration * 3600  # MJ
         ener_consumed = pumping_power * duration * 3600 * 1 / 1000000 + ener_consumed_refrig  # MJ
-        
+
         A_after_loss = A - BOG_loss # Net amount
-        
+
         money = ener_consumed * start_electricity_price_tuple_arg[2]  # $
         G_emission = ener_consumed * 0.2778 * CO2e_start_arg * 0.001 + BOG_loss * GWP_chem_list_arg[B_fuel_type]  # kgCO2
-        
+
         return money, ener_consumed, G_emission, A_after_loss, BOG_loss
-    
+
     def chem_storage_at_port_A(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         # Unpack the specific arguments this function needs from the passed-in tuple.
         # The order of variables here MUST EXACTLY MATCH the order they are packed.
@@ -573,18 +564,18 @@ def run_lca_model(inputs):
         number_of_storage = math.ceil(A / liquid_chem_density_arg[B_fuel_type] / storage_volume_arg[B_fuel_type])
         local_BOR_storage = dBOR_dT_arg[B_fuel_type] * (start_local_temperature_arg - 25) + BOR_land_storage_arg[B_fuel_type]
         current_BOG_loss = A * local_BOR_storage * storage_time_A_arg # Renamed BOG_loss to current_BOG_loss
-        
+
         A_after_loss = A - current_BOG_loss # Initial chemical amount after BOG loss, before recirculation
-        
+
         storage_area_val = 4 * np.pi * (storage_radius_arg[B_fuel_type]**2) * number_of_storage
-        
+
         thermal_resist_val = tank_metal_thickness_arg / metal_thermal_conduct_arg + \
                             tank_insulator_thickness_arg / insulator_thermal_conduct_arg
         OHTC_val = 1 / thermal_resist_val if thermal_resist_val > 0 else float('inf') # Avoid division by zero
-        
+
         heat_required_val = OHTC_val * storage_area_val * (start_local_temperature_arg + 273 - 20) # Assuming 20K target
         ener_consumed_refrig = (heat_required_val / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * 86400 * storage_time_A_arg
-        
+
         opex_money = ener_consumed_refrig * start_electricity_price_tuple_arg[2]
         total_energy_consumed = ener_consumed_refrig # Initial total energy
         G_emission = total_energy_consumed * 0.2778 * CO2e_start_arg * 0.001 + current_BOG_loss * GWP_chem_list_arg[B_fuel_type]
@@ -596,7 +587,7 @@ def run_lca_model(inputs):
             if E_storage_apply == 1: # 1) Re-liquefy BOG
                 usable_BOG = current_BOG_loss * BOG_recirculation_storage_percentage_arg * 0.01
                 BOG_flowrate = usable_BOG / storage_time_A_arg * 1 / 24 # kg/hr
-                
+
                 reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
                 reliq_ener_consumed = reliq_ener_required * usable_BOG
                 total_energy_consumed += reliq_ener_consumed # Add energy for re-liquefaction
@@ -608,31 +599,31 @@ def run_lca_model(inputs):
             elif E_storage_apply == 2: # 2) Use BOG as another energy source (e.g., fuel cell)
                 usable_BOG = current_BOG_loss * BOG_recirculation_storage_percentage_arg * 0.01
                 usable_ener = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
-                
+
                 initial_refrig_energy = ener_consumed_refrig # Store initial refrigeration energy
                 ener_consumed_refrig -= usable_ener # Reduce refrigeration energy by BOG-derived energy
                 if ener_consumed_refrig < 0:
                     ener_consumed_refrig = 0
-                
+
                 total_energy_consumed = ener_consumed_refrig # Update total energy (only refrigeration part changes)
                 opex_money = total_energy_consumed * start_electricity_price_tuple_arg[2] # Recalculate money
-                
+
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_storage_percentage_arg * 0.01)
                 # A_after_loss remains A - current_BOG_loss, as BOG is consumed
-                
+
                 G_emission = total_energy_consumed * 0.2778 * CO2e_start_arg * 0.001 + net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
         total_money = opex_money
         return total_money, total_energy_consumed, G_emission, A_after_loss, net_BOG_loss
-    
+
     def chem_loading_to_ship(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         # Unpack all necessary arguments
-        (V_flowrate_arg, number_of_cryo_pump_load_ship_port_A_arg, dBOR_dT_arg, 
-        start_local_temperature_arg, BOR_loading_arg, liquid_chem_density_arg, head_pump_arg, 
-        pump_power_factor_arg, EIM_cryo_pump_arg, ss_therm_cond_arg, pipe_length_arg, pipe_inner_D_arg, 
-        pipe_thick_arg, boiling_point_chem_arg, EIM_refrig_eff_arg, start_electricity_price_tuple_arg, 
-        CO2e_start_arg, GWP_chem_list_arg, calculated_storage_area_arg, ship_tank_metal_thick_arg, 
-        ship_tank_insulation_thick_arg, ship_tank_metal_density_arg, ship_tank_insulation_density_arg, 
-        ship_tank_metal_specific_heat_arg, ship_tank_insulation_specific_heat_arg, 
+        (V_flowrate_arg, number_of_cryo_pump_load_ship_port_A_arg, dBOR_dT_arg,
+        start_local_temperature_arg, BOR_loading_arg, liquid_chem_density_arg, head_pump_arg,
+        pump_power_factor_arg, EIM_cryo_pump_arg, ss_therm_cond_arg, pipe_length_arg, pipe_inner_D_arg,
+        pipe_thick_arg, boiling_point_chem_arg, EIM_refrig_eff_arg, start_electricity_price_tuple_arg,
+        CO2e_start_arg, GWP_chem_list_arg, calculated_storage_area_arg, ship_tank_metal_thickness,
+        ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density,
+        ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat,
         COP_cooldown_arg, COP_refrig_arg, ship_number_of_tanks_arg, pipe_metal_specific_heat_arg) = process_args_tuple
 
         # --- Existing Calculations ---
@@ -640,7 +631,7 @@ def run_lca_model(inputs):
         local_BOR_loading_val = dBOR_dT_arg[B_fuel_type] * (start_local_temperature_arg - 25) + BOR_loading_arg[B_fuel_type]
         BOG_loss = local_BOR_loading_val * (1 / 24) * duration * A
         # Be sure to add EIM_cryo_pump_arg to the arguments tuple for this function
-        pumping_power = liquid_chem_density_arg[B_fuel_type] * V_flowrate_arg[B_fuel_type] * (1 / 3600) * head_pump_arg * 9.8 / (367 * pump_power_factor_arg) / (EIM_cryo_pump_arg / 100) 
+        pumping_power = liquid_chem_density_arg[B_fuel_type] * V_flowrate_arg[B_fuel_type] * (1 / 3600) * head_pump_arg * 9.8 / (367 * pump_power_factor_arg) / (EIM_cryo_pump_arg / 100)
         ener_consumed_pumping = pumping_power * duration * 3600 / 1000000
 
         # Pipe refrigeration calculation
@@ -648,7 +639,7 @@ def run_lca_model(inputs):
         q_pipe = 0
         if log_arg > 0:
             q_pipe = 2 * np.pi * ss_therm_cond_arg * pipe_length_arg * (start_local_temperature_arg + 273.15 - boiling_point_chem_arg[B_fuel_type]) / (np.log(log_arg))
-        
+
         ener_consumed_pipe_refrig = 0
         pipe_refrig_cop = COP_refrig_arg[B_fuel_type]
         if pipe_refrig_cop > 0:
@@ -656,30 +647,30 @@ def run_lca_model(inputs):
 
         ener_consumed_cooldown = 0
         if B_fuel_type in [0, 1]: # Cooldown only needed for cryogenic fuels
-            mass_metal = calculated_storage_area_arg * ship_tank_metal_thick_arg * ship_tank_metal_density_arg * ship_number_of_tanks_arg
-            mass_insulation = calculated_storage_area_arg * ship_tank_insulation_thick_arg[B_fuel_type] * ship_tank_insulation_density_arg * ship_number_of_tanks_arg
-            
-            H_tank_metal = ship_tank_metal_specific_heat_arg * mass_metal
-            H_tank_insulation = ship_tank_insulation_specific_heat_arg * mass_insulation
-            
+            mass_metal = calculated_storage_area_arg * ship_tank_metal_thickness * ship_tank_metal_density * ship_number_of_tanks_arg
+            mass_insulation = calculated_storage_area_arg * ship_tank_insulation_thickness[B_fuel_type] * ship_tank_insulation_density * ship_number_of_tanks_arg
+
+            H_tank_metal = ship_tank_metal_specific_heat * mass_metal
+            H_tank_insulation = ship_tank_insulation_specific_heat * mass_insulation
+
             delta_T = (start_local_temperature_arg + 273.15) - boiling_point_chem_arg[B_fuel_type]
             Q_cooling = (H_tank_metal + H_tank_insulation) * delta_T
-            
+
             cooldown_cop = COP_cooldown_arg[B_fuel_type]
             if cooldown_cop > 0:
                 ener_consumed_cooldown = Q_cooling / cooldown_cop
-                
+
         ener_consumed_cooldown_pipes = 0
         if B_fuel_type in [0, 1]: # Cooldown only for cryogenic fuels (LH2, NH3)
             # Calculate volume of pipe metal: (Outer Area - Inner Area) * Length
             pipe_outer_D = pipe_inner_D_arg + 2 * pipe_thick_arg
             pipe_metal_volume = (np.pi * (pipe_outer_D/2)**2 - np.pi * (pipe_inner_D_arg/2)**2) * pipe_length_arg
-            
+
             # Assuming pipe_metal_density is similar to ship_tank_metal_density for stainless steel
             pipe_metal_density = ship_tank_metal_density # Using existing parameter for consistency
-            
+
             mass_metal_pipes = pipe_metal_volume * pipe_metal_density
-            
+
             # Delta T from ambient to boiling point of the chemical
             delta_T_pipes = (start_local_temperature_arg + 273.15) - boiling_point_chem_arg[B_fuel_type]
 
@@ -689,15 +680,15 @@ def run_lca_model(inputs):
             cooldown_cop_pipes = COP_cooldown_arg[B_fuel_type]
             if cooldown_cop_pipes > 0:
                 ener_consumed_cooldown_pipes = Q_cooling_pipes / cooldown_cop_pipes
-                
-        
+
+
         # --- Final Totals for this step ---
         ener_consumed = ener_consumed_pumping + ener_consumed_pipe_refrig + ener_consumed_cooldown + ener_consumed_cooldown_pipes
         A_after_loss = A - BOG_loss
-        
+
         money = ener_consumed * start_electricity_price_tuple_arg[2]
         G_emission = ener_consumed * 0.2778 * CO2e_start_arg * 0.001 + BOG_loss * GWP_chem_list_arg[B_fuel_type]
-        
+
         return money, ener_consumed, G_emission, A_after_loss, BOG_loss
 
     def port_to_port(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
@@ -717,26 +708,26 @@ def run_lca_model(inputs):
             aux_engine_efficiency_arg,
             GWP_N2O_arg
         ) = process_args_tuple
-    
+
         # --- 2. Calculate Base Propulsion Requirements ---
         propulsion_work_kwh = avg_ship_power_kw_arg * port_to_port_duration_arg
-        
+
         # --- 3. Calculate BOG & Refrigeration ---
         T_avg = (start_local_temperature_arg + end_local_temperature_arg) / 2
         refrig_work_mj = 0
         if B_fuel_type == 0: # LH2 requires active refrigeration
             heat_required_watts = OHTC_ship_arg[B_fuel_type] * calculated_storage_area_arg * (T_avg + 273 - 20) * ship_number_of_tanks_arg
             refrig_work_mj = (heat_required_watts / (COP_refrig_arg[B_fuel_type] * (EIM_refrig_eff_arg / 100))) / 1000000 * 3600 * port_to_port_duration_arg
-    
+
         local_BOR_transportation = dBOR_dT_arg[B_fuel_type] * (T_avg - 25) + BOR_ship_trans_arg[B_fuel_type]
         current_BOG_loss = local_BOR_transportation * (1 / 24) * port_to_port_duration_arg * A
-        
+
         # --- 4. Handle BOG Recirculation ---
         net_BOG_loss = current_BOG_loss
         A_after_loss = A - current_BOG_loss
         reliq_work_mj = 0
         energy_saved_from_bog_mj = 0
-    
+
         if C_recirculation_BOG == 2:
             usable_BOG = current_BOG_loss * (BOG_recirculation_maritime_percentage_arg / 100.0)
             net_BOG_loss -= usable_BOG
@@ -746,49 +737,47 @@ def run_lca_model(inputs):
                 reliq_work_mj = reliq_ener_required * usable_BOG
             elif F_maritime_apply == 2: # Use as fuel
                 energy_saved_from_bog_mj = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
-    
+
         # --- 5. Calculate Total Fuel Consumed ---
         fuel_hhv_mj_per_kg = selected_fuel_params_arg['hhv_mj_per_kg']
         sfoc_g_per_kwh = selected_fuel_params_arg['sfoc_g_per_kwh']
-        
+
         # Calculate total work the engines must produce (in MJ)
         total_engine_work_mj = (propulsion_work_kwh * 3.6) + refrig_work_mj + reliq_work_mj - energy_saved_from_bog_mj
         if total_engine_work_mj < 0: total_engine_work_mj = 0 # Cannot have negative work
-            
+
         total_engine_work_kwh = total_engine_work_mj / 3.6
-        
+
         # Calculate fuel needed for this work, based on engine efficiency (SFOC)
-        total_fuel_consumed_kg = (total_engine_work_kwh * sfoc_g_per_kwh) / 1000
-        
+        total_fuel_consumed_kg = (total_engine_work_kwh * sfoc_g_per_kwh) / 1000.0
+
         # --- 6. Aggregate Final Cost and Emissions ---
         total_money = (total_fuel_consumed_kg / 1000) * selected_fuel_params_arg['price_usd_per_ton']
-    
+
         # Emissions from fuel combustion (CO2 and CH4)
         co2_factor = selected_fuel_params_arg['co2_emissions_factor_kg_per_kg_fuel']
         methane_factor = selected_fuel_params_arg['methane_slip_gwp100']
         fuel_emissions_co2e = (total_fuel_consumed_kg * co2_factor) + (total_fuel_consumed_kg * methane_factor)
-        
+
         # Emissions from N2O (for Ammonia fuel)
         n2o_emissions_co2e = 0
         if 'n2o_emission_factor_g_per_kwh' in selected_fuel_params_arg:
             n2o_factor_g_kwh = selected_fuel_params_arg['n2o_emission_factor_g_per_kwh']
             n2o_emissions_kg = (total_engine_work_kwh * n2o_factor_g_kwh) / 1000
             n2o_emissions_co2e = n2o_emissions_kg * GWP_N2O_arg
-    
+
         # Emissions from vented cargo BOG
         bog_emissions_co2e = net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
-        
+
         # Sum all emissions sources
         total_G_emission = fuel_emissions_co2e + bog_emissions_co2e + n2o_emissions_co2e
-        
+
         # Total chemical energy consumed is the HHV of the fuel burned
         total_energy_consumed_mj = total_fuel_consumed_kg * fuel_hhv_mj_per_kg
-        
+
         return total_money, total_energy_consumed_mj, total_G_emission, A_after_loss, net_BOG_loss
-        
+
     def chem_unloading_from_ship(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
-        # Unpack the specific arguments this function needs from the passed-in tuple.
-        # The order of variables here MUST EXACTLY MATCH the order they are packed.
 
         V_flowrate_arg, \
         number_of_cryo_pump_load_storage_port_B_arg, \
@@ -814,28 +803,28 @@ def run_lca_model(inputs):
 
         # Original logic of the function, using the unpacked '_arg' variables
         duration = A / (V_flowrate_arg[B_fuel_type]) / number_of_cryo_pump_load_storage_port_B_arg  # hr
-        
+
         local_BOR_unloading_val = dBOR_dT_arg[B_fuel_type] * (end_local_temperature_arg - 25) + BOR_unloading_arg[B_fuel_type]
         BOG_loss = local_BOR_unloading_val * (1 / 24) * duration * A  # kg
-        
+
         pumping_power = liquid_chem_density_arg[B_fuel_type] * V_flowrate_arg[B_fuel_type] * (1 / 3600) * \
                         head_pump_arg * 9.8 / (367 * pump_power_factor_arg) / (EIM_cryo_pump_arg / 100) # W
-        
+
         log_arg = (pipe_inner_D_arg + 2 * pipe_thick_arg) / pipe_inner_D_arg
         if log_arg <= 0: # Safety check
             q_pipe = 0
         else:
             q_pipe = 2 * np.pi * ss_therm_cond_arg * pipe_length_arg * \
                     (end_local_temperature_arg - (-253)) / (2.3 * np.log10(log_arg))  # W
-        
+
         ener_consumed_refrig = (q_pipe / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * duration * 3600  # MJ
         ener_consumed = pumping_power * duration * 3600 * 1 / 1000000 + ener_consumed_refrig  # MJ
-        
+
         A_after_loss = A - BOG_loss # Net amount
-        
+
         money = ener_consumed * end_electricity_price_tuple_arg[2]  # $
         G_emission = ener_consumed * 0.2778 * CO2e_end_arg * 0.001 + BOG_loss * GWP_chem_list_arg[B_fuel_type]  # kgCO2
-        
+
         return money, ener_consumed, G_emission, A_after_loss, BOG_loss
 
     def chem_storage_at_port_B(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
@@ -854,21 +843,21 @@ def run_lca_model(inputs):
         number_of_storage = math.ceil(A / liquid_chem_density_arg[B_fuel_type] / storage_volume_arg[B_fuel_type])
         local_BOR_storage = dBOR_dT_arg[B_fuel_type] * (end_local_temperature_arg - 25) + BOR_land_storage_arg[B_fuel_type]
         current_BOG_loss = A * local_BOR_storage * storage_time_B_arg
-        
+
         A_after_loss = A - current_BOG_loss
-        
+
         storage_area_val = 4 * np.pi * (storage_radius_arg[B_fuel_type]**2) * number_of_storage
-        
+
         thermal_resist_val = tank_metal_thickness_arg / metal_thermal_conduct_arg + \
                             tank_insulator_thickness_arg / insulator_thermal_conduct_arg
         OHTC_val = 1 / thermal_resist_val if thermal_resist_val > 0 else float('inf')
-        
+
         heat_required_val = OHTC_val * storage_area_val * (end_local_temperature_arg + 273 - 20) # Using end_local_temperature
         ener_consumed_refrig = (heat_required_val / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * 86400 * storage_time_B_arg
-        
+
         opex_money = ener_consumed_refrig * end_electricity_price_tuple_arg[2]
         total_energy_consumed = ener_consumed_refrig
-        
+
         G_emission = total_energy_consumed * 0.2778 * CO2e_end_arg * 0.001 + current_BOG_loss * GWP_chem_list_arg[B_fuel_type] # Using CO2e_end
         net_BOG_loss = current_BOG_loss
 
@@ -877,32 +866,32 @@ def run_lca_model(inputs):
             if E_storage_apply == 1: # Re-liquefy BOG
                 usable_BOG = current_BOG_loss * BOG_recirculation_storage_percentage_arg * 0.01
                 BOG_flowrate = usable_BOG / storage_time_B_arg * 1 / 24
-                
+
                 reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
                 reliq_ener_consumed = reliq_ener_required * usable_BOG
-                
+
                 total_energy_consumed += reliq_ener_consumed
                 opex_money = total_energy_consumed * end_electricity_price_tuple_arg[2] # Using end_electricity_price
-                
+
                 A_after_loss += usable_BOG
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_storage_percentage_arg * 0.01)
-                
+
                 G_emission = total_energy_consumed * 0.2778 * CO2e_end_arg * 0.001 + net_BOG_loss * GWP_chem_list_arg[B_fuel_type] # Using CO2e_end
 
             elif E_storage_apply == 2: # Use BOG as another energy source
                 usable_BOG = current_BOG_loss * BOG_recirculation_storage_percentage_arg * 0.01
                 usable_ener = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
-                
+
                 ener_consumed_refrig_original = ener_consumed_refrig # Store original refrigeration energy
                 ener_consumed_refrig -= usable_ener
                 if ener_consumed_refrig < 0:
                     ener_consumed_refrig = 0
-                
+
                 total_energy_consumed = ener_consumed_refrig # Update total energy
                 opex_money = total_energy_consumed * end_electricity_price_tuple_arg[2] # Using end_electricity_price
-                
+
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_storage_percentage_arg * 0.01)
-                
+
                 G_emission = total_energy_consumed * 0.2778 * CO2e_end_arg * 0.001 + net_BOG_loss * GWP_chem_list_arg[B_fuel_type] # Using CO2e_end
         total_money = opex_money
         return total_money, total_energy_consumed, G_emission, A_after_loss, net_BOG_loss
@@ -934,126 +923,29 @@ def run_lca_model(inputs):
 
         # Original logic of the function, using the unpacked '_arg' variables
         duration = A / (V_flowrate_arg[B_fuel_type]) / number_of_cryo_pump_load_truck_port_B_arg  # hr
-        
+
         local_BOR_unloading_val = dBOR_dT_arg[B_fuel_type] * (end_local_temperature_arg - 25) + BOR_unloading_arg[B_fuel_type]
         BOG_loss = local_BOR_unloading_val * (1 / 24) * duration * A  # kg
-        
+
         pumping_power = liquid_chem_density_arg[B_fuel_type] * V_flowrate_arg[B_fuel_type] * (1 / 3600) * \
                         head_pump_arg * 9.8 / (367 * pump_power_factor_arg) / (EIM_cryo_pump_arg / 100) # W
-        
+
         log_arg = (pipe_inner_D_arg + 2 * pipe_thick_arg) / pipe_inner_D_arg
         if log_arg <= 0: # Safety check
             q_pipe = 0
         else:
             q_pipe = 2 * np.pi * ss_therm_cond_arg * pipe_length_arg * \
                     (end_local_temperature_arg - (-253)) / (2.3 * np.log10(log_arg))  # W
-        
+
         ener_consumed_refrig = (q_pipe / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * duration * 3600  # MJ
         ener_consumed = pumping_power * duration * 3600 * 1 / 1000000 + ener_consumed_refrig  # MJ
-        
+
         A_after_loss = A - BOG_loss # Net amount
-        
+
         money = ener_consumed * end_electricity_price_tuple_arg[2]  # $ (using end_electricity_price)
         G_emission = ener_consumed * 0.2778 * CO2e_end_arg * 0.001 + BOG_loss * GWP_chem_list_arg[B_fuel_type]  # kgCO2 (using CO2e_end)
-        
+
         return money, ener_consumed, G_emission, A_after_loss, BOG_loss
-
-    def port_B_to_site_B(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
-        # Unpack the specific arguments this function needs from the passed-in tuple.
-        # The order of variables here MUST EXACTLY MATCH the order they are packed.
-
-        road_delivery_ener_arg, HHV_chem_arg, chem_in_truck_weight_arg, truck_economy_arg, distance_port_to_B_arg, \
-        HHV_diesel_arg, diesel_density_arg, diesel_price_end_arg, truck_tank_radius_arg, \
-        truck_tank_length_arg, truck_tank_metal_thickness_arg, metal_thermal_conduct_arg, \
-        truck_tank_insulator_thickness_arg, insulator_thermal_conduct_arg, OHTC_ship_arg, \
-        end_local_temperature_arg, COP_refrig_arg, EIM_refrig_eff_arg, duration_port_to_B_arg, \
-        dBOR_dT_arg, BOR_truck_trans_arg, diesel_engine_eff_arg, EIM_truck_eff_arg, \
-        CO2e_diesel_arg, GWP_chem_list_arg, \
-        BOG_recirculation_truck_percentage_arg, \
-        LH2_plant_capacity_arg, EIM_liquefication_arg, \
-        fuel_cell_eff_arg, EIM_fuel_cell_arg, LHV_chem_arg, \
-        driver_daily_salary_end_arg, annual_working_days_arg = process_args_tuple # ADDED DRIVER SALARY ARGS
-
-        # Original logic of the function, using the unpacked '_arg' variables
-        number_of_trucks = A / chem_in_truck_weight_arg[B_fuel_type] # Local variable
-        truck_energy_consumed = road_delivery_ener_arg[B_fuel_type] * HHV_chem_arg[B_fuel_type]
-        #trans_energy_required = truck_energy_consumed * distance_port_to_B_arg * A # Using distance_port_to_B
-        trans_energy_required = number_of_trucks * distance_port_to_B_arg * HHV_diesel_arg * diesel_density_arg / truck_economy_arg[B_fuel_type]
-        diesel_money = trans_energy_required / HHV_diesel_arg / diesel_density_arg * diesel_price_end_arg
-
-        storage_area_truck = 2 * np.pi * truck_tank_radius_arg * truck_tank_length_arg
-
-        # Consistent OHTC calculation for trucks, similar to site_A_to_port_A
-        if B_fuel_type == 0:
-            thermal_resist_val = truck_tank_metal_thickness_arg / metal_thermal_conduct_arg + \
-                                truck_tank_insulator_thickness_arg / insulator_thermal_conduct_arg
-            OHTC = 1 / thermal_resist_val if thermal_resist_val > 0 else float('inf')
-        else:
-            # Assuming if not LH2 (B_fuel_type != 0), truck OHTC might be different,
-            # or you might want a specific truck OHTC value instead of OHTC_ship.
-            # For now, replicating the logic from your site_A_to_port_A for OHTC.
-            OHTC = OHTC_ship_arg[B_fuel_type] # Or a truck-specific OHTC value if available
-
-        heat_required_val = OHTC * storage_area_truck * (end_local_temperature_arg + 273 - 20) # Using end_local_temperature
-        refrig_ener_consumed = (heat_required_val / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / \
-                            1000000 * 60 * duration_port_to_B_arg * number_of_trucks # Using duration_port_to_B
-
-        local_BOR_truck_trans_val = dBOR_dT_arg[B_fuel_type] * (end_local_temperature_arg - 25) + BOR_truck_trans_arg[B_fuel_type] # Using end_local_temperature
-        current_BOG_loss = A * local_BOR_truck_trans_val / (24 * 60) * duration_port_to_B_arg # Using duration_port_to_B
-
-        refrig_money = (refrig_ener_consumed / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / \
-                    diesel_density_arg * diesel_price_end_arg
-        money = diesel_money + refrig_money
-        total_energy_consumed = trans_energy_required + refrig_ener_consumed
-
-        A_after_loss = A - current_BOG_loss
-
-        G_emission_energy = (total_energy_consumed * CO2e_diesel_arg) / (HHV_diesel_arg * diesel_density_arg)
-        G_emission = G_emission_energy + current_BOG_loss * GWP_chem_list_arg[B_fuel_type]
-        net_BOG_loss = current_BOG_loss
-        # Recirculation logic (C_recirculation_BOG is user_define[2], D_truck_apply is user_define[3])
-        if C_recirculation_BOG == 2:
-            if D_truck_apply == 1: # Re-liquefy BOG
-                usable_BOG = current_BOG_loss * BOG_recirculation_truck_percentage_arg * 0.01
-                BOG_flowrate = usable_BOG / duration_port_to_B_arg * 60 # kg/hr
-
-                reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
-                reliq_ener_consumed = reliq_ener_required * usable_BOG
-
-                total_energy_consumed += reliq_ener_consumed
-                reliq_money = (reliq_ener_consumed / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / \
-                            diesel_density_arg * diesel_price_end_arg
-                money = diesel_money + reliq_money + refrig_money
-
-                A_after_loss += usable_BOG
-                net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_truck_percentage_arg * 0.01)
-
-                G_emission_energy = (total_energy_consumed * CO2e_diesel_arg) / (HHV_diesel_arg * diesel_density_arg)
-                G_emission = G_emission_energy + net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
-
-            elif D_truck_apply == 2: # Use BOG as another energy source
-                usable_BOG = current_BOG_loss * BOG_recirculation_truck_percentage_arg * 0.01
-                usable_ener = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
-
-                energy_saved_from_refrig = min(usable_ener, refrig_ener_consumed)
-                money_saved_from_refrig = (energy_saved_from_refrig / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / \
-                                        diesel_density_arg * diesel_price_end_arg
-
-                total_energy_consumed = trans_energy_required + (refrig_ener_consumed - energy_saved_from_refrig)
-                money = diesel_money + (refrig_money - money_saved_from_refrig)
-
-                net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_truck_percentage_arg * 0.01)
-
-                G_emission_energy = (total_energy_consumed * CO2e_diesel_arg) / (HHV_diesel_arg * diesel_density_arg)
-                G_emission = G_emission_energy + net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
-
-        # ADDITION: Calculate and add driver salary cost
-        trip_days = max(1, math.ceil(duration_port_to_B_arg / 1440)) # At least 1 day, round up
-        driver_cost_per_truck = (driver_daily_salary_end_arg / annual_working_days_arg) * trip_days
-        total_driver_cost = driver_cost_per_truck * number_of_trucks
-        money += total_driver_cost # Add to total money
-
-        return money, total_energy_consumed, G_emission, A_after_loss, net_BOG_loss
 
     def chem_site_B_unloading_from_truck(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         # Unpack the specific arguments this function needs from the passed-in tuple.
@@ -1080,29 +972,29 @@ def run_lca_model(inputs):
 
         # Original logic of the function, using the unpacked '_arg' variables
         duration = A / (V_flowrate_arg[B_fuel_type]) / number_of_cryo_pump_load_storage_site_B_arg  # hr
-        
+
         local_BOR_unloading_val = dBOR_dT_arg[B_fuel_type] * (end_local_temperature_arg - 25) + BOR_unloading_arg[B_fuel_type]
         BOG_loss = local_BOR_unloading_val * (1 / 24) * duration * A  # kg
-        
-        # Using EIM_cryo_pump_arg in the formula
+
+        # Using EIM_cryo_pump_arg in the formula for consistency
         pumping_power = liquid_chem_density_arg[B_fuel_type] * V_flowrate_arg[B_fuel_type] * (1 / 3600) * \
-                        head_pump_arg * 9.8 / (367 * pump_power_factor_arg) / (EIM_cryo_pump_arg / 100) # W
-        
+                        head_pump_arg * 9.8 / (367 * pump_power_factor_arg) / (EIM_cryo_pump_arg / 100)  # W
+
         log_arg = (pipe_inner_D_arg + 2 * pipe_thick_arg) / pipe_inner_D_arg
         if log_arg <= 0: # Safety check
             q_pipe = 0
         else:
             q_pipe = 2 * np.pi * ss_therm_cond_arg * pipe_length_arg * \
                     (end_local_temperature_arg - (-253)) / (2.3 * np.log10(log_arg))  # W
-        
+
         ener_consumed_refrig = (q_pipe / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * duration * 3600  # MJ
         ener_consumed = pumping_power * duration * 3600 * 1 / 1000000 + ener_consumed_refrig  # MJ
-        
+
         A_after_loss = A - BOG_loss # Net amount
-        
+
         money = ener_consumed * end_electricity_price_tuple_arg[2]  # $ (using end_electricity_price)
         G_emission = ener_consumed * 0.2778 * CO2e_end_arg * 0.001 + BOG_loss * GWP_chem_list_arg[B_fuel_type]  # kgCO2 (using CO2e_end)
-        
+
         return money, ener_consumed, G_emission, A_after_loss, BOG_loss
 
     def chem_storage_at_site_B(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
@@ -1121,21 +1013,21 @@ def run_lca_model(inputs):
         number_of_storage = math.ceil(A / liquid_chem_density_arg[B_fuel_type] / storage_volume_arg[B_fuel_type])
         local_BOR_storage = dBOR_dT_arg[B_fuel_type] * (end_local_temperature_arg - 25) + BOR_land_storage_arg[B_fuel_type]
         current_BOG_loss = A * local_BOR_storage * storage_time_C_arg
-        
+
         A_after_loss = A - current_BOG_loss
-        
+
         storage_area_val = 4 * np.pi * (storage_radius_arg[B_fuel_type]**2) * number_of_storage
-        
+
         thermal_resist_val = tank_metal_thickness_arg / metal_thermal_conduct_arg + \
                             tank_insulator_thickness_arg / insulator_thermal_conduct_arg
         OHTC_val = 1 / thermal_resist_val if thermal_resist_val > 0 else float('inf')
-        
+
         heat_required_val = OHTC_val * storage_area_val * (end_local_temperature_arg + 273 - 20) # Using end_local_temperature
         ener_consumed_refrig = (heat_required_val / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * 86400 * storage_time_C_arg
-        
+
         opex_money = ener_consumed_refrig * end_electricity_price_tuple_arg[2] # Using end_electricity_price
         total_energy_consumed = ener_consumed_refrig
-        
+
         G_emission = total_energy_consumed * 0.2778 * CO2e_end_arg * 0.001 + current_BOG_loss * GWP_chem_list_arg[B_fuel_type] # Using CO2e_end
         net_BOG_loss = current_BOG_loss
 
@@ -1144,34 +1036,34 @@ def run_lca_model(inputs):
             if E_storage_apply == 1: # Re-liquefy BOG
                 usable_BOG = current_BOG_loss * BOG_recirculation_storage_percentage_arg * 0.01
                 BOG_flowrate = usable_BOG / storage_time_C_arg * 1 / 24 # kg/hr
-                
+
                 reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
                 reliq_ener_consumed = reliq_ener_required * usable_BOG
-                
+
                 total_energy_consumed += reliq_ener_consumed
                 opex_money = total_energy_consumed * end_electricity_price_tuple_arg[2] # Using end_electricity_price
-                
+
                 A_after_loss += usable_BOG
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_storage_percentage_arg * 0.01)
-                
+
                 G_emission = total_energy_consumed * 0.2778 * CO2e_end_arg * 0.001 + net_BOG_loss * GWP_chem_list_arg[B_fuel_type] # Using CO2e_end
 
             elif E_storage_apply == 2: # Use BOG as another energy source
                 usable_BOG = current_BOG_loss * BOG_recirculation_storage_percentage_arg * 0.01
                 usable_ener = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
-                
+
                 # ener_consumed here refers to ener_consumed_refrig from before the BOG logic
-                initial_refrig_energy = ener_consumed_refrig 
+                initial_refrig_energy = ener_consumed_refrig
                 ener_consumed_refrig_after_bog = initial_refrig_energy - usable_ener
                 if ener_consumed_refrig_after_bog < 0:
                     ener_consumed_refrig_after_bog = 0
-                
+
                 total_energy_consumed = ener_consumed_refrig_after_bog # Update total energy
                 opex_money = total_energy_consumed * end_electricity_price_tuple_arg[2] # Using end_electricity_price
-                
+
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_storage_percentage_arg * 0.01)
                 # A_after_loss remains A - current_BOG_loss, as BOG is consumed
-                
+
                 G_emission = total_energy_consumed * 0.2778 * CO2e_end_arg * 0.001 + net_BOG_loss * GWP_chem_list_arg[B_fuel_type] # Using CO2e_end
         total_money = opex_money
         return total_money, total_energy_consumed, G_emission, A_after_loss, net_BOG_loss
@@ -1201,29 +1093,29 @@ def run_lca_model(inputs):
 
         # Original logic of the function, using the unpacked '_arg' variables
         duration = A / (V_flowrate_arg[B_fuel_type]) / number_of_cryo_pump_load_storage_site_B_arg  # hr
-        
+
         local_BOR_unloading_val = dBOR_dT_arg[B_fuel_type] * (end_local_temperature_arg - 25) + BOR_unloading_arg[B_fuel_type]
         BOG_loss = local_BOR_unloading_val * (1 / 24) * duration * A  # kg
-        
+
         # Using EIM_cryo_pump_arg in the formula for consistency
         pumping_power = liquid_chem_density_arg[B_fuel_type] * V_flowrate_arg[B_fuel_type] * (1 / 3600) * \
                         head_pump_arg * 9.8 / (367 * pump_power_factor_arg) / (EIM_cryo_pump_arg / 100)  # W
-        
+
         log_arg = (pipe_inner_D_arg + 2 * pipe_thick_arg) / pipe_inner_D_arg
         if log_arg <= 0: # Safety check
             q_pipe = 0
         else:
             q_pipe = 2 * np.pi * ss_therm_cond_arg * pipe_length_arg * \
                     (end_local_temperature_arg - (-253)) / (2.3 * np.log10(log_arg))  # W
-        
+
         ener_consumed_refrig = (q_pipe / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * duration * 3600  # MJ
         ener_consumed = pumping_power * duration * 3600 * 1 / 1000000 + ener_consumed_refrig  # MJ
-        
+
         A_after_loss = A - BOG_loss # Net amount
-        
+
         money = ener_consumed * end_electricity_price_tuple_arg[2]  # $ (using end_electricity_price)
         G_emission = ener_consumed * 0.2778 * CO2e_end_arg * 0.001 + BOG_loss * GWP_chem_list_arg[B_fuel_type]  # kgCO2 (using CO2e_end)
-        
+
         return money, ener_consumed, G_emission, A_after_loss, BOG_loss
 
     def chem_convert_to_H2(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
@@ -1248,15 +1140,15 @@ def run_lca_model(inputs):
         else:
             # Convert chemical (NH3 or CH3OH) to H2 weight
             convert_to_H2_weight = A * mass_conversion_to_H2_arg[B_fuel_type]
-            
+
             convert_energy = energy_chem_to_H2_arg[B_fuel_type] * A / eff_energy_chem_to_H2_arg[B_fuel_type]  # Total energy for conversion
-            
+
             G_emission = convert_energy * 0.2778 * CO2e_end_arg * 0.001  # Emissions from energy use
             money = convert_energy * end_electricity_price_tuple_arg[2]   # Cost of energy
-            
+
             BOG_loss = 0 # Assuming no BOG loss during the chemical conversion process itself
             A = convert_to_H2_weight # The chemical amount is now the H2 equivalent weight
-            
+
             # Note: The GWP of the original chemical is not accounted for here as it's being converted,
             # and BOG_loss from this specific process is assumed to be 0.
             # If there were fugitive emissions of the original chemical *during conversion*,
@@ -1285,25 +1177,25 @@ def run_lca_model(inputs):
         # or PH2_storage_V might need to be an array specific to fuel type if this function
         # were ever to be used for something other than pure H2.
         # For now, assuming this function is only for B_fuel_type == 0 (Hydrogen).
-        
+
         PH2_density = A / (PH2_storage_V_arg * numbers_of_PH2_storage_at_start_arg)  # kg/m3
         PH2_pressure = PH2_pressure_fnc_helper(PH2_density)  # bar
-        
+
         compress_energy = multistage_compress_helper(PH2_pressure) * A / (multistage_eff_arg / 100) # MJ (assuming multistage_eff is in %)
-        
+
         money = start_electricity_price_tuple_arg[2] * compress_energy  # $
         G_emission = compress_energy * 0.2778 * CO2e_start_arg * 0.001  # kgCO2
-        
+
         leak_loss = 0 # As per your snippet
-        
+
         # A (amount of chemical) does not change in this pressurization step, only its state.
         # The 'leak_loss' is returned, which is 0.
-        
+
         # It's good practice to avoid print statements in functions that are part of a web backend,
         # as they will go to the server console and not the user.
         # For debugging, you can use app.logger.debug(f'H2 pressure...: {PH2_pressure}')
-        # print(f'H2 pressure at pressurization process at site A (bar): {PH2_pressure}') 
-        
+        # print(f'H2 pressure at pressurization process at site A (bar): {PH2_pressure}')
+
         return money, compress_energy, G_emission, A, leak_loss
 
     def PH2_site_A_to_port_A(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
@@ -1331,7 +1223,7 @@ def run_lca_model(inputs):
 
         # Original logic of the function, using the unpacked '_arg' variables and helper functions
         # Assuming B_fuel_type is 0 (Hydrogen) for this PH2 specific function
-        
+
         PH2_density = A / (PH2_storage_V_arg * numbers_of_PH2_storage_at_start_arg)  # kg/m3
         PH2_pressure = PH2_pressure_fnc_helper(PH2_density)  # bar
 
@@ -1342,11 +1234,11 @@ def run_lca_model(inputs):
         kine_vis = kinematic_viscosity_PH2_helper(PH2_pressure)
         Re = compressor_velocity_arg * pipeline_diameter_arg / kine_vis
         f_D = solve_colebrook_helper(Re, epsilon_arg, pipeline_diameter_arg)
-        
+
         # Pressure drop calculation using L_meters
         P_drop_Pa = L_meters * f_D * PH2_density * (compressor_velocity_arg**2) / (2 * pipeline_diameter_arg) # Pa
         P_drop_bar = P_drop_Pa / 100000  # bar
-        
+
         # Pumping power and energy (commented out in your snippet, but calculations shown)
         # pipe_area = np.pi * (pipeline_diameter_arg**2) / 4
         # pumping_power_watts = P_drop_Pa * compressor_velocity_arg * pipe_area # Watts
@@ -1364,19 +1256,19 @@ def run_lca_model(inputs):
 
         final_PH2_density = PH2_density_fnc_helper(final_P_PH2) # Helper for density from pressure
         A_final = final_PH2_density * PH2_storage_V_arg * numbers_of_PH2_storage_arg # Using the general numbers_of_PH2_storage
-        
+
         # Ensure A_final is not greater than A (can happen if P_drop is negative due to issues)
         A_final = min(A, A_final) if final_P_PH2 > 0 else 0
 
         trans_loss = A - A_final
         if trans_loss < 0: trans_loss = 0 # Loss cannot be negative
 
-        money = start_electricity_price_tuple_arg[2] * ener_consumed 
+        money = start_electricity_price_tuple_arg[2] * ener_consumed
         G_emission = ener_consumed * 0.2778 * CO2e_start_arg * 0.001
-        
+
         # print(f'PH2 site A to port A - P_drop (bar): {P_drop_bar}')
         # print(f'PH2 site A to port A - final pressure at port A (bar): {final_P_PH2}')
-        
+
         return money, ener_consumed, G_emission, A_final, trans_loss
 
     def port_A_liquification(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
@@ -1394,7 +1286,7 @@ def run_lca_model(inputs):
 
         # Original logic of the function, using the unpacked '_arg' variables and helper functions
         # This function is specific to B_fuel_type == 0 (Hydrogen) being liquefied.
-        
+
         if B_fuel_type != 0:
             # This function is intended for liquefying H2 that arrived as gas.
             # If the chemical is not H2, this step might be different or skipped.
@@ -1403,21 +1295,21 @@ def run_lca_model(inputs):
 
         LH2_energy_required = liquification_data_fitting_helper(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)  # MJ/kg
         LH2_ener_consumed = LH2_energy_required * A  # MJ
-        
+
         # Using electricity price at Port A
         LH2_money = LH2_ener_consumed * start_port_electricity_price_tuple_arg[2]  # $
-        
+
         # Using CO2e at Port A (assuming CO2e_start is representative of Port A's grid,
         # or you might have a CO2e_port_A variable if it's different)
         G_emission = LH2_ener_consumed * 0.2778 * CO2e_start_arg * 0.001  # kgCO2
-        
+
         BOG_loss = 0.016 * A  # kg; ref [11] page 21
-        
+
         # In your snippet, 'A' (the amount of chemical) is NOT reduced by BOG_loss in the return.
         # The BOG_loss is calculated and returned, but the original amount 'A' is passed through.
         # If A should be reduced, it would be: A_after_loss = A - BOG_loss, then return A_after_loss.
         # Also, G_emission does not include GWP of BOG_loss here.
-        
+
         return LH2_money, LH2_ener_consumed, G_emission, A, BOG_loss
 
     def H2_pressurization_at_port_B(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
@@ -1438,7 +1330,7 @@ def run_lca_model(inputs):
 
         # Original logic of the function, using the unpacked '_arg' variables and helper functions
         # This function is specific to B_fuel_type == 0 (Hydrogen).
-        
+
         if B_fuel_type != 0:
             # This function is intended for pressurizing H2.
             # If the chemical is not H2, this step is likely irrelevant.
@@ -1450,7 +1342,7 @@ def run_lca_model(inputs):
         # Energy to raise temperature from boiling point (approx 20K for H2) to 300K (approx 27C)
         # Assuming input A is at boiling point after vaporization.
         # The (300-20) implies heating from 20K to 300K.
-        Q_sensible = A * specific_heat_H2_arg * (300 - 20)  # MJ 
+        Q_sensible = A * specific_heat_H2_arg * (300 - 20)  # MJ
 
         # Density and pressure calculation for compression
         # This assumes 'A' is now gaseous H2 at some initial (likely low) pressure post-vaporization
@@ -1460,25 +1352,25 @@ def run_lca_model(inputs):
         # For now, assuming A is mass of H2 gas at some initial state to be compressed into storage.
         PH2_density = A / (PH2_storage_V_arg * numbers_of_PH2_storage_arg)  # kg/m3
         PH2_pressure = PH2_pressure_fnc_helper(PH2_density)  # bar
-        
+
         compress_energy = multistage_compress_helper(PH2_pressure) * A / (multistage_eff_arg / 100)  # MJ (assuming multistage_eff is in %)
-        
+
         total_energy_consumed = compress_energy + Q_latent + Q_sensible
-        
+
         # Using electricity price at Port B
         money = end_port_electricity_price_tuple_arg[2] * total_energy_consumed  # $
-        
+
         # Using CO2e at Port B (end location)
         G_emission = total_energy_consumed * 0.2778 * CO2e_end_arg * 0.001  # kgCO2
-        
+
         leak_loss = 0  # As per your snippet
-        
+
         # 'A' (amount of chemical) does not change by mass in this pressurization step,
         # only its state (temperature and pressure).
         # The 'leak_loss' is returned, which is 0.
-        
+
         # print(f'H2 pressure at pressurization process at port B (bar): {PH2_pressure}')
-        
+
         return money, total_energy_consumed, G_emission, A, leak_loss
 
     def PH2_port_B_to_site_B(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
@@ -1508,7 +1400,7 @@ def run_lca_model(inputs):
 
         # Original logic of the function, using the unpacked '_arg' variables and helper functions
         # This function is specific to B_fuel_type == 0 (Hydrogen).
-        
+
         if B_fuel_type != 0:
             return 0, 0, 0, A, 0 # Should not be called for non-H2
 
@@ -1524,29 +1416,29 @@ def run_lca_model(inputs):
         kine_vis = kinematic_viscosity_PH2_helper(initial_PH2_pressure_at_port_B) # Use initial pressure at Port B
         Re = compressor_velocity_arg * pipeline_diameter_arg / kine_vis
         f_D = solve_colebrook_helper(Re, epsilon_arg, pipeline_diameter_arg)
-        
+
         # Pressure drop calculation using initial density at Port B
         P_drop_Pa = L_meters * f_D * initial_PH2_density_at_port_B * (compressor_velocity_arg**2) / (2 * pipeline_diameter_arg) # Pa
         P_drop_bar = P_drop_Pa / 100000  # bar
-        
+
         # Commented out pumping power calculation from your snippet
         # pipe_area = np.pi * (pipeline_diameter_arg**2) / 4
-        # pumping_power_watts = P_drop_Pa * compressor_velocity_arg * pipe_area 
+        # pumping_power_watts = P_drop_Pa * compressor_velocity_arg * pipe_area
         # duration_seconds = A / initial_PH2_density_at_port_B / pipe_area / compressor_velocity_arg
         # pumping_ener_MJ = pumping_power_watts * duration_seconds / 1000000
         # print('pumping energy (calculated from P_drop): ', pumping_ener_MJ)
 
         ener_consumed = PH2_transport_energy_helper(L_km) * A  # MJ (assuming PH2_transport_energy takes km)
-        
+
         final_P_PH2_at_site_B = initial_PH2_pressure_at_port_B - P_drop_bar
 
         # Ensure final pressure is not negative
         if final_P_PH2_at_site_B < 0:
-            final_P_PH2_at_site_B = 0 
-        
+            final_P_PH2_at_site_B = 0
+
         # Density at Site B based on the actual final pressure after pipeline transport
         final_PH2_density_at_site_B = PH2_density_fnc_helper(final_P_PH2_at_site_B)
-        
+
         # Your snippet calculates numbers_of_PH2_storage based on target_pressure_site_B.
         # This seems to be for sizing destination storage, let's retain that part for A_final.
         # However, the actual A_final should be based on what's physically left.
@@ -1563,26 +1455,26 @@ def run_lca_model(inputs):
         # and fugitive losses, then trans_loss might be a fixed percentage or part of that helper.
         # For now, let's assume trans_loss represents unrecoverable gas due to pressure becoming too low,
         # or actual leakage. If pressure is 0, all is lost for practical purposes.
-        
+
         A_final = A # Assuming no mass loss unless pressure drops to zero
         if final_P_PH2_at_site_B <= 0: # If pressure drops too much, assume unusable
             A_final = 0
-        
+
         trans_loss = A - A_final
         if trans_loss < 0: trans_loss = 0
 
         # Cost of energy for transport (e.g., for intermediate compressors if PH2_transport_energy represents this)
         # Using electricity price at Port B (origin of this pipeline segment)
-        money = end_port_electricity_price_tuple_arg[2] * ener_consumed 
-        
+        money = end_port_electricity_price_tuple_arg[2] * ener_consumed
+
         # Emissions from energy consumption for transport
         G_emission = ener_consumed * 0.2778 * CO2e_end_arg * 0.001
-        
+
         # print(f'PH2 port B to site B - P_drop (bar): {P_drop_bar}')
         # print(f'PH2 port B to site B - final pressure at site B (bar): {final_P_PH2_at_site_B}')
-        
+
         return money, ener_consumed, G_emission, A_final, trans_loss
-    
+
     def PH2_storage_at_site_B(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         # Unpack the specific arguments this function needs from the passed-in tuple.
         # The order of variables here MUST EXACTLY MATCH the order they are packed.
@@ -1595,7 +1487,7 @@ def run_lca_model(inputs):
 
         # Original logic of the function, using the unpacked '_arg' variables and helper functions
         # This function is specific to B_fuel_type == 0 (Hydrogen).
-        
+
         if B_fuel_type != 0:
             # This function is for PH2 storage.
             # If the chemical is not H2, this step is likely irrelevant or different.
@@ -1611,19 +1503,19 @@ def run_lca_model(inputs):
         else:
             PH2_density = A / (PH2_storage_V_at_site_B_arg * numbers_of_PH2_storage_at_site_B_arg)  # kg/m3
             PH2_pressure = PH2_pressure_fnc_helper(PH2_density)  # bar
-        
+
         # As per your snippet, this step has no operational costs, energy, or emissions.
         money = 0
         ener_consumed = 0
         G_emission = 0
         BOG_loss = 0 # Assuming BOG_loss is specific to a storage *duration*, which isn't a factor here,
                     # or that this function just notes the state, not losses over time.
-        
+
         # The amount of chemical A does not change in this state-defining step.
         # Any losses would have occurred in previous transport or timed storage steps.
-        
+
         # print(f'PH2 pressure at final storage at site B (bar): {PH2_pressure}')
-        
+
         return money, ener_consumed, G_emission, A, BOG_loss
     def optimization_chem_weight(A_initial_guess, args_for_optimizer_tuple):
         # Unpack the main arguments bundle passed from minimize
@@ -1645,52 +1537,53 @@ def run_lca_model(inputs):
         head_pump_opt, pump_power_factor_opt, EIM_cryo_pump_opt,
         ss_therm_cond_opt, pipe_length_opt, pipe_inner_D_opt, pipe_thick_opt,
         COP_refrig_opt, EIM_refrig_eff_opt, pipe_metal_specific_heat_opt, COP_cooldown_opt,
-        road_delivery_ener_opt, HHV_chem_opt, distance_A_to_port_opt,
+        road_delivery_ener_opt, HHV_chem_opt,
         chem_in_truck_weight_opt, truck_economy_opt, truck_tank_radius_opt, truck_tank_length_opt,
         truck_tank_metal_thickness_opt, metal_thermal_conduct_opt,
         truck_tank_insulator_thickness_opt, insulator_thermal_conduct_opt,
-        OHTC_ship_opt, duration_A_to_port_opt, BOR_truck_trans_opt,
+        OHTC_ship_opt, BOR_truck_trans_opt,
         HHV_diesel_opt, diesel_engine_eff_opt, EIM_truck_eff_opt,
-        diesel_density_opt, diesel_price_start_opt, diesel_price_end_opt, CO2e_diesel_opt,
+        diesel_density_opt, CO2e_diesel_opt,
         BOG_recirculation_truck_opt, # This is the BOG_recirculation_truck_percentage
         fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem_opt,
         storage_time_A_opt, liquid_chem_density_opt, storage_volume_opt,
         storage_radius_opt, BOR_land_storage_opt, tank_metal_thickness_opt,
         tank_insulator_thickness_opt, BOG_recirculation_storage_opt,
-        driver_daily_salary_start_opt, annual_working_days_opt # ADDED FOR OPTIMIZER
+        distance_A_to_port_opt, duration_A_to_port_opt, diesel_price_start_opt, driver_daily_salary_start_opt, annual_working_days_opt # ADDED FOR OPTIMIZER
         ) = all_shared_params_tuple
 
-  
+
         X = A_initial_guess[0]  # Current chemical weight being optimized
 
         # Loop through the first 7 process functions
         for func_to_call in process_funcs_for_optimization:
-            process_args_for_current_func = () 
+            process_args_for_current_func = ()
 
             if func_to_call.__name__ == "site_A_chem_production":
                 # Only needs GWP_chem_opt if there were potential BOG with GWP.
                 # Assuming it matches the refactored version that takes minimal args.
-                process_args_for_current_func = (GWP_chem_opt,) 
-            
+                process_args_for_current_func = (GWP_chem_opt,)
+
             elif func_to_call.__name__ == "site_A_chem_liquification":
                 process_args_for_current_func = (
                     LH2_plant_capacity_opt, EIM_liquefication_opt, specific_heat_chem_opt,
                     start_local_temperature_opt, boiling_point_chem_opt, latent_H_chem_opt,
                     COP_liq_opt, start_electricity_price_opt, CO2e_start_opt, GWP_chem_opt
                 )
-            
+
             elif func_to_call.__name__ == "chem_site_A_loading_to_truck":
                 process_args_for_current_func = (
-                    V_flowrate_opt, 
+                    V_flowrate_opt,
                     number_of_cryo_pump_load_truck_site_A_opt, # Specific pump number for this stage
-                    dBOR_dT_opt, start_local_temperature_opt, BOR_loading_opt, 
-                    liquid_chem_density_opt, head_pump_opt, pump_power_factor_opt, 
+                    dBOR_dT_opt, start_local_temperature_opt, BOR_loading_opt,
+                    liquid_chem_density_opt, head_pump_opt, pump_power_factor_opt,
                     EIM_cryo_pump_opt, ss_therm_cond_opt, pipe_length_opt,
                     pipe_inner_D_opt, pipe_thick_opt, COP_refrig_opt, EIM_refrig_eff_opt,
                     start_electricity_price_opt, CO2e_start_opt, GWP_chem_opt
                 )
-            
-            elif func_to_call.__name__ == "site_A_to_port_A":
+
+            elif func_to_call.__name__ == "fuel_road_transport": # NEW: Unified road transport
+                # For the first leg (Site A to Port A), use the 'start' parameters
                 process_args_for_current_func = (
                     road_delivery_ener_opt, HHV_chem_opt, chem_in_truck_weight_opt, truck_economy_opt,
                     distance_A_to_port_opt, HHV_diesel_opt, diesel_density_opt,
@@ -1701,32 +1594,32 @@ def run_lca_model(inputs):
                     EIM_refrig_eff_opt, duration_A_to_port_opt, dBOR_dT_opt,
                     BOR_truck_trans_opt, diesel_engine_eff_opt, EIM_truck_eff_opt,
                     CO2e_diesel_opt, GWP_chem_opt,
-                    BOG_recirculation_truck_opt, # This is the BOG_recirculation_truck_percentage
+                    BOG_recirculation_truck_opt,
                     LH2_plant_capacity_opt, EIM_liquefication_opt,
                     fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem_opt,
-                    driver_daily_salary_start_opt, annual_working_days_opt # ADDED
+                    driver_daily_salary_start_opt, annual_working_days_opt
                 )
 
             elif func_to_call.__name__ == "port_A_unloading_to_storage":
                 process_args_for_current_func = (
-                    V_flowrate_opt, 
+                    V_flowrate_opt,
                     number_of_cryo_pump_load_storage_port_A_opt, # Specific pump number
-                    dBOR_dT_opt, start_local_temperature_opt, 
+                    dBOR_dT_opt, start_local_temperature_opt,
                     BOR_unloading_opt, # Use BOR_unloading for this stage
-                    liquid_chem_density_opt, head_pump_opt, pump_power_factor_opt, 
+                    liquid_chem_density_opt, head_pump_opt, pump_power_factor_opt,
                     EIM_cryo_pump_opt, ss_therm_cond_opt, pipe_length_opt,
                     pipe_inner_D_opt, pipe_thick_opt, COP_refrig_opt, EIM_refrig_eff_opt,
                     start_electricity_price_opt, CO2e_start_opt, GWP_chem_opt
                 )
-            
+
             elif func_to_call.__name__ == "chem_storage_at_port_A":
                 process_args_for_current_func = (
-                    liquid_chem_density_opt, storage_volume_opt, dBOR_dT_opt, 
-                    start_local_temperature_opt, BOR_land_storage_opt, storage_time_A_opt, 
-                    storage_radius_opt, tank_metal_thickness_opt, metal_thermal_conduct_opt, 
-                    tank_insulator_thickness_opt, insulator_thermal_conduct_opt, 
-                    COP_refrig_opt, EIM_refrig_eff_opt, start_electricity_price_opt, 
-                    CO2e_start_opt, GWP_chem_opt, 
+                    liquid_chem_density_opt, storage_volume_opt, dBOR_dT_opt,
+                    start_local_temperature_opt, BOR_land_storage_opt, storage_time_A_opt,
+                    storage_radius_opt, tank_metal_thickness_opt, metal_thermal_conduct_opt,
+                    tank_insulator_thickness_opt, insulator_thermal_conduct_opt,
+                    COP_refrig_opt, EIM_refrig_eff_opt, start_electricity_price_opt,
+                    CO2e_start_opt, GWP_chem_opt,
                     BOG_recirculation_storage_opt, # This is BOG_recirculation_storage_percentage
                     LH2_plant_capacity_opt, EIM_liquefication_opt,
                     fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem_opt
@@ -1738,9 +1631,9 @@ def run_lca_model(inputs):
                     start_local_temperature_opt, BOR_loading_opt, liquid_chem_density_opt, head_pump_opt,
                     pump_power_factor_opt, EIM_cryo_pump_opt, ss_therm_cond_opt, pipe_length_opt, pipe_inner_D_opt,
                     pipe_thick_opt, boiling_point_chem_opt, EIM_refrig_eff_opt, start_electricity_price_opt,
-                    CO2e_start_opt, GWP_chem_opt, storage_area, ship_tank_metal_thickness, 
-                    ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density, 
-                    ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat, 
+                    CO2e_start_opt, GWP_chem_opt, storage_area, ship_tank_metal_thickness,
+                    ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density,
+                    ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat,
                     COP_cooldown, COP_refrig, ship_number_of_tanks, pipe_metal_specific_heat
                 )
             # Call the current process function with its tailored arguments
@@ -1750,21 +1643,21 @@ def run_lca_model(inputs):
             # user_define_params[3] is D_truck_apply
             # user_define_params[4] is E_storage_apply
             # user_define_params[5] is F_maritime_apply
-            _, _, _, X, _ = func_to_call(X, 
-                                        user_define_params[1], 
-                                        user_define_params[2], 
-                                        user_define_params[3], 
-                                        user_define_params[4], 
-                                        user_define_params[5], 
+            _, _, _, X, _ = func_to_call(X,
+                                        user_define_params[1],
+                                        user_define_params[2],
+                                        user_define_params[3],
+                                        user_define_params[4],
+                                        user_define_params[5],
                                         process_args_for_current_func)
-        
+
         # target_weight is accessible from the enclosing run_lca_model scope
         return abs(X - target_weight)
 
     def constraint(A):
         """Ensures the optimized weight is not less than the target weight."""
         return A[0] - target_weight # This must be >= 0
-    
+
     def calculate_liquefaction_capex(capacity_tpd, fuel_type):
         """
         Estimates the amortized capital cost per kg for liquefaction of hydrogen, ammonia, or methanol.
@@ -1788,28 +1681,28 @@ def run_lca_model(inputs):
                 "default": {"base_capex_M_usd": 0, "base_capacity": 1, "power_law_exp": 0}  # No liquefaction
             }
         }
-        
+
         # Select model based on fuel type
         if fuel_type not in cost_models:
             return 0
-        
+
         if fuel_type == 0:  # Hydrogen
             model = cost_models[0]["large_scale"] if capacity_tpd > 100 else cost_models[0]["small_scale"]
         else:  # Ammonia or Methanol
             model = cost_models[fuel_type]["default"]
-        
+
         # Calculate total capital cost using power law
         total_capex_usd = (model['base_capex_M_usd'] * 1000000) * (capacity_tpd / model['base_capacity']) ** model['power_law_exp']
-        
+
         # Amortize over 20 years with 8% cost of capital
         annualized_capex = total_capex_usd * 0.09
-        
+
         # Calculate annual throughput
         annual_throughput_kg = capacity_tpd * 1000 * 330
-        
+
         if annual_throughput_kg == 0:
             return 0
-            
+
         capex_per_kg = annualized_capex / annual_throughput_kg
         return capex_per_kg
 
@@ -1836,18 +1729,18 @@ def run_lca_model(inputs):
                 "base_capex_M_usd": 0, "base_capacity": 1, "power_law_exp": 0
             }
         }
-        
+
         if fuel_type not in cost_models:
             return 0
-        
+
         model = cost_models[fuel_type]
-        
+
         # Calculate total capital cost using power law
         total_capex_usd = (model['base_capex_M_usd'] * 1000000) * (A / model['base_capacity']) ** model['power_law_exp']
-        
+
         # Amortize over 20 years with 8% cost of capital
         annualized_capex = total_capex_usd * 0.09
-        
+
         # Calculate annual throughput
         if fuel_type in [0, 1]:  # Hydrogen or Ammonia
             if storage_days == 0:
@@ -1856,13 +1749,13 @@ def run_lca_model(inputs):
             annual_throughput_kg = A * cycles_per_year
         else:  # Methanol
             annual_throughput_kg = capacity_tpd * 1000 * 330
-        
+
         if annual_throughput_kg == 0:
             return 0
-            
+
         capex_per_kg = annualized_capex / annual_throughput_kg
         return capex_per_kg
-        
+
     def calculate_loading_unloading_capex(fuel_type): # Removed A_shipment_kg from parameters
             """
             Estimates the amortized capital cost per kg for loading/unloading infrastructure (arms, jetties).
@@ -1885,21 +1778,23 @@ def run_lca_model(inputs):
 
             capex_per_kg_throughput = annualized_capex / annual_throughput_kg if annual_throughput_kg > 0 else 0
 
-            return capex_per_kg_throughput # Now returns a rate   
-        
+            return capex_per_kg_throughput # Now returns a rate
+
     # This is the 'base' function that runs the main sequence of calculations
-    def total_chem_base(A_optimized_chem_weight, B_fuel_type_tc, C_recirculation_BOG_tc, 
+    def total_chem_base(A_optimized_chem_weight, B_fuel_type_tc, C_recirculation_BOG_tc,
                         D_truck_apply_tc, E_storage_apply_tc, F_maritime_apply_tc):
-            
+
         funcs_sequence = [
             site_A_chem_production, site_A_chem_liquification, chem_site_A_loading_to_truck,
-            site_A_to_port_A, port_A_unloading_to_storage, chem_storage_at_port_A,
+            (fuel_road_transport, 'start_leg'), # NEW: First road transport leg
+            port_A_unloading_to_storage, chem_storage_at_port_A,
             chem_loading_to_ship, port_to_port, chem_unloading_from_ship,
-            chem_storage_at_port_B, port_B_unloading_from_storage, port_B_to_site_B,
+            chem_storage_at_port_B, port_B_unloading_from_storage,
+            (fuel_road_transport, 'end_leg'), # NEW: Second road transport leg
             chem_site_B_unloading_from_truck, chem_storage_at_site_B,
             chem_unloading_from_site_B
         ]
-        
+
         R_current_chem = A_optimized_chem_weight
         data_results_list = []
         total_money_tc = 0.0
@@ -1907,17 +1802,24 @@ def run_lca_model(inputs):
         total_G_emission_tc = 0.0
         total_S_bog_loss_tc = 0.0
 
-        for func_to_call in funcs_sequence:
-            # This block is copied directly from your file and is correct
-            # --- (The entire if/elif chain for packing process_args_for_this_call_tc goes here) ---
+        for func_entry in funcs_sequence:
+            func_to_call = func_entry
+            leg_type = None
+            if isinstance(func_entry, tuple):
+                func_to_call, leg_type = func_entry
+
+            process_args_for_this_call_tc = ()
             if func_to_call.__name__ == "site_A_chem_production":
                 process_args_for_this_call_tc = (GWP_chem,)
             elif func_to_call.__name__ == "site_A_chem_liquification":
                 process_args_for_this_call_tc = (LH2_plant_capacity, EIM_liquefication, specific_heat_chem, start_local_temperature, boiling_point_chem, latent_H_chem, COP_liq, start_electricity_price, CO2e_start, GWP_chem)
             elif func_to_call.__name__ == "chem_site_A_loading_to_truck":
                 process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_truck_site_A, dBOR_dT, start_local_temperature, BOR_loading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem)
-            elif func_to_call.__name__ == "site_A_to_port_A":
-                process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_A_to_port, HHV_diesel, diesel_density, diesel_price_start, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, start_local_temperature, COP_refrig, EIM_refrig_eff, duration_A_to_port, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem, driver_daily_salary_start, annual_working_days)
+            elif func_to_call.__name__ == "fuel_road_transport": # NEW: Unified road transport
+                if leg_type == 'start_leg':
+                    process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_A_to_port, HHV_diesel, diesel_density, diesel_price_start, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, start_local_temperature, COP_refrig, EIM_refrig_eff, duration_A_to_port, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem, driver_daily_salary_start, annual_working_days)
+                elif leg_type == 'end_leg':
+                    process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_port_to_B, HHV_diesel, diesel_density, diesel_price_end, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, end_local_temperature, COP_refrig, EIM_refrig_eff, duration_port_to_B, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem, driver_daily_salary_end, annual_working_days)
             elif func_to_call.__name__ == "port_A_unloading_to_storage":
                 process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_port_A, dBOR_dT, start_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem)
             elif func_to_call.__name__ == "chem_storage_at_port_A":
@@ -1927,10 +1829,10 @@ def run_lca_model(inputs):
             elif func_to_call.__name__ == "port_to_port":
                 process_args_for_this_call_tc = (
                     start_local_temperature, end_local_temperature, OHTC_ship,
-                    storage_area, ship_number_of_tanks, COP_refrig, EIM_refrig_eff, 
+                    storage_area, ship_number_of_tanks, COP_refrig, EIM_refrig_eff,
                     port_to_port_duration, selected_marine_fuel_params,
-                    dBOR_dT, BOR_ship_trans, GWP_chem, 
-                    BOG_recirculation_mati_trans, LH2_plant_capacity, EIM_liquefication, 
+                    dBOR_dT, BOR_ship_trans, GWP_chem,
+                    BOG_recirculation_mati_trans, LH2_plant_capacity, EIM_liquefication,
                     fuel_cell_eff, EIM_fuel_cell, LHV_chem,
                     avg_ship_power_kw,
                     0.45, # Assumed auxiliary engine efficiency (45%)
@@ -1942,8 +1844,6 @@ def run_lca_model(inputs):
                 process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, end_local_temperature, BOR_land_storage, storage_time_B, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem)
             elif func_to_call.__name__ == "port_B_unloading_from_storage":
                 process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_truck_port_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
-            elif func_to_call.__name__ == "port_B_to_site_B":
-                process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_port_to_B, HHV_diesel, diesel_density, diesel_price_end, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, end_local_temperature, COP_refrig, EIM_refrig_eff, duration_port_to_B, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem, driver_daily_salary_end, annual_working_days)
             elif func_to_call.__name__ == "chem_site_B_unloading_from_truck":
                 process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_site_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
             elif func_to_call.__name__ == "chem_storage_at_site_B":
@@ -1952,10 +1852,11 @@ def run_lca_model(inputs):
                 process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_site_B, dBOR_dT, end_local_temperature, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem)
 
             X_money, Y_energy, Z_emission, R_current_chem, S_bog_loss = \
-                func_to_call(R_current_chem, B_fuel_type_tc, C_recirculation_BOG_tc, D_truck_apply_tc, 
+                func_to_call(R_current_chem, B_fuel_type_tc, C_recirculation_BOG_tc, D_truck_apply_tc,
                             E_storage_apply_tc, F_maritime_apply_tc, process_args_for_this_call_tc)
-            
-            data_results_list.append([func_to_call.__name__, X_money, Y_energy, Z_emission, R_current_chem, S_bog_loss])
+
+            # Store results with original function name for labeling later
+            data_results_list.append([func_to_call.__name__ + (f'_{leg_type}' if leg_type else ''), X_money, Y_energy, Z_emission, R_current_chem, S_bog_loss])
             total_money_tc += X_money
             total_ener_consumed_tc += Y_energy
             total_G_emission_tc += Z_emission
@@ -1963,13 +1864,13 @@ def run_lca_model(inputs):
 
         final_total_result_tc = [total_money_tc, total_ener_consumed_tc, total_G_emission_tc, R_current_chem]
         data_results_list.append(["TOTAL", total_money_tc, total_ener_consumed_tc, total_G_emission_tc, R_current_chem, total_S_bog_loss_tc])
-        
+
         return final_total_result_tc, data_results_list
 
     # =================================================================
     # <<<                  FOOD PROCESSING FUNCTIONS                >>>
     # =================================================================
- 
+
     def food_harvest_and_prep(A, args):
         return 0, 0, 0, A, 0
 
@@ -2032,7 +1933,7 @@ def run_lca_model(inputs):
 
         # 2. Calculate the total heat that needs to be removed (in MJ)
         # This is based on the formula: Q = m * c * ΔT
-        delta_T = (precool_params['initial_field_heat_celsius'] - 
+        delta_T = (precool_params['initial_field_heat_celsius'] -
                 precool_params['target_precool_temperature_celsius'])
 
         # Ensure delta_T is not negative; if it is, no cooling is needed.
@@ -2051,7 +1952,7 @@ def run_lca_model(inputs):
         capex_money = 0
         if include_overheads:
             capex_per_kg = calculate_food_infra_capex("precool", facility_capacity, A,0)
-            capex_money = A * capex_per_kg        
+            capex_money = A * capex_per_kg
         total_money = opex_money + capex_money
         # Convert MJ to kWh for emission calculation (1 MJ ≈ 0.2778 kWh)
         emissions = energy_mj * 0.2778 * co2_factor * 0.001
@@ -2061,7 +1962,7 @@ def run_lca_model(inputs):
 
         # 6. Return the standard tuple of results
         return total_money, energy_mj, emissions, A - loss, loss
-    
+
     def calculate_ca_energy_kwh(A, food_params, duration_hrs):
         """
         Calculates the energy consumption of a Controlled Atmosphere system
@@ -2072,7 +1973,7 @@ def run_lca_model(inputs):
 
         ca_p = food_params['ca_params']
         gen_p = food_params['general_params']
-        
+
         num_containers = math.ceil(A / gen_p['cargo_per_truck_kg'])
         container_volume_m3 = 76 # Approx. volume of a 40ft container
 
@@ -2094,9 +1995,9 @@ def run_lca_model(inputs):
 
         # 4. Energy for Baseline Controls
         energy_base_kwh = num_containers * ca_p['base_control_power_kw'] * duration_hrs
-        
+
         total_ca_energy_kwh = energy_n2_kwh + energy_co2_scrub_kwh + energy_humidity_kwh + energy_base_kwh
-        
+
         return total_ca_energy_kwh
 
     def food_sea_transport(A, args):
@@ -2106,21 +2007,21 @@ def run_lca_model(inputs):
         """
         # Unpack arguments
         food_params, duration_hrs, selected_fuel, avg_ship_kw = args
-        
+
         # --- 1. Calculate Fuel Mass for Each System ---
 
         # A) Auxiliary Fuel for Reefers and CA Systems
         total_auxiliary_energy_kwh = calculate_ca_energy_kwh(A, food_params, duration_hrs)
         reefer_power_kw = math.ceil(A / food_params['general_params']['cargo_per_truck_kg']) * food_params['general_params']['reefer_container_power_kw']
         total_auxiliary_energy_kwh += reefer_power_kw * duration_hrs
-        
+
         aux_sfoc_g_kwh = 200 # g/kWh for auxiliary engines
         fuel_for_auxiliary_kg = (total_auxiliary_energy_kwh * aux_sfoc_g_kwh) / 1000.0
 
         # B) Propulsion Fuel for Main Engine
         propulsion_work_kwh = avg_ship_kw * duration_hrs
         fuel_for_propulsion_kg = (propulsion_work_kwh * selected_fuel['sfoc_g_per_kwh']) / 1000.0
-        
+
         # --- 2. Calculate Cost, Energy, and Emissions for Each Fuel SEPARATELY ---
 
         # A) For Auxiliary Fuel (MGO)
@@ -2138,7 +2039,7 @@ def run_lca_model(inputs):
         total_money = money_aux + money_prop
         total_energy_mj = energy_aux_mj + energy_prop_mj
         total_emissions = emissions_aux + emissions_prop
-        
+
         # Spoilage calculation remains the same
         duration_days = duration_hrs / 24.0
         spoilage_rate = food_params['general_params']['spoilage_rate_per_day'] # Default rate
@@ -2147,23 +2048,23 @@ def run_lca_model(inputs):
             spoilage_rate = food_params['general_params']['spoilage_rate_ca_per_day']
         loss = A * spoilage_rate * duration_days
         return total_money, total_energy_mj, total_emissions, A - loss, loss
-    
+
     def food_cold_storage(A, args):
         params, storage_days, elec_price, co2_factor, ambient_temp = args
-        
+
         # The 'params' dictionary now has a nested 'general_params' key
         volume_m3 = A / params['general_params']['density_kg_per_m3']
-        
+
         # The rest of the dynamic calculation uses the 'ambient_temp' passed into the function
         base_energy_factor_kwh_m3_day = 0.5
         temp_adjustment_factor = 1 + (0.03 * (ambient_temp - 20))
-        if temp_adjustment_factor < 0.5: 
+        if temp_adjustment_factor < 0.5:
             temp_adjustment_factor = 0.5 # Set a floor
-            
+
         dynamic_energy_factor = base_energy_factor_kwh_m3_day * temp_adjustment_factor
         energy_kwh_per_day = dynamic_energy_factor * volume_m3
         total_energy_kwh = energy_kwh_per_day * storage_days
-        
+
         energy_mj = total_energy_kwh * 3.6
         opex_money = energy_mj * elec_price[2]
         capex_money = 0
@@ -2177,9 +2078,9 @@ def run_lca_model(inputs):
         if params['process_flags'].get('needs_controlled_atmosphere'):
             # If CA is active, use the lower spoilage rate
             spoilage_rate = params['general_params']['spoilage_rate_ca_per_day']
-            
-        loss = A * spoilage_rate * storage_days        
-        
+
+        loss = A * spoilage_rate * storage_days
+
         return total_money, energy_mj, emissions, A - loss, loss
 
 # REPLACE your old total_food_lca function with this one
@@ -2189,29 +2090,29 @@ def run_lca_model(inputs):
         food_funcs_sequence = [
             (food_harvest_and_prep, "Harvesting & Preparation"),
         ]
-    
+
         # Dynamically add steps based on the food's flags
         flags = food_params['process_flags']
         if flags.get('needs_precooling', False):
             food_funcs_sequence.append((food_precooling_process, f"Pre-cooling in {start}"))
-    
+
         if flags.get('needs_freezing', False):
             food_funcs_sequence.append((food_freezing_process, f"Freezing in {start}"))
-    
+
         # Add the universal transport and storage steps
         food_funcs_sequence.extend([
             (food_road_transport, f"Road Transport: {start} to {start_port_name}"),
             (food_cold_storage, f"Cold Storage at {start_port_name}"),
             (food_sea_transport, f"Marine Transport: {start_port_name} to {end_port_name}")
         ])
-    
+
         # Add the remaining universal steps
         food_funcs_sequence.extend([
             (food_cold_storage, f"Cold Storage at {end_port_name}"),
             (food_road_transport, f"Road Transport: {end_port_name} to {end}"),
             (food_cold_storage, f"Cold Storage at {end} (Destination)"),
         ])
-    
+
         current_weight = initial_weight
         results_list = []
         for func, label in food_funcs_sequence:
@@ -2237,15 +2138,15 @@ def run_lca_model(inputs):
             elif func == food_cold_storage and "Destination" in label:
                 args_for_func = (food_params, storage_time_C, end_electricity_price, CO2e_end, end_local_temperature)
             elif func == food_harvest_and_prep:
-                args_for_func = () 
+                args_for_func = ()
             else:
                 args_for_func = (food_params,)
-    
+
             money, energy, emissions, current_weight, loss = func(current_weight, args_for_func)
             results_list.append([label, money, energy, emissions, current_weight, loss])
-            
+
         return results_list
-    
+
     def openai_get_food_price(food_name, location_name):
         """
         Uses an AI model to find, parse, and convert the retail price of a
@@ -2253,7 +2154,7 @@ def run_lca_model(inputs):
         """
         from openai import OpenAI
         client = OpenAI(api_key=api_key_openAI)
-        
+
         # Improved prompt to handle broader locations
         prompt_messages = [
             {
@@ -2265,7 +2166,7 @@ def run_lca_model(inputs):
                 "content": f"""Find a representative retail price for {food_name} in the country or region of '{location_name}'. Return the result in the following JSON format: {{"price_usd_per_kg": "PRICE_HERE_AS_FLOAT_OR_NULL", "original_price_found": "ORIGINAL_PRICE_AS_STRING", "source_info": "BRIEF_DESCRIPTION_OF_SOURCE_AND_LOCATION"}}"""
             }
         ]
-        
+
         try:
             print(f"Requesting AI price analysis for: {food_name} in {location_name}")
             response = client.chat.completions.create(
@@ -2276,17 +2177,17 @@ def run_lca_model(inputs):
             )
             result = json.loads(response.choices[0].message.content)
             price = result.get("price_usd_per_kg")
-            
+
             # Ensure the price is a valid number, return None otherwise
             if isinstance(price, (int, float)):
                 return price
             else:
                 return None
-                
+
         except Exception as e:
             print(f"AI price lookup failed: {e}")
             return None
-        
+
     def openai_get_nearest_farm_region(food_name, location_name):
         """
         Uses an AI model to find a major commercial farming region for a food item
@@ -2294,7 +2195,7 @@ def run_lca_model(inputs):
         """
         from openai import OpenAI
         client = OpenAI(api_key=api_key_openAI)
-        
+
         # This prompt guides the AI to provide a realistic, commercially viable origin
         prompt_messages = [
             {
@@ -2306,7 +2207,7 @@ def run_lca_model(inputs):
                 "content": f"""For the food item '{food_name}', find the nearest major commercial farming region to the destination '{location_name}'. Return the result in the following JSON format: {{"farm_region_name": "NAME_OF_REGION", "latitude": "LATITUDE_FLOAT", "longitude": "LONGITUDE_FLOAT"}}"""
             }
         ]
-        
+
         try:
             print(f"Requesting AI analysis for nearest farm region for: {food_name} near {location_name}")
             response = client.chat.completions.create(
@@ -2316,13 +2217,13 @@ def run_lca_model(inputs):
                 messages=prompt_messages
             )
             result = json.loads(response.choices[0].message.content)
-            
+
             # Ensure all keys exist and are valid before returning
             if all(k in result for k in ['farm_region_name', 'latitude', 'longitude']) and isinstance(result['latitude'], (int, float)):
                 return result
             else:
                 return None
-                
+
         except Exception as e:
             print(f"AI farm region lookup failed: {e}")
             return None
@@ -2346,7 +2247,7 @@ def run_lca_model(inputs):
         try:
             # The coordinates from searoute are in [longitude, latitude] format.
             route_coords = route_object.geometry['coordinates']
-            
+
             for lon, lat in route_coords:
                 # Check for Panama Canal transit
                 if (PANAMA_CANAL_BBOX[0] <= lon <= PANAMA_CANAL_BBOX[2] and
@@ -2363,7 +2264,7 @@ def run_lca_model(inputs):
             # If we finished the loop and found a transit, we don't need to do the old check.
             if transits["panama"] or transits["suez"]:
                 return transits
-                
+
             # Fallback to the old method just in case, though less likely to be needed.
             # This part can be removed if you trust the geographic check completely.
             route_info_string = json.dumps(route_object.properties).lower()
@@ -2371,11 +2272,11 @@ def run_lca_model(inputs):
                 transits["suez"] = True
             if "panama" in route_info_string:
                 transits["panama"] = True
-                
+
         except Exception as e:
             print(f"Could not parse route properties for canal detection: {e}")
-        
-        return transits                
+
+        return transits
 
     def calculate_voyage_overheads(voyage_duration_days, ship_params, canal_transits, port_regions):
         ship_gt = ship_params['gross_tonnage']
@@ -2392,29 +2293,29 @@ def run_lca_model(inputs):
             canal_fees_cost = ship_gt * overheads['suez_toll_per_gt_usd']
         elif canal_transits.get("panama"):
             canal_fees_cost = ship_gt * overheads['panama_toll_per_gt_usd']
-        
+
         # 5. Total Overhead Calculation
         total_overheads = opex_cost + capex_cost + port_fees_cost + canal_fees_cost
         return total_overheads
-    
+
     def calculate_single_reefer_service_cost(duration_hrs, food_params):
 
         # Calculate energy needed for the reefer unit + CA system for one container
         # Dummy mass of 1kg is used because the CA energy function scales by container, not mass
         ca_energy_kwh_per_container = calculate_ca_energy_kwh(1, food_params, duration_hrs)
         reefer_energy_kwh_per_container = food_params['general_params']['reefer_container_power_kw'] * duration_hrs
-        
+
         total_energy_kwh = ca_energy_kwh_per_container + reefer_energy_kwh_per_container
-        
+
         # Calculate fuel burned by auxiliary engine to provide this electricity
         aux_sfoc_g_kwh = 200 # g/kWh for auxiliary engines
         fuel_kg = (total_energy_kwh * aux_sfoc_g_kwh) / 1000.0
-        
+
         # Calculate cost, energy, and emissions from that fuel
         cost = (fuel_kg / 1000.0) * auxiliary_fuel_params['price_usd_per_ton']
         energy_mj = fuel_kg * auxiliary_fuel_params['hhv_mj_per_kg']
         emissions = fuel_kg * auxiliary_fuel_params['co2_emissions_factor_kg_per_kg_fuel']
-        
+
         return cost, energy_mj, emissions
 
     def calculate_food_infra_capex(process_name, capacity_tons_per_day, A, storage_days):
@@ -2432,7 +2333,7 @@ def run_lca_model(inputs):
             "freezing": {"base_cost_M_usd": 3, "power_law_exp": 0.65, "reference_capacity": 30},
             "cold_storage": {"base_cost_M_usd": 0.82, "power_law_exp": 0.7, "reference_capacity": 5000000}  # 5,000 tons = 5M kg
         }
-        
+
         model = cost_models.get(process_name)
         if not model:
             return 0
@@ -2442,10 +2343,10 @@ def run_lca_model(inputs):
             total_capex_usd = (model['base_cost_M_usd'] * 1000000) * (A / model['reference_capacity']) ** model['power_law_exp']
         else:
             total_capex_usd = (model['base_cost_M_usd'] * 1000000) * (capacity_tons_per_day / model['reference_capacity']) ** model['power_law_exp']
-        
+
         # Amortize over 20 years with 8% cost of capital
-        annualized_capex = total_capex_usd * 0.1 
-        
+        annualized_capex = total_capex_usd * 0.1
+
         # Calculate capex_per_kg
         if process_name == "cold_storage":
             if storage_days == 0:
@@ -2454,10 +2355,10 @@ def run_lca_model(inputs):
             annual_throughput_kg = A * cycles_per_year  # Total kg processed annually
         else:
             annual_throughput_kg = capacity_tons_per_day * 1000 * 330  # Throughput for precool/freezing
-        
+
         if annual_throughput_kg == 0:
             return 0
-            
+
         capex_per_kg = annualized_capex / annual_throughput_kg
         return capex_per_kg
 
@@ -2901,7 +2802,7 @@ def run_lca_model(inputs):
         "Zambia": 9366.00,
         "Zimbabwe": 9366.00
     }
-    
+
     start_country_name = get_country_from_coords(coor_start_lat, coor_start_lng)
     end_country_name = get_country_from_coords(coor_end_lat, coor_end_lng)
 
@@ -2945,7 +2846,7 @@ def run_lca_model(inputs):
     total_ship_volume = selected_ship_params['volume_m3']
     ship_number_of_tanks = selected_ship_params['num_tanks']
     ship_tank_shape = selected_ship_params['shape']
-    
+
     avg_ship_power_kw = calculate_ship_power_kw(total_ship_volume)
     marine_fuels_data = {
         'VLSFO': {'price_usd_per_ton': 650.0, 'sfoc_g_per_kwh': 185, 'hhv_mj_per_kg': 41.0, 'co2_emissions_factor_kg_per_kg_fuel': 3.114, 'methane_slip_gwp100': 0},
@@ -3050,7 +2951,7 @@ def run_lca_model(inputs):
                         'spoilage_rate_per_day': 0.001, # Higher spoilage rate due to sensitivity. Source: Shelf-life studies on bananas.
                         'spoilage_rate_ca_per_day': 0.0004, # Lower spoilage rate under CA
                         'reefer_container_power_kw': 1.8, # Power draw for this specific chilled temperature. Source: Reefer manufacturer specifications.
-                        'cargo_per_truck_kg': 20000, # Standard maximum payload. Source: Freight and logistics industry standards.
+                        'cargo_per_truck_kg': 20000, # Standard maximum payload for a 40ft refrigerated container. Source: Freight and logistics industry standards.
                         'specific_heat_fresh_mj_kgK': 0.0033, # Thermodynamic property. Source: Food science literature.
                         'reefer_truck_fuel_consumption_L_hr': 1.5,
                         'production_CO2e_kg_per_kg': 0.241, # Average CO2 emissions from banana production per kg. Source: Reducing food’s environmental impacts through producers and consumers.
@@ -3129,7 +3030,7 @@ def run_lca_model(inputs):
         mass_conversion_to_H2 = [1, 0.176, 0.1875] # NH3, CH3OH
         eff_energy_chem_to_H2 = [0, 0.7, 0.75]
         energy_chem_to_H2 = [0, 9.3, 5.3]
-        PH2_storage_V = 150.0 
+        PH2_storage_V = 150.0
         numbers_of_PH2_storage_at_start = 50.0
         multistage_eff = 0.85
         pipeline_diameter = 0.5 # meters
@@ -3145,24 +3046,24 @@ def run_lca_model(inputs):
         truck_economy = [13.84, 10.14, 9.66]  # km/gal Grok Analysis
 
         # ADD THESE NEW PARAMETERS FOR TANK COOLDOWN
-        # Sourced from Table 2 in the provided study 
+        # Sourced from Table 2 in the provided study
         ship_tank_metal_specific_heat = 0.47 / 1000  # MJ/kg-K
         ship_tank_insulation_specific_heat = 1.5 / 1000 # MJ/kg-K
         ship_tank_metal_density = 7900  # kg/m^3
         ship_tank_insulation_density = 100 # kg/m^3
         pipe_metal_specific_heat = 0.5 / 1000  # MJ/kg-K (for stainless steel)
-        # Sourced from the study's text and Table 6 
+        # Sourced from the study's text and Table 6
         ship_tank_metal_thickness = 0.05 # m
-        # Using onshore storage insulation thickness as a proxy from the study 
+        # Using onshore storage insulation thickness as a proxy from the study
         ship_tank_insulation_thickness = [0.66, 0.09, 0] # m (H2, NH3, Methanol)
-        
-        # Sourced from Table 6 for the "Cooldown" scenario 
+
+        # Sourced from Table 6 for the "Cooldown" scenario
         COP_cooldown = [0.131, 1.714, 0] # (H2, NH3, Methanol)
         SMR_EMISSIONS_KG_PER_KG_H2 = 9.3 # kg CO2e / kg H2 for unabated Steam Methane Reforming
 
         # --- 5. Optimization ---
         target_weight = total_ship_volume * liquid_chem_density[fuel_type] * 0.98  # kg, ref [3] section 2.1:  the filling limit is defined as 98% for ships cargo tank.
-        
+
         con = {'type': 'ineq', 'fun': constraint}
 
         # This is the target_weight for the optimization
@@ -3171,7 +3072,8 @@ def run_lca_model(inputs):
         # List of the first 7 process function objects for optimization
         process_funcs_for_optimization = [
             site_A_chem_production, site_A_chem_liquification, chem_site_A_loading_to_truck,
-            site_A_to_port_A, port_A_unloading_to_storage, chem_storage_at_port_A,
+            fuel_road_transport, # NEW: Unified road transport for optimization
+            port_A_unloading_to_storage, chem_storage_at_port_A,
             chem_loading_to_ship
         ]
 
@@ -3184,7 +3086,7 @@ def run_lca_model(inputs):
             COP_liq, start_electricity_price, CO2e_start, GWP_chem,
 
             # Parameters for loading/unloading/pumping (general and specific)
-            V_flowrate, 
+            V_flowrate,
             number_of_cryo_pump_load_truck_site_A,  # For loading truck at Site A
             number_of_cryo_pump_load_storage_port_A, # For unloading to storage at Port A
             number_of_cryo_pump_load_ship_port_A,    # For loading ship at Port A
@@ -3194,20 +3096,20 @@ def run_lca_model(inputs):
             COP_refrig, EIM_refrig_eff, pipe_metal_specific_heat,
             COP_cooldown,
 
-            # Parameters for site_A_to_port_A (truck transport)
-            road_delivery_ener, HHV_chem, distance_A_to_port,
+            # Parameters for fuel_road_transport (all possible parameters for both legs)
+            road_delivery_ener, HHV_chem,
             chem_in_truck_weight, truck_economy, truck_tank_radius, truck_tank_length,
             truck_tank_metal_thickness, metal_thermal_conduct,
             truck_tank_insulator_thickness, insulator_thermal_conduct,
-            OHTC_ship, # Or a truck-specific OHTC if defined
-            duration_A_to_port, BOR_truck_trans,
+            OHTC_ship, BOR_truck_trans,
             HHV_diesel, diesel_engine_eff, EIM_truck_eff,
-            diesel_density, diesel_price_start, diesel_price_end, CO2e_diesel,
+            diesel_density, CO2e_diesel,
             BOG_recirculation_truck, # This is the percentage from inputs
 
             # Parameters for BOG recirculation (if used in first 7 funcs)
-            fuel_cell_eff, EIM_fuel_cell, LHV_chem, 
+            fuel_cell_eff, EIM_fuel_cell, LHV_chem,
             # LH2_plant_capacity, EIM_liquefication are already above for site_A_chem_liquification
+
             # Parameters for chem_storage_at_port_A
             storage_time_A, liquid_chem_density, storage_volume,
             storage_radius, BOR_land_storage, tank_metal_thickness,
@@ -3215,8 +3117,7 @@ def run_lca_model(inputs):
             BOG_recirculation_storage, # This is the percentage from inputs
             # COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem,
             # LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem are already above
-            driver_daily_salary_start, annual_working_days # ADDED FOR OPTIMIZER
-
+            distance_A_to_port, duration_A_to_port, diesel_price_start, driver_daily_salary_start, annual_working_days # ADDED FOR OPTIMIZER
         )
 
         # This is the tuple that will be passed to scipy.optimize.minimize
@@ -3227,7 +3128,7 @@ def run_lca_model(inputs):
         )
 
         initial_guess = [target_weight / 0.9] # Initial guess assuming ~10% loss
-        
+
         # Call minimize, passing the new args_for_optimizer_tuple
         result = minimize(optimization_chem_weight,
                         initial_guess,
@@ -3235,17 +3136,17 @@ def run_lca_model(inputs):
                         method='SLSQP',
                         bounds=[(0, None)],
                         constraints=[con])
-                        
+
         if result.success:
             chem_weight = result.x[0]
         else:
             # If the optimization fails, raise an exception with the optimizer's message.
             # This will be caught by the main try...except block and returned as a JSON error.
             raise Exception(f"Optimization failed: {result.message}")
-        
+
         # --- 6. Final Calculation ---
-        
-        final_results_raw, data_raw = total_chem_base(chem_weight, user_define[1], user_define[2], 
+
+        final_results_raw, data_raw = total_chem_base(chem_weight, user_define[1], user_define[2],
                                                     user_define[3], user_define[4], user_define[5])
 
         # --- Correctly Handle Overheads and Infrastructure CAPEX ---
@@ -3316,11 +3217,6 @@ def run_lca_model(inputs):
             # Assuming these trucks are utilized for 330 days/year, handling capacity_tpd
             # This is an estimate, a detailed fleet model would be more precise.
 
-            # Get truck data for site_A_to_port_A
-            # We need to re-calculate number_of_trucks specific to the initial_weight in the context of chem_in_truck_weight
-            # and then amortize the truck for that specific delivery.
-            # Instead of daily amortization, let's consider the cost per *trip* based on capacity.
-
             # Re-calculate number of trucks for initial leg A->Port A based on initial chem_weight
             num_trucks_A_to_PortA = math.ceil(chem_weight / chem_in_truck_weight[fuel_type])
             # Re-calculate number of trucks for final leg Port B->B based on final delivered weight (final_results_raw[3])
@@ -3348,7 +3244,7 @@ def run_lca_model(inputs):
             final_results_raw[0] += total_voyage_overheads
             final_results_raw[0] += total_liquefaction_capex
             final_results_raw[0] += total_storage_capex
-            final_results_raw[0] += total_trucking_capex 
+            final_results_raw[0] += total_trucking_capex
             final_results_raw[0] += total_loading_unloading_capex
 
             # Create and insert display rows into the detailed data list
@@ -3363,68 +3259,68 @@ def run_lca_model(inputs):
             if liquefaction_index != -1:
                 liquefaction_capex_row = ["Liquefaction Facility CAPEX", total_liquefaction_capex, 0, 0, chem_weight, 0]
                 data_raw.insert(liquefaction_index + 1, liquefaction_capex_row)
-            
+
             # Insert Storage CAPEX row (we'll add one consolidated row for simplicity)
             # Find the index of the last storage step to insert after it
             last_storage_index = next((i for i, row in reversed(list(enumerate(data_raw))) if "chem_storage_at" in row[0]), -1)
             if last_storage_index != -1:
                 storage_capex_row = ["Storage Facilities CAPEX (Total)", total_storage_capex, 0, 0, data_raw[last_storage_index][4], 0]
                 data_raw.insert(last_storage_index + 1, storage_capex_row)
-            
+
             # NEW: Insert Trucking CAPEX row
             # Best place to insert is after the first road transport or consolidated.
             # Let's insert it after the first road transport for chronological order.
-            road_transport_A_index = next((i for i, row in enumerate(data_raw) if row[0] == "site_A_to_port_A"), -1)
+            road_transport_A_index = next((i for i, row in enumerate(data_raw) if row[0] == "fuel_road_transport_start_leg"), -1)
             if road_transport_A_index != -1:
                 trucking_capex_row = ["Trucking System CAPEX (Total)", total_trucking_capex, 0, 0, data_raw[road_transport_A_index][4], 0]
                 data_raw.insert(road_transport_A_index + 1, trucking_capex_row)
-        
+
             ship_loading_index = next((i for i, row in enumerate(data_raw) if row[0] == "chem_loading_to_ship"), -1)
             if ship_loading_index != -1:
                 loading_unloading_capex_row = ["Loading/Unloading Infrastructure CAPEX", total_loading_unloading_capex, 0, 0, data_raw[ship_loading_index][4], 0]
                 data_raw.insert(ship_loading_index + 1, loading_unloading_capex_row)
-        
+
         # 2. If the fuel is not H2, run the conversion step and update the raw results
         if user_define[1] != 0:
             amount_before_conversion = final_results_raw[3]
             args_for_conversion = (mass_conversion_to_H2, eff_energy_chem_to_H2, energy_chem_to_H2, CO2e_end, end_electricity_price)
-            
+
             money_conv, energy_conv, emission_conv, amount_after_conversion, bog_conv = \
-                chem_convert_to_H2(amount_before_conversion, user_define[1], user_define[2], user_define[3], 
+                chem_convert_to_H2(amount_before_conversion, user_define[1], user_define[2], user_define[3],
                                 user_define[4], user_define[5], args_for_conversion)
-            
+
             data_raw.insert(-1, ["chem_convert_to_H2", money_conv, energy_conv, emission_conv, amount_after_conversion, bog_conv])
-            
+
             final_results_raw[0] += money_conv
             final_results_raw[1] += energy_conv
             final_results_raw[2] += emission_conv
             final_results_raw[3] = amount_after_conversion
 
             data_raw[-1] = ["TOTAL", final_results_raw[0], final_results_raw[1], final_results_raw[2], final_results_raw[3], 0]
-        
+
         # 3. Now that all calculations are done, define the final denominators
         final_chem_kg_denominator = final_results_raw[3]
         # NEW: Calculate final energy in GigaJoules (MJ / 1000)
         final_energy_gj_denominator = (final_results_raw[3] * HHV_chem[fuel_type]) / 1000 if final_chem_kg_denominator > 0 else 0
-        
+
         # 4. Create the final data list, now including the "per unit" calculations
         data_with_all_columns = []
         for row in data_raw:
             current_cost = float(row[1])
             current_emission = float(row[3])
-        
+
             cost_per_kg = current_cost / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             # NEW: Calculate "Cost per GJ"
             cost_per_gj = current_cost / final_energy_gj_denominator if final_energy_gj_denominator > 0 else 0
-            
+
             emission_per_kg = current_emission / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             # NEW: Calculate "eCO2 per GJ"
             emission_per_gj = current_emission / final_energy_gj_denominator if final_energy_gj_denominator > 0 else 0
-            
+
             # Append the new values in the correct order
             new_row_with_additions = list(row) + [cost_per_kg, cost_per_gj, emission_per_kg, emission_per_gj]
             data_with_all_columns.append(new_row_with_additions)
-        
+
         # 5. Assign the fully processed data to the final variables
         data = data_with_all_columns
         total_results = final_results_raw # This already holds the correct total values
@@ -3446,7 +3342,7 @@ def run_lca_model(inputs):
             "site_A_chem_production": "Initial Production (Placeholder)",
             "site_A_chem_liquification": f"Liquifaction in {start}",
             "chem_site_A_loading_to_truck": f"Loading {selected_fuel_name} on trucks",
-            "site_A_to_port_A": f"Road transport: {start} to {start_port_name}",
+            "fuel_road_transport_start_leg": f"Road transport: {start} to {start_port_name}", # NEW Label
             "port_A_unloading_to_storage": f"Unloading at {start_port_name}",
             "chem_storage_at_port_A": f"Storing {selected_fuel_name} at {start_port_name}",
             "chem_loading_to_ship": f"Loading {selected_fuel_name} on Ship",
@@ -3454,14 +3350,19 @@ def run_lca_model(inputs):
             "chem_unloading_from_ship": f"Unloading {selected_fuel_name} from Ship",
             "chem_storage_at_port_B": f"Storing {selected_fuel_name} at {end_port_name}",
             "port_B_unloading_from_storage": "Loading from Storage to Truck",
-            "port_B_to_site_B": f"Road transport: {end_port_name} to {end}",
+            "fuel_road_transport_end_leg": f"Road transport: {end_port_name} to {end}", # NEW Label
             "chem_site_B_unloading_from_truck": f"Unloading {selected_fuel_name} at {end}",
             "chem_storage_at_site_B": f"Storing {selected_fuel_name} at {end}",
             "chem_unloading_from_site_B": "Unloading for final use",
             "chem_convert_to_H2": "Cracking/Reforming to H2",
-            "voyage_overheads": "Voyage Overheads (Non-Fuel)", 
+            "Voyage Overheads": "Voyage Overheads (Non-Fuel)", # Keep consistent label for clarity
+            "Liquefaction Facility CAPEX": "Liquefaction Facility CAPEX",
+            "Storage Facilities CAPEX (Total)": "Storage Facilities CAPEX (Total)",
+            "Trucking System CAPEX (Total)": "Trucking System CAPEX (Total)",
+            "Loading/Unloading Infrastructure CAPEX": "Loading/Unloading Infrastructure CAPEX",
             "TOTAL": "TOTAL"
         }
+
 
         # Apply the new labels to the data
         relabeled_data = []
@@ -3487,7 +3388,7 @@ def run_lca_model(inputs):
             "Storage Facilities CAPEX (Total)",
             "TOTAL" # Still exclude the total row for the chart
         ]
-        
+
         # Filter for the charts (removes the placeholder AND the TOTAL row)
         data_for_emission_chart = [row for row in data_for_display_common if row[0] not in emission_chart_exclusions]
 
