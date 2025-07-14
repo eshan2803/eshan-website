@@ -2846,7 +2846,7 @@ def run_lca_model(inputs):
         if include_overheads:
             # --- 1. Calculate Voyage Overheads (Non-Fuel Ship Costs) ---
             start_port_country = get_country_from_coords(start_port_lat, start_port_lng)
-            end_port_country = get_country_from_coords(end_port_lat, end_lon) # Fixed: changed end_port_lng to end_lon for consistency
+            end_port_country = get_country_from_coords(end_port_lat, end_port_lng) 
             port_regions = {'start': start_port_country, 'end': end_port_country}
             voyage_duration_days = port_to_port_duration / 24.0
             total_voyage_overheads = calculate_voyage_overheads(voyage_duration_days, selected_ship_params, canal_transits, port_regions)
