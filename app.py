@@ -1134,28 +1134,28 @@ def run_lca_model(inputs):
         # Unpack ALL shared parameters that ANY of the first 7 functions might need.
         # The order here MUST MATCH how they were packed into all_shared_params_tuple
         # in run_lca_model.
-        (LH2_plant_capacity_opt, EIM_liquefication_opt, specific_heat_chem, # specific_heat_chem is a list
-        start_local_temperature_opt, boiling_point_chem, latent_H_chem, # boiling_point_chem, latent_H_chem are lists
-        COP_liq, start_electricity_price_opt, CO2e_start_opt, GWP_chem, # COP_liq, GWP_chem are lists
-        V_flowrate, # V_flowrate is a list
+        (LH2_plant_capacity_opt, EIM_liquefication_opt, specific_heat_chem, # specific_heat_chem (list)
+        start_local_temperature_opt, boiling_point_chem, latent_H_chem, # boiling_point_chem (list), latent_H_chem (list)
+        COP_liq, start_electricity_price_opt, CO2e_start_opt, GWP_chem, # COP_liq (list), GWP_chem (list)
+        V_flowrate, # V_flowrate (list)
         number_of_cryo_pump_load_truck_site_A_opt,
         number_of_cryo_pump_load_storage_port_A_opt,
         number_of_cryo_pump_load_ship_port_A_opt,
-        dBOR_dT, BOR_loading, BOR_unloading, # dBOR_dT, BOR_loading, BOR_unloading are lists
+        dBOR_dT, BOR_loading, BOR_unloading, # dBOR_dT (list), BOR_loading (list), BOR_unloading (list)
         head_pump_opt, pump_power_factor_opt, EIM_cryo_pump_opt,
         ss_therm_cond_opt, pipe_length_opt, pipe_inner_D_opt, pipe_thick_opt,
-        COP_refrig, EIM_refrig_eff_opt, pipe_metal_specific_heat_opt, COP_cooldown, # COP_refrig, COP_cooldown are lists
-        road_delivery_ener, HHV_chem, # road_delivery_ener, HHV_chem are lists
-        chem_in_truck_weight, truck_economy, truck_tank_radius_opt, truck_tank_length_opt, # chem_in_truck_weight, truck_economy are lists
+        COP_refrig, EIM_refrig_eff_opt, pipe_metal_specific_heat, COP_cooldown, # COP_refrig (list), pipe_metal_specific_heat (scalar), COP_cooldown (list)
+        road_delivery_ener, HHV_chem, # road_delivery_ener (list), HHV_chem (list)
+        chem_in_truck_weight, truck_economy, truck_tank_radius_opt, truck_tank_length_opt, # chem_in_truck_weight (list), truck_economy (list)
         truck_tank_metal_thickness_opt, metal_thermal_conduct_opt,
         truck_tank_insulator_thickness_opt, insulator_thermal_conduct_opt,
-        OHTC_ship, BOR_truck_trans, # OHTC_ship, BOR_truck_trans are lists
+        OHTC_ship, BOR_truck_trans, # OHTC_ship (list), BOR_truck_trans (list)
         HHV_diesel_opt, diesel_engine_eff_opt, EIM_truck_eff_opt,
         diesel_density_opt, CO2e_diesel_opt,
         BOG_recirculation_truck_opt,
-        fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem, # LHV_chem is a list
-        storage_time_A_opt, liquid_chem_density, storage_volume, # liquid_chem_density, storage_volume are lists
-        storage_radius, BOR_land_storage, tank_metal_thickness_opt, # storage_radius, BOR_land_storage are lists
+        fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem, # LHV_chem (list)
+        storage_time_A_opt, liquid_chem_density, storage_volume, # liquid_chem_density (list), storage_volume (list)
+        storage_radius, BOR_land_storage, tank_metal_thickness_opt, # storage_radius (list), BOR_land_storage (list)
         tank_insulator_thickness_opt, BOG_recirculation_storage_opt,
         distance_A_to_port_opt, duration_A_to_port_opt, diesel_price_start_opt, driver_daily_salary_start_opt, annual_working_days_opt
         ) = all_shared_params_tuple
@@ -1182,13 +1182,13 @@ def run_lca_model(inputs):
             process_args_for_current_func = ()
 
             if func_to_call.__name__ == "site_A_chem_production":
-                process_args_for_current_func = (GWP_chem_opt,)
+                process_args_for_current_func = (GWP_chem,)
 
             elif func_to_call.__name__ == "site_A_chem_liquification":
                 process_args_for_current_func = (
-                    LH2_plant_capacity_opt, EIM_liquefication_opt, specific_heat_chem_opt,
-                    start_local_temperature_opt, boiling_point_chem_opt, latent_H_chem_opt,
-                    COP_liq_opt, start_electricity_price_opt, CO2e_start_opt, GWP_chem_opt
+                    LH2_plant_capacity_opt, EIM_liquefication_opt, specific_heat_chem, # Changed from specific_heat_chem_opt
+                    start_local_temperature_opt, boiling_point_chem, latent_H_chem, # Changed from boiling_point_chem_opt, latent_H_chem_opt
+                    COP_liq, start_electricity_price_opt, CO2e_start_opt, GWP_chem # Changed from COP_liq_opt, GWP_chem_opt
                 )
 
             elif func_to_call.__name__ == "fuel_pump_transfer": # NEW: Unified pump transfer
@@ -1196,70 +1196,67 @@ def run_lca_model(inputs):
                 # Only 'siteA_to_truck' and 'portA_to_storage' are in the optimization path
                 if transfer_context == 'siteA_to_truck':
                     process_args_for_current_func = (
-                        V_flowrate_opt,
+                        V_flowrate, # Changed from V_flowrate_opt
                         number_of_cryo_pump_load_truck_site_A_opt,
-                        dBOR_dT_opt, BOR_loading_opt, # BOR_loading for loading to truck
-                        liquid_chem_density_opt, head_pump_opt, pump_power_factor_opt,
+                        dBOR_dT, BOR_loading, # Changed from dBOR_dT_opt, BOR_loading_opt
+                        liquid_chem_density, head_pump_opt, pump_power_factor_opt, # Changed from liquid_chem_density_opt
                         EIM_cryo_pump_opt, ss_therm_cond_opt, pipe_length_opt,
-                        pipe_inner_D_opt, pipe_thick_opt, COP_refrig_opt, EIM_refrig_eff_opt,
-                        start_electricity_price_opt, CO2e_start_opt, GWP_chem_opt,
+                        pipe_inner_D_opt, pipe_thick_opt, COP_refrig, EIM_refrig_eff_opt, # Changed from COP_refrig_opt
+                        start_electricity_price_opt, CO2e_start_opt, GWP_chem, # Changed from GWP_chem_opt
                         start_local_temperature_opt
                     )
                 elif transfer_context == 'portA_to_storage':
                     process_args_for_current_func = (
-                        V_flowrate_opt,
+                        V_flowrate, # Changed from V_flowrate_opt
                         number_of_cryo_pump_load_storage_port_A_opt,
-                        dBOR_dT_opt, BOR_unloading_opt, # BOR_unloading for unloading to storage
-                        liquid_chem_density_opt, head_pump_opt, pump_power_factor_opt,
+                        dBOR_dT, BOR_unloading, # Changed from dBOR_dT_opt, BOR_unloading_opt
+                        liquid_chem_density, head_pump_opt, pump_power_factor_opt, # Changed from liquid_chem_density_opt
                         EIM_cryo_pump_opt, ss_therm_cond_opt, pipe_length_opt,
-                        pipe_inner_D_opt, pipe_thick_opt, COP_refrig_opt, EIM_refrig_eff_opt,
-                        start_electricity_price_opt, CO2e_start_opt, GWP_chem_opt,
+                        pipe_inner_D_opt, pipe_thick_opt, COP_refrig, EIM_refrig_eff_opt, # Changed from COP_refrig_opt
+                        start_electricity_price_opt, CO2e_start_opt, GWP_chem, # Changed from GWP_chem_opt
                         start_local_temperature_opt
                     )
 
-
-            elif func_to_call.__name__ == "fuel_road_transport": # Unified road transport
-                # For the first leg (Site A to Port A), use the 'start' parameters
+            elif func_to_call.__name__ == "fuel_road_transport":
                 process_args_for_current_func = (
-                    road_delivery_ener_opt, HHV_chem_opt, chem_in_truck_weight_opt, truck_economy_opt,
-                    distance_A_to_port_opt, HHV_diesel_opt, diesel_density_opt,
-                    diesel_price_start_opt, truck_tank_radius_opt, truck_tank_length_opt,
-                    truck_tank_metal_thickness_opt, metal_thermal_conduct_opt,
-                    truck_tank_insulator_thickness_opt, insulator_thermal_conduct_opt,
-                    OHTC_ship_opt, start_local_temperature_opt, COP_refrig_opt,
-                    EIM_refrig_eff_opt, duration_A_to_port_opt, dBOR_dT_opt,
-                    BOR_truck_trans_opt, diesel_engine_eff_opt, EIM_truck_eff_opt,
-                    CO2e_diesel_opt, GWP_chem_opt,
+                    road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, # Changed from _opt for all these
+                    distance_A_to_port, HHV_diesel, diesel_density,
+                    diesel_price_start, truck_tank_radius, truck_tank_length,
+                    truck_tank_metal_thickness, metal_thermal_conduct,
+                    truck_tank_insulator_thickness, insulator_thermal_conduct,
+                    OHTC_ship, start_local_temperature, COP_refrig, # Changed from OHTC_ship_opt, COP_refrig_opt
+                    EIM_refrig_eff, duration_A_to_port, dBOR_dT, # Changed from dBOR_dT_opt
+                    BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, # Changed from BOR_truck_trans_opt
+                    CO2e_diesel, GWP_chem, # Changed from GWP_chem_opt
                     BOG_recirculation_truck_opt,
                     LH2_plant_capacity_opt, EIM_liquefication_opt,
-                    fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem_opt,
+                    fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem, # Changed from LHV_chem_opt
                     driver_daily_salary_start_opt, annual_working_days_opt
                 )
 
-            elif func_to_call.__name__ == "fuel_storage": # NEW: Unified storage
-                # Only 'port_A' storage is in the optimization path
+            elif func_to_call.__name__ == "fuel_storage":
                 process_args_for_current_func = (
-                    liquid_chem_density_opt, storage_volume_opt, dBOR_dT_opt,
-                    BOR_land_storage_opt, storage_time_A_opt, storage_radius_opt, tank_metal_thickness_opt,
+                    liquid_chem_density, storage_volume, dBOR_dT, # Changed from _opt
+                    BOR_land_storage, storage_time_A_opt, storage_radius, tank_metal_thickness_opt, # Changed from _opt
                     metal_thermal_conduct_opt, tank_insulator_thickness_opt, insulator_thermal_conduct_opt,
-                    COP_refrig_opt, EIM_refrig_eff_opt, start_electricity_price_opt,
-                    CO2e_start_opt, GWP_chem_opt,
+                    COP_refrig, EIM_refrig_eff_opt, start_electricity_price_opt, # Changed from COP_refrig_opt
+                    CO2e_start_opt, GWP_chem, # Changed from GWP_chem_opt
                     BOG_recirculation_storage_opt,
                     LH2_plant_capacity_opt, EIM_liquefication_opt,
-                    fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem_opt,
+                    fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem, # Changed from LHV_chem_opt
                     start_local_temperature_opt # Local temperature for Port A
                 )
 
             elif func_to_call.__name__ == "chem_loading_to_ship":
                 process_args_for_current_func = (
-                    V_flowrate_opt, number_of_cryo_pump_load_ship_port_A_opt, dBOR_dT_opt,
-                    start_local_temperature_opt, BOR_loading_opt, liquid_chem_density_opt, head_pump_opt,
+                    V_flowrate, number_of_cryo_pump_load_ship_port_A_opt, dBOR_dT, # Changed from V_flowrate_opt, dBOR_dT_opt
+                    start_local_temperature_opt, BOR_loading, liquid_chem_density, head_pump_opt, # Changed from BOR_loading_opt, liquid_chem_density_opt
                     pump_power_factor_opt, EIM_cryo_pump_opt, ss_therm_cond_opt, pipe_length_opt, pipe_inner_D_opt,
-                    pipe_thick_opt, boiling_point_chem_opt, EIM_refrig_eff_opt, start_electricity_price_opt,
-                    CO2e_start_opt, GWP_chem_opt, storage_area, ship_tank_metal_thickness,
+                    pipe_thick_opt, boiling_point_chem, EIM_refrig_eff_opt, start_electricity_price_opt, # Changed from boiling_point_chem_opt
+                    CO2e_start_opt, GWP_chem, storage_area, ship_tank_metal_thickness, # Changed from GWP_chem_opt
                     ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density,
                     ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat,
-                    COP_cooldown, COP_refrig, ship_number_of_tanks, pipe_metal_specific_heat
+                    COP_cooldown, COP_refrig, ship_number_of_tanks, pipe_metal_specific_heat # Changed from COP_cooldown_opt, COP_refrig_opt
                 )
             # Call the current process function with its tailored arguments
             # user_define_params[0] is the initial placeholder for chem_weight (or target_weight later)
