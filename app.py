@@ -1134,32 +1134,69 @@ def run_lca_model(inputs):
         # Unpack ALL shared parameters that ANY of the first 7 functions might need.
         # The order here MUST MATCH how they were packed into all_shared_params_tuple
         # in run_lca_model.
-        (LH2_plant_capacity_opt, EIM_liquefication_opt, specific_heat_chem, # specific_heat_chem (list)
-        start_local_temperature_opt, boiling_point_chem, latent_H_chem, # boiling_point_chem (list), latent_H_chem (list)
-        COP_liq, start_electricity_price_opt, CO2e_start_opt, GWP_chem, # COP_liq (list), GWP_chem (list)
-        V_flowrate, # V_flowrate (list)
-        number_of_cryo_pump_load_truck_site_A_opt,
-        number_of_cryo_pump_load_storage_port_A_opt,
-        number_of_cryo_pump_load_ship_port_A_opt,
-        dBOR_dT, BOR_loading, BOR_unloading, # dBOR_dT (list), BOR_loading (list), BOR_unloading (list)
-        head_pump_opt, pump_power_factor_opt, EIM_cryo_pump_opt,
-        ss_therm_cond_opt, pipe_length_opt, pipe_inner_D_opt, pipe_thick_opt,
-        COP_refrig, EIM_refrig_eff_opt, pipe_metal_specific_heat, COP_cooldown, # COP_refrig (list), pipe_metal_specific_heat (scalar), COP_cooldown (list)
-        road_delivery_ener, HHV_chem, # road_delivery_ener (list), HHV_chem (list)
-        chem_in_truck_weight, truck_economy, truck_tank_radius_opt, truck_tank_length_opt, # chem_in_truck_weight (list), truck_economy (list)
-        truck_tank_metal_thickness_opt, metal_thermal_conduct_opt,
-        truck_tank_insulator_thickness_opt, insulator_thermal_conduct_opt,
-        OHTC_ship, BOR_truck_trans, # OHTC_ship (list), BOR_truck_trans (list)
-        HHV_diesel_opt, diesel_engine_eff_opt, EIM_truck_eff_opt,
-        diesel_density_opt, CO2e_diesel_opt,
-        BOG_recirculation_truck_opt,
-        fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem, # LHV_chem (list)
-        storage_time_A_opt, liquid_chem_density, storage_volume, # liquid_chem_density (list), storage_volume (list)
-        storage_radius, BOR_land_storage, tank_metal_thickness_opt, # storage_radius (list), BOR_land_storage (list)
-        tank_insulator_thickness_opt, BOG_recirculation_storage_opt,
-        distance_A_to_port_opt, duration_A_to_port_opt, diesel_price_start_opt, driver_daily_salary_start_opt, annual_working_days_opt
+        (LH2_plant_capacity_opt, # Scalar
+        EIM_liquefication_opt, # Scalar
+        specific_heat_chem, # List
+        start_local_temperature_opt, # Scalar
+        boiling_point_chem, # List
+        latent_H_chem, # List
+        COP_liq, # List
+        start_electricity_price_opt, # Tuple (holds (lat, lon, price))
+        CO2e_start_opt, # Scalar
+        GWP_chem, # List
+        V_flowrate, # List
+        number_of_cryo_pump_load_truck_site_A_opt, # Scalar
+        number_of_cryo_pump_load_storage_port_A_opt, # Scalar
+        number_of_cryo_pump_load_ship_port_A_opt, # Scalar
+        dBOR_dT, # List
+        BOR_loading, # List
+        BOR_unloading, # List
+        head_pump_opt, # Scalar
+        pump_power_factor_opt, # Scalar
+        EIM_cryo_pump_opt, # Scalar
+        ss_therm_cond_opt, # Scalar
+        pipe_length_opt, # Scalar
+        pipe_inner_D_opt, # Scalar
+        pipe_thick_opt, # Scalar
+        COP_refrig, # List
+        EIM_refrig_eff_opt, # Scalar
+        pipe_metal_specific_heat, # Scalar
+        COP_cooldown, # List
+        road_delivery_ener, # List
+        HHV_chem, # List
+        chem_in_truck_weight, # List
+        truck_economy, # List
+        truck_tank_radius_opt, # Scalar
+        truck_tank_length_opt, # Scalar
+        truck_tank_metal_thickness_opt, # Scalar
+        metal_thermal_conduct_opt, # Scalar
+        truck_tank_insulator_thickness_opt, # Scalar
+        insulator_thermal_conduct_opt, # Scalar
+        OHTC_ship, # List
+        BOR_truck_trans, # List
+        HHV_diesel_opt, # Scalar
+        diesel_engine_eff_opt, # Scalar
+        EIM_truck_eff_opt, # Scalar
+        diesel_density_opt, # Scalar
+        CO2e_diesel_opt, # Scalar
+        BOG_recirculation_truck_opt, # Scalar
+        fuel_cell_eff_opt, # Scalar
+        EIM_fuel_cell_opt, # Scalar
+        LHV_chem, # List
+        storage_time_A_opt, # Scalar
+        liquid_chem_density, # List
+        storage_volume, # List
+        storage_radius, # List
+        BOR_land_storage, # List
+        tank_metal_thickness_opt, # Scalar
+        tank_insulator_thickness_opt, # Scalar
+        BOG_recirculation_storage_opt, # Scalar
+        distance_A_to_port_opt, # Scalar
+        duration_A_to_port_opt, # Scalar
+        diesel_price_start_opt, # Scalar
+        driver_daily_salary_start_opt, # Scalar
+        annual_working_days_opt # Scalar
         ) = all_shared_params_tuple
-
         X = A_initial_guess[0]  # Current chemical weight being optimized
 
         # Loop through the first 7 process functions
