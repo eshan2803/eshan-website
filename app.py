@@ -409,12 +409,7 @@ def run_lca_model(inputs):
 
         return money, ener_consumed, G_emission, A_after_loss, BOG_loss
 
-    # NEW: Unified fuel_road_transport function
     def fuel_road_transport(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
-        """
-        Calculates cost, energy, and emissions for road transport of fuel.
-        This function replaces site_A_to_port_A and port_B_to_site_B.
-        """
         # Unpack all arguments, including those that vary by leg (start vs. end)
         road_delivery_ener_arg, HHV_chem_arg, chem_in_truck_weight_arg, truck_economy_arg, \
         distance_arg, HHV_diesel_arg, diesel_density_arg, diesel_price_arg, \
@@ -1253,7 +1248,6 @@ def run_lca_model(inputs):
                         start_electricity_price_opt, CO2e_start_opt, GWP_chem, # Changed from GWP_chem_opt
                         start_local_temperature_opt
                     )
-
             elif func_to_call.__name__ == "fuel_road_transport":
                 process_args_for_current_func = (
                     road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, # Changed from _opt for all these
@@ -1274,14 +1268,14 @@ def run_lca_model(inputs):
             elif func_to_call.__name__ == "fuel_storage":
                 process_args_for_current_func = (
                     liquid_chem_density, storage_volume, dBOR_dT, # Changed from _opt
+                    start_local_temperature_opt, # <--- CORRECTED POSITION IN OPTIMIZER
                     BOR_land_storage, storage_time_A_opt, storage_radius, tank_metal_thickness_opt, # Changed from _opt
                     metal_thermal_conduct_opt, tank_insulator_thickness_opt, insulator_thermal_conduct_opt,
                     COP_refrig, EIM_refrig_eff_opt, start_electricity_price_opt, # Changed from COP_refrig_opt
                     CO2e_start_opt, GWP_chem, # Changed from GWP_chem_opt
                     BOG_recirculation_storage_opt,
                     LH2_plant_capacity_opt, EIM_liquefication_opt,
-                    fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem, # Changed from LHV_chem_opt
-                    start_local_temperature # Local temperature for Port A
+                    fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem # Changed from LHV_chem_opt
                 )
 
             elif func_to_call.__name__ == "chem_loading_to_ship":
@@ -1487,7 +1481,7 @@ def run_lca_model(inputs):
                 process_args_for_this_call_tc = (GWP_chem,)
             elif func_to_call.__name__ == "site_A_chem_liquification":
                 process_args_for_this_call_tc = (LH2_plant_capacity, EIM_liquefication, specific_heat_chem, start_local_temperature, boiling_point_chem, latent_H_chem, COP_liq, start_electricity_price, CO2e_start, GWP_chem)
-            elif func_to_call.__name__ == "fuel_pump_transfer": # NEW: Unified pump transfer
+            elif func_to_call.__name__ == "fuel_pump_transfer": 
                 if transfer_context == 'siteA_to_truck':
                     process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_truck_site_A, dBOR_dT, BOR_loading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, start_local_temperature)
                 elif transfer_context == 'portA_to_storage':
@@ -1500,18 +1494,45 @@ def run_lca_model(inputs):
                     process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_site_B, dBOR_dT, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, end_local_temperature)
                 elif transfer_context == 'siteB_to_use':
                     process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_site_B, dBOR_dT, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, end_local_temperature)
+
             elif func_to_call.__name__ == "fuel_road_transport": # Unified road transport
                 if leg_type == 'start_leg':
                     process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_A_to_port, HHV_diesel, diesel_density, diesel_price_start, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, start_local_temperature, COP_refrig, EIM_refrig_eff, duration_A_to_port, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem, driver_daily_salary_start, annual_working_days)
                 elif leg_type == 'end_leg':
                     process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_port_to_B, HHV_diesel, diesel_density, diesel_price_end, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, end_local_temperature, COP_refrig, EIM_refrig_eff, duration_port_to_B, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem, driver_daily_salary_end, annual_working_days)
-            elif func_to_call.__name__ == "fuel_storage": # NEW: Unified storage
+
+            elif func_to_call.__name__ == "fuel_storage": 
                 if storage_location_type == 'port_A':
-                    process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, BOR_land_storage, storage_time_A, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem, start_local_temperature)
+                    process_args_for_this_call_tc = (
+                        liquid_chem_density, storage_volume, dBOR_dT,
+                        start_local_temperature, # <--- CORRECTED POSITION
+                        BOR_land_storage, storage_time_A, storage_radius, tank_metal_thickness,
+                        metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct,
+                        COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start,
+                        GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication,
+                        fuel_cell_eff, EIM_fuel_cell, LHV_chem
+                    )
                 elif storage_location_type == 'port_B':
-                    process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, BOR_land_storage, storage_time_B, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem, end_local_temperature)
+                    process_args_for_this_call_tc = (
+                        liquid_chem_density, storage_volume, dBOR_dT,
+                        end_local_temperature, # <--- CORRECTED POSITION
+                        BOR_land_storage, storage_time_B, storage_radius, tank_metal_thickness,
+                        metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct,
+                        COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end,
+                        GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication,
+                        fuel_cell_eff, EIM_fuel_cell, LHV_chem
+                    )
                 elif storage_location_type == 'site_B':
-                    process_args_for_this_call_tc = (liquid_chem_density, storage_volume, dBOR_dT, BOR_land_storage, storage_time_C, storage_radius, tank_metal_thickness, metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem, end_local_temperature)
+                    process_args_for_this_call_tc = (
+                        liquid_chem_density, storage_volume, dBOR_dT,
+                        end_local_temperature, # <--- CORRECTED POSITION
+                        BOR_land_storage, storage_time_C, storage_radius, tank_metal_thickness,
+                        metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct,
+                        COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end,
+                        GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication,
+                        fuel_cell_eff, EIM_fuel_cell, LHV_chem
+                    )
+
             elif func_to_call.__name__ == "chem_loading_to_ship":
                 process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_ship_port_A, dBOR_dT, start_local_temperature, BOR_loading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, boiling_point_chem, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, storage_area, ship_tank_metal_thickness, ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density, ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat, COP_cooldown, COP_refrig, ship_number_of_tanks, pipe_metal_specific_heat)
             elif func_to_call.__name__ == "port_to_port":
