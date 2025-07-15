@@ -62,6 +62,7 @@
     nav a:hover::after {
       transform: scaleX(1);
       transform-origin: bottom left;
+      /* Citation: This interaction effect is a common UI pattern. No specific external source. */
     }
     nav a:hover {
       text-decoration: none;
@@ -214,17 +215,6 @@
             <option value="Ammonia">Ammonia</option>
         </select>
         </div>
-        <div class="input-group">
-            <label class="input-inline" style="display: flex; align-items: center; gap: 0.5rem;">
-                <input type="checkbox" id="includeOverheads" name="includeOverheads" style="width: auto;">
-                <span style="font-weight: normal;">
-                    Include All Non-Energy Costs (Infrastructure CAPEX & Voyage Overheads)?
-                    <a href="transport-model-documentation.html#overhead-assumptions" target="_blank" style="color: #007BFF; text-decoration: underline;">
-                        Refer to Documentation.
-                    </a>
-                </span>
-            </label>
-        </div>
         <div class="input-group" id="capacity-input-group">
           <label id="capacity-label" for="lh2PlantCapacity">LH2 Plant Capacity (TPD):</label>
           <input type="number" id="lh2PlantCapacity" value="24">
@@ -313,8 +303,8 @@
                 <h3 class="text-lg font-semibold mb-3 text-gray-600">Green Premium Analysis (Local vs. International)</h3>
                 <div id="greenPremiumTableContainer" class="table-container mb-6 shadow-md"></div>
             </div>
-            <h3 class="text-lg font-semibold mb-3 text-gray-600">Detailed Process Breakdown:</h3>
-            <div id="detailedTableContainer" class="table-container mb-6 shadow-md"></div>
+            <h3 class="text-lg font-semibold mb-3 text-gray-600 hidden" id="detailedTableTitle">Detailed Process Breakdown:</h3>
+            <div id="detailedTableContainer" class="table-container mb-6 shadow-md hidden"></div>
 
             <div class="charts-container" style="margin-top: 2rem;">
             <h3 class="text-lg font-semibold mb-3 text-gray-600">Cost Breakdown Chart:</h3>
@@ -515,7 +505,8 @@
       // Conditionally build the userInputs object
       const commodity = document.getElementById('commodity-type').value;
       const shipArchetype = document.getElementById('shipArchetypeSelect').value;
-      const includeOverheads = document.getElementById('includeOverheads').checked;
+      // Removed the includeOverheads checkbox logic as it's no longer needed
+      // const includeOverheads = document.getElementById('includeOverheads').checked;
       let userInputs = {
         commodity_type: commodity,
         start: document.getElementById('startLocation').value,
@@ -525,7 +516,8 @@
         storage_time_C: parseFloat(document.getElementById('storageTimeC').value),
         LH2_plant_capacity: parseFloat(document.getElementById('lh2PlantCapacity').value), // We can repurpose this input
         ship_archetype: shipArchetype,
-        include_overheads: includeOverheads,
+        // Removed include_overheads from userInputs, as it's always true now
+        // include_overheads: includeOverheads,
       };
 
       if (commodity === 'fuel') {
@@ -571,7 +563,7 @@
         logStatus("Calculation complete. Rendering results...");
 
         const routeBounds = displayMap(results.map_data, results.food_type);
-        displayTables(results.table_data, commodity);
+        displayTables(results.table_data, commodity); // commodity parameter is needed here for conditional table display
         completeResultsForCsv = results.csv_data;
         if (results.charts) {
           document.getElementById('costChartImg').src = "data:image/png;base64," + results.charts.cost_chart_base64;
@@ -776,9 +768,9 @@
           if (isDetailed) {
             if (index === 0) { // First column (Process Step) is always text
               cellContent = cell;
-            } else if (index >= 6) { // "Per unit" columns get 4 decimal places
+            } else if (index >= 7) { // "Per unit" columns (Opex/kg, Capex/kg, Cost/kg, etc.) get 4 decimal places
               cellContent = isNaN(Number(cell)) ? cell : Number(cell).toFixed(4);
-            } else { // Raw data columns (Cost, Energy, etc.) get scientific notation
+            } else { // Raw data columns (Opex, Capex, Energy, CO2eq, Chem, BOG/Spoilage) get scientific notation (indices 1-6)
               cellContent = isNaN(Number(cell)) ? cell : Number(cell).toExponential(2);
             }
           }
@@ -795,18 +787,47 @@
 
     function displayTables(tableData, commodity) {
         // --- 1. DETAILED TABLE LOGIC ---
+        // Get the detailed table elements
+        const detailedTableTitle = document.getElementById('detailedTableTitle');
+        const detailedTableContainer = document.getElementById('detailedTableContainer');
+
+        // Hide the detailed table and its title
+        detailedTableTitle.classList.add('hidden');
+        detailedTableContainer.classList.add('hidden');
+
+        // The data is still processed and ready for CSV download, just not displayed.
         let detailedHeaders = tableData.detailed_headers || [];
         let detailedData = tableData.detailed_data || [];
 
+        // This filtering logic is still important for the CSV data,
+        // even if the table isn't displayed on the UI.
         if (commodity === 'food') {
             // If the commodity is food, filter out the GJ columns
-            const columnsToRemove = [7, 9]; // Indices for 'Cost/GJ' and 'eCO2/GJ'
-            detailedHeaders = detailedHeaders.filter((_, index) => !columnsToRemove.includes(index));
-            detailedData = detailedData.map(row => row.filter((_, index) => !columnsToRemove.includes(index)));
-        }
-        // Render the detailed table with the (potentially filtered) data
-        document.getElementById('detailedTableContainer').innerHTML = createTableHtml(detailedHeaders, detailedData, true);
+            // These indices need to be carefully checked against your backend's new_detailed_headers
+            // Assuming your backend sends the full headers and data,
+            // these indices are based on `new_detailed_headers` in app_food.py
+            const costPerGJIndex = detailedHeaders.indexOf('Cost/GJ ($/GJ)');
+            const eco2PerGJIndex = detailedHeaders.indexOf('eCO2/GJ (kg/GJ)');
 
+            const columnsToRemove = [];
+            if (costPerGJIndex !== -1) columnsToRemove.push(costPerGJIndex);
+            if (eco2PerGJIndex !== -1) columnsToRemove.push(eco2PerGJIndex);
+
+            // Sort in descending order so that removing elements doesn't affect subsequent indices
+            columnsToRemove.sort((a, b) => b - a);
+
+            detailedHeaders = detailedHeaders.filter((_, index) => !columnsToRemove.includes(index));
+            detailedData = detailedData.map(row => {
+                let newRow = [...row]; // Create a copy to avoid modifying original
+                columnsToRemove.forEach(index => {
+                    if (index < newRow.length) {
+                        newRow.splice(index, 1);
+                    }
+                });
+                return newRow;
+            });
+        }
+        // No longer rendering the detailed table HTML here
 
         // --- 2. SUMMARY TABLE 1 LOGIC (No changes here) ---
         const summary1Headers = tableData.summary1_headers || [];
