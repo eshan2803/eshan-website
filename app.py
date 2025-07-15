@@ -278,21 +278,26 @@ def run_lca_model(inputs):
         powers_kw = [p[1] for p in power_scaling_data]
         return np.interp(ship_volume_m3, volumes_m3, powers_kw)
     
-    def create_breakdown_chart(data, opex_column_index, capex_column_index, title, x_label, overlay_text=None):
+    def create_breakdown_chart(data, primary_value_column_index, secondary_value_column_index, title, x_label, overlay_text=None, is_emission_chart=False):
         try:
             if not data:
                 print("Chart creation skipped: No data provided.")
                 return ""
             labels = [row[0] for row in data]
-            opex_values = []
-            capex_values = []
+            primary_values = []
+            secondary_values = [] # This will be all zeros for emission chart
+
             for row in data:
                 try:
-                    opex_values.append(float(row[opex_column_index]))
-                    capex_values.append(float(row[capex_column_index]))
-                except (ValueError, TypeError):
-                    opex_values.append(0.0)
-                    capex_values.append(0.0)
+                    primary_values.append(float(row[primary_value_column_index]))
+                    if not is_emission_chart: # Only get secondary values if it's a cost chart
+                        secondary_values.append(float(row[secondary_value_column_index]))
+                    else:
+                        secondary_values.append(0.0) # For emission chart, secondary is zero
+                except (ValueError, TypeError, IndexError) as e: # Added IndexError here
+                    print(f"DEBUG: Error processing row for chart '{title}': {row}. Error: {e}")
+                    primary_values.append(0.0)
+                    secondary_values.append(0.0)
                     print(f"Warning: Could not convert value to a number for chart '{title}'. Defaulting to 0.")
 
             plt.style.use('seaborn-v0_8-whitegrid')
@@ -300,10 +305,12 @@ def run_lca_model(inputs):
 
             y_pos = np.arange(len(labels))
 
-            # Plot OPEX
-            ax.barh(y_pos, opex_values, align='center', color='#8BC34A', edgecolor='black', label='OPEX') # Lighter Green
-            # Plot CAPEX on top of OPEX
-            ax.barh(y_pos, capex_values, left=opex_values, align='center', color='#4CAF50', edgecolor='black', label='CAPEX') # Original Green
+            if is_emission_chart:
+                ax.barh(y_pos, primary_values, align='center', color='#4CAF50', edgecolor='black', label='Emissions')
+            else:
+                ax.barh(y_pos, primary_values, align='center', color='#8BC34A', edgecolor='black', label='OPEX') # Lighter Green
+                ax.barh(y_pos, secondary_values, left=primary_values, align='center', color='#4CAF50', edgecolor='black', label='CAPEX') # Original Green
+
 
             ax.set_yticks(y_pos)
             ax.set_yticklabels(labels, fontsize=12)
@@ -311,12 +318,12 @@ def run_lca_model(inputs):
             ax.set_xlabel(x_label, fontsize=14, weight='bold')
             ax.set_title(title, fontsize=16, weight='bold', pad=20)
 
-            # Add values for total (OPEX + CAPEX)
-            for i, (o, c) in enumerate(zip(opex_values, capex_values)):
-                total_value = o + c
+            # Add values for total (Primary + Secondary for cost, just Primary for emission)
+            for i, (p, s) in enumerate(zip(primary_values, secondary_values)):
+                total_value = p + s if not is_emission_chart else p
                 ax.text(total_value, i, f' {total_value:,.2f}', color='black', va='center', fontweight='bold')
 
-            ax.legend(loc='lower right', fontsize=10) # Add legend for OPEX/CAPEX
+            ax.legend(loc='lower right', fontsize=10)
 
             plt.tight_layout(pad=2.0)
 
@@ -339,8 +346,7 @@ def run_lca_model(inputs):
             import traceback
             traceback.print_exc()
             print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-            return ""    
-
+            return ""
     # =================================================================
     # <<<                   FUEL PROCESS FUNCTIONS                  >>>
     # =================================================================
@@ -2477,17 +2483,18 @@ def run_lca_model(inputs):
             capex_per_kg_index,
             'Cost Breakdown per kg of Delivered Fuel', # Title
             'Cost ($/kg)',                          # X-label
-            overlay_text=cost_overlay_text
+            overlay_text=cost_overlay_text,
+            is_emission_chart=False # Explicitly state it's not an emission chart
         )
         emission_chart_base64 = create_breakdown_chart(
             data_for_emission_chart,
             eco2_per_kg_index,
-            eco2_per_kg_index, # For emissions, you'd likely still want a single bar unless you also break down emission types
+            eco2_per_kg_index, # This argument is effectively ignored for emission charts
             'CO2eq Breakdown per kg of Delivered Fuel', # Title
             'CO2eq (kg/kg)',                            # X-label
-            overlay_text=emission_overlay_text
+            overlay_text=emission_overlay_text,
+            is_emission_chart=True # Explicitly state it's an emission chart
         )
-
         summary1_data = [
             ["Cost ($/kg chemical)", f"{chem_cost:.2f}"],
             ["Consumed Energy (MJ/kg chemical)", f"{chem_energy:.2f}"],
@@ -2508,7 +2515,7 @@ def run_lca_model(inputs):
             [f"Marine Fuel ({marine_fuel_choice}) Price at {start_port_name}*", f"{dynamic_price:.2f} $/ton"],
             [f"Green H2 Production Price at {start}*", f"{hydrogen_production_cost:.2f} $/kg"],
         ]
-
+        csv_data = [new_detailed_headers] + detailed_data_formatted
         response = {
             "status": "success",
             "map_data": {
@@ -2527,7 +2534,7 @@ def run_lca_model(inputs):
                 "summary2_headers": ["Per Energy Output", "Value"], "summary2_data": summary2_data,
                 "assumed_prices_headers": ["Assumed Price", "Value"], "assumed_prices_data": assumed_prices_data
             },
-            "csv_data": csv_data,
+            "csv_data": csv_data, # Now csv_data is defined
             "charts": {
                 "cost_chart_base64": cost_chart_base64,
                 "emission_chart_base64": emission_chart_base64
@@ -2687,19 +2694,19 @@ def run_lca_model(inputs):
             current_total_cost = current_opex + current_capex
             current_emission = float(row[4])
 
-            # Calculate Opex/kg and Capex/kg
-            opex_per_kg = current_opex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-            capex_per_kg = current_capex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+            # Recalculate these for food context
+            opex_per_kg = current_opex / final_commodity_kg if final_commodity_kg > 0 else 0
+            capex_per_kg = current_capex / final_commodity_kg if final_commodity_kg > 0 else 0
 
-            cost_per_kg = current_total_cost / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-            cost_per_gj = current_total_cost / final_energy_gj_denominator if final_energy_gj_denominator > 0 else 0
+            cost_per_kg = current_total_cost / final_commodity_kg if final_commodity_kg > 0 else 0
+            cost_per_gj = current_total_cost / final_energy_output_gj if final_energy_output_gj > 0 else 0 # Use final_energy_output_gj from food section
 
-            emission_per_kg = current_emission / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-            emission_per_gj = current_emission / final_energy_gj_denominator if final_energy_gj_denominator > 0 else 0
+            emission_per_kg = current_emission / final_commodity_kg if final_commodity_kg > 0 else 0
+            emission_per_gj = current_emission / final_energy_output_gj if final_energy_output_gj > 0 else 0 # Use final_energy_output_gj from food section
 
             new_row_with_additions = list(row) + [opex_per_kg, capex_per_kg, cost_per_kg, cost_per_gj, emission_per_kg, emission_per_gj]
             data_with_all_columns.append(new_row_with_additions)
-            
+                        
         detailed_data_formatted = data_with_all_columns
         data_for_display_common = [row for row in detailed_data_formatted if row[0] != "TOTAL"]
         emission_chart_exclusions_food = [] # No exclusions needed if all costs/emissions are now integrated
