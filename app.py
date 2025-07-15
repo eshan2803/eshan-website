@@ -2989,28 +2989,6 @@ def run_lca_model(inputs):
         energy_per_kg = total_energy / final_commodity_kg if final_commodity_kg > 0 else 0
         emissions_per_kg = total_emissions / final_commodity_kg if final_commodity_kg > 0 else 0
 
-        cost_chart_base64 = create_breakdown_chart(
-            data_for_cost_chart_display, # Use the correctly built list
-            opex_per_kg_for_chart_idx,
-            capex_per_kg_for_chart_idx,
-            carbon_tax_per_kg_for_chart_idx,
-            insurance_per_kg_for_chart_idx, # Ensure this index is passed
-            'Cost Breakdown per kg of Delivered Food',
-            'Cost ($/kg)',
-            overlay_text=cost_overlay_text,
-            is_emission_chart=False
-        )
-        emission_chart_base64 = create_breakdown_chart(
-            data_for_emission_chart, # Use the correctly built list
-            eco2_per_kg_for_chart_idx,      # Emissions chart uses this as its primary value
-            eco2_per_kg_for_chart_idx,      # Placeholder, will be ignored for emission charts
-            eco2_per_kg_for_chart_idx,      # Placeholder, will be ignored for emission charts
-            eco2_per_kg_for_chart_idx,      # Placeholder, will be ignored for emission charts
-            'CO2eq Breakdown per kg of Delivered Food',
-            'CO2eq (kg/kg)',
-            overlay_text=emission_overlay_text,
-            is_emission_chart=True
-        )        
         summary1_data = [
             ["Cost ($/kg food)", f"{cost_per_kg:.2f}"],
             ["Consumed Energy (MJ/kg food)", f"{energy_per_kg:.2f}"],
@@ -3051,6 +3029,30 @@ def run_lca_model(inputs):
                 f"• Farming Emissions alone for {current_food_params['name']}: {production_co2e:.2f} kg CO2eq/kg\n"
                 f"• Logistics add {ratio_emission:.1f}X the farming emissions."
             )
+
+        cost_chart_base64 = create_breakdown_chart(
+            data_for_cost_chart_display, # Use the correctly built list
+            opex_per_kg_for_chart_idx,
+            capex_per_kg_for_chart_idx,
+            carbon_tax_per_kg_for_chart_idx,
+            insurance_per_kg_for_chart_idx, # Ensure this index is passed
+            'Cost Breakdown per kg of Delivered Food',
+            'Cost ($/kg)',
+            overlay_text=cost_overlay_text,
+            is_emission_chart=False
+        )
+        emission_chart_base64 = create_breakdown_chart(
+            data_for_emission_chart, # Use the correctly built list
+            eco2_per_kg_for_chart_idx,      # Emissions chart uses this as its primary value
+            eco2_per_kg_for_chart_idx,      # Placeholder, will be ignored for emission charts
+            eco2_per_kg_for_chart_idx,      # Placeholder, will be ignored for emission charts
+            eco2_per_kg_for_chart_idx,      # Placeholder, will be ignored for emission charts
+            'CO2eq Breakdown per kg of Delivered Food',
+            'CO2eq (kg/kg)',
+            overlay_text=emission_overlay_text,
+            is_emission_chart=True
+        )        
+            
         response = {
             "status": "success",
             "map_data": { "coor_start": {"lat": coor_start_lat, "lng": coor_start_lng}, "coor_end": {"lat": coor_end_lat, "lng": coor_end_lng}, "start_port": {"lat": start_port_lat, "lng": start_port_lng, "name": start_port_name}, "end_port": {"lat": end_port_lat, "lng": end_port_lng, "name": end_port_name}, "road_route_start_coords": road_route_start_coords, "road_route_end_coords": road_route_end_coords, "sea_route_coords": searoute_coor },
