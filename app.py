@@ -83,6 +83,8 @@ def run_lca_model(inputs):
     # =================================================================
     # <<<                       HELPER FUNCTIONS                    >>>
     # =================================================================
+    final_energy_output_gj = 0.0  # Add this line
+
     def extract_lat_long(address_or_postalcode):
         endpoint = f'https://maps.googleapis.com/maps/api/geocode/json'
         params = {'address': address_or_postalcode, 'key': api_key_google}
@@ -352,9 +354,11 @@ def run_lca_model(inputs):
             plt.tight_layout(pad=2.0)
 
             if overlay_text:
-                # Adjust position: 0.95 -> 0.92 for x-coordinate to move left, and 0.9 -> 0.98 for y-coordinate to move higher
-                fig.text(0.92, 0.98, overlay_text,
-                        ha='right', va='top', size=10, # Changed va to 'top'
+                # Adjust position to be above the lower right legend
+                # x=0.92 to keep it right-aligned, y=0.15 to place it above the lower-right legend.
+                # va='bottom' ensures the bottom of the text box is at the specified y-coordinate.
+                fig.text(0.92, 0.15, overlay_text, # Adjusted y-coordinate
+                        ha='right', va='bottom', size=10, # Changed va to 'bottom'
                         bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.6))
 
             buf = io.BytesIO()
@@ -2423,7 +2427,6 @@ def run_lca_model(inputs):
             final_results_raw[2] += emission_conv
             final_results_raw[3] = amount_after_conversion
 
-            # Update the TOTAL row to reflect the new total money, energy, emissions, and final amount
             data_raw[-1] = ["TOTAL", sum(row[1] for row in data_raw[:-1]), sum(row[2] for row in data_raw[:-1]), final_results_raw[1], final_results_raw[2], final_results_raw[3], 0]
 
 
