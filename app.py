@@ -2736,7 +2736,7 @@ def run_lca_model(inputs):
             reefer_service_total_cost = reefer_service_cost * shipment_size_containers
             reefer_service_total_energy = reefer_service_energy * shipment_size_containers
             reefer_service_total_emissions = reefer_service_emissions * shipment_size_containers
-            reefer_row = ["Reefer & CA Services", reefer_service_total_cost, 0, reefer_service_total_energy, reefer_service_total_emissions, commodity_weight_at_marine_transport, 0]
+            reefer_row = ["Reefer & CA Services", reefer_service_total_cost, 0, 0, reefer_service_total_energy, reefer_service_total_emissions, commodity_weight_at_marine_transport, 0]
             data_raw.insert(marine_transport_index + 1, reefer_row)
 
         total_opex_money = sum(row[1] for row in data_raw if row[0] != "TOTAL")
