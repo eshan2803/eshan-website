@@ -2306,6 +2306,17 @@ def run_lca_model(inputs):
 
     data_raw = []
     response_data = {}
+    detailed_data_formatted = [] 
+    cost_chart_base64 = ""      
+    emission_chart_base64 = ""  
+    summary1_data = []           
+    summary2_data = []           
+    assumed_prices_data = []     
+    csv_data = []                
+    green_premium_data = None    
+    local_sourcing_results = None 
+    cost_overlay_text = ""       
+    emission_overlay_text = ""   
     if commodity_type == 'fuel':
         fuel_type = inputs['fuel_type']
         fuel_names = ['Liquid Hydrogen', 'Ammonia', 'Methanol']
