@@ -2461,8 +2461,40 @@ def run_lca_model(inputs):
 
             opex_per_kg = current_opex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             capex_per_kg = current_capex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+            carbon_tax_per_kg = current_carbon_tax / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
 
-            new_row_with_additions = list(row) + [opex_per_kg, capex_per_kg, cost_per_kg, cost_per_gj, emission_per_kg, emission_per_gj]
+            insurance_per_kg = 0
+            if row[0] == "site_A_chem_production":
+                # This needs to come from the 'site_A_chem_production' function's calculation
+                # For now, let's assume it's directly available or calculable here if not explicitly returned.
+                # If 'insurance_cost' is directly part of 'opex_money' for that step,
+                # you might need to adjust the 'site_A_chem_production' function to return it separately,
+                # or deduce it here.
+                # For a quick fix, if insurance_cost is passed as a separate argument to the function
+                # site_A_chem_production (as INSURANCE_PERCENTAGE_OF_CARGO_VALUE * hydrogen_production_cost),
+                # you can calculate it again, or ideally, have the function return it.
+
+                # Based on your site_A_chem_production:
+                # insurance_cost = cargo_value * (insurance_percentage_of_cargo_value_arg / 100)
+                # opex_money += insurance_cost
+                # To extract it:
+                cargo_value_at_production = float(row[6]) * hydrogen_production_cost # row[6] is 'Chem (kg)'
+                insurance_cost_absolute = cargo_value_at_production * (INSURANCE_PERCENTAGE_OF_CARGO_VALUE / 100)
+                insurance_per_kg = insurance_cost_absolute / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+                # Reduce opex_per_kg for the 'site_A_chem_production' step by this insurance_per_kg
+                if row[0] == "site_A_chem_production":
+                    opex_per_kg -= insurance_per_kg # Deduct from OPEX for accurate breakdown
+
+            current_total_cost = current_opex + current_capex + current_carbon_tax # Sum of total values.
+
+            cost_per_kg_total = current_total_cost / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+            cost_per_gj = current_total_cost / final_energy_output_gj if final_energy_output_gj > 0 else 0
+
+            emission_per_kg = current_emission / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+            emission_per_gj = current_emission / final_energy_output_gj if final_energy_output_gj > 0 else 0
+
+            # Add all the new per-kg columns, including the total cost per kg
+            new_row_with_additions = list(row) + [opex_per_kg, capex_per_kg, carbon_tax_per_kg, insurance_per_kg, cost_per_kg_total, cost_per_gj, emission_per_kg, emission_per_gj]
             data_with_all_columns.append(new_row_with_additions)
             
         data = data_with_all_columns
@@ -2542,9 +2574,11 @@ def run_lca_model(inputs):
                 f"• Total Transport Emission: {chem_CO2e:.2f} kg CO2eq/kg\n"
                 f"• Transport emission is {ratio_emission:.1f} times the SMR emission."
             )
-        new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Carbon Tax ($)", "Energy (MJ)", "CO2eq (kg)", "Chem (kg)", "BOG (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "CO2eq/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
+        new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Carbon Tax ($)", "Energy (MJ)", "CO2eq (kg)", "Chem (kg)", "BOG (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Carbon Tax/kg ($/kg)", "Insurance/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "CO2eq/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
         opex_per_kg_index = new_detailed_headers.index("Opex/kg ($/kg)")
         capex_per_kg_index = new_detailed_headers.index("Capex/kg ($/kg)")
+        carbon_tax_index = new_detailed_headers.index("Carbon Tax/kg ($/kg)") # Changed to point to per-kg value
+        insurance_index = new_detailed_headers.index("Insurance/kg ($/kg)") # New index
         eco2_per_kg_index = new_detailed_headers.index("CO2eq/kg (kg/kg)")
         carbon_tax_index = 3 # Assuming carbon tax is at index 3 in data_raw, which is the 4th column
         insurance_index = 1 # Insurance is part of OPEX for now, but its specific value should be filtered in the chart. For this, we treat it as its own index for chart's parsing logic.
@@ -2552,8 +2586,8 @@ def run_lca_model(inputs):
             data_for_display_common,
             opex_per_kg_index,
             capex_per_kg_index,
-            carbon_tax_index, # New argument
-            insurance_index,  # New argument
+            carbon_tax_index,
+            insurance_index,
             'Cost Breakdown per kg of Delivered Fuel', # Title
             'Cost ($/kg)',                          # X-label
             overlay_text=cost_overlay_text,
@@ -2799,10 +2833,12 @@ def run_lca_model(inputs):
         data_for_emission_chart = [row for row in data_for_display_common if row[0] not in emission_chart_exclusions_food]
         carbon_tax_index = 3 # Assuming carbon tax is at index 3 in data_raw, which is the 4th column
         insurance_index = 1 # Insurance is part of OPEX for now, but its specific value should be filtered in the chart's parsing logic        
-        new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Carbon Tax ($)", "Energy (MJ)", "eCO2 (kg)", "Commodity (kg)", "Spoilage (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
+        new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Carbon Tax ($)", "Energy (MJ)", "eCO2 (kg)", "Commodity (kg)", "Spoilage (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Carbon Tax/kg ($/kg)", "Insurance/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
         opex_per_kg_index = new_detailed_headers.index("Opex/kg ($/kg)")
         capex_per_kg_index = new_detailed_headers.index("Capex/kg ($/kg)")
-        eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)") # Note: This was "CO2eq/kg" in your fuel section. Ensure consistency if possible. I've updated it to match your food section header.
+        carbon_tax_index = new_detailed_headers.index("Carbon Tax/kg ($/kg)") # Changed to point to per-kg value
+        insurance_index = new_detailed_headers.index("Insurance/kg ($/kg)") # New index
+        eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)")
         
         cost_per_kg = total_money / final_commodity_kg if final_commodity_kg > 0 else 0
         energy_per_kg = total_energy / final_commodity_kg if final_commodity_kg > 0 else 0
@@ -2852,8 +2888,8 @@ def run_lca_model(inputs):
             data_for_display_common,
             opex_per_kg_index,
             capex_per_kg_index,
-            carbon_tax_index, # New argument
-            insurance_index,  # New argument
+            carbon_tax_index,
+            insurance_index,
             'Cost Breakdown per kg of Delivered Food', # Title (changed from 'Fuel' to 'Food')
             'Cost ($/kg)',                           # X-label
             overlay_text=cost_overlay_text
