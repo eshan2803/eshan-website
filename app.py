@@ -2463,16 +2463,6 @@ def run_lca_model(inputs):
             0.0  # row[15] eCO2/GJ
         ]        
         for row in data_raw:
-            # The structure of `data_raw` now coming from total_chem_base is:
-            # [Process, opex_total, capex_total, carbon_tax_total, energy_total, emission_total, chem_kg_final, bog_loss_final]
-            # (Note: total_chem_base's data_results_list returns current_chem and bog_loss at index 6 and 7 respectively, if not changed.)
-            # Based on your total_chem_base, its row structure is:
-            # [Process, opex_money, capex_money, carbon_tax_money_current, Y_energy, Z_emission, R_current_chem, S_bog_loss] -> This means 8 columns.
-
-            # Update len(row) check based on actual data_raw structure from total_chem_base.
-            # From the `total_chem_base` function, `data_results_list` has 8 elements per row:
-            # [func_name, opex, capex, carbon_tax, energy, emission, R_current_chem, S_bog_loss]
-            # The `site_A_chem_production` function added insurance_cost to opex_money.
             if len(row) < 8: # Assuming 8 columns from total_chem_base now
                 print(f"Warning: Row has insufficient data points: {row}. Skipping 'per unit' calculations for this row.")
                 data_with_all_columns.append(list(row) + [0]*(16 - len(row)))
@@ -2521,22 +2511,6 @@ def run_lca_model(inputs):
                 cost_per_kg_total, cost_per_gj, emission_per_kg, emission_per_gj # Derived per-unit values
             ]
             data_with_all_columns.append(new_row_with_additions)
-        filtered_relabeled_data_except_production_and_total = [
-            row for row in relabeled_data if row[0] not in ["Initial Production (Placeholder)", "TOTAL"]
-        ]                       
-        data = data_with_all_columns
-        total_results = final_results_raw
-
-        final_weight = total_results[3]
-        chem_cost = total_results[0] / final_weight if final_weight > 0 else 0
-        chem_energy = total_results[1] / final_weight if final_weight > 0 else 0
-        chem_CO2e = total_results[2] / final_weight if final_weight > 0 else 0
-        final_energy_output_mj = final_weight * HHV_chem[fuel_type]
-        final_energy_output_gj = final_energy_output_mj / 1000
-
-        fuel_names = ['Liquid Hydrogen', 'Ammonia', 'Methanol']
-        selected_fuel_name = fuel_names[fuel_type]
-
         label_map = {
             "site_A_chem_production": "Initial Production (Placeholder)",
             "site_A_chem_liquification": f"Liquifaction in {start}",
@@ -2578,7 +2552,26 @@ def run_lca_model(inputs):
                     formatted_row.append(f"{item:,.2f}")
                 else:
                     formatted_row.append(item)
-            detailed_data_formatted.append(formatted_row)
+            detailed_data_formatted.append(formatted_row)            
+            
+        filtered_relabeled_data_except_production_and_total = [
+            row for row in relabeled_data if row[0] not in ["Initial Production (Placeholder)", "TOTAL"]
+        ]                       
+        data = data_with_all_columns
+        total_results = final_results_raw
+
+        final_weight = total_results[3]
+        chem_cost = total_results[0] / final_weight if final_weight > 0 else 0
+        chem_energy = total_results[1] / final_weight if final_weight > 0 else 0
+        chem_CO2e = total_results[2] / final_weight if final_weight > 0 else 0
+        final_energy_output_mj = final_weight * HHV_chem[fuel_type]
+        final_energy_output_gj = final_energy_output_mj / 1000
+
+        fuel_names = ['Liquid Hydrogen', 'Ammonia', 'Methanol']
+        selected_fuel_name = fuel_names[fuel_type]
+
+
+            
         filtered_relabeled_data_for_chart = []
         for row in relabeled_data:
             # Only include rows that are NOT the placeholder for the original production, and NOT the TOTAL
