@@ -2546,6 +2546,8 @@ def run_lca_model(inputs):
             data_for_emission_chart,
             eco2_per_kg_index,
             eco2_per_kg_index, # This argument is effectively ignored for emission charts
+            carbon_tax_index,  # ADDED
+            insurance_index,   # ADDED
             'CO2eq Breakdown per kg of Delivered Fuel', # Title
             'CO2eq (kg/kg)',                            # X-label
             overlay_text=emission_overlay_text,
