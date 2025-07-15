@@ -30,7 +30,22 @@ api_key_EIA = os.environ.get("API_KEY_EIA", "ESHAN_API_KEY_EIA")
 api_key_weather = os.environ.get("API_KEY_WEATHER", "ESHAN_API_KEY_WEATHER")
 api_key_openAI = os.environ.get("API_KEY_OPENAI", "ESHAN_API_KEY_OPENAI")
 api_key_electricity_map = os.environ.get("API_KEY_ELECTRICITYMAP", "ESHAN_API_KEY_ELECTRICITYMAP")
-
+HHV_diesel = 45.6
+diesel_density = 3.22
+CO2e_diesel = 10.21
+VOYAGE_OVERHEADS_DATA = {
+    'small':    {'daily_operating_cost_usd': 8500, 'daily_capital_cost_usd': 10000, 'port_fee_usd': 30000, 'suez_toll_per_gt_usd': 9.00, 'panama_toll_per_gt_usd': 9.00},
+    'midsized': {'daily_operating_cost_usd': 15500, 'daily_capital_cost_usd': 20000, 'port_fee_usd': 50000, 'suez_toll_per_gt_usd': 8.50, 'panama_toll_per_gt_usd': 9.50},
+    'standard': {'daily_operating_cost_usd': 22000, 'daily_capital_cost_usd': 35000, 'port_fee_usd': 60000, 'suez_toll_per_gt_usd': 8.00, 'panama_toll_per_gt_usd': 9.00},
+    'q-flex':   {'daily_operating_cost_usd': 20000, 'daily_capital_cost_usd': 55000, 'port_fee_usd': 80000, 'suez_toll_per_gt_usd': 7.50, 'panama_toll_per_gt_usd': 8.00},
+    'q-max':    {'daily_operating_cost_usd': 25000, 'daily_capital_cost_usd': 75000, 'port_fee_usd': 90000, 'suez_toll_per_gt_usd': 7.00, 'panama_toll_per_gt_usd': 7.50}
+}
+annual_working_days = 330
+truck_capex_params = {
+    0: {'cost_usd_per_truck': 1500000, 'useful_life_years': 10, 'annualization_factor': 0.15},
+    1: {'cost_usd_per_truck': 800000,  'useful_life_years': 10, 'annualization_factor': 0.15},
+    2: {'cost_usd_per_truck': 200000,  'useful_life_years': 10, 'annualization_factor': 0.15}
+}
 MAINTENANCE_COST_PER_KM_TRUCK = 0.05 # $/km
 MAINTENANCE_COST_PER_KM_SHIP = 0.10 # $/km
 INSURANCE_PERCENTAGE_OF_CARGO_VALUE = 1.0 # 1%
@@ -2098,7 +2113,6 @@ def run_lca_model(inputs):
 
     driver_daily_salary_start = truck_driver_annual_salaries.get(start_country_name, 30000) / 330
     driver_daily_salary_end = truck_driver_annual_salaries.get(end_country_name, 30000) / 330
-    annual_working_days = 330
 
     _, dynamic_price = openai_get_marine_fuel_price(marine_fuel_choice, (start_port_lat, start_port_lng), start_port_name)
 
@@ -2144,16 +2158,6 @@ def run_lca_model(inputs):
         'price_usd_per_ton': 750.0,
         'hhv_mj_per_kg': 45.5,
         'co2_emissions_factor_kg_per_kg_fuel': 3.206
-    }
-    HHV_diesel = 45.6
-    diesel_density = 3.22
-    CO2e_diesel = 10.21
-    VOYAGE_OVERHEADS_DATA = {
-        'small':    {'daily_operating_cost_usd': 8500, 'daily_capital_cost_usd': 10000, 'port_fee_usd': 30000, 'suez_toll_per_gt_usd': 9.00, 'panama_toll_per_gt_usd': 9.00},
-        'midsized': {'daily_operating_cost_usd': 15500, 'daily_capital_cost_usd': 20000, 'port_fee_usd': 50000, 'suez_toll_per_gt_usd': 8.50, 'panama_toll_per_gt_usd': 9.50},
-        'standard': {'daily_operating_cost_usd': 22000, 'daily_capital_cost_usd': 35000, 'port_fee_usd': 60000, 'suez_toll_per_gt_usd': 8.00, 'panama_toll_per_gt_usd': 9.00},
-        'q-flex':   {'daily_operating_cost_usd': 20000, 'daily_capital_cost_usd': 55000, 'port_fee_usd': 80000, 'suez_toll_per_gt_usd': 7.50, 'panama_toll_per_gt_usd': 8.00},
-        'q-max':    {'daily_operating_cost_usd': 25000, 'daily_capital_cost_usd': 75000, 'port_fee_usd': 90000, 'suez_toll_per_gt_usd': 7.00, 'panama_toll_per_gt_usd': 7.50}
     }
     food_params = {
                 'strawberry': {
@@ -2284,8 +2288,8 @@ def run_lca_model(inputs):
             storage_area = 4*np.pi*ship_tank_radius**2
         HHV_chem = [142, 22.5, 22.7]; LHV_chem = [120, 18.6, 19.9]; boiling_point_chem = [20, 239.66, 337.7];
         latent_H_chem = [449.6/1000, 1.37, 1.1]; specific_heat_chem = [14.3/1000, 4.7/1000, 2.5/1000];
-        HHV_heavy_fuel = 40; HHV_diesel = 45.6; liquid_chem_density = [71, 682, 805];
-        CO2e_diesel = 10.21; CO2e_heavy_fuel = 11.27; GWP_chem = [33, 0, 0]; GWP_N2O = 273;
+        HHV_diesel = 45.6; liquid_chem_density = [71, 682, 805];
+        GWP_chem = [33, 0, 0]; GWP_N2O = 273;
         fuel_cell_eff = 0.65; road_delivery_ener = [0.0455/500, 0.022/500, 0.022/500];
         BOR_land_storage = [0.0032, 0.0001, 0.0000032]; BOR_loading = [0.0086, 0.00022, 0.0001667];
         BOR_truck_trans = [0.005, 0.00024, 0.000005]; BOR_ship_trans = [0.00326, 0.00024, 0.000005];
@@ -2301,7 +2305,7 @@ def run_lca_model(inputs):
         number_of_cryo_pump_load_truck_port_B = 10; number_of_cryo_pump_load_storage_site_B = 10;
         storage_volume = [5683, 50000000/liquid_chem_density[1], 50000000/liquid_chem_density[2]];
         storage_radius = [np.cbrt(3 * volume / (4 * np.pi)) for volume in storage_volume];
-        ship_fuel_consumption = 0.23; OHTC_ship = [0.05, 0.22, 0.02];
+        OHTC_ship = [0.05, 0.22, 0.02];
         COP_cooldown = [0.131, 1.714, 2]; COP_liq = [0.131, 1.714, 2]; COP_refrig = [0.036, 1.636, 2];
         dBOR_dT = [(0.02538-0.02283)/(45-15)/4, (0.000406-0.0006122)/(45-15)/4, 0];
         EIM_liquefication=100; EIM_cryo_pump=100; EIM_truck_eff=100; EIM_ship_eff=100; EIM_refrig_eff=100; EIM_fuel_cell=100;
@@ -2336,12 +2340,6 @@ def run_lca_model(inputs):
 
         COP_cooldown = [0.131, 1.714, 0]
         SMR_EMISSIONS_KG_PER_KG_H2 = 9.3
-
-        truck_capex_params = {
-            0: {'cost_usd_per_truck': 1500000, 'useful_life_years': 10, 'annualization_factor': 0.15},
-            1: {'cost_usd_per_truck': 800000,  'useful_life_years': 10, 'annualization_factor': 0.15},
-            2: {'cost_usd_per_truck': 200000,  'useful_life_years': 10, 'annualization_factor': 0.15}
-        }
 
         loading_unloading_capex_params = {
             0: {'total_capex_M_usd': 500, 'annualization_factor': 0.08},
@@ -2578,23 +2576,17 @@ def run_lca_model(inputs):
         selected_fuel_name = fuel_names[fuel_type]
 
         data_for_cost_chart_display = []
-        # Add the extracted "Insurance" row as the first entry
         if extracted_insurance_row_for_chart:
             data_for_cost_chart_display.append(extracted_insurance_row_for_chart)
 
-        # Iterate through the relabeled_data and add relevant rows
         for row in relabeled_data:
-            # Exclude the original "Initial Production (Placeholder)" and "TOTAL" from this main chart list
-            # The "Insurance" line already accounts for the production step's insurance.
             if row[0] not in ["Initial Production (Placeholder)", "TOTAL"]:
-                # The 'insurance_per_kg' value for these rows is already correctly 0.0 from the loop above,
-                # as only the production step had a non-zero initial insurance component.
                 data_for_cost_chart_display.append(row)
 
         emission_chart_exclusions = ["TOTAL", "Initial Production (Placeholder)", "Insurance"]
         data_for_emission_chart = [row for row in relabeled_data if row[0] not in emission_chart_exclusions]
 
-        data_for_display_common = data_for_cost_chart_display # Use the already prepared list for cost chart
+        data_for_display_common = data_for_cost_chart_display 
         cost_overlay_text = ""
         if hydrogen_production_cost > 0:
             ratio_cost = chem_cost / hydrogen_production_cost
