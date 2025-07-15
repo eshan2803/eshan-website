@@ -2710,7 +2710,7 @@ def run_lca_model(inputs):
             }
         }
         return response
-    
+
     elif commodity_type == 'food':
         food_type = inputs.get('food_type')
         shipment_size_containers = inputs.get('shipment_size_containers', 10)
@@ -2728,8 +2728,10 @@ def run_lca_model(inputs):
         total_capex_money = 0
         total_energy = 0
         total_emissions = 0
+        total_carbon_tax_money = 0 # Ensure this is initialized
 
         total_ship_container_capacity = math.floor(total_ship_volume / 76)
+
         initial_weight = shipment_size_containers * current_food_params['general_params']['cargo_per_truck_kg']
         data_raw = total_food_lca(initial_weight, current_food_params, CARBON_TAX_PER_TON_CO2_DICT, HHV_diesel, diesel_density, CO2e_diesel)
         
@@ -2738,32 +2740,38 @@ def run_lca_model(inputs):
         propulsion_fuel_kg = (propulsion_fuel_kwh * selected_marine_fuel_params['sfoc_g_per_kwh']) / 1000.0
         propulsion_cost = (propulsion_fuel_kg / 1000.0) * selected_marine_fuel_params['price_usd_per_ton']
 
+        # Calculate per-container reefer service costs
+        reefer_service_cost_per_container, reefer_service_capex_per_container, reefer_service_carbon_tax_per_container, reefer_service_energy_per_container, reefer_service_emissions_per_container, _, _ = calculate_single_reefer_service_cost(port_to_port_duration, current_food_params)
+
         # Inject the new, more detailed sea transport costs into the results
         marine_transport_index = next((i for i, row in enumerate(data_raw) if "Marine Transport" in row[0]), -1)
 
         if marine_transport_index != -1:
-            # Preserve the commodity weight at this stage (before reefer_row calculation)
-            commodity_weight_at_marine_transport = data_raw[marine_transport_index][6] # Adjusted index for new data format (index 6 is current_weight)
+            # Base freight cost for the user's shipment
+            base_freight_cost = (propulsion_cost / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0
+            
+            # Preserve the commodity weight at this stage
+            # IMPORTANT: Current_weight is now at index 6 based on 8-element row from total_food_lca
+            commodity_weight_at_marine_transport = data_raw[marine_transport_index][6] 
 
-            # Calculate per-container reefer service costs
-            reefer_service_cost_per_container, reefer_service_capex_per_container, reefer_service_carbon_tax_per_container, reefer_service_energy_per_container, reefer_service_emissions_per_container, _, _ = calculate_single_reefer_service_cost(port_to_port_duration, current_food_params)
+            # Update the existing marine transport row (which now represents base freight OPEX)
+            # Its original index was [1], CAPEX [2], Energy [4], Emissions [5] etc.
+            # New structure: [label, opex, capex, carbon_tax, energy, emissions, weight, loss]
+            data_raw[marine_transport_index][0] = "Marine Transport (Base Freight)"
+            data_raw[marine_transport_index][1] = base_freight_cost # Opex
+            data_raw[marine_transport_index][2] = 0 # Capex (base freight is operational)
+            data_raw[marine_transport_index][3] = 0 # Carbon Tax (handled by food_sea_transport later)
+            
+            propulsion_emissions = (propulsion_fuel_kg * selected_marine_fuel_params['co2_emissions_factor_kg_per_kg_fuel'])
+            data_raw[marine_transport_index][5] = (propulsion_emissions / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0 # Emissions
+            data_raw[marine_transport_index][4] = (propulsion_fuel_kwh * 3.6 / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0 # Energy
 
             # Calculate TOTAL reefer service costs for the entire shipment
             reefer_service_total_cost = reefer_service_cost_per_container * shipment_size_containers
             reefer_service_total_capex = reefer_service_capex_per_container * shipment_size_containers
             reefer_service_total_carbon_tax = reefer_service_carbon_tax_per_container * shipment_size_containers            
-            reefer_service_total_energy = reefer_service_energy_per_container * shipment_size_containers # You were missing total for energy/emissions
-            reefer_service_total_emissions = reefer_service_emissions_per_container * shipment_size_containers # You were missing total for energy/emissions
-
-            # Update the existing marine transport row (which now represents base freight OPEX)
-            # Ensure the correct index for 'Commodity (kg)' is used, which is 6 in the 8-element row.
-            data_raw[marine_transport_index][0] = "Marine Transport (Base Freight)"
-            data_raw[marine_transport_index][1] = (propulsion_cost / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0 # Opex
-            data_raw[marine_transport_index][2] = 0 # Capex (base freight is operational)
-            
-            propulsion_emissions = (propulsion_fuel_kg * selected_marine_fuel_params['co2_emissions_factor_kg_per_kg_fuel'])
-            data_raw[marine_transport_index][4] = (propulsion_emissions / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0 # Emissions (this is now index 5 for total_food_lca's results)
-            data_raw[marine_transport_index][3] = (propulsion_fuel_kwh * 3.6 / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0 # Energy (this is now index 4 for total_food_lca's results)
+            reefer_service_total_energy = reefer_service_energy_per_container * shipment_size_containers # This was missing a total prefix
+            reefer_service_total_emissions = reefer_service_emissions_per_container * shipment_size_containers # This was missing a total prefix
 
             # Create the reefer_row AFTER all its components are calculated
             reefer_row = ["Reefer & CA Services", reefer_service_total_cost, reefer_service_total_capex, reefer_service_total_carbon_tax, reefer_service_total_energy, reefer_service_total_emissions, commodity_weight_at_marine_transport, 0]
@@ -2771,22 +2779,20 @@ def run_lca_model(inputs):
 
         total_opex_money = sum(row[1] for row in data_raw if row[0] != "TOTAL")
         total_capex_money = sum(row[2] for row in data_raw if row[0] != "TOTAL")
-        total_carbon_tax_money = sum(row[3] for row in data_raw if row[0] != "TOTAL")
-        total_energy = sum(row[4] for row in data_raw if row[0] != "TOTAL")
-        total_emissions = sum(row[5] for row in data_raw if row[0] != "TOTAL")
+        total_carbon_tax_money = sum(row[3] for row in data_raw if row[0] != "TOTAL") # Sum this from data_raw
+        total_energy = sum(row[4] for row in data_raw if row[0] != "TOTAL") # Sum this from data_raw
+        total_emissions = sum(row[5] for row in data_raw if row[0] != "TOTAL") # Sum this from data_raw
 
         # The last row of data_raw is "TOTAL", so final_weight should be from there.
-        # total_food_lca appends an 8-element list. The final_commodity_kg is at index 6.
-        final_weight = data_raw[-1][6] if data_raw and len(data_raw[-1]) > 6 else 0.0
-        final_commodity_kg = final_weight
-        # ... (rest of the code) ...
+        final_weight = data_raw[-1][6] if data_raw and len(data_raw[-1]) > 6 else 0.0 # From data_raw's last row (TOTAL), its commodity quantity
+        final_commodity_kg = final_weight # This is your delivered quantity
 
         total_money = total_opex_money + total_capex_money + total_carbon_tax_money # Sum all three cost types
 
         # Retrieve the initial quantity (A) for calculating insurance cost for food
         # The 'Harvesting & Preparation' row is the first in data_raw from total_food_lca.
-        # Its original 'A' (initial_weight) is at data_raw[0][7]
-        initial_food_kg_for_insurance_calc = data_raw[0][7] if data_raw and len(data_raw[0]) > 7 else 0.0
+        # Its original 'A' (initial_weight) is at index 6 in the 8-element row from total_food_lca
+        initial_food_kg_for_insurance_calc = data_raw[0][6] if data_raw and len(data_raw[0]) > 6 else 0.0
 
         # Calculate the absolute insurance cost from the initial harvesting step's inputs
         absolute_insurance_cost_food = initial_food_kg_for_insurance_calc * price_start * (INSURANCE_PERCENTAGE_OF_CARGO_VALUE / 100) if price_start is not None else 0.0
@@ -2794,18 +2800,24 @@ def run_lca_model(inputs):
         # Calculate the insurance cost PER KG delivered (using the final delivered mass)
         insurance_per_kg_for_chart_food = absolute_insurance_cost_food / final_commodity_kg if final_commodity_kg > 0 else 0.0
 
+        # Create the extracted insurance row here, it should have the same structure as data_with_all_columns rows
+        # The chart functions expect specific indices for Opex, Capex, Carbon Tax, Insurance.
+        # The original columns are 8 (Process Step, Opex, Capex, Carbon Tax, Energy, Emissions, Weight, Loss).
+        # The new ones add Opex/kg, Capex/kg, Carbon Tax/kg, Insurance/kg, Cost/kg, Cost/GJ, CO2eq/kg, eCO2/GJ.
+        # So total 16 columns.
         extracted_insurance_row_for_chart_food = [
-            "Insurance", # row[0] Process Step
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, # Placeholder for total values
-            0.0, # Opex/kg
-            0.0, # Capex/kg
-            0.0, # Carbon Tax/kg
-            insurance_per_kg_for_chart_food, # Insurance/kg (THE VALUE)
-            insurance_per_kg_for_chart_food, # Cost/kg (sum of per-kg for THIS row only)
-            0.0, # Cost/GJ
-            0.0, # CO2eq/kg
-            0.0  # eCO2/GJ
+            "Insurance", # Index 0
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, # Indices 1-7 (Totals, leave as 0 for this row if only showing per-unit)
+            0.0, # Index 8: Opex/kg (Insurance is not Opex for charting purposes here)
+            0.0, # Index 9: Capex/kg
+            0.0, # Index 10: Carbon Tax/kg
+            insurance_per_kg_for_chart_food, # Index 11: Insurance/kg (THE VALUE)
+            insurance_per_kg_for_chart_food, # Index 12: Cost/kg (sum of per-kg components for THIS row only, which is just insurance here)
+            0.0, # Index 13: Cost/GJ
+            0.0, # Index 14: CO2eq/kg
+            0.0  # Index 15: eCO2/GJ
         ]
+
         local_sourcing_results = None
         green_premium_data = None
         farm_name = None
@@ -2885,13 +2897,12 @@ def run_lca_model(inputs):
         final_energy_output_gj = final_energy_output_mj / 1000
 
         data_with_all_columns = []
-        # Create a variable to hold the extracted insurance row data.
-        extracted_insurance_row_for_chart_food = None
+        # No need to initialize extracted_insurance_row_for_chart_food here again, it's done above.
 
         for row in data_raw:
-            # Based on your total_food_lca function, results_list has 9 elements per row:
-            # [label, opex_m, capex_m, carbon_tax_m, insurance_m, energy, emissions, current_weight, loss]
-            if len(row) < 9: # Assuming 9 columns now for food data_raw
+            # Based on your total_food_lca function, results_list has 8 elements per row:
+            # [label, opex_m, capex_m, carbon_tax_m, energy, emissions, current_weight, loss]
+            if len(row) < 8: # Check for 8 columns now
                 print(f"Warning: Food row has insufficient data points: {row}. Skipping 'per unit' calculations for this row.")
                 data_with_all_columns.append(list(row) + [0]*(16 - len(row)))
                 continue
@@ -2925,10 +2936,10 @@ def run_lca_model(inputs):
 
             # Append ALL values. Ensure order matches new_detailed_headers
             new_row_with_additions = [
-                process_label_raw, # Process Step
-                current_opex, current_capex, current_carbon_tax, current_energy_total, current_emission_total, current_commodity_kg_at_step, current_spoilage_loss, # Original total values
-                opex_per_kg, capex_per_kg, carbon_tax_per_kg, insurance_per_kg, # Per-kg values
-                cost_per_kg_total, cost_per_gj, emission_per_kg, emission_per_gj # Derived per-unit values
+                process_label_raw, # Index 0: Process Step
+                current_opex, current_capex, current_carbon_tax, current_energy_total, current_emission_total, current_commodity_kg_at_step, current_spoilage_loss, # Indices 1-7: Original total values
+                opex_per_kg, capex_per_kg, carbon_tax_per_kg, insurance_per_kg, # Indices 8-11: Per-kg values
+                cost_per_kg_total, cost_per_gj, emission_per_kg, emission_per_gj # Indices 12-15: Derived per-unit values
             ]
             data_with_all_columns.append(new_row_with_additions)
 
@@ -2939,20 +2950,33 @@ def run_lca_model(inputs):
             new_label = label_map.get(relabel_key, relabel_key)
             relabeled_data.append([new_label] + row[1:])
 
+        # --- IMPORTANT: Define these chart data lists *before* creating the charts ---
         data_for_cost_chart_display = []
-        # Add the extracted "Insurance" row as the first entry
-        if extracted_insurance_row_for_chart_food:
+        # Add the extracted "Insurance" row as the first entry IF IT HAS A VALUE
+        if extracted_insurance_row_for_chart_food[11] > 0: # Check if insurance_per_kg_for_chart_food > 0
             data_for_cost_chart_display.append(extracted_insurance_row_for_chart_food)
 
-        # Iterate through the detailed_data_formatted (which is the relabeled and formatted data)
-        for row in detailed_data_formatted:
+        # Iterate through the relabeled_data (which has the full 16 columns now)
+        for row in relabeled_data:
             # Exclude the original "Harvesting & Preparation" and "TOTAL" from this main chart list
-            if row[0] not in ["Harvesting & Preparation", "TOTAL"]:
-                # The 'insurance_per_kg' value for these rows is already correctly 0.0 from the loop above.
+            # The 'insurance_per_kg' value for these rows is already correctly 0.0 from the loop above.
+            if row[0] not in ["Harvesting & Gearing Up", "TOTAL", "Insurance"]: # Use the relabeled "Harvesting & Gearing Up"
                 data_for_cost_chart_display.append(row)
+        
+        emission_chart_exclusions_food = ["TOTAL", "Harvesting & Preparation", "Insurance"] # Still refers to original labels here
+        data_for_emission_chart = [row for row in relabeled_data if row[0] not in emission_chart_exclusions_food]
 
-        emission_chart_exclusions_food = ["TOTAL", "Harvesting & Preparation", "Insurance"]
-        data_for_emission_chart = [row for row in detailed_data_formatted if row[0] not in emission_chart_exclusions_food]
+        # Format numeric values for display in tables (detailed_data_formatted)
+        # This should happen *after* data_for_cost_chart_display and data_for_emission_chart are constructed
+        detailed_data_formatted = []
+        for row in relabeled_data: # Use relabeled_data here
+            formatted_row = [row[0]] # Keep the label as is
+            for item in row[1:]: # Format numeric values
+                if isinstance(item, (int, float)):
+                    formatted_row.append(f"{item:,.2f}")
+                else:
+                    formatted_row.append(item)
+            detailed_data_formatted.append(formatted_row)
 
         new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Carbon Tax ($)", "Energy (MJ)", "eCO2 (kg)", "Commodity (kg)", "Spoilage (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Carbon Tax/kg ($/kg)", "Insurance/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
         opex_per_kg_for_chart_idx = new_detailed_headers.index("Opex/kg ($/kg)")
@@ -2960,12 +2984,13 @@ def run_lca_model(inputs):
         carbon_tax_per_kg_for_chart_idx = new_detailed_headers.index("Carbon Tax/kg ($/kg)")
         insurance_per_kg_for_chart_idx = new_detailed_headers.index("Insurance/kg ($/kg)") # This should now be correct
         eco2_per_kg_for_chart_idx = new_detailed_headers.index("eCO2/kg (kg/kg)")
-        cost_per_kg = total_money / final_commodity_kg if final_commodity_kg > 0 else 0 #
-        energy_per_kg = total_energy / final_commodity_kg if final_commodity_kg > 0 else 0 #
-        emissions_per_kg = total_emissions / final_commodity_kg if final_commodity_kg > 0 else 0 #
+        
+        cost_per_kg = total_money / final_commodity_kg if final_commodity_kg > 0 else 0
+        energy_per_kg = total_energy / final_commodity_kg if final_commodity_kg > 0 else 0
+        emissions_per_kg = total_emissions / final_commodity_kg if final_commodity_kg > 0 else 0
 
         cost_chart_base64 = create_breakdown_chart(
-            data_for_display_common,
+            data_for_cost_chart_display, # Use the correctly built list
             opex_per_kg_for_chart_idx,
             capex_per_kg_for_chart_idx,
             carbon_tax_per_kg_for_chart_idx,
@@ -2976,7 +3001,7 @@ def run_lca_model(inputs):
             is_emission_chart=False
         )
         emission_chart_base64 = create_breakdown_chart(
-            data_for_emission_chart,
+            data_for_emission_chart, # Use the correctly built list
             eco2_per_kg_for_chart_idx,      # Emissions chart uses this as its primary value
             eco2_per_kg_for_chart_idx,      # Placeholder, will be ignored for emission charts
             eco2_per_kg_for_chart_idx,      # Placeholder, will be ignored for emission charts
@@ -3004,7 +3029,7 @@ def run_lca_model(inputs):
             [f"Diesel Price at {start}", f"{diesel_price_start:.2f} $/gal"],
             [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"],
             [f"Marine Fuel ({marine_fuel_choice}) Price at {start_port_name}*", f"{dynamic_price:.2f} $/ton"],
-            [f"Green H2 Production Price at {start}*", f"{hydrogen_production_cost:.2f} $/kg"],
+            # [f"Green H2 Production Price at {start}*", f"{hydrogen_production_cost:.2f} $/kg"], # This is fuel-specific, remove from food
         ]
         if 'farm_name' in locals() and 'price_farm' in locals() and price_farm is not None:
             assumed_prices_data.append([f"{food_name_for_lookup} Price at {farm_name}*", f"${price_farm:.2f}/kg"])
@@ -3042,7 +3067,7 @@ def run_lca_model(inputs):
             "local_sourcing_comparison": local_sourcing_results,
             "food_type": food_type
         }
-        return response        
+        return response    
 
 # --- Flask API Endpoint ---
 @app.route('/calculate', methods=['POST'])
