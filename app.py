@@ -1863,7 +1863,7 @@ def run_lca_model(inputs):
         capex_per_kg = annualized_capex / annual_throughput_kg
         return capex_per_kg
 
-    def total_food_lca(initial_weight, food_params, carbon_tax_per_ton_co2_dict_tl):
+    def total_food_lca(initial_weight, food_params, carbon_tax_per_ton_co2_dict_tl, HHV_diesel_tl, diesel_density_tl, CO2e_diesel_tl):
 
         food_funcs_sequence = [
             (food_harvest_and_prep, "Harvesting & Preparation"),
@@ -1908,9 +1908,9 @@ def run_lca_model(inputs):
                 freezing_full_params = {**food_params.get('freezing_params', {}), **food_params['general_params']}
                 args_for_func = (freezing_full_params, start_local_temperature, start_electricity_price, CO2e_start, facility_capacity, start_country_name, carbon_tax_per_ton_co2_dict_tl)
             elif func == food_road_transport and start_port_name in label:
-                args_for_func = (food_params, distance_A_to_port, duration_A_to_port, diesel_price_start, HHV_diesel, diesel_density, CO2e_diesel, start_local_temperature, driver_daily_salary_start, annual_working_days, MAINTENANCE_COST_PER_KM_TRUCK, truck_capex_params, start_country_name, carbon_tax_per_ton_co2_dict_tl)
+                args_for_func = (food_params, distance_A_to_port, duration_A_to_port, diesel_price_start, HHV_diesel_tl, diesel_density_tl, CO2e_diesel_tl, start_local_temperature, driver_daily_salary_start, annual_working_days, MAINTENANCE_COST_PER_KM_TRUCK, truck_capex_params, start_country_name, carbon_tax_per_ton_co2_dict_tl)
             elif func == food_road_transport and end_port_name in label:
-                args_for_func = (food_params, distance_port_to_B, duration_port_to_B, diesel_price_end, HHV_diesel, diesel_density, CO2e_diesel, end_local_temperature, driver_daily_salary_end, annual_working_days, MAINTENANCE_COST_PER_KM_TRUCK, truck_capex_params, end_country_name, carbon_tax_per_ton_co2_dict_tl)
+                args_for_func = (food_params, distance_port_to_B, duration_port_to_B, diesel_price_end, HHV_diesel_tl, diesel_density_tl, CO2e_diesel_tl, end_local_temperature, driver_daily_salary_end, annual_working_days, MAINTENANCE_COST_PER_KM_TRUCK, truck_capex_params, end_country_name, carbon_tax_per_ton_co2_dict_tl)
             elif func == food_sea_transport:
                 args_for_func = (food_params, port_to_port_duration, selected_marine_fuel_params, avg_ship_power_kw, MAINTENANCE_COST_PER_KM_SHIP, port_to_port_dis, calculate_voyage_overheads, selected_ship_params, canal_transits, port_regions, end_country_name, carbon_tax_per_ton_co2_dict_tl, EU_MEMBER_COUNTRIES)
             elif func == food_cold_storage and "at " + start_port_name in label:
@@ -1927,7 +1927,6 @@ def run_lca_model(inputs):
             results_list.append([label, opex_m, capex_m, carbon_tax_m, energy, emissions, current_weight, loss])
 
         return results_list
-    ### CHANGE END ###
 
     def openai_get_food_price(food_name, location_name):
         from openai import OpenAI
@@ -2706,7 +2705,7 @@ def run_lca_model(inputs):
         total_ship_container_capacity = math.floor(total_ship_volume / 76)
 
         initial_weight = shipment_size_containers * current_food_params['general_params']['cargo_per_truck_kg']
-        data_raw = total_food_lca(initial_weight, current_food_params, CARBON_TAX_PER_TON_CO2_DICT) # Corrected this line
+        data_raw = total_food_lca(initial_weight, current_food_params, CARBON_TAX_PER_TON_CO2_DICT, HHV_diesel, diesel_density, CO2e_diesel)
         
         # Calculate BASE costs (Propulsion) for the ENTIRE SHIP
         propulsion_fuel_kwh = avg_ship_power_kw * port_to_port_duration
