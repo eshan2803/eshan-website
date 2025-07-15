@@ -294,20 +294,18 @@ def run_lca_model(inputs):
 
             for row in data:
                 try:
-                    if is_emission_chart: # For emission chart, only use the primary value
-                        opex_values.append(float(row[opex_col_idx])) # This is actually the emission value
+                    if is_emission_chart:
+                        opex_values.append(float(row[opex_col_idx]))
                         capex_values.append(0.0)
                         carbon_tax_values.append(0.0)
                         insurance_values.append(0.0)
                     else:
-                        # Ensure values are floats, handle potential errors
                         opex_values.append(float(row[opex_col_idx]))
                         capex_values.append(float(row[capex_col_idx]))
                         carbon_tax_values.append(float(row[carbon_tax_col_idx]))
                         insurance_values.append(float(row[insurance_col_idx]))
                 except (ValueError, TypeError, IndexError) as e:
                     print(f"DEBUG: Error processing row for chart '{title}': {row}. Error: {e}")
-                    # Default to zeros if conversion fails to avoid breaking chart
                     opex_values.append(0.0)
                     capex_values.append(0.0)
                     carbon_tax_values.append(0.0)
@@ -315,60 +313,72 @@ def run_lca_model(inputs):
                     print(f"Warning: Could not convert value to a number for chart '{title}'. Defaulting to 0.")
 
             plt.style.use('seaborn-v0_8-whitegrid')
-            fig, ax = plt.subplots(figsize=(10, len(labels) * 0.5))
+            
+            # Estimate text height to adjust figure size BEFORE creating the subplot
+            extra_bottom_margin = 0.0 # Default no extra margin
+            if overlay_text:
+                num_lines = len(overlay_text.split('\n'))
+                # A good rule of thumb for text height: 0.03-0.04 per line in figure coordinates
+                extra_bottom_margin = 0.035 * num_lines + 0.05 # Add some padding
+
+            # Adjust figure height based on labels count and potential overlay text
+            fig_height_base = len(labels) * 0.5 # Base height for bars
+            total_figure_height_inches = fig_height_base + (extra_bottom_margin * 10) # Convert normalized margin to inches for fig size
+            # Ensure a minimum height if there are very few bars
+            if total_figure_height_inches < 4:
+                total_figure_height_inches = 4
+            
+            fig, ax = plt.subplots(figsize=(10, total_figure_height_inches))
+
+            # Adjust subplot parameters to create space for the text at the bottom
+            # This sets the margin within the figure for the main plot
+            fig.subplots_adjust(bottom=extra_bottom_margin + 0.05) # Add a bit more margin to existing plot margin
 
             y_pos = np.arange(len(labels))
 
             if is_emission_chart:
                 ax.barh(y_pos, opex_values, align='center', color='#4CAF50', edgecolor='black', label='Emissions')
             else:
-                # Stacked bars for cost components
-                # Insurance (new distinct color)
-                ax.barh(y_pos, insurance_values, align='center', color='#800080', edgecolor='black', label='Insurance') # Purple
-                # OPEX on top of Insurance
-                ax.barh(y_pos, opex_values, left=insurance_values, align='center', color='#8BC34A', edgecolor='black', label='OPEX') # Lighter Green
-                # CAPEX on top of OPEX and Insurance
-                ax.barh(y_pos, capex_values, left=np.array(insurance_values) + np.array(opex_values), align='center', color='#4CAF50', edgecolor='black', label='CAPEX') # Original Green
-                # Carbon Tax on top of CAPEX, OPEX and Insurance
-                ax.barh(y_pos, carbon_tax_values, left=np.array(insurance_values) + np.array(opex_values) + np.array(capex_values), align='center', color='#FFC107', edgecolor='black', label='Carbon Tax') # Amber
+                ax.barh(y_pos, insurance_values, align='center', color='#800080', edgecolor='black', label='Insurance')
+                ax.barh(y_pos, opex_values, left=insurance_values, align='center', color='#8BC34A', edgecolor='black', label='OPEX')
+                ax.barh(y_pos, capex_values, left=np.array(insurance_values) + np.array(opex_values), align='center', color='#4CAF50', edgecolor='black', label='CAPEX')
+                ax.barh(y_pos, carbon_tax_values, left=np.array(insurance_values) + np.array(opex_values) + np.array(capex_values), align='center', color='#FFC107', edgecolor='black', label='Carbon Tax')
 
             ax.set_yticks(y_pos)
             ax.set_yticklabels(labels, fontsize=12)
-            ax.invert_yaxis()  # labels read top-to-bottom
+            ax.invert_yaxis()
             ax.set_xlabel(x_label, fontsize=14, weight='bold')
             ax.set_title(title, fontsize=16, weight='bold', pad=20)
 
-            # Add values for total (sum of all components for cost, just primary for emission)
             for i in range(len(labels)):
                 total_value = 0
                 if is_emission_chart:
-                    total_value = opex_values[i] # Just the emission value
+                    total_value = opex_values[i]
                 else:
                     total_value = opex_values[i] + capex_values[i] + carbon_tax_values[i] + insurance_values[i]
-                
-                # Position text slightly right of the end of the total bar
                 ax.text(total_value, i, f' {total_value:,.2f}', color='black', va='center', fontweight='bold')
 
             ax.legend(loc='lower right', fontsize=10)
 
-            plt.tight_layout(pad=2.0) # Keep this line for good spacing
-
             if overlay_text:
-                fig.set_size_inches(10, len(labels) * 0.5 + 2) # Increase figure height to make space below
-
-                fig.text(0.1, -0.05, overlay_text, # x=0.1 (left-aligned), y=-0.05 (below the bottom of the figure)
-                         ha='left', va='top', size=10,
-                         bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.6),
-                         transform=ax.transAxes) # Use ax.transAxes to keep it relative to the axes
+                # Place text using fig.text, relative to the figure's bottom margin
+                # x=0.05 (5% from left), y=0.01 (1% from bottom, within the extended margin)
+                fig.text(0.05, 0.01, overlay_text, # Coordinates are (x, y) relative to the figure
+                         ha='left', va='bottom', size=10,
+                         bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.6))
+            
+            # Use tight_layout, but apply it to the subplot area that fig.subplots_adjust defined.
+            # No need for the `rect` parameter with fig.subplots_adjust handling margins.
+            plt.tight_layout() # Just call it without rect
 
             buf = io.BytesIO()
-            plt.savefig(buf, format='png', dpi=100, bbox_inches='tight') # Add bbox_inches='tight' for better fit
+            plt.savefig(buf, format='png', dpi=100, bbox_inches='tight')
             buf.seek(0)
             img_base64 = base64.b64encode(buf.read()).decode('utf-8')
             plt.close(fig)
 
-            return img_base64
-
+            return img_base64    
+    
         except Exception as e:
             print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
             print(f"CRITICAL ERROR generating chart '{title}': {e}")
@@ -2434,52 +2444,86 @@ def run_lca_model(inputs):
         final_energy_gj_denominator = (final_results_raw[3] * HHV_chem[fuel_type]) / 1000 if final_chem_kg_denominator > 0 else 0
 
         data_with_all_columns = []
+        # Create a variable to hold the extracted insurance row data.
+        # Initialize it to None, it will be populated if the production row is found.
+        extracted_insurance_row_for_chart = None 
+        initial_chem_kg_for_insurance_calc = data_raw[0][6] if data_raw and len(data_raw[0]) > 6 else 0.0
+        absolute_insurance_cost_fuel = initial_chem_kg_for_insurance_calc * hydrogen_production_cost * (INSURANCE_PERCENTAGE_OF_CARGO_VALUE / 100)
+        insurance_per_kg_for_chart_fuel = absolute_insurance_cost_fuel / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0.0
+        extracted_insurance_row_for_chart = [
+            "Insurance", # row[0] Process Step
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, # row[1] to row[7] (total values, not used by chart for stacking)
+            0.0, # row[8] Opex/kg
+            0.0, # row[9] Capex/kg
+            0.0, # row[10] Carbon Tax/kg
+            insurance_per_kg_for_chart_fuel, # row[11] Insurance/kg (THE VALUE)
+            insurance_per_kg_for_chart_fuel, # row[12] Cost/kg (sum of per-kg components for THIS row only)
+            0.0, # row[13] Cost/GJ
+            0.0, # row[14] CO2eq/kg
+            0.0  # row[15] eCO2/GJ
+        ]        
         for row in data_raw:
-            if len(row) < 6: # At least up to emissions data
+            # The structure of `data_raw` now coming from total_chem_base is:
+            # [Process, opex_total, capex_total, carbon_tax_total, energy_total, emission_total, chem_kg_final, bog_loss_final]
+            # (Note: total_chem_base's data_results_list returns current_chem and bog_loss at index 6 and 7 respectively, if not changed.)
+            # Based on your total_chem_base, its row structure is:
+            # [Process, opex_money, capex_money, carbon_tax_money_current, Y_energy, Z_emission, R_current_chem, S_bog_loss] -> This means 8 columns.
+
+            # Update len(row) check based on actual data_raw structure from total_chem_base.
+            # From the `total_chem_base` function, `data_results_list` has 8 elements per row:
+            # [func_name, opex, capex, carbon_tax, energy, emission, R_current_chem, S_bog_loss]
+            # The `site_A_chem_production` function added insurance_cost to opex_money.
+            if len(row) < 8: # Assuming 8 columns from total_chem_base now
                 print(f"Warning: Row has insufficient data points: {row}. Skipping 'per unit' calculations for this row.")
-                data_with_all_columns.append(list(row) + [0]*8) # Adjusted to 8 zeros for all new per-kg columns
+                data_with_all_columns.append(list(row) + [0]*(16 - len(row)))
                 continue
 
+            # Original total values from data_raw
+            process_label_raw = row[0]
             current_opex = float(row[1])
             current_capex = float(row[2])
             current_carbon_tax = float(row[3])
             current_energy = float(row[4])
             current_emission = float(row[5])
-            
-            # Initialize insurance_per_kg to 0 for all rows
-            insurance_per_kg = 0.0
+            current_chem_kg_at_step = float(row[6]) # This is the `A` value for the step
+            current_bog_loss = float(row[7])
 
-            # Calculate individual cost components PER KG based on current row's totals
+            # Calculate individual cost components PER KG
+            # Initialize per_kg values, assuming final_chem_kg_denominator is defined upstream
             opex_per_kg = current_opex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             capex_per_kg = current_capex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             carbon_tax_per_kg = current_carbon_tax / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+            # Initialize insurance_per_kg for all rows. Will be populated only for production.
+            insurance_per_kg = 0.0
+            # This step has the insurance cost embedded in its OPEX.
+            # We want to extract it, create a separate row, and then remove it from this row's OPEX.
+            if process_label_raw == "site_A_chem_production":
+                opex_per_kg = max(0, opex_per_kg - insurance_per_kg_for_chart_fuel)
+                # Ensure that `insurance_per_kg` for THIS specific row is set to 0,
+                # as its value is now in the dedicated `extracted_insurance_row_for_chart`.
+                insurance_per_kg = 0.0 # Clear insurance from this row's per-kg value
 
-            # --- Insurance Calculation for 'site_A_chem_production' ---
-            # This logic should extract the portion of opex that IS insurance.
-            if row[0] == "site_A_chem_production":
-                cargo_value_at_production_step = float(row[6]) * hydrogen_production_cost
-                insurance_cost_absolute = cargo_value_at_production_step * (INSURANCE_PERCENTAGE_OF_CARGO_VALUE / 100)
-                insurance_per_kg = insurance_cost_absolute / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-                # CRITICAL: Subtract insurance from OPEX_PER_KG for this specific step
-                # so OPEX and Insurance are distinct in the stacked bar chart.
-                opex_per_kg = max(0, opex_per_kg - insurance_per_kg) # Ensure it doesn't go negative
-
-            # Calculate total cost per kg (sum of per-kg components)
-            cost_per_kg_total = opex_per_kg + capex_per_kg + carbon_tax_per_kg + insurance_per_kg
-
-            # Calculate other 'per GJ' and 'per kg' values for the table
-            # You might need to redefine current_total_cost here for the per_gj calculation if not already defined for the row.
-            # Assuming current_total_cost refers to the sum of the original row's total costs (opex, capex, carbon_tax)
-            current_total_cost_row = current_opex + current_capex + current_carbon_tax # This was missing in the food section, now explicitly here for consistency
+            # Calculate total cost per kg for this specific row (adjusted for insurance)
+            # The `insurance_per_kg` variable for non-production rows will be 0.0 as initialized.
+            # For the 'site_A_chem_production' row, it will also be 0.0 after this adjustment.
+            cost_per_kg_total = opex_per_kg + capex_per_kg + carbon_tax_per_kg + insurance_per_kg 
+            
+            # Recalculate current_total_cost_row based on the original totals, including all parts
+            current_total_cost_row = current_opex + current_capex + current_carbon_tax
+            
             cost_per_gj = current_total_cost_row / final_energy_output_gj if final_energy_output_gj > 0 else 0
             emission_per_kg = current_emission / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             emission_per_gj = current_emission / final_energy_output_gj if final_energy_output_gj > 0 else 0
-
-            # Append ALL values (total and per-kg) to the row for detailed display
-            # Make sure the order matches new_detailed_headers
-            new_row_with_additions = list(row) + [opex_per_kg, capex_per_kg, carbon_tax_per_kg, insurance_per_kg, cost_per_kg_total, cost_per_gj, emission_per_kg, emission_per_gj]
-            data_with_all_columns.append(new_row_with_additions) 
-                       
+            new_row_with_additions = [
+                process_label_raw,  # Process Step (original label)
+                current_opex, current_capex, current_carbon_tax, current_energy, current_emission, current_chem_kg_at_step, current_bog_loss, # Original total values
+                opex_per_kg, capex_per_kg, carbon_tax_per_kg, insurance_per_kg, # Per-kg values
+                cost_per_kg_total, cost_per_gj, emission_per_kg, emission_per_gj # Derived per-unit values
+            ]
+            data_with_all_columns.append(new_row_with_additions)
+        filtered_relabeled_data_except_production_and_total = [
+            row for row in relabeled_data if row[0] not in ["Initial Production (Placeholder)", "TOTAL"]
+        ]                       
         data = data_with_all_columns
         total_results = final_results_raw
 
@@ -2520,21 +2564,47 @@ def run_lca_model(inputs):
         }
 
         relabeled_data = []
-        for row in data:
-            function_name = row[0]
-            if function_name in label_map:
-                new_row = row[:]
-                new_row[0] = label_map[function_name]
-                relabeled_data.append(new_row)
-            else:
-                relabeled_data.append(row[:])
+        for row in data_with_all_columns:
+            relabel_key = row[0]
+            new_label = label_map.get(relabel_key, relabel_key)
+            relabeled_data.append([new_label] + row[1:])
 
-        detailed_data_formatted = [row for row in relabeled_data if row[0] != label_map.get("site_A_chem_production")]
-        data_for_display_common = [row for row in detailed_data_formatted if row[0] != "TOTAL"]
+        # Format numeric values for display in tables (detailed_data_formatted)
+        detailed_data_formatted = []
+        for row in relabeled_data:
+            formatted_row = [row[0]] # Keep the label as is
+            for item in row[1:]: # Format numeric values
+                if isinstance(item, (int, float)):
+                    formatted_row.append(f"{item:,.2f}")
+                else:
+                    formatted_row.append(item)
+            detailed_data_formatted.append(formatted_row)
+        filtered_relabeled_data_for_chart = []
+        for row in relabeled_data:
+            # Only include rows that are NOT the placeholder for the original production, and NOT the TOTAL
+            if row[0] not in ["Initial Production (Placeholder)", "TOTAL"]:
+                modified_row = list(row) # Create a copy to modify
+                # Ensure the Insurance/kg value is 0 for all other rows, as it's extracted into its own row.
+                modified_row[insurance_per_kg_for_chart_idx] = 0.0
+                filtered_relabeled_data_for_chart.append(modified_row)
 
-        emission_chart_exclusions = ["TOTAL"]
+        data_for_display_common = []
+        # Add the extracted insurance row as the FIRST entry
+        if extracted_insurance_row_for_chart: # This is the 16-element row created earlier
+            data_for_display_common.append(extracted_insurance_row_for_chart)
 
-        data_for_emission_chart = [row for row in data_for_display_common if row[0] not in emission_chart_exclusions]
+        # Then add all other filtered and modified rows
+        data_for_display_common.extend(filtered_relabeled_data_for_chart)
+        # Now append all other filtered and relabeled rows
+        for row in filtered_relabeled_data_except_production_and_total:
+            # Re-map the original row (which is already per-kg calculated) to the expected chart format
+            # Set the Insurance/kg to 0 for all other rows, as it's now a dedicated row.
+            modified_row_for_chart = row[:] # Copy the row
+            modified_row_for_chart[insurance_per_kg_for_chart_idx] = 0.0 # Zero out insurance for other rows
+            data_for_display_common.append(modified_row_for_chart)
+
+        emission_chart_exclusions = ["TOTAL", "Initial Production (Placeholder)", "Insurance"] # "Insurance" is the label you gave it
+        data_for_emission_chart = [row for row in relabeled_data if row[0] not in emission_chart_exclusions]
 
         cost_overlay_text = ""
         if hydrogen_production_cost > 0:
@@ -2690,15 +2760,41 @@ def run_lca_model(inputs):
             reefer_row = ["Reefer & CA Services", reefer_service_total_cost, 0, reefer_service_total_energy, reefer_service_total_emissions, commodity_weight_at_marine_transport, 0]
             data_raw.insert(marine_transport_index + 1, reefer_row)
 
-        # Now, calculate the overall totals *after* all rows have been adjusted/inserted
-        total_opex_money = sum(row[1] for row in data_raw)
-        total_capex_money = sum(row[2] for row in data_raw)
-        total_money = total_opex_money + total_capex_money
-        total_energy = sum(row[3] for row in data_raw)
-        total_emissions = sum(row[4] for row in data_raw)
-        final_weight = data_raw[-1][5]
-        final_commodity_kg = final_weight
-        
+        total_opex_money = sum(row[1] for row in data_raw if row[0] != "TOTAL")
+        total_capex_money = sum(row[2] for row in data_raw if row[0] != "TOTAL")
+        total_carbon_tax_money = sum(row[3] for row in data_raw if row[0] != "TOTAL") # Sum this from data_raw
+        total_energy = sum(row[4] for row in data_raw if row[0] != "TOTAL") # Sum this from data_raw
+        total_emissions = sum(row[5] for row in data_raw if row[0] != "TOTAL") # Sum this from data_raw
+
+        # The last row of data_raw is "TOTAL", so final_weight should be from there.
+        final_weight = data_raw[-1][6] if data_raw and len(data_raw[-1]) > 6 else 0.0 # From data_raw's last row (TOTAL), its commodity quantity
+        final_commodity_kg = final_weight # This is your delivered quantity
+
+        total_money = total_opex_money + total_capex_money + total_carbon_tax_money # Sum all three cost types
+
+        # Retrieve the initial quantity (A) for calculating insurance cost for food
+        # The 'Harvesting & Preparation' row is the first in data_raw from total_food_lca.
+        # Its original 'A' (initial_weight) is at data_raw[0][7]
+        initial_food_kg_for_insurance_calc = data_raw[0][7] if data_raw and len(data_raw[0]) > 7 else 0.0
+
+        # Calculate the absolute insurance cost from the initial harvesting step's inputs
+        absolute_insurance_cost_food = initial_food_kg_for_insurance_calc * price_start * (INSURANCE_PERCENTAGE_OF_CARGO_VALUE / 100) if price_start is not None else 0.0
+
+        # Calculate the insurance cost PER KG delivered (using the final delivered mass)
+        insurance_per_kg_for_chart_food = absolute_insurance_cost_food / final_commodity_kg if final_commodity_kg > 0 else 0.0
+
+        extracted_insurance_row_for_chart_food = [
+            "Insurance", # row[0] Process Step
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, # Placeholder for total values
+            0.0, # Opex/kg
+            0.0, # Capex/kg
+            0.0, # Carbon Tax/kg
+            insurance_per_kg_for_chart_food, # Insurance/kg (THE VALUE)
+            insurance_per_kg_for_chart_food, # Cost/kg (sum of per-kg for THIS row only)
+            0.0, # Cost/GJ
+            0.0, # CO2eq/kg
+            0.0  # eCO2/GJ
+        ]
         local_sourcing_results = None
         green_premium_data = None
         farm_name = None
@@ -2780,56 +2876,101 @@ def run_lca_model(inputs):
         final_energy_output_gj = final_energy_output_mj / 1000
 
         data_with_all_columns = []
+        # Create a variable to hold the extracted insurance row data.
+        extracted_insurance_row_for_chart_food = None
+
         for row in data_raw:
-            if len(row) < 6: # At least up to emissions data
+            # Based on your total_food_lca function, results_list has 9 elements per row:
+            # [label, opex_m, capex_m, carbon_tax_m, insurance_m, energy, emissions, current_weight, loss]
+            if len(row) < 9: # Assuming 9 columns now for food data_raw
                 print(f"Warning: Food row has insufficient data points: {row}. Skipping 'per unit' calculations for this row.")
-                data_with_all_columns.append(list(row) + [0]*8) # Adjusted to 8 zeros
+                data_with_all_columns.append(list(row) + [0]*(16 - len(row)))
                 continue
 
+            process_label_raw = row[0]
             current_opex = float(row[1])
             current_capex = float(row[2])
-            current_carbon_tax = float(row[3]) # Get carbon tax
-            current_energy_total = float(row[4]) # Total energy
-            current_emission_total = float(row[5]) # Total emissions
-
-            # Initialize insurance_per_kg to 0 for all rows
-            insurance_per_kg = 0.0
+            current_carbon_tax = float(row[3])
+            # The 'insurance_m' from food_harvest_and_prep is already in row[4] here.
+            current_insurance_from_func = float(row[4]) 
+            current_energy_total = float(row[5])
+            current_emission_total = float(row[6])
+            current_commodity_kg_at_step = float(row[7]) # This is the `A` value for the step
+            current_spoilage_loss = float(row[8])
 
             # Calculate individual cost components PER KG
             opex_per_kg = current_opex / final_commodity_kg if final_commodity_kg > 0 else 0
             capex_per_kg = current_capex / final_commodity_kg if final_commodity_kg > 0 else 0
             carbon_tax_per_kg = current_carbon_tax / final_commodity_kg if final_commodity_kg > 0 else 0
+            # Initialize insurance_per_kg for this loop iteration
+            insurance_per_kg = 0.0
 
-            # --- Insurance Calculation for 'Harvesting & Preparation' ---
-            # This logic should extract the portion of opex that IS insurance.
-            if row[0] == "Harvesting & Preparation":
-                # Assuming row[6] contains the commodity weight at this step
-                cargo_value_at_harvest = float(row[6]) * price_start if price_start is not None else 0
-                insurance_cost_absolute = cargo_value_at_harvest * (INSURANCE_PERCENTAGE_OF_CARGO_VALUE / 100)
-                insurance_per_kg = insurance_cost_absolute / final_commodity_kg if final_commodity_kg > 0 else 0
-                # CRITICAL: Deduct insurance from OPEX_PER_KG for this specific step
-                opex_per_kg = max(0, opex_per_kg - insurance_per_kg) # Ensure it doesn't go negative
+            # --- SPECIAL HANDLING FOR "Harvesting & Preparation" ---
+            if process_label_raw == "Harvesting & Preparation":
+                # Do NOT recalculate insurance_per_kg_extracted here. It's already done above.
+                # Just subtract it from the opex_per_kg for THIS ROW.
+                opex_per_kg = max(0, opex_per_kg - insurance_per_kg_for_chart_food)
+                # Ensure that `insurance_per_kg` for THIS specific row is set to 0.0,
+                # as its value is now in the dedicated `extracted_insurance_row_for_chart_food`.
+                insurance_per_kg = 0.0 # Clear insurance from this row's per-kg value
 
-            # Calculate total cost per kg (sum of per-kg components)
-            cost_per_kg_total = opex_per_kg + capex_per_kg + carbon_tax_per_kg + insurance_per_kg
-
-            # Calculate other 'per GJ' and 'per kg' values for the table
-            current_total_cost_row = current_opex + current_capex + current_carbon_tax # Ensure this is defined for the row
+            # Calculate total cost per kg for this specific row (adjusted for insurance)
+            cost_per_kg_total = opex_per_kg + capex_per_kg + carbon_tax_per_kg + insurance_per_kg 
+            
+            current_total_cost_row = current_opex + current_capex + current_carbon_tax # This is good
+            
             cost_per_gj = current_total_cost_row / final_energy_output_gj if final_energy_output_gj > 0 else 0
             emission_per_kg = current_emission_total / final_commodity_kg if final_commodity_kg > 0 else 0
             emission_per_gj = current_emission_total / final_energy_output_gj if final_energy_output_gj > 0 else 0
 
-            # Add all the new per-kg columns, including the total cost per kg
-            new_row_with_additions = list(row) + [opex_per_kg, capex_per_kg, carbon_tax_per_kg, insurance_per_kg, cost_per_kg_total, cost_per_gj, emission_per_kg, emission_per_gj]
-            data_with_all_columns.append(new_row_with_additions)    
-                                                        
-        detailed_data_formatted = data_with_all_columns
-        data_for_display_common = [row for row in detailed_data_formatted if row[0] != "TOTAL" and row[0] != "Harvesting & Preparation"]
-        emission_chart_exclusions_food = [] # No exclusions needed if all costs/emissions are now integrated
-        data_for_emission_chart = [row for row in data_for_display_common if row[0] not in emission_chart_exclusions_food]
-        carbon_tax_index = 3 # Assuming carbon tax is at index 3 in data_raw, which is the 4th column
-        insurance_index = 1 # Insurance is part of OPEX for now, but its specific value should be filtered in the chart's parsing logic        
+            # Append ALL values. Ensure order matches new_detailed_headers
+            new_row_with_additions = [
+                process_label_raw, # Process Step
+                current_opex, current_capex, current_carbon_tax, current_energy_total, current_emission_total, current_commodity_kg_at_step, current_spoilage_loss, # Original total values
+                opex_per_kg, capex_per_kg, carbon_tax_per_kg, insurance_per_kg, # Per-kg values
+                cost_per_kg_total, cost_per_gj, emission_per_kg, emission_per_gj # Derived per-unit values
+            ]
+            data_with_all_columns.append(new_row_with_additions)
 
+
+        relabeled_data = []
+        for row in data_with_all_columns:
+            relabel_key = row[0]
+            new_label = label_map.get(relabel_key, relabel_key)
+            relabeled_data.append([new_label] + row[1:])
+
+        # Format numeric values for display in tables (detailed_data_formatted)
+        detailed_data_formatted = []
+        for row in relabeled_data:
+            formatted_row = [row[0]] # Keep the label as is
+            for item in row[1:]: # Format numeric values
+                if isinstance(item, (int, float)):
+                    formatted_row.append(f"{item:,.2f}")
+                else:
+                    formatted_row.append(item)
+            detailed_data_formatted.append(formatted_row)
+                                                                    
+        filtered_detailed_data_for_chart = []
+        for row in detailed_data_formatted:
+            # Only include rows that are NOT the original harvesting step and NOT the TOTAL
+            if row[0] not in ["Harvesting & Preparation", "TOTAL"]:
+                modified_row = list(row) # Create a copy to modify
+                # Zero out the insurance_per_kg for all other rows.
+                modified_row[insurance_per_kg_for_chart_idx] = 0.0
+                filtered_detailed_data_for_chart.append(modified_row)
+
+
+        data_for_display_common = []
+        # Add the extracted insurance row as the FIRST entry
+        if extracted_insurance_row_for_chart_food:
+            data_for_display_common.append(extracted_insurance_row_for_chart_food)
+
+        # Then add all other filtered rows
+        data_for_display_common.extend(filtered_detailed_data_for_chart)        
+        # Emissions chart should exclude the dedicated insurance row and original harvesting row
+
+        emission_chart_exclusions_food = ["TOTAL", "Harvesting & Preparation", "Insurance"] # "Insurance" is the label you gave it
+        data_for_emission_chart = [row for row in detailed_data_formatted if row[0] not in emission_chart_exclusions_food]
         new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Carbon Tax ($)", "Energy (MJ)", "eCO2 (kg)", "Commodity (kg)", "Spoilage (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Carbon Tax/kg ($/kg)", "Insurance/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
         opex_per_kg_for_chart_idx = new_detailed_headers.index("Opex/kg ($/kg)")
         capex_per_kg_for_chart_idx = new_detailed_headers.index("Capex/kg ($/kg)")
