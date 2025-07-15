@@ -20,8 +20,8 @@ import base64
 
 # --- Initialize Flask App ---
 app = Flask(__name__)
+#CORS(app) # Allows the frontend to make requests
 CORS(app, resources={r"/calculate": {"origins": "https://eshansingh.xyz"}})
-
 # --- API KEYS ---
 # Place your actual API keys here.
 api_key_google = os.environ.get("API_KEY_GOOGLE", "ESHAN_API_KEY_GOOGLE")
@@ -30,46 +30,6 @@ api_key_EIA = os.environ.get("API_KEY_EIA", "ESHAN_API_KEY_EIA")
 api_key_weather = os.environ.get("API_KEY_WEATHER", "ESHAN_API_KEY_WEATHER")
 api_key_openAI = os.environ.get("API_KEY_OPENAI", "ESHAN_API_KEY_OPENAI")
 api_key_electricity_map = os.environ.get("API_KEY_ELECTRICITYMAP", "ESHAN_API_KEY_ELECTRICITYMAP")
-
-MAINTENANCE_COST_PER_KM_TRUCK = 0.05 # $/km
-MAINTENANCE_COST_PER_KM_SHIP = 0.10 # $/km
-INSURANCE_PERCENTAGE_OF_CARGO_VALUE = 1.0 # 1%
-CARBON_TAX_PER_TON_CO2_DICT = {
-    "Sweden": 144.62,          # 2025 rate from Tax Foundation
-    "Switzerland": 136.04,     # 2025 rate from Tax Foundation
-    "Liechtenstein": 136.04,   # 2025 rate from Tax Foundation
-    "Poland": 0.10,            # 2025 rate from Tax Foundation
-    "Ukraine": 0.73,           # 2025 rate from Tax Foundation
-    "Norway": 107.78,          # 2024 rate from World Population Review
-    "Finland": 100.02,         # 2024 rate from World Population Review
-    "Netherlands": 71.51,      # 2024 rate from World Population Review
-    "Portugal": 60.48,         # 2024 rate from World Population Review
-    "Ireland": 60.22,          # 2024 rate from World Population Review
-    "Luxembourg": 49.92,       # 2024 rate from World Population Review
-    "Germany": 48.39,          # 2024 rate from World Population Review
-    "Austria": 48.37,          # 2024 rate from World Population Review
-    "France": 47.96,           # 2024 rate from World Population Review
-    "Iceland": 36.51,          # 2024 rate from World Population Review
-    "Denmark": 28.10,          # 2024 rate from World Population Review
-    "United Kingdom": 22.62,   # 2024 rate from World Population Review
-    "Slovenia": 18.60,         # 2024 rate from World Population Review
-    "Spain": 16.13,            # 2024 rate from World Population Review
-    "Latvia": 16.13,           # 2024 rate from World Population Review
-    "Estonia": 2.18,           # 2024 rate from World Population Review
-    "South Africa": 10.69,     # 2024 rate from World Population Review
-    "Singapore": 19.55,        # 2024 rate from World Population Review
-    "Uruguay": 167.00,         # 2024 rate from Statista
-    "Japan": 2.65              # Rate from academic sources, stable since implementation
-}
-
-# List of current EU Member Countries (as of July 2025)
-EU_MEMBER_COUNTRIES = [
-    "Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus", "Czech Republic",
-    "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary",
-    "Ireland", "Italy", "Latvia", "Lithuania", "Luxembourg", "Malta",
-    "Netherlands", "Poland", "Portugal", "Romania", "Slovakia", "Slovenia",
-    "Spain", "Sweden"
-]
 
 # ==============================================================================
 # MAIN CALCULATION FUNCTION
@@ -97,7 +57,7 @@ def run_lca_model(inputs):
 
     def decode_polyline(polyline_str):
         index, lat, lng = 0, 0, 0
-        coordinates = []
+        coordinates = [] # FIXED: Initialize coordinates as an empty list
         while index < len(polyline_str):
             shift, result, lat_change, lng_change = 0, 0, 0, 0
             for unit in ['lat', 'lng']:
@@ -120,7 +80,9 @@ def run_lca_model(inputs):
         endpoint = "https://maps.googleapis.com/maps/api/directions/json"
         params = {'origin': f"{origin[0]},{origin[1]}", 'destination': f"{destination[0]},{destination[1]}", 'key': api_key_google, 'mode': 'driving'}
         response = requests.get(f'{endpoint}?{urlencode(params)}')
+        # It's good practice to handle cases where 'routes' might be empty or status is not 'OK'
         if response.status_code not in range(200, 299) or not response.json().get('routes'):
+            # Return an empty list of coordinates or handle as an error if route not found
             return []
         points = response.json()['routes'][0]['overview_polyline']['points']
         return decode_polyline(points)
@@ -149,8 +111,10 @@ def run_lca_model(inputs):
             if lon_str is not None:
                 lon = float(str(lon_str).strip().replace(',', ''))
         except ValueError:
+            # Log the problematic string to understand why it failed
             print(f"DEBUG: Could not convert latitude '{lat_str}' or longitude '{lon_str}' to float.")
-            return None, None, None
+            return None, None, None # Return None for all if conversion fails for either
+
         return lat, lon, port_name
 
     def inland_routes_cal(start_coords, end_coords):
@@ -277,53 +241,33 @@ def run_lca_model(inputs):
         volumes_m3 = [p[0] for p in power_scaling_data]
         powers_kw = [p[1] for p in power_scaling_data]
         return np.interp(ship_volume_m3, volumes_m3, powers_kw)
-    
-    def create_breakdown_chart(data, primary_value_column_index, secondary_value_column_index, title, x_label, overlay_text=None, is_emission_chart=False):
+
+    def create_breakdown_chart(data, column_index, title, x_label, overlay_text=None):
         try:
             if not data:
                 print("Chart creation skipped: No data provided.")
                 return ""
             labels = [row[0] for row in data]
-            primary_values = []
-            secondary_values = [] # This will be all zeros for emission chart
-
+            values = []
             for row in data:
                 try:
-                    primary_values.append(float(row[primary_value_column_index]))
-                    if not is_emission_chart: # Only get secondary values if it's a cost chart
-                        secondary_values.append(float(row[secondary_value_column_index]))
-                    else:
-                        secondary_values.append(0.0) # For emission chart, secondary is zero
-                except (ValueError, TypeError, IndexError) as e: # Added IndexError here
-                    print(f"DEBUG: Error processing row for chart '{title}': {row}. Error: {e}")
-                    primary_values.append(0.0)
-                    secondary_values.append(0.0)
-                    print(f"Warning: Could not convert value to a number for chart '{title}'. Defaulting to 0.")
-
+                    values.append(float(row[column_index]))
+                except (ValueError, TypeError):
+                    values.append(0.0)
+                    print(f"Warning: Could not convert value '{row[column_index]}' to a number for chart '{title}'. Defaulting to 0.")
             plt.style.use('seaborn-v0_8-whitegrid')
             fig, ax = plt.subplots(figsize=(10, len(labels) * 0.5))
 
             y_pos = np.arange(len(labels))
-
-            if is_emission_chart:
-                ax.barh(y_pos, primary_values, align='center', color='#4CAF50', edgecolor='black', label='Emissions')
-            else:
-                ax.barh(y_pos, primary_values, align='center', color='#8BC34A', edgecolor='black', label='OPEX') # Lighter Green
-                ax.barh(y_pos, secondary_values, left=primary_values, align='center', color='#4CAF50', edgecolor='black', label='CAPEX') # Original Green
-
-
+            ax.barh(y_pos, values, align='center', color='#4CAF50', edgecolor='black')
             ax.set_yticks(y_pos)
             ax.set_yticklabels(labels, fontsize=12)
             ax.invert_yaxis()  # labels read top-to-bottom
             ax.set_xlabel(x_label, fontsize=14, weight='bold')
             ax.set_title(title, fontsize=16, weight='bold', pad=20)
 
-            # Add values for total (Primary + Secondary for cost, just Primary for emission)
-            for i, (p, s) in enumerate(zip(primary_values, secondary_values)):
-                total_value = p + s if not is_emission_chart else p
-                ax.text(total_value, i, f' {total_value:,.2f}', color='black', va='center', fontweight='bold')
-
-            ax.legend(loc='lower right', fontsize=10)
+            for i, v in enumerate(values):
+                ax.text(v, i, f' {v:,.2f}', color='black', va='center', fontweight='bold')
 
             plt.tight_layout(pad=2.0)
 
@@ -332,68 +276,77 @@ def run_lca_model(inputs):
                         ha='right', va='bottom', size=10,
                         bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.6))
 
+            # --- Saving the plot to a memory buffer ---
             buf = io.BytesIO()
-            plt.savefig(buf, format='png', dpi=100)
+            plt.savefig(buf, format='png', dpi=100) # Increased dpi for better quality
             buf.seek(0)
             img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-            plt.close(fig)
+            plt.close(fig) # Explicitly close the figure to free up memory
 
             return img_base64
 
+        # --- NEW: Catch any exception during chart creation ---
         except Exception as e:
+            # Print a detailed error message to your backend logs
             print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
             print(f"CRITICAL ERROR generating chart '{title}': {e}")
             import traceback
             traceback.print_exc()
             print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            # Return an empty string so the frontend doesn't break
             return ""
     # =================================================================
     # <<<                   FUEL PROCESS FUNCTIONS                  >>>
     # =================================================================
 
-    def PH2_pressure_fnc(density): return density * 1.2
-    def multistage_compress(pressure): return pressure * 0.05
-    def kinematic_viscosity_PH2(pressure): return 1e-5 / (pressure/10)
-    def solve_colebrook(Re, epsilon, D): return 0.02
-    def PH2_transport_energy(L): return L * 0.001
-    def PH2_density_fnc(pressure): return pressure / 1.2
+    def PH2_pressure_fnc(density): return density * 1.2 # Simplified placeholder
+    def multistage_compress(pressure): return pressure * 0.05 # Simplified placeholder
+    def kinematic_viscosity_PH2(pressure): return 1e-5 / (pressure/10) # Simplified placeholder
+    def solve_colebrook(Re, epsilon, D): return 0.02 # Simplified placeholder for friction factor
+    def PH2_transport_energy(L): return L * 0.001 # Simplified placeholder
+    def PH2_density_fnc(pressure): return pressure / 1.2 # Simplified placeholder
     def straight_dis(coor_start_lang,coor_start_lat,coor_end_lang,coor_end_lat): return 1000
     def PH2_density_fnc_helper(pressure): return 0.25
     #actual process functions
     def liquification_data_fitting(H2_plant_capacity):
-        x = H2_plant_capacity*(1000/24)
+        x = H2_plant_capacity*(1000/24) #convert TPD to kg/hr
         y0, x0, A1, A2, A3, t1, t2, t3 = 37.76586, -11.05773, 6248.66187, 80.56526, 25.95391, 2.71336, 32.3875, 685.33284
         return y0 + A1*np.exp(-(x-x0)/t1) + A2*np.exp(-(x-x0)/t2) + A3*np.exp(-(x-x0)/t3)
 
     def site_A_chem_production(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
-        (GWP_chem_list_arg, insurance_percentage_of_cargo_value_arg, hydrogen_production_cost_arg, start_country_name_arg, carbon_tax_per_ton_co2_dict_arg) = process_args_tuple
+        # Unpack the specific arguments this function needs.
+        # Even if currently minimal, this maintains the pattern.
+        # For this function, based on its simple return, only GWP_chem might be relevant
+        # if BOG_loss was non-zero and its GWP impact needed to be calculated.
 
-        opex_money = 0
-        capex_money = 0
-        convert_energy_consumed = 0
+        (GWP_chem_list_arg,) = process_args_tuple # Unpacking a tuple with one element
+
+        # Original logic from your snippet:
+        money = 0
+        convert_energy_consumed = 0 # Or just ener_consumed if preferred
         G_emission = 0
         BOG_loss = 0
 
-        # Insurance Cost
-        cargo_value = A * hydrogen_production_cost_arg
-        insurance_cost = cargo_value * (insurance_percentage_of_cargo_value_arg / 100)
-        opex_money += insurance_cost
+        # If BOG_loss were potentially non-zero in a more detailed version of this function,
+        # you would calculate G_emission like this:
+        # G_emission = (convert_energy_consumed * 0.2778 * CO2e_start_arg * 0.001) + (BOG_loss * GWP_chem_list_arg[B_fuel_type])
+        # But since BOG_loss and convert_energy_consumed are 0, G_emission is 0.
 
-        # Carbon Tax (if any, though production emissions might be covered elsewhere or be zero for green H2)
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_country_name_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
-        
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, convert_energy_consumed, G_emission, A, BOG_loss
+        # A (amount of chemical) does not change in this initial production step in your snippet
+        return money, convert_energy_consumed, G_emission, A, BOG_loss
 
     def site_A_chem_liquification(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_specific_args_tuple):
-        (LH2_plant_capacity_arg, EIM_liquefication_arg, specific_heat_chem_arg, 
-        start_local_temperature_arg, boiling_point_chem_arg, latent_H_chem_arg, 
-        COP_liq_arg, start_electricity_price_tuple_arg, CO2e_start_arg, 
-        GWP_chem_list_arg, calculate_liquefaction_capex_helper_arg, start_country_name_arg, carbon_tax_per_ton_co2_dict_arg) = process_specific_args_tuple
-
-        opex_money = 0
-        capex_money = 0
+        # Unpack the specific arguments this function needs
+        LH2_plant_capacity_arg, \
+        EIM_liquefication_arg, \
+        specific_heat_chem_arg, \
+        start_local_temperature_arg, \
+        boiling_point_chem_arg, \
+        latent_H_chem_arg, \
+        COP_liq_arg, \
+        start_electricity_price_tuple_arg, \
+        CO2e_start_arg, \
+        GWP_chem_list_arg = process_specific_args_tuple # GWP_chem_list_arg is your list [33,0,0]
 
         if B_fuel_type == 0:  # LH2
             liquify_energy_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
@@ -404,110 +357,95 @@ def run_lca_model(inputs):
             liquify_energy_required = 0
 
         liquify_ener_consumed = liquify_energy_required * A
-        opex_money += liquify_ener_consumed * start_electricity_price_tuple_arg[2]
-        
-        # CAPEX
-        capex_per_kg = calculate_liquefaction_capex_helper_arg(B_fuel_type, LH2_plant_capacity_arg) # Order matters here
-        capex_money += capex_per_kg * A
-
+        opex_money = liquify_ener_consumed * start_electricity_price_tuple_arg[2] # Access the price float
+        total_money = opex_money
         G_emission_from_energy = liquify_ener_consumed * 0.2778 * CO2e_start_arg * 0.001
         BOG_loss = 0.016 * A
         A_after_loss = A - BOG_loss
         G_emission_from_bog = BOG_loss * GWP_chem_list_arg[B_fuel_type]
         G_emission = G_emission_from_energy + G_emission_from_bog
+        return total_money, liquify_ener_consumed, G_emission, A_after_loss, BOG_loss
 
-        # Carbon Tax
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_country_name_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
-
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, liquify_ener_consumed, G_emission, A_after_loss, BOG_loss
-
+    # NEW: Unified fuel_pump_transfer function for loading/unloading
     def fuel_pump_transfer(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
-        (V_flowrate_arg, number_of_cryo_pump_load_arg, dBOR_dT_arg, 
-        BOR_transfer_arg, liquid_chem_density_arg, head_pump_arg, 
-        pump_power_factor_arg, EIM_cryo_pump_arg, ss_therm_cond_arg, 
-        pipe_length_arg, pipe_inner_D_arg, pipe_thick_arg, COP_refrig_arg, 
-        EIM_refrig_eff_arg, electricity_price_tuple_arg, CO2e_arg, 
-        GWP_chem_list_arg, local_temperature_arg, calculate_loading_unloading_capex_helper_arg, 
-        country_of_transfer_arg, carbon_tax_per_ton_co2_dict_arg) = process_args_tuple
+        """
+        Calculates cost, energy, and emissions for various fuel transfer operations
+        involving pumps and pipes (loading/unloading trucks, loading/unloading storage).
+        Replaces multiple specific loading/unloading functions.
+        """
+        # Unpack all necessary arguments
+        V_flowrate_arg, number_of_cryo_pump_load_arg, dBOR_dT_arg, \
+        BOR_transfer_arg, liquid_chem_density_arg, head_pump_arg, \
+        pump_power_factor_arg, EIM_cryo_pump_arg, ss_therm_cond_arg, \
+        pipe_length_arg, pipe_inner_D_arg, pipe_thick_arg, COP_refrig_arg, \
+        EIM_refrig_eff_arg, electricity_price_tuple_arg, CO2e_arg, \
+        GWP_chem_list_arg, local_temperature_arg = process_args_tuple
 
-        opex_money = 0
-        capex_money = 0
+        duration = A / (V_flowrate_arg[B_fuel_type]) / number_of_cryo_pump_load_arg  # hr
 
-        duration = A / (V_flowrate_arg[B_fuel_type]) / number_of_cryo_pump_load_arg
+        # BOG loss
         local_BOR_transfer = dBOR_dT_arg[B_fuel_type] * (local_temperature_arg - 25) + BOR_transfer_arg[B_fuel_type]
         BOG_loss = local_BOR_transfer * (1 / 24) * duration * A
 
+        # Pumping power
         pumping_power = liquid_chem_density_arg[B_fuel_type] * V_flowrate_arg[B_fuel_type] * (1 / 3600) * \
-                        head_pump_arg * 9.8 / (367 * pump_power_factor_arg) / (EIM_cryo_pump_arg / 100)
-        ener_consumed_pumping = pumping_power * duration * 3600 * 1 / 1000000
+                        head_pump_arg * 9.8 / (367 * pump_power_factor_arg) / (EIM_cryo_pump_arg / 100) # W
+        ener_consumed_pumping = pumping_power * duration * 3600 * 1 / 1000000 # MJ
 
+        # Pipe refrigeration
         log_arg = (pipe_inner_D_arg + 2 * pipe_thick_arg) / pipe_inner_D_arg
         q_pipe = 0
         if log_arg > 0:
             q_pipe = 2 * np.pi * ss_therm_cond_arg * pipe_length_arg * \
-                    (local_temperature_arg - (-253)) / (2.3 * np.log10(log_arg))
+                    (local_temperature_arg - (-253)) / (2.3 * np.log10(log_arg))  # W
 
-        ener_consumed_refrig = (q_pipe / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * duration * 3600
+        ener_consumed_refrig = (q_pipe / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * duration * 3600  # MJ
 
         ener_consumed = ener_consumed_pumping + ener_consumed_refrig
         A_after_loss = A - BOG_loss
 
-        opex_money += ener_consumed * electricity_price_tuple_arg[2]
-        
-        # CAPEX
-        capex_per_kg = calculate_loading_unloading_capex_helper_arg(B_fuel_type)
-        capex_money += capex_per_kg * A
-
+        money = ener_consumed * electricity_price_tuple_arg[2]
         G_emission = ener_consumed * 0.2778 * CO2e_arg * 0.001 + BOG_loss * GWP_chem_list_arg[B_fuel_type]
 
-        # Carbon Tax
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(country_of_transfer_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
-
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, ener_consumed, G_emission, A_after_loss, BOG_loss
+        return money, ener_consumed, G_emission, A_after_loss, BOG_loss
 
     def fuel_road_transport(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
-        (road_delivery_ener_arg, HHV_chem_arg, chem_in_truck_weight_arg, truck_economy_arg, 
-        distance_arg, HHV_diesel_arg, diesel_density_arg, diesel_price_arg, 
-        truck_tank_radius_arg, truck_tank_length_arg, truck_tank_metal_thickness_arg, 
-        metal_thermal_conduct_arg, truck_tank_insulator_thickness_arg, insulator_thermal_conduct_arg, 
-        OHTC_ship_arg, local_temperature_arg, COP_refrig_arg, EIM_refrig_eff_arg, 
-        duration_arg, dBOR_dT_arg, BOR_truck_trans_arg, diesel_engine_eff_arg, 
-        EIM_truck_eff_arg, CO2e_diesel_arg, GWP_chem_arg, 
-        BOG_recirculation_truck_percentage_arg, LH2_plant_capacity_arg, EIM_liquefication_arg, 
-        fuel_cell_eff_arg, EIM_fuel_cell_arg, LHV_chem_arg, 
-        driver_daily_salary_arg, annual_working_days_arg, maintenance_cost_per_km_truck_arg, 
-        truck_capex_params_arg, country_of_road_transport_arg, carbon_tax_per_ton_co2_dict_arg) = process_args_tuple
-
-        opex_money = 0
-        capex_money = 0
-        total_energy = 0
+        # Unpack all arguments, including those that vary by leg (start vs. end)
+        road_delivery_ener_arg, HHV_chem_arg, chem_in_truck_weight_arg, truck_economy_arg, \
+        distance_arg, HHV_diesel_arg, diesel_density_arg, diesel_price_arg, \
+        truck_tank_radius_arg, truck_tank_length_arg, truck_tank_metal_thickness_arg, \
+        metal_thermal_conduct_arg, truck_tank_insulator_thickness_arg, insulator_thermal_conduct_arg, \
+        OHTC_ship_arg, local_temperature_arg, COP_refrig_arg, EIM_refrig_eff_arg, \
+        duration_arg, dBOR_dT_arg, BOR_truck_trans_arg, diesel_engine_eff_arg, \
+        EIM_truck_eff_arg, CO2e_diesel_arg, GWP_chem_arg, \
+        BOG_recirculation_truck_percentage_arg, LH2_plant_capacity_arg, EIM_liquefication_arg, \
+        fuel_cell_eff_arg, EIM_fuel_cell_arg, LHV_chem_arg, \
+        driver_daily_salary_arg, annual_working_days_arg = process_args_tuple
 
         number_of_trucks = math.ceil(A / chem_in_truck_weight_arg[B_fuel_type])
         
+        # Energy for propulsion
         trans_energy_required = number_of_trucks * distance_arg * HHV_diesel_arg * diesel_density_arg / truck_economy_arg[B_fuel_type]
         diesel_money = trans_energy_required / HHV_diesel_arg / diesel_density_arg * diesel_price_arg
-        opex_money += diesel_money
 
+        # Refrigeration for cryogenic/refrigerated fuels
         storage_area_truck = 2 * np.pi * truck_tank_radius_arg * truck_tank_length_arg
-        if B_fuel_type == 0:
+        if B_fuel_type == 0: # LH2
             thermal_resist = truck_tank_metal_thickness_arg / metal_thermal_conduct_arg + \
                             truck_tank_insulator_thickness_arg / insulator_thermal_conduct_arg
             OHTC = 1 / thermal_resist if thermal_resist > 0 else float('inf')
-        else:
+        else: # Ammonia, Methanol (using ship OHTC as proxy for truck if not LH2)
             OHTC = OHTC_ship_arg[B_fuel_type]
 
-        heat_required = OHTC * storage_area_truck * (local_temperature_arg + 273 - 20)
+        heat_required = OHTC * storage_area_truck * (local_temperature_arg + 273 - 20) # Assuming 20K target temp
         refrig_ener_consumed = (heat_required / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * 60 * duration_arg * number_of_trucks
 
+        # BOG loss during transit
         local_BOR_truck_trans = dBOR_dT_arg[B_fuel_type] * (local_temperature_arg - 25) + BOR_truck_trans_arg[B_fuel_type]
         current_BOG_loss = A * local_BOR_truck_trans / (24 * 60) * duration_arg
 
         refrig_money = (refrig_ener_consumed / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / diesel_density_arg * diesel_price_arg
-        opex_money += refrig_money
+        money = diesel_money + refrig_money
         total_energy = trans_energy_required + refrig_ener_consumed
 
         A_after_loss = A - current_BOG_loss
@@ -515,22 +453,23 @@ def run_lca_model(inputs):
         G_emission = G_emission_energy + current_BOG_loss * GWP_chem_arg[B_fuel_type]
         net_BOG_loss = current_BOG_loss
 
+        # Recirculation logic
         if C_recirculation_BOG == 2:
-            if D_truck_apply == 1:
+            if D_truck_apply == 1: # Re-liquefy BOG
                 usable_BOG = current_BOG_loss * BOG_recirculation_truck_percentage_arg * 0.01
                 reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
                 reliq_ener_consumed = reliq_ener_required * usable_BOG
 
                 total_energy += reliq_ener_consumed
                 reliq_money = (reliq_ener_consumed / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / diesel_density_arg * diesel_price_arg
-                opex_money += reliq_money
+                money += reliq_money
 
                 A_after_loss += usable_BOG
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_truck_percentage_arg * 0.01)
                 G_emission_energy = (total_energy * CO2e_diesel_arg) / (HHV_diesel_arg * diesel_density_arg)
                 G_emission = G_emission_energy + net_BOG_loss * GWP_chem_arg[B_fuel_type]
 
-            elif D_truck_apply == 2:
+            elif D_truck_apply == 2: # Use BOG as another energy source
                 usable_BOG = current_BOG_loss * BOG_recirculation_truck_percentage_arg * 0.01
                 usable_ener = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
 
@@ -538,47 +477,33 @@ def run_lca_model(inputs):
                 money_saved_from_refrig = (energy_saved_from_refrig / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / diesel_density_arg * diesel_price_arg
 
                 total_energy = trans_energy_required + (refrig_ener_consumed - energy_saved_from_refrig)
-                opex_money = diesel_money + (refrig_money - money_saved_from_refrig)
+                money = diesel_money + (refrig_money - money_saved_from_refrig)
 
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_truck_percentage_arg * 0.01)
                 G_emission_energy = (total_energy * CO2e_diesel_arg) / (HHV_diesel_arg * diesel_density_arg)
                 G_emission = G_emission_energy + net_BOG_loss * GWP_chem_arg[B_fuel_type]
 
-        # Driver salary cost
-        trip_days = max(1, math.ceil(duration_arg / 1440))
+        # Calculate and add driver salary cost
+        trip_days = max(1, math.ceil(duration_arg / 1440)) # At least 1 day, round up
         driver_cost_per_truck = (driver_daily_salary_arg / annual_working_days_arg) * trip_days
         total_driver_cost = driver_cost_per_truck * number_of_trucks
-        opex_money += total_driver_cost
+        money += total_driver_cost
 
-        # Maintenance and Repair Cost
-        maintenance_cost = maintenance_cost_per_km_truck_arg * distance_arg * number_of_trucks
-        opex_money += maintenance_cost
+        return money, total_energy, G_emission, A_after_loss, net_BOG_loss
 
-        # Truck CAPEX
-        annual_truck_cost_usd = truck_capex_params_arg[B_fuel_type]['cost_usd_per_truck'] * truck_capex_params_arg[B_fuel_type]['annualization_factor']
-        capex_per_truck_trip_usd = annual_truck_cost_usd / 330 # Assuming 330 annual trips
-        capex_money += capex_per_truck_trip_usd * number_of_trucks
-
-        # Carbon Tax
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(country_of_road_transport_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
-
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, total_energy, G_emission, A_after_loss, net_BOG_loss
-
+    # NEW: Unified fuel_storage function
     def fuel_storage(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
-        (liquid_chem_density_arg, storage_volume_arg, dBOR_dT_arg, local_temperature_arg, 
-        BOR_land_storage_arg, storage_time_arg, storage_radius_arg, tank_metal_thickness_arg, 
-        metal_thermal_conduct_arg, tank_insulator_thickness_arg, insulator_thermal_conduct_arg, 
-        COP_refrig_arg, EIM_refrig_eff_arg, electricity_price_tuple_arg, CO2e_arg, 
-        GWP_chem_list_arg, BOG_recirculation_storage_percentage_arg, 
-        LH2_plant_capacity_arg, EIM_liquefication_arg, 
-        fuel_cell_eff_arg, EIM_fuel_cell_arg, LHV_chem_arg, calculate_storage_capex_helper_arg,
-        country_of_storage_arg, carbon_tax_per_ton_co2_dict_arg) = process_args_tuple
-
-        opex_money = 0
-        capex_money = 0
-        total_energy_consumed = 0
+        """
+        Calculates cost, energy, and emissions for fuel storage at various locations.
+        Replaces chem_storage_at_port_A, chem_storage_at_port_B, chem_storage_at_site_B.
+        """
+        liquid_chem_density_arg, storage_volume_arg, dBOR_dT_arg, local_temperature_arg, \
+        BOR_land_storage_arg, storage_time_arg, storage_radius_arg, tank_metal_thickness_arg, \
+        metal_thermal_conduct_arg, tank_insulator_thickness_arg, insulator_thermal_conduct_arg, \
+        COP_refrig_arg, EIM_refrig_eff_arg, electricity_price_tuple_arg, CO2e_arg, \
+        GWP_chem_list_arg, BOG_recirculation_storage_percentage_arg, \
+        LH2_plant_capacity_arg, EIM_liquefication_arg, \
+        fuel_cell_eff_arg, EIM_fuel_cell_arg, LHV_chem_arg = process_args_tuple
 
         number_of_storage = math.ceil(A / liquid_chem_density_arg[B_fuel_type] / storage_volume_arg[B_fuel_type])
         local_BOR_storage = dBOR_dT_arg[B_fuel_type] * (local_temperature_arg - 25) + BOR_land_storage_arg[B_fuel_type]
@@ -592,21 +517,18 @@ def run_lca_model(inputs):
                             tank_insulator_thickness_arg / insulator_thermal_conduct_arg
         OHTC_val = 1 / thermal_resist_val if thermal_resist_val > 0 else float('inf')
 
-        heat_required_val = OHTC_val * storage_area_val * (local_temperature_arg + 273 - 20)
+        heat_required_val = OHTC_val * storage_area_val * (local_temperature_arg + 273 - 20) # Assuming 20K target
         ener_consumed_refrig = (heat_required_val / (COP_refrig_arg[B_fuel_type] * EIM_refrig_eff_arg / 100)) / 1000000 * 86400 * storage_time_arg
 
-        opex_money += ener_consumed_refrig * electricity_price_tuple_arg[2]
+        opex_money = ener_consumed_refrig * electricity_price_tuple_arg[2]
         total_energy_consumed = ener_consumed_refrig
-        
-        # CAPEX
-        capex_per_kg = calculate_storage_capex_helper_arg(B_fuel_type, LH2_plant_capacity_arg, A, storage_time_arg)
-        capex_money += capex_per_kg * A
 
         G_emission = total_energy_consumed * 0.2778 * CO2e_arg * 0.001 + current_BOG_loss * GWP_chem_list_arg[B_fuel_type]
         net_BOG_loss = current_BOG_loss
 
+        # Recirculation logic
         if C_recirculation_BOG == 2:
-            if E_storage_apply == 1:
+            if E_storage_apply == 1: # Re-liquefy BOG
                 usable_BOG = current_BOG_loss * BOG_recirculation_storage_percentage_arg * 0.01
                 reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
                 reliq_ener_consumed = reliq_ener_required * usable_BOG
@@ -619,7 +541,7 @@ def run_lca_model(inputs):
 
                 G_emission = total_energy_consumed * 0.2778 * CO2e_arg * 0.001 + net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
 
-            elif E_storage_apply == 2:
+            elif E_storage_apply == 2: # Use BOG as another energy source
                 usable_BOG = current_BOG_loss * BOG_recirculation_storage_percentage_arg * 0.01
                 usable_ener = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
 
@@ -634,15 +556,11 @@ def run_lca_model(inputs):
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_storage_percentage_arg * 0.01)
 
                 G_emission = total_energy_consumed * 0.2778 * CO2e_arg * 0.001 + net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
-
-        # Carbon Tax
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(country_of_storage_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
-
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, total_energy_consumed, G_emission, A_after_loss, net_BOG_loss
+        total_money = opex_money
+        return total_money, total_energy_consumed, G_emission, A_after_loss, net_BOG_loss
 
     def chem_loading_to_ship(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
+        # Unpack all necessary arguments
         (V_flowrate_arg, number_of_cryo_pump_load_ship_port_A_arg, dBOR_dT_arg,
         start_local_temperature_arg, BOR_loading_arg, liquid_chem_density_arg, head_pump_arg,
         pump_power_factor_arg, EIM_cryo_pump_arg, ss_therm_cond_arg, pipe_length_arg, pipe_inner_D_arg,
@@ -650,18 +568,17 @@ def run_lca_model(inputs):
         CO2e_start_arg, GWP_chem_list_arg, calculated_storage_area_arg, ship_tank_metal_thickness,
         ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density,
         ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat,
-        COP_cooldown_arg, COP_refrig_arg, ship_number_of_tanks_arg, pipe_metal_specific_heat_arg,
-        calculate_loading_unloading_capex_helper_arg, start_country_name_arg, carbon_tax_per_ton_co2_dict_arg) = process_args_tuple
+        COP_cooldown_arg, COP_refrig_arg, ship_number_of_tanks_arg, pipe_metal_specific_heat_arg) = process_args_tuple
 
-        opex_money = 0
-        capex_money = 0
-
+        # --- Existing Calculations ---
         duration = A / (V_flowrate_arg[B_fuel_type]) / number_of_cryo_pump_load_ship_port_A_arg
         local_BOR_loading_val = dBOR_dT_arg[B_fuel_type] * (start_local_temperature_arg - 25) + BOR_loading_arg[B_fuel_type]
         BOG_loss = local_BOR_loading_val * (1 / 24) * duration * A
+        # Be sure to add EIM_cryo_pump_arg to the arguments tuple for this function
         pumping_power = liquid_chem_density_arg[B_fuel_type] * V_flowrate_arg[B_fuel_type] * (1 / 3600) * head_pump_arg * 9.8 / (367 * pump_power_factor_arg) / (EIM_cryo_pump_arg / 100)
         ener_consumed_pumping = pumping_power * duration * 3600 / 1000000
 
+        # Pipe refrigeration calculation
         log_arg = (pipe_inner_D_arg + 2 * pipe_thick_arg) / pipe_inner_D_arg
         q_pipe = 0
         if log_arg > 0:
@@ -673,7 +590,7 @@ def run_lca_model(inputs):
             ener_consumed_pipe_refrig = (q_pipe / (pipe_refrig_cop * (EIM_refrig_eff_arg / 100))) / 1000000 * duration * 3600
 
         ener_consumed_cooldown = 0
-        if B_fuel_type in [0, 1]:
+        if B_fuel_type in [0, 1]: # Cooldown only needed for cryogenic fuels
             mass_metal = calculated_storage_area_arg * ship_tank_metal_thickness * ship_tank_metal_density * ship_number_of_tanks_arg
             mass_insulation = calculated_storage_area_arg * ship_tank_insulation_thickness[B_fuel_type] * ship_tank_insulation_density * ship_number_of_tanks_arg
 
@@ -688,66 +605,68 @@ def run_lca_model(inputs):
                 ener_consumed_cooldown = Q_cooling / cooldown_cop
 
         ener_consumed_cooldown_pipes = 0
-        if B_fuel_type in [0, 1]:
+        if B_fuel_type in [0, 1]: # Cooldown only for cryogenic fuels (LH2, NH3)
+            # Calculate volume of pipe metal: (Outer Area - Inner Area) * Length
             pipe_outer_D = pipe_inner_D_arg + 2 * pipe_thick_arg
             pipe_metal_volume = (np.pi * (pipe_outer_D/2)**2 - np.pi * (pipe_inner_D_arg/2)**2) * pipe_length_arg
 
-            pipe_metal_density = ship_tank_metal_density
+            # Assuming pipe_metal_density is similar to ship_tank_metal_density for stainless steel
+            pipe_metal_density = ship_tank_metal_density # Using existing parameter for consistency
 
             mass_metal_pipes = pipe_metal_volume * pipe_metal_density
 
+            # Delta T from ambient to boiling point of the chemical
             delta_T_pipes = (start_local_temperature_arg + 273.15) - boiling_point_chem_arg[B_fuel_type]
 
             Q_cooling_pipes = mass_metal_pipes * pipe_metal_specific_heat_arg * delta_T_pipes
 
+            # Use the same cooldown COP as for tanks for simplicity
             cooldown_cop_pipes = COP_cooldown_arg[B_fuel_type]
             if cooldown_cop_pipes > 0:
                 ener_consumed_cooldown_pipes = Q_cooling_pipes / cooldown_cop_pipes
 
+
+        # --- Final Totals for this step ---
         ener_consumed = ener_consumed_pumping + ener_consumed_pipe_refrig + ener_consumed_cooldown + ener_consumed_cooldown_pipes
         A_after_loss = A - BOG_loss
 
-        opex_money += ener_consumed * start_electricity_price_tuple_arg[2]
-        
-        # CAPEX
-        capex_per_kg = calculate_loading_unloading_capex_helper_arg(B_fuel_type)
-        capex_money += capex_per_kg * A
-
+        money = ener_consumed * start_electricity_price_tuple_arg[2]
         G_emission = ener_consumed * 0.2778 * CO2e_start_arg * 0.001 + BOG_loss * GWP_chem_list_arg[B_fuel_type]
 
-        # Carbon Tax
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_country_name_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
-
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, ener_consumed, G_emission, A_after_loss, BOG_loss
+        return money, ener_consumed, G_emission, A_after_loss, BOG_loss
 
     def port_to_port(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
-        (start_local_temperature_arg, end_local_temperature_arg, OHTC_ship_arg,
-        calculated_storage_area_arg, ship_number_of_tanks_arg, COP_refrig_arg, EIM_refrig_eff_arg,
-        port_to_port_duration_arg, selected_fuel_params_arg,
-        dBOR_dT_arg, BOR_ship_trans_arg, GWP_chem_list_arg,
-        BOG_recirculation_maritime_percentage_arg, LH2_plant_capacity_arg, EIM_liquefication_arg,
-        fuel_cell_eff_arg, EIM_fuel_cell_arg, LHV_chem_arg,
-        avg_ship_power_kw_arg, aux_engine_efficiency_arg, GWP_N2O_arg,
-        maintenance_cost_per_km_ship_arg, port_to_port_dis_arg, calculate_voyage_overheads_helper_arg,
-        selected_ship_params_arg, canal_transits_arg, port_regions_arg, end_country_name_arg, carbon_tax_per_ton_co2_dict_arg,
-        eu_member_countries_arg) = process_args_tuple # Added eu_member_countries_arg
+        """
+        Calculates the cost, emissions, and losses for the maritime transportation leg.
+        This version includes a corrected N2O calculation for Ammonia fuel.
+        """
+        # --- 1. Unpack all incoming arguments ---
+        (
+            start_local_temperature_arg, end_local_temperature_arg, OHTC_ship_arg,
+            calculated_storage_area_arg, ship_number_of_tanks_arg, COP_refrig_arg, EIM_refrig_eff_arg,
+            port_to_port_duration_arg, selected_fuel_params_arg,
+            dBOR_dT_arg, BOR_ship_trans_arg, GWP_chem_list_arg,
+            BOG_recirculation_maritime_percentage_arg, LH2_plant_capacity_arg, EIM_liquefication_arg,
+            fuel_cell_eff_arg, EIM_fuel_cell_arg, LHV_chem_arg,
+            avg_ship_power_kw_arg,
+            aux_engine_efficiency_arg,
+            GWP_N2O_arg
+        ) = process_args_tuple
 
-        opex_money = 0
-        capex_money = 0
-
+        # --- 2. Calculate Base Propulsion Requirements ---
         propulsion_work_kwh = avg_ship_power_kw_arg * port_to_port_duration_arg
 
+        # --- 3. Calculate BOG & Refrigeration ---
         T_avg = (start_local_temperature_arg + end_local_temperature_arg) / 2
         refrig_work_mj = 0
-        if B_fuel_type == 0:
+        if B_fuel_type == 0: # LH2 requires active refrigeration
             heat_required_watts = OHTC_ship_arg[B_fuel_type] * calculated_storage_area_arg * (T_avg + 273 - 20) * ship_number_of_tanks_arg
             refrig_work_mj = (heat_required_watts / (COP_refrig_arg[B_fuel_type] * (EIM_refrig_eff_arg / 100))) / 1000000 * 3600 * port_to_port_duration_arg
 
         local_BOR_transportation = dBOR_dT_arg[B_fuel_type] * (T_avg - 25) + BOR_ship_trans_arg[B_fuel_type]
         current_BOG_loss = local_BOR_transportation * (1 / 24) * port_to_port_duration_arg * A
 
+        # --- 4. Handle BOG Recirculation ---
         net_BOG_loss = current_BOG_loss
         A_after_loss = A - current_BOG_loss
         reliq_work_mj = 0
@@ -756,343 +675,531 @@ def run_lca_model(inputs):
         if C_recirculation_BOG == 2:
             usable_BOG = current_BOG_loss * (BOG_recirculation_maritime_percentage_arg / 100.0)
             net_BOG_loss -= usable_BOG
-            if F_maritime_apply == 1:
+            if F_maritime_apply == 1: # Re-liquefy
                 A_after_loss += usable_BOG
                 reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
                 reliq_work_mj = reliq_ener_required * usable_BOG
-            elif F_maritime_apply == 2:
+            elif F_maritime_apply == 2: # Use as fuel
                 energy_saved_from_bog_mj = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
 
+        # --- 5. Calculate Total Fuel Consumed ---
         fuel_hhv_mj_per_kg = selected_fuel_params_arg['hhv_mj_per_kg']
         sfoc_g_per_kwh = selected_fuel_params_arg['sfoc_g_per_kwh']
 
+        # Calculate total work the engines must produce (in MJ)
         total_engine_work_mj = (propulsion_work_kwh * 3.6) + refrig_work_mj + reliq_work_mj - energy_saved_from_bog_mj
-        if total_engine_work_mj < 0: total_engine_work_mj = 0
+        if total_engine_work_mj < 0: total_engine_work_mj = 0 # Cannot have negative work
 
         total_engine_work_kwh = total_engine_work_mj / 3.6
 
+        # Calculate fuel needed for this work, based on engine efficiency (SFOC)
         total_fuel_consumed_kg = (total_engine_work_kwh * sfoc_g_per_kwh) / 1000.0
 
-        opex_money += (total_fuel_consumed_kg / 1000) * selected_fuel_params_arg['price_usd_per_ton']
+        # --- 6. Aggregate Final Cost and Emissions ---
+        total_money = (total_fuel_consumed_kg / 1000) * selected_fuel_params_arg['price_usd_per_ton']
 
-        # Maintenance and Repair Cost
-        maintenance_cost = maintenance_cost_per_km_ship_arg * port_to_port_dis_arg
-        opex_money += maintenance_cost
-
-        # Voyage CAPEX (from calculate_voyage_overheads)
-        voyage_duration_days = port_to_port_duration_arg / 24.0
-        voyage_capex_total = calculate_voyage_overheads_helper_arg(voyage_duration_days, selected_ship_params_arg, canal_transits_arg, port_regions_arg)
-        capex_money += voyage_capex_total
-
+        # Emissions from fuel combustion (CO2 and CH4)
         co2_factor = selected_fuel_params_arg['co2_emissions_factor_kg_per_kg_fuel']
         methane_factor = selected_fuel_params_arg['methane_slip_gwp100']
         fuel_emissions_co2e = (total_fuel_consumed_kg * co2_factor) + (total_fuel_consumed_kg * methane_factor)
 
+        # Emissions from N2O (for Ammonia fuel)
         n2o_emissions_co2e = 0
         if 'n2o_emission_factor_g_per_kwh' in selected_fuel_params_arg:
             n2o_factor_g_kwh = selected_fuel_params_arg['n2o_emission_factor_g_per_kwh']
             n2o_emissions_kg = (total_engine_work_kwh * n2o_factor_g_kwh) / 1000
             n2o_emissions_co2e = n2o_emissions_kg * GWP_N2O_arg
 
+        # Emissions from vented cargo BOG
         bog_emissions_co2e = net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
 
+        # Sum all emissions sources
         total_G_emission = fuel_emissions_co2e + bog_emissions_co2e + n2o_emissions_co2e
 
-        # Carbon Tax (General)
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0) * (total_G_emission / 1000)
-        opex_money += carbon_tax
-
-        # EU ETS Carbon Tax (if applicable)
-        eu_ets_tax = 0
-        if end_country_name_arg in eu_member_countries_arg:
-            # As of 2025, 50% of emissions for inbound voyages are covered by EU ETS
-            eu_ets_emissions_tons = (total_G_emission / 1000) * 0.50
-            eu_ets_tax = eu_ets_emissions_tons * carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0)
-            opex_money += eu_ets_tax # Add to opex_money
-
+        # Total chemical energy consumed is the HHV of the fuel burned
         total_energy_consumed_mj = total_fuel_consumed_kg * fuel_hhv_mj_per_kg
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, total_energy_consumed_mj, total_G_emission, A_after_loss, net_BOG_loss
+
+        return total_money, total_energy_consumed_mj, total_G_emission, A_after_loss, net_BOG_loss
 
     def chem_convert_to_H2(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
-        (mass_conversion_to_H2_arg, eff_energy_chem_to_H2_arg, energy_chem_to_H2_arg, 
-        CO2e_end_arg, end_electricity_price_tuple_arg, end_country_name_arg, carbon_tax_per_ton_co2_dict_arg) = process_args_tuple
+        # Unpack the specific arguments this function needs from the passed-in tuple.
+        # The order of variables here MUST EXACTLY MATCH the order they are packed.
 
-        opex_money = 0
-        capex_money = 0
-        convert_energy = 0
-        G_emission = 0
-        BOG_loss = 0
+        mass_conversion_to_H2_arg, \
+        eff_energy_chem_to_H2_arg, \
+        energy_chem_to_H2_arg, \
+        CO2e_end_arg, \
+        end_electricity_price_tuple_arg = process_args_tuple
+        # Note: GWP_chem is not used in the snippet for BOG_loss here, as BOG_loss is set to 0.
+        # If BOG_loss could be non-zero and have a GWP impact, GWP_chem_list_arg would be needed.
 
-        if B_fuel_type == 0:
-            pass
+        # Original logic of the function, using the unpacked '_arg' variables
+        if B_fuel_type == 0:  # If it's already Hydrogen
+            money = 0
+            convert_energy = 0
+            BOG_loss = 0 # No BOG loss during conversion if it's already H2
+            G_emission = 0
+            # A remains A (no change in amount or type)
         else:
+            # Convert chemical (NH3 or CH3OH) to H2 weight
             convert_to_H2_weight = A * mass_conversion_to_H2_arg[B_fuel_type]
-            convert_energy = energy_chem_to_H2_arg[B_fuel_type] * A / eff_energy_chem_to_H2_arg[B_fuel_type]
 
-            G_emission = convert_energy * 0.2778 * CO2e_end_arg * 0.001
-            opex_money += convert_energy * end_electricity_price_tuple_arg[2]
-            
-            # Carbon Tax
-            carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0) * (G_emission / 1000)
-            opex_money += carbon_tax
+            convert_energy = energy_chem_to_H2_arg[B_fuel_type] * A / eff_energy_chem_to_H2_arg[B_fuel_type]  # Total energy for conversion
 
-            A = convert_to_H2_weight
+            G_emission = convert_energy * 0.2778 * CO2e_end_arg * 0.001  # Emissions from energy use
+            money = convert_energy * end_electricity_price_tuple_arg[2]   # Cost of energy
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, convert_energy, G_emission, A, BOG_loss
+            BOG_loss = 0 # Assuming no BOG loss during the chemical conversion process itself
+            A = convert_to_H2_weight # The chemical amount is now the H2 equivalent weight
+
+            # Note: The GWP of the original chemical is not accounted for here as it's being converted,
+            # and BOG_loss from this specific process is assumed to be 0.
+            # If there were fugitive emissions of the original chemical *during conversion*,
+            # GWP_chem_list_arg would be needed.
+
+        return money, convert_energy, G_emission, A, BOG_loss
+
+    #################################### PH2 section:
 
     def PH2_pressurization_at_site_A(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
-        (PH2_storage_V_arg, numbers_of_PH2_storage_at_start_arg, PH2_pressure_fnc_helper, 
-        multistage_compress_helper, multistage_eff_arg, start_electricity_price_tuple_arg, 
-        CO2e_start_arg, start_country_name_arg, carbon_tax_per_ton_co2_dict_arg) = process_args_tuple
+        # Unpack the specific arguments this function needs from the passed-in tuple.
+        # The order of variables here MUST EXACTLY MATCH the order they are packed.
 
-        opex_money = 0
-        capex_money = 0
+        PH2_storage_V_arg, \
+        numbers_of_PH2_storage_at_start_arg, \
+        PH2_pressure_fnc_helper, \
+        multistage_compress_helper, \
+        multistage_eff_arg, \
+        start_electricity_price_tuple_arg, \
+        CO2e_start_arg = process_args_tuple
+        # Note: GWP_chem is not used in this function as leak_loss is 0.
+        # If leak_loss could be non-zero and have a GWP, GWP_chem_list_arg would be needed.
 
-        PH2_density = A / (PH2_storage_V_arg * numbers_of_PH2_storage_at_start_arg)
-        PH2_pressure = PH2_pressure_fnc_helper(PH2_density)
+        # Original logic of the function, using the unpacked '_arg' variables and helper functions
+        # Ensure B_fuel_type is 0 for PH2 pathway, otherwise density calculations might be off
+        # or PH2_storage_V might need to be an array specific to fuel type if this function
+        # were ever to be used for something other than pure H2.
+        # For now, assuming this function is only for B_fuel_type == 0 (Hydrogen).
 
-        compress_energy = multistage_compress_helper(PH2_pressure) * A / (multistage_eff_arg / 100)
+        PH2_density = A / (PH2_storage_V_arg * numbers_of_PH2_storage_at_start_arg)  # kg/m3
+        PH2_pressure = PH2_pressure_fnc_helper(PH2_density)  # bar
 
-        opex_money += start_electricity_price_tuple_arg[2] * compress_energy
-        G_emission = compress_energy * 0.2778 * CO2e_start_arg * 0.001
+        compress_energy = multistage_compress_helper(PH2_pressure) * A / (multistage_eff_arg / 100) # MJ (assuming multistage_eff is in %)
 
-        leak_loss = 0
+        money = start_electricity_price_tuple_arg[2] * compress_energy  # $
+        G_emission = compress_energy * 0.2778 * CO2e_start_arg * 0.001  # kgCO2
 
-        # Carbon Tax
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_country_name_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
+        leak_loss = 0 # As per your snippet
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, compress_energy, G_emission, A, leak_loss
+        # A (amount of chemical) does not change in this pressurization step, only its state.
+        # The 'leak_loss' is returned, which is 0.
+
+        # It's good practice to avoid print statements in functions that are part of a web backend,
+        # as they will go to the server console and not the user.
+        # For debugging, you can use app.logger.debug(f'H2 pressure...: {PH2_pressure}')
+        # print(f'H2 pressure at pressurization process at site A (bar): {PH2_pressure}')
+
+        return money, compress_energy, G_emission, A, leak_loss
 
     def PH2_site_A_to_port_A(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
-        (PH2_storage_V_arg, numbers_of_PH2_storage_at_start_arg, PH2_pressure_fnc_helper, 
-        coor_start_lat_arg, coor_start_lng_arg, start_port_lat_arg, start_port_lng_arg, 
-        straight_line_dis_helper, kinematic_viscosity_PH2_helper, compressor_velocity_arg, 
-        pipeline_diameter_arg, solve_colebrook_helper, epsilon_arg, PH2_transport_energy_helper, 
-        gas_chem_density_arg, numbers_of_PH2_storage_arg, start_electricity_price_tuple_arg, 
-        CO2e_start_arg, start_country_name_arg, carbon_tax_per_ton_co2_dict_arg) = process_args_tuple
+        # Unpack the specific arguments this function needs from the passed-in tuple.
+        # The order of variables here MUST EXACTLY MATCH the order they are packed.
 
-        opex_money = 0
-        capex_money = 0
+        PH2_storage_V_arg, \
+        numbers_of_PH2_storage_at_start_arg, \
+        PH2_pressure_fnc_helper, \
+        coor_start_lat_arg, coor_start_lng_arg, \
+        start_port_lat_arg, start_port_lng_arg, \
+        straight_line_dis_helper, \
+        kinematic_viscosity_PH2_helper, \
+        compressor_velocity_arg, \
+        pipeline_diameter_arg, \
+        solve_colebrook_helper, \
+        epsilon_arg, \
+        PH2_transport_energy_helper, \
+        gas_chem_density_arg, \
+        numbers_of_PH2_storage_arg, \
+        start_electricity_price_tuple_arg, \
+        CO2e_start_arg = process_args_tuple
+        # Note: GWP_chem is not used in this function as trans_loss is not directly tied to GWP here.
+        # If trans_loss (leakage) had a GWP impact, GWP_chem_list_arg would be needed.
 
-        PH2_density = A / (PH2_storage_V_arg * numbers_of_PH2_storage_at_start_arg)
-        PH2_pressure = PH2_pressure_fnc_helper(PH2_density)
+        # Original logic of the function, using the unpacked '_arg' variables and helper functions
+        # Assuming B_fuel_type is 0 (Hydrogen) for this PH2 specific function
 
-        L_km = straight_line_dis_helper(coor_start_lat_arg, coor_start_lng_arg, start_port_lat_arg, start_port_lng_arg)
-        L_meters = L_km * 1000
+        PH2_density = A / (PH2_storage_V_arg * numbers_of_PH2_storage_at_start_arg)  # kg/m3
+        PH2_pressure = PH2_pressure_fnc_helper(PH2_density)  # bar
+
+        # Calculate distance L using the passed coordinates and helper
+        L_km = straight_line_dis_helper(coor_start_lat_arg, coor_start_lng_arg, start_port_lat_arg, start_port_lng_arg) # km
+        L_meters = L_km * 1000 # Convert km to meters for P_drop calculation
 
         kine_vis = kinematic_viscosity_PH2_helper(PH2_pressure)
         Re = compressor_velocity_arg * pipeline_diameter_arg / kine_vis
         f_D = solve_colebrook_helper(Re, epsilon_arg, pipeline_diameter_arg)
 
-        P_drop_Pa = L_meters * f_D * PH2_density * (compressor_velocity_arg**2) / (2 * pipeline_diameter_arg)
-        P_drop_bar = P_drop_Pa / 100000
+        # Pressure drop calculation using L_meters
+        P_drop_Pa = L_meters * f_D * PH2_density * (compressor_velocity_arg**2) / (2 * pipeline_diameter_arg) # Pa
+        P_drop_bar = P_drop_Pa / 100000  # bar
 
-        ener_consumed = PH2_transport_energy_helper(L_km) * A
+        # Pumping power and energy (commented out in your snippet, but calculations shown)
+        # pipe_area = np.pi * (pipeline_diameter_arg**2) / 4
+        # pumping_power_watts = P_drop_Pa * compressor_velocity_arg * pipe_area # Watts
+        # duration_seconds = A / PH2_density / pipe_area / compressor_velocity_arg # seconds
+        # pumping_ener_MJ = pumping_power_watts * duration_seconds / 1000000 # MJ
+        # print('pumping energy (calculated from P_drop): ',pumping_ener_MJ)
+
+        ener_consumed = PH2_transport_energy_helper(L_km) * A  # MJ (assuming PH2_transport_energy takes km)
         final_P_PH2 = PH2_pressure - P_drop_bar
 
+        # Ensure final pressure is not negative
         if final_P_PH2 < 0:
-            final_P_PH2 = 0
+            final_P_PH2 = 0 # Or handle as an error indicating insufficient initial pressure
+            # This would also affect final_PH2_density and A_final
 
-        final_PH2_density = PH2_density_fnc_helper(final_P_PH2)
-        A_final = final_PH2_density * PH2_storage_V_arg * numbers_of_PH2_storage_arg
+        final_PH2_density = PH2_density_fnc_helper(final_P_PH2) # Helper for density from pressure
+        A_final = final_PH2_density * PH2_storage_V_arg * numbers_of_PH2_storage_arg # Using the general numbers_of_PH2_storage
+
+        # Ensure A_final is not greater than A (can happen if P_drop is negative due to issues)
         A_final = min(A, A_final) if final_P_PH2 > 0 else 0
 
         trans_loss = A - A_final
-        if trans_loss < 0: trans_loss = 0
+        if trans_loss < 0: trans_loss = 0 # Loss cannot be negative
 
-        opex_money += start_electricity_price_tuple_arg[2] * ener_consumed
+        money = start_electricity_price_tuple_arg[2] * ener_consumed
         G_emission = ener_consumed * 0.2778 * CO2e_start_arg * 0.001
 
-        # Carbon Tax
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_country_name_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
+        # print(f'PH2 site A to port A - P_drop (bar): {P_drop_bar}')
+        # print(f'PH2 site A to port A - final pressure at port A (bar): {final_P_PH2}')
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, ener_consumed, G_emission, A_final, trans_loss
+        return money, ener_consumed, G_emission, A_final, trans_loss
 
     def port_A_liquification(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
-        (liquification_data_fitting_helper, LH2_plant_capacity_arg, EIM_liquefication_arg, 
-        start_port_electricity_price_tuple_arg, CO2e_start_arg, calculate_liquefaction_capex_helper_arg,
-        start_port_country_name_arg, carbon_tax_per_ton_co2_dict_arg) = process_args_tuple
+        # Unpack the specific arguments this function needs from the passed-in tuple.
+        # The order of variables here MUST EXACTLY MATCH the order they are packed.
 
-        opex_money = 0
-        capex_money = 0
+        liquification_data_fitting_helper, \
+        LH2_plant_capacity_arg, \
+        EIM_liquefication_arg, \
+        start_port_electricity_price_tuple_arg, \
+        CO2e_start_arg = process_args_tuple
+        # Note: GWP_chem is not used in your snippet for this function's emission calculation,
+        # as BOG_loss is calculated but not explicitly added to G_emission with its GWP factor.
+        # Also, 'A' is returned without BOG_loss being subtracted from it in your snippet.
+
+        # Original logic of the function, using the unpacked '_arg' variables and helper functions
+        # This function is specific to B_fuel_type == 0 (Hydrogen) being liquefied.
 
         if B_fuel_type != 0:
-            return 0, 0, 0, 0, A, 0
+            # This function is intended for liquefying H2 that arrived as gas.
+            # If the chemical is not H2, this step might be different or skipped.
+            # Returning zero impact if called with non-H2 for safety.
+            return 0, 0, 0, A, 0
 
-        LH2_energy_required = liquification_data_fitting_helper(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
-        LH2_ener_consumed = LH2_energy_required * A
+        LH2_energy_required = liquification_data_fitting_helper(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)  # MJ/kg
+        LH2_ener_consumed = LH2_energy_required * A  # MJ
 
-        opex_money += LH2_ener_consumed * start_port_electricity_price_tuple_arg[2]
-        
-        # CAPEX
-        capex_per_kg = calculate_liquefaction_capex_helper_arg(B_fuel_type, LH2_plant_capacity_arg) # Order matters here
-        capex_money += capex_per_kg * A
+        # Using electricity price at Port A
+        LH2_money = LH2_ener_consumed * start_port_electricity_price_tuple_arg[2]  # $
 
-        G_emission = LH2_ener_consumed * 0.2778 * CO2e_start_arg * 0.001
+        # Using CO2e at Port A (assuming CO2e_start is representative of Port A's grid,
+        # or you might have a CO2e_port_A variable if it's different)
+        G_emission = LH2_ener_consumed * 0.2778 * CO2e_start_arg * 0.001  # kgCO2
 
-        BOG_loss = 0.016 * A
+        BOG_loss = 0.016 * A  # kg; ref [11] page 21
 
-        # Carbon Tax
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_port_country_name_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
+        # In your snippet, 'A' (the amount of chemical) is NOT reduced by BOG_loss in the return.
+        # The BOG_loss is calculated and returned, but the original amount 'A' is passed through.
+        # If A should be reduced, it would be: A_after_loss = A - BOG_loss, then return A_after_loss.
+        # Also, G_emission does not include GWP of BOG_loss here.
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, LH2_ener_consumed, G_emission, A, BOG_loss
+        return LH2_money, LH2_ener_consumed, G_emission, A, BOG_loss
 
     def H2_pressurization_at_port_B(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
-        (latent_H_H2_arg, specific_heat_H2_arg, PH2_storage_V_arg, 
-        numbers_of_PH2_storage_arg, PH2_pressure_fnc_helper, multistage_compress_helper, 
-        multistage_eff_arg, end_port_electricity_price_tuple_arg, CO2e_end_arg,
-        end_port_country_name_arg, carbon_tax_per_ton_co2_dict_arg) = process_args_tuple
+        # Unpack the specific arguments this function needs from the passed-in tuple.
+        # The order of variables here MUST EXACTLY MATCH the order they are packed.
 
-        opex_money = 0
-        capex_money = 0
+        latent_H_H2_arg, \
+        specific_heat_H2_arg, \
+        PH2_storage_V_arg, \
+        numbers_of_PH2_storage_arg, \
+        PH2_pressure_fnc_helper, \
+        multistage_compress_helper, \
+        multistage_eff_arg, \
+        end_port_electricity_price_tuple_arg, \
+        CO2e_end_arg = process_args_tuple
+        # Note: GWP_chem is not used in this function as leak_loss is 0.
+        # If leak_loss could be non-zero and have a GWP, GWP_chem_list_arg would be needed.
+
+        # Original logic of the function, using the unpacked '_arg' variables and helper functions
+        # This function is specific to B_fuel_type == 0 (Hydrogen).
 
         if B_fuel_type != 0:
-            return 0, 0, 0, 0, A, 0
+            # This function is intended for pressurizing H2.
+            # If the chemical is not H2, this step is likely irrelevant.
+            # Returning zero impact if called with non-H2 for safety.
+            return 0, 0, 0, A, 0
 
-        Q_latent = latent_H_H2_arg * A
-        Q_sensible = A * specific_heat_H2_arg * (300 - 20)
+        # Energy for vaporization (if input A is liquid H2 at its boiling point)
+        Q_latent = latent_H_H2_arg * A  # MJ
+        # Energy to raise temperature from boiling point (approx 20K for H2) to 300K (approx 27C)
+        # Assuming input A is at boiling point after vaporization.
+        # The (300-20) implies heating from 20K to 300K.
+        Q_sensible = A * specific_heat_H2_arg * (300 - 20)  # MJ
 
-        PH2_density = A / (PH2_storage_V_arg * numbers_of_PH2_storage_arg)
-        PH2_pressure = PH2_pressure_fnc_helper(PH2_density)
+        # Density and pressure calculation for compression
+        # This assumes 'A' is now gaseous H2 at some initial (likely low) pressure post-vaporization
+        # and the PH2_storage_V is for the compressed gas.
+        # If A is the mass of H2, then PH2_density is mass/volume.
+        # This part might need adjustment based on the state of A entering this compression stage.
+        # For now, assuming A is mass of H2 gas at some initial state to be compressed into storage.
+        PH2_density = A / (PH2_storage_V_arg * numbers_of_PH2_storage_arg)  # kg/m3
+        PH2_pressure = PH2_pressure_fnc_helper(PH2_density)  # bar
 
-        compress_energy = multistage_compress_helper(PH2_pressure) * A / (multistage_eff_arg / 100)
+        compress_energy = multistage_compress_helper(PH2_pressure) * A / (multistage_eff_arg / 100)  # MJ (assuming multistage_eff is in %)
 
         total_energy_consumed = compress_energy + Q_latent + Q_sensible
 
-        opex_money += end_port_electricity_price_tuple_arg[2] * total_energy_consumed
-        G_emission = total_energy_consumed * 0.2778 * CO2e_end_arg * 0.001
+        # Using electricity price at Port B
+        money = end_port_electricity_price_tuple_arg[2] * total_energy_consumed  # $
 
-        leak_loss = 0
+        # Using CO2e at Port B (end location)
+        G_emission = total_energy_consumed * 0.2778 * CO2e_end_arg * 0.001  # kgCO2
 
-        # Carbon Tax
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(end_port_country_name_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
+        leak_loss = 0  # As per your snippet
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, total_energy_consumed, G_emission, A, leak_loss
+        # 'A' (amount of chemical) does not change by mass in this pressurization step,
+        # only its state (temperature and pressure).
+        # The 'leak_loss' is returned, which is 0.
+
+        # print(f'H2 pressure at pressurization process at port B (bar): {PH2_pressure}')
+
+        return money, total_energy_consumed, G_emission, A, leak_loss
 
     def PH2_port_B_to_site_B(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
-        (PH2_density_fnc_helper, target_pressure_site_B_arg, PH2_storage_V_arg, 
-        numbers_of_PH2_storage_at_port_B_arg, PH2_pressure_fnc_helper, 
-        end_port_lat_arg, end_port_lng_arg, coor_end_lat_arg, coor_end_lng_arg, 
-        straight_line_dis_helper, kinematic_viscosity_PH2_helper, compressor_velocity_arg, 
-        pipeline_diameter_arg, solve_colebrook_helper, epsilon_arg, PH2_transport_energy_helper, 
-        end_port_electricity_price_tuple_arg, CO2e_end_arg, end_country_name_arg, carbon_tax_per_ton_co2_dict_arg) = process_args_tuple
+        # Unpack the specific arguments this function needs from the passed-in tuple.
+        # The order of variables here MUST EXACTLY MATCH the order they are packed.
 
-        opex_money = 0
-        capex_money = 0
+        PH2_density_fnc_helper, \
+        target_pressure_site_B_arg, \
+        PH2_storage_V_arg, \
+        numbers_of_PH2_storage_at_port_B_arg, \
+        PH2_pressure_fnc_helper, \
+        end_port_lat_arg, end_port_lng_arg, \
+        coor_end_lat_arg, coor_end_lng_arg, \
+        straight_line_dis_helper, \
+        kinematic_viscosity_PH2_helper, \
+        compressor_velocity_arg, \
+        pipeline_diameter_arg, \
+        solve_colebrook_helper, \
+        epsilon_arg, \
+        PH2_transport_energy_helper, \
+        end_port_electricity_price_tuple_arg, \
+        CO2e_end_arg = process_args_tuple
+        # Note: GWP_chem is not used as trans_loss GWP impact isn't explicitly calculated here.
+        #       numbers_of_PH2_storage_at_port_B_arg is assumed for calculating initial density/pressure at Port B.
+        #       Your snippet had 'numbers_of_PH2_storage' for final density, I'll assume it's the same
+        #       unless a different 'numbers_of_PH2_storage_at_site_B' is intended and passed.
+
+        # Original logic of the function, using the unpacked '_arg' variables and helper functions
+        # This function is specific to B_fuel_type == 0 (Hydrogen).
 
         if B_fuel_type != 0:
-            return 0, 0, 0, 0, A, 0
+            return 0, 0, 0, A, 0 # Should not be called for non-H2
 
+        # Calculate initial conditions at Port B for pipeline transport
+        # Assuming 'A' is the mass of H2 in storage at Port B
         initial_PH2_density_at_port_B = A / (PH2_storage_V_arg * numbers_of_PH2_storage_at_port_B_arg)
         initial_PH2_pressure_at_port_B = PH2_pressure_fnc_helper(initial_PH2_density_at_port_B)
 
-        L_km = straight_line_dis_helper(end_port_lat_arg, end_port_lng_arg, coor_end_lat_arg, coor_end_lng_arg)
-        L_meters = L_km * 1000
+        # Calculate pipeline length (L)
+        L_km = straight_line_dis_helper(end_port_lat_arg, end_port_lng_arg, coor_end_lat_arg, coor_end_lng_arg) # km
+        L_meters = L_km * 1000 # meters
 
-        kine_vis = kinematic_viscosity_PH2_helper(initial_PH2_pressure_at_port_B)
+        kine_vis = kinematic_viscosity_PH2_helper(initial_PH2_pressure_at_port_B) # Use initial pressure at Port B
         Re = compressor_velocity_arg * pipeline_diameter_arg / kine_vis
         f_D = solve_colebrook_helper(Re, epsilon_arg, pipeline_diameter_arg)
 
-        P_drop_Pa = L_meters * f_D * initial_PH2_density_at_port_B * (compressor_velocity_arg**2) / (2 * pipeline_diameter_arg)
-        P_drop_bar = P_drop_Pa / 100000
+        # Pressure drop calculation using initial density at Port B
+        P_drop_Pa = L_meters * f_D * initial_PH2_density_at_port_B * (compressor_velocity_arg**2) / (2 * pipeline_diameter_arg) # Pa
+        P_drop_bar = P_drop_Pa / 100000  # bar
 
-        ener_consumed = PH2_transport_energy_helper(L_km) * A
+        # Commented out pumping power calculation from your snippet
+        # pipe_area = np.pi * (pipeline_diameter_arg**2) / 4
+        # pumping_power_watts = P_drop_Pa * compressor_velocity_arg * pipe_area
+        # duration_seconds = A / initial_PH2_density_at_port_B / pipe_area / compressor_velocity_arg
+        # pumping_ener_MJ = pumping_power_watts * duration_seconds / 1000000
+        # print('pumping energy (calculated from P_drop): ', pumping_ener_MJ)
+
+        ener_consumed = PH2_transport_energy_helper(L_km) * A  # MJ (assuming PH2_transport_energy takes km)
 
         final_P_PH2_at_site_B = initial_PH2_pressure_at_port_B - P_drop_bar
 
+        # Ensure final pressure is not negative
         if final_P_PH2_at_site_B < 0:
             final_P_PH2_at_site_B = 0
 
-        A_final = A
-        if final_P_PH2_at_site_B <= 0:
+        # Density at Site B based on the actual final pressure after pipeline transport
+        final_PH2_density_at_site_B = PH2_density_fnc_helper(final_P_PH2_at_site_B)
+
+        # Your snippet calculates numbers_of_PH2_storage based on target_pressure_site_B.
+        # This seems to be for sizing destination storage, let's retain that part for A_final.
+        # However, the actual A_final should be based on what's physically left.
+        target_density_at_site_B = PH2_density_fnc_helper(target_pressure_site_B_arg)
+        # If using a fixed number of storage units at Site B (e.g., numbers_of_PH2_storage_arg for Site B)
+        # then A_final would be:
+        # A_final = final_PH2_density_at_site_B * PH2_storage_V_arg * numbers_of_PH2_storage_at_site_B_arg (if passed)
+        # For now, let's assume the number of storage units at site B is flexible to hold A at target density,
+        # or that A_final is determined by the final density in the available total storage volume.
+
+        # The crucial part is that the mass A does not change due to pressure drop, only its density/pressure.
+        # Transport loss here implies leakage, which is not explicitly calculated in P_drop.
+        # If PH2_transport_energy_helper already accounts for energy for re-compression to overcome P_drop
+        # and fugitive losses, then trans_loss might be a fixed percentage or part of that helper.
+        # For now, let's assume trans_loss represents unrecoverable gas due to pressure becoming too low,
+        # or actual leakage. If pressure is 0, all is lost for practical purposes.
+
+        A_final = A # Assuming no mass loss unless pressure drops to zero
+        if final_P_PH2_at_site_B <= 0: # If pressure drops too much, assume unusable
             A_final = 0
 
         trans_loss = A - A_final
         if trans_loss < 0: trans_loss = 0
 
-        opex_money += end_port_electricity_price_tuple_arg[2] * ener_consumed
+        # Cost of energy for transport (e.g., for intermediate compressors if PH2_transport_energy represents this)
+        # Using electricity price at Port B (origin of this pipeline segment)
+        money = end_port_electricity_price_tuple_arg[2] * ener_consumed
+
+        # Emissions from energy consumption for transport
         G_emission = ener_consumed * 0.2778 * CO2e_end_arg * 0.001
 
-        # Carbon Tax
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
+        # print(f'PH2 port B to site B - P_drop (bar): {P_drop_bar}')
+        # print(f'PH2 port B to site B - final pressure at site B (bar): {final_P_PH2_at_site_B}')
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, ener_consumed, G_emission, A_final, trans_loss
+        return money, ener_consumed, G_emission, A_final, trans_loss
 
     def PH2_storage_at_site_B(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
-        (PH2_storage_V_at_site_B_arg, numbers_of_PH2_storage_at_site_B_arg, PH2_pressure_fnc_helper,
-        end_country_name_arg, carbon_tax_per_ton_co2_dict_arg) = process_args_tuple
+        # Unpack the specific arguments this function needs from the passed-in tuple.
+        # The order of variables here MUST EXACTLY MATCH the order they are packed.
 
-        opex_money = 0
-        capex_money = 0
+        PH2_storage_V_at_site_B_arg, \
+        numbers_of_PH2_storage_at_site_B_arg, \
+        PH2_pressure_fnc_helper = process_args_tuple
+        # Note: No other parameters like electricity price, CO2e, GWP are needed
+        # as this function, per your snippet, has no associated operational costs or emissions.
+
+        # Original logic of the function, using the unpacked '_arg' variables and helper functions
+        # This function is specific to B_fuel_type == 0 (Hydrogen).
 
         if B_fuel_type != 0:
-            return 0, 0, 0, 0, A, 0
+            # This function is for PH2 storage.
+            # If the chemical is not H2, this step is likely irrelevant or different.
+            return 0, 0, 0, A, 0 # Return zero impact
 
+        # Calculate density and pressure based on the amount A and Site B storage configuration
+        # Ensure PH2_storage_V_at_site_B_arg and numbers_of_PH2_storage_at_site_B_arg are positive
         if PH2_storage_V_at_site_B_arg <= 0 or numbers_of_PH2_storage_at_site_B_arg <= 0:
+            # Handle error or set default pressure if storage volume/number is invalid
             PH2_density = 0
             PH2_pressure = 0
+            # Or raise an error: raise ValueError("Storage volume and number must be positive.")
         else:
-            PH2_density = A / (PH2_storage_V_at_site_B_arg * numbers_of_PH2_storage_at_site_B_arg)
-            PH2_pressure = PH2_pressure_fnc_helper(PH2_density)
+            PH2_density = A / (PH2_storage_V_at_site_B_arg * numbers_of_PH2_storage_at_site_B_arg)  # kg/m3
+            PH2_pressure = PH2_pressure_fnc_helper(PH2_density)  # bar
 
+        # As per your snippet, this step has no operational costs, energy, or emissions.
+        money = 0
         ener_consumed = 0
         G_emission = 0
-        BOG_loss = 0
+        BOG_loss = 0 # Assuming BOG_loss is specific to a storage *duration*, which isn't a factor here,
+                    # or that this function just notes the state, not losses over time.
 
-        # Carbon Tax (if any emissions from storage, though typically zero for PH2)
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
+        # The amount of chemical A does not change in this state-defining step.
+        # Any losses would have occurred in previous transport or timed storage steps.
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, ener_consumed, G_emission, A, BOG_loss
+        # print(f'PH2 pressure at final storage at site B (bar): {PH2_pressure}')
 
+        return money, ener_consumed, G_emission, A, BOG_loss
     def optimization_chem_weight(A_initial_guess, args_for_optimizer_tuple):
-        user_define_params, process_funcs_for_optimization, all_shared_params_tuple = args_for_optimizer_tuple
+        # Unpack the main arguments bundle passed from minimize
+        user_define_params, \
+        process_funcs_for_optimization, \
+        all_shared_params_tuple = args_for_optimizer_tuple
 
-        (LH2_plant_capacity_opt, EIM_liquefication_opt, specific_heat_chem,
-        start_local_temperature_opt, boiling_point_chem, latent_H_chem,
-        COP_liq, start_electricity_price_opt, CO2e_start_opt, GWP_chem,
-        V_flowrate, number_of_cryo_pump_load_truck_site_A_opt,
-        number_of_cryo_pump_load_storage_port_A_opt, number_of_cryo_pump_load_ship_port_A_opt,
-        dBOR_dT, BOR_loading, BOR_unloading, head_pump_opt, pump_power_factor_opt,
-        EIM_cryo_pump_opt, ss_therm_cond_opt, pipe_length_opt, pipe_inner_D_opt,
-        pipe_thick_opt, COP_refrig, EIM_refrig_eff_opt, pipe_metal_specific_heat, COP_cooldown,
-        road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy,
-        truck_tank_radius_opt, truck_tank_length_opt, truck_tank_metal_thickness_opt,
-        metal_thermal_conduct_opt, truck_tank_insulator_thickness_opt, insulator_thermal_conduct_opt,
-        OHTC_ship, BOR_truck_trans, HHV_diesel_opt, diesel_engine_eff_opt,
-        EIM_truck_eff_opt, diesel_density_opt, CO2e_diesel_opt,
-        BOG_recirculation_truck_opt, fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem,
-        storage_time_A_opt, liquid_chem_density, storage_volume, storage_radius,
-        BOR_land_storage, tank_metal_thickness_opt, tank_insulator_thickness_opt,
-        BOG_recirculation_storage_opt, distance_A_to_port, duration_A_to_port,
-        diesel_price_start_opt, driver_daily_salary_start_opt, annual_working_days_opt,
-        calculate_liquefaction_capex_helper_opt, calculate_loading_unloading_capex_helper_opt,
-        calculate_storage_capex_helper_opt, truck_capex_params_opt,
-        maintenance_cost_per_km_truck_opt, maintenance_cost_per_km_ship_opt,
-        insurance_percentage_of_cargo_value_opt, hydrogen_production_cost_opt,
-        start_country_name_opt, start_port_country_name_opt, carbon_tax_per_ton_co2_dict_opt, # This is carbon_tax_per_ton_co2_dict_opt
-        port_regions_opt # Added port_regions_opt here
+        # Unpack ALL shared parameters that ANY of the first 7 functions might need.
+        # The order here MUST MATCH how they were packed into all_shared_params_tuple
+        # in run_lca_model.
+        (LH2_plant_capacity_opt, # Scalar
+        EIM_liquefication_opt, # Scalar
+        specific_heat_chem, # List
+        start_local_temperature_opt, # Scalar
+        boiling_point_chem, # List
+        latent_H_chem, # List
+        COP_liq, # List
+        start_electricity_price_opt, # Tuple (holds (lat, lon, price))
+        CO2e_start_opt, # Scalar
+        GWP_chem, # List
+        V_flowrate, # List
+        number_of_cryo_pump_load_truck_site_A_opt, # Scalar
+        number_of_cryo_pump_load_storage_port_A_opt, # Scalar
+        number_of_cryo_pump_load_ship_port_A_opt, # Scalar
+        dBOR_dT, # List
+        BOR_loading, # List
+        BOR_unloading, # List
+        head_pump_opt, # Scalar
+        pump_power_factor_opt, # Scalar
+        EIM_cryo_pump_opt, # Scalar
+        ss_therm_cond_opt, # Scalar
+        pipe_length_opt, # Scalar
+        pipe_inner_D_opt, # Scalar
+        pipe_thick_opt, # Scalar
+        COP_refrig, # List
+        EIM_refrig_eff_opt, # Scalar
+        pipe_metal_specific_heat, # Scalar
+        COP_cooldown, # List
+        road_delivery_ener, # List
+        HHV_chem, # List
+        chem_in_truck_weight, # List
+        truck_economy, # List
+        truck_tank_radius_opt, # Scalar
+        truck_tank_length_opt, # Scalar
+        truck_tank_metal_thickness_opt, # Scalar
+        metal_thermal_conduct_opt, # Scalar
+        truck_tank_insulator_thickness_opt, # Scalar
+        insulator_thermal_conduct_opt, # Scalar
+        OHTC_ship, # List
+        BOR_truck_trans, # List
+        HHV_diesel_opt, # Scalar
+        diesel_engine_eff_opt, # Scalar
+        EIM_truck_eff_opt, # Scalar
+        diesel_density_opt, # Scalar
+        CO2e_diesel_opt, # Scalar
+        BOG_recirculation_truck_opt, # Scalar
+        fuel_cell_eff_opt, # Scalar
+        EIM_fuel_cell_opt, # Scalar
+        LHV_chem, # List
+        storage_time_A_opt, # Scalar
+        liquid_chem_density, # List
+        storage_volume, # List
+        storage_radius, # List
+        BOR_land_storage, # List
+        tank_metal_thickness_opt, # Scalar
+        tank_insulator_thickness_opt, # Scalar
+        BOG_recirculation_storage_opt, # Scalar
+        distance_A_to_port_opt, # Scalar
+        duration_A_to_port_opt, # Scalar
+        diesel_price_start_opt, # Scalar
+        driver_daily_salary_start_opt, # Scalar
+        annual_working_days_opt # Scalar
         ) = all_shared_params_tuple
-        X = A_initial_guess[0]
+        X = A_initial_guess[0]  # Current chemical weight being optimized
 
+        # Loop through the first 7 process functions
         for func_entry in process_funcs_for_optimization:
             func_to_call = func_entry
-            leg_type = None
-            transfer_context = None
-            storage_location_type = None
+            leg_type = None # For road transport
+            transfer_context = None # For pump transfer
+            storage_location_type = None # For storage
 
             if isinstance(func_entry, tuple):
                 func_to_call, context_type = func_entry
@@ -1103,94 +1210,93 @@ def run_lca_model(inputs):
                 elif func_to_call.__name__ == "fuel_storage":
                     storage_location_type = context_type
 
+
             process_args_for_current_func = ()
 
             if func_to_call.__name__ == "site_A_chem_production":
-                process_args_for_current_func = (GWP_chem, insurance_percentage_of_cargo_value_opt, hydrogen_production_cost_opt, start_country_name_opt, carbon_tax_per_ton_co2_dict_opt)
+                process_args_for_current_func = (GWP_chem,)
 
             elif func_to_call.__name__ == "site_A_chem_liquification":
                 process_args_for_current_func = (
-                    LH2_plant_capacity_opt, EIM_liquefication_opt, specific_heat_chem,
-                    start_local_temperature_opt, boiling_point_chem, latent_H_chem,
-                    COP_liq, start_electricity_price_opt, CO2e_start_opt, GWP_chem,
-                    calculate_liquefaction_capex_helper_opt, start_country_name_opt, carbon_tax_per_ton_co2_dict_opt
+                    LH2_plant_capacity_opt, EIM_liquefication_opt, specific_heat_chem, # Changed from specific_heat_chem_opt
+                    start_local_temperature, boiling_point_chem, latent_H_chem, # Changed from boiling_point_chem_opt, latent_H_chem_opt
+                    COP_liq, start_electricity_price_opt, CO2e_start_opt, GWP_chem # Changed from COP_liq_opt, GWP_chem_opt
                 )
 
-            elif func_to_call.__name__ == "fuel_pump_transfer":
-                country_for_transfer = start_country_name_opt # Default for optimizer's scope
+            elif func_to_call.__name__ == "fuel_pump_transfer": # NEW: Unified pump transfer
+                # Parameters for this function vary based on transfer_context
+                # Only 'siteA_to_truck' and 'portA_to_storage' are in the optimization path
                 if transfer_context == 'siteA_to_truck':
                     process_args_for_current_func = (
-                        V_flowrate, number_of_cryo_pump_load_truck_site_A_opt,
-                        dBOR_dT, BOR_loading,
-                        liquid_chem_density, head_pump_opt, pump_power_factor_opt,
+                        V_flowrate, # Changed from V_flowrate_opt
+                        number_of_cryo_pump_load_truck_site_A_opt,
+                        dBOR_dT, BOR_loading, # Changed from dBOR_dT_opt, BOR_loading_opt
+                        liquid_chem_density, head_pump_opt, pump_power_factor_opt, # Changed from liquid_chem_density_opt
                         EIM_cryo_pump_opt, ss_therm_cond_opt, pipe_length_opt,
-                        pipe_inner_D_opt, pipe_thick_opt, COP_refrig, EIM_refrig_eff_opt,
-                        start_electricity_price_opt, CO2e_start_opt, GWP_chem,
-                        start_local_temperature_opt, calculate_loading_unloading_capex_helper_opt,
-                        country_for_transfer, carbon_tax_per_ton_co2_dict_opt
+                        pipe_inner_D_opt, pipe_thick_opt, COP_refrig, EIM_refrig_eff_opt, # Changed from COP_refrig_opt
+                        start_electricity_price_opt, CO2e_start_opt, GWP_chem, # Changed from GWP_chem_opt
+                        start_local_temperature_opt
                     )
                 elif transfer_context == 'portA_to_storage':
-                    country_for_transfer = start_port_country_name_opt
                     process_args_for_current_func = (
-                        V_flowrate, number_of_cryo_pump_load_storage_port_A_opt,
-                        dBOR_dT, BOR_unloading,
-                        liquid_chem_density, head_pump_opt, pump_power_factor_opt,
+                        V_flowrate, # Changed from V_flowrate_opt
+                        number_of_cryo_pump_load_storage_port_A_opt,
+                        dBOR_dT, BOR_unloading, # Changed from dBOR_dT_opt, BOR_unloading_opt
+                        liquid_chem_density, head_pump_opt, pump_power_factor_opt, # Changed from liquid_chem_density_opt
                         EIM_cryo_pump_opt, ss_therm_cond_opt, pipe_length_opt,
-                        pipe_inner_D_opt, pipe_thick_opt, COP_refrig, EIM_refrig_eff_opt,
-                        start_electricity_price_opt, CO2e_start_opt, GWP_chem,
-                        start_local_temperature_opt, calculate_loading_unloading_capex_helper_opt,
-                        country_for_transfer, carbon_tax_per_ton_co2_dict_opt
+                        pipe_inner_D_opt, pipe_thick_opt, COP_refrig, EIM_refrig_eff_opt, # Changed from COP_refrig_opt
+                        start_electricity_price_opt, CO2e_start_opt, GWP_chem, # Changed from GWP_chem_opt
+                        start_local_temperature_opt
                     )
             elif func_to_call.__name__ == "fuel_road_transport":
-                country_for_road = start_country_name_opt # Default for optimizer's scope
                 process_args_for_current_func = (
-                    road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy,
-                    distance_A_to_port, HHV_diesel_opt, diesel_density_opt,
-                    diesel_price_start_opt, truck_tank_radius_opt, truck_tank_length_opt,
-                    truck_tank_metal_thickness_opt, metal_thermal_conduct_opt,
-                    truck_tank_insulator_thickness_opt, insulator_thermal_conduct_opt,
-                    OHTC_ship, start_local_temperature_opt, COP_refrig,
-                    EIM_refrig_eff_opt, duration_A_to_port, dBOR_dT,
-                    BOR_truck_trans, diesel_engine_eff_opt, EIM_truck_eff_opt,
-                    CO2e_diesel_opt, GWP_chem,
+                    road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, # Changed from _opt for all these
+                    distance_A_to_port, HHV_diesel, diesel_density,
+                    diesel_price_start, truck_tank_radius, truck_tank_length,
+                    truck_tank_metal_thickness, metal_thermal_conduct,
+                    truck_tank_insulator_thickness, insulator_thermal_conduct,
+                    OHTC_ship, start_local_temperature, COP_refrig, # Changed from OHTC_ship_opt, COP_refrig_opt
+                    EIM_refrig_eff, duration_A_to_port, dBOR_dT, # Changed from dBOR_dT_opt
+                    BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, # Changed from BOR_truck_trans_opt
+                    CO2e_diesel, GWP_chem, # Changed from GWP_chem_opt
                     BOG_recirculation_truck_opt,
                     LH2_plant_capacity_opt, EIM_liquefication_opt,
-                    fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem,
-                    driver_daily_salary_start_opt, annual_working_days_opt,
-                    maintenance_cost_per_km_truck_opt, truck_capex_params_opt,
-                    country_for_road, carbon_tax_per_ton_co2_dict_opt
+                    fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem, # Changed from LHV_chem_opt
+                    driver_daily_salary_start_opt, annual_working_days_opt
                 )
 
             elif func_to_call.__name__ == "fuel_storage":
-                country_for_storage = start_port_country_name_opt # Default for optimizer's scope
                 process_args_for_current_func = (
-                    liquid_chem_density, storage_volume, dBOR_dT,
-                    start_local_temperature_opt,
-                    BOR_land_storage, storage_time_A_opt, storage_radius, tank_metal_thickness_opt,
+                    liquid_chem_density, storage_volume, dBOR_dT, # Changed from _opt
+                    start_local_temperature_opt, # <--- CORRECTED POSITION IN OPTIMIZER
+                    BOR_land_storage, storage_time_A_opt, storage_radius, tank_metal_thickness_opt, # Changed from _opt
                     metal_thermal_conduct_opt, tank_insulator_thickness_opt, insulator_thermal_conduct_opt,
-                    COP_refrig, EIM_refrig_eff_opt, start_electricity_price_opt,
-                    CO2e_start_opt, GWP_chem,
+                    COP_refrig, EIM_refrig_eff_opt, start_electricity_price_opt, # Changed from COP_refrig_opt
+                    CO2e_start_opt, GWP_chem, # Changed from GWP_chem_opt
                     BOG_recirculation_storage_opt,
                     LH2_plant_capacity_opt, EIM_liquefication_opt,
-                    fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem,
-                    calculate_storage_capex_helper_opt, country_for_storage, carbon_tax_per_ton_co2_dict_opt
+                    fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem # Changed from LHV_chem_opt
                 )
 
             elif func_to_call.__name__ == "chem_loading_to_ship":
                 process_args_for_current_func = (
-                    V_flowrate, number_of_cryo_pump_load_ship_port_A_opt, dBOR_dT,
-                    start_local_temperature_opt, BOR_loading, liquid_chem_density, head_pump_opt,
+                    V_flowrate, number_of_cryo_pump_load_ship_port_A_opt, dBOR_dT, # Changed from V_flowrate_opt, dBOR_dT_opt
+                    start_local_temperature_opt, BOR_loading, liquid_chem_density, head_pump_opt, # Changed from BOR_loading_opt, liquid_chem_density_opt
                     pump_power_factor_opt, EIM_cryo_pump_opt, ss_therm_cond_opt, pipe_length_opt, pipe_inner_D_opt,
-                    pipe_thick_opt, boiling_point_chem, EIM_refrig_eff_opt, start_electricity_price_opt,
-                    CO2e_start_opt, GWP_chem, storage_area, ship_tank_metal_thickness,
+                    pipe_thick_opt, boiling_point_chem, EIM_refrig_eff_opt, start_electricity_price_opt, # Changed from boiling_point_chem_opt
+                    CO2e_start_opt, GWP_chem, storage_area, ship_tank_metal_thickness, # Changed from GWP_chem_opt
                     ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density,
                     ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat,
-                    COP_cooldown, COP_refrig, ship_number_of_tanks, pipe_metal_specific_heat,
-                    calculate_loading_unloading_capex_helper_opt, start_country_name_opt, carbon_tax_per_ton_co2_dict_opt
+                    COP_cooldown, COP_refrig, ship_number_of_tanks, pipe_metal_specific_heat # Changed from COP_cooldown_opt, COP_refrig_opt
                 )
-            
             # Call the current process function with its tailored arguments
-            opex_m, capex_m, Y_energy, Z_emission, X, S_bog_loss = func_to_call(X,
+            # user_define_params[0] is the initial placeholder for chem_weight (or target_weight later)
+            # user_define_params[1] is B_fuel_type
+            # user_define_params[2] is C_recirculation_BOG
+            # user_define_params[3] is D_truck_apply
+            # user_define_params[4] is E_storage_apply
+            # user_define_params[5] is F_maritime_apply
+            _, _, _, X, _ = func_to_call(X,
                                         user_define_params[1],
                                         user_define_params[2],
                                         user_define_params[3],
@@ -1198,47 +1304,53 @@ def run_lca_model(inputs):
                                         user_define_params[5],
                                         process_args_for_current_func)
 
+        # target_weight is accessible from the enclosing run_lca_model scope
         return abs(X - target_weight)
 
     def constraint(A):
         """Ensures the optimized weight is not less than the target weight."""
-        return A[0] - target_weight
+        return A[0] - target_weight # This must be >= 0
 
-    def calculate_liquefaction_capex(fuel_type, capacity_tpd): # Corrected order of arguments
+    def calculate_liquefaction_capex(capacity_tpd, fuel_type):
         """
         Estimates the amortized capital cost per kg for liquefaction of hydrogen, ammonia, or methanol.
         Source: Based on industry data for hydrogen and ammonia liquefaction costs; methanol assumed zero.
         Parameters:
-            fuel_type: 0 for hydrogen, 1 for ammonia, 2 for methanol
             capacity_tpd: Daily throughput in tons
+            fuel_type: 0 for hydrogen, 1 for ammonia, 2 for methanol
         Returns:
             Amortized CAPEX per kg in USD
         """
+        # Cost models for different fuels
         cost_models = {
-            0: {
-                "small_scale": {"base_capex_M_usd": 138.6, "base_capacity": 27, "power_law_exp": 0.66},
-                "large_scale": {"base_capex_M_usd": 762.67, "base_capacity": 800, "power_law_exp": 0.62}
+            0: {  # Hydrogen
+                "small_scale": {"base_capex_M_usd": 138.6, "base_capacity": 27, "power_law_exp": 0.66},  # <100 TPD
+                "large_scale": {"base_capex_M_usd": 762.67, "base_capacity": 800, "power_law_exp": 0.62}  # >100 TPD
             },
-            1: {
+            1: {  # Ammonia
                 "default": {"base_capex_M_usd": 36.67, "base_capacity": 100, "power_law_exp": 0.7}
             },
-            2: {
-                "default": {"base_capex_M_usd": 0, "base_capacity": 1, "power_law_exp": 0}
+            2: {  # Methanol
+                "default": {"base_capex_M_usd": 0, "base_capacity": 1, "power_law_exp": 0}  # No liquefaction
             }
         }
 
+        # Select model based on fuel type
         if fuel_type not in cost_models:
             return 0
 
-        if fuel_type == 0:
+        if fuel_type == 0:  # Hydrogen
             model = cost_models[0]["large_scale"] if capacity_tpd > 100 else cost_models[0]["small_scale"]
-        else:
+        else:  # Ammonia or Methanol
             model = cost_models[fuel_type]["default"]
 
+        # Calculate total capital cost using power law
         total_capex_usd = (model['base_capex_M_usd'] * 1000000) * (capacity_tpd / model['base_capacity']) ** model['power_law_exp']
 
+        # Amortize over 20 years with 8% cost of capital
         annualized_capex = total_capex_usd * 0.09
 
+        # Calculate annual throughput
         annual_throughput_kg = capacity_tpd * 1000 * 330
 
         if annual_throughput_kg == 0:
@@ -1260,14 +1372,14 @@ def run_lca_model(inputs):
             Amortized CAPEX per kg in USD
         """
         cost_models = {
-            0: {
+            0: {  # Hydrogen
                 "base_capex_M_usd": 35, "base_capacity": 335000, "power_law_exp": 0.7
             },
-            1: {
+            1: {  # Ammonia
                 "base_capex_M_usd": 15, "base_capacity": 6650000, "power_law_exp": 0.7
             },
-            2: {
-                "default": {"base_capex_M_usd": 0, "base_capacity": 1, "power_law_exp": 0}
+            2: {  # Methanol
+                "default": {"base_capex_M_usd": 0, "base_capacity": 1, "power_law_exp": 0}  # No liquefaction
             }
         }
 
@@ -1276,16 +1388,19 @@ def run_lca_model(inputs):
 
         model = cost_models[fuel_type]
 
+        # Calculate total capital cost using power law
         total_capex_usd = (model['base_capex_M_usd'] * 1000000) * (A / model['base_capacity']) ** model['power_law_exp']
 
+        # Amortize over 20 years with 8% cost of capital
         annualized_capex = total_capex_usd * 0.09
 
-        if fuel_type in [0, 1]:
+        # Calculate annual throughput
+        if fuel_type in [0, 1]:  # Hydrogen or Ammonia
             if storage_days == 0:
                 return 0
             cycles_per_year = 330 / storage_days
             annual_throughput_kg = A * cycles_per_year
-        else:
+        else:  # Methanol
             annual_throughput_kg = capacity_tpd * 1000 * 330
 
         if annual_throughput_kg == 0:
@@ -1294,7 +1409,7 @@ def run_lca_model(inputs):
         capex_per_kg = annualized_capex / annual_throughput_kg
         return capex_per_kg
 
-    def calculate_loading_unloading_capex(fuel_type):
+    def calculate_loading_unloading_capex(fuel_type): # Removed A_shipment_kg from parameters
             """
             Estimates the amortized capital cost per kg for loading/unloading infrastructure (arms, jetties).
             Prorated based on assumed annual throughput of a typical terminal.
@@ -1316,61 +1431,41 @@ def run_lca_model(inputs):
 
             capex_per_kg_throughput = annualized_capex / annual_throughput_kg if annual_throughput_kg > 0 else 0
 
-            return capex_per_kg_throughput
+            return capex_per_kg_throughput # Now returns a rate
 
-    def calculate_voyage_overheads(voyage_duration_days, ship_params, canal_transits, port_regions):
-        ship_gt = ship_params['gross_tonnage']
-        overheads = VOYAGE_OVERHEADS_DATA.get(ship_params.get('key', 'standard'), VOYAGE_OVERHEADS_DATA['standard'])
-        # 1. Daily Operating Cost (OPEX)
-        opex_cost = overheads['daily_operating_cost_usd'] * voyage_duration_days
-        # 2. Daily Capital Cost (CAPEX)
-        capex_cost = overheads['daily_capital_cost_usd'] * voyage_duration_days
-        # 3. Port Fees (assumed for 2 ports: origin and destination)
-        port_fees_cost = overheads['port_fee_usd'] * 2
-        # 4. Canal Transit Fees
-        canal_fees_cost = 0
-        if canal_transits.get("suez"):
-            canal_fees_cost = ship_gt * overheads['suez_toll_per_gt_usd']
-        elif canal_transits.get("panama"):
-            canal_fees_cost = ship_gt * overheads['panama_toll_per_gt_usd']
-
-        # 5. Total Overhead Calculation
-        total_overheads = opex_cost + capex_cost + port_fees_cost + canal_fees_cost
-        return total_overheads
-
+    # This is the 'base' function that runs the main sequence of calculations
     def total_chem_base(A_optimized_chem_weight, B_fuel_type_tc, C_recirculation_BOG_tc,
-                        D_truck_apply_tc, E_storage_apply_tc, F_maritime_apply_tc, carbon_tax_per_ton_co2_dict_tc): # Added carbon_tax_per_ton_co2_dict_tc
+                        D_truck_apply_tc, E_storage_apply_tc, F_maritime_apply_tc):
 
         funcs_sequence = [
             site_A_chem_production, site_A_chem_liquification,
-            (fuel_pump_transfer, 'siteA_to_truck'),
-            (fuel_road_transport, 'start_leg'),
-            (fuel_pump_transfer, 'portA_to_storage'),
-            (fuel_storage, 'port_A'),
-            chem_loading_to_ship,
+            (fuel_pump_transfer, 'siteA_to_truck'), # NEW: Consolidated loading to truck
+            (fuel_road_transport, 'start_leg'), # Unified road transport
+            (fuel_pump_transfer, 'portA_to_storage'), # NEW: Consolidated unloading to storage
+            (fuel_storage, 'port_A'), # NEW: Consolidated storage
+            chem_loading_to_ship, # Remains separate for now due to unique cooldown
             port_to_port,
-            (fuel_pump_transfer, 'ship_to_portB'),
-            (fuel_storage, 'port_B'),
-            (fuel_pump_transfer, 'portB_to_truck'),
-            (fuel_road_transport, 'end_leg'),
-            (fuel_pump_transfer, 'truck_to_siteB'),
-            (fuel_storage, 'site_B'),
-            (fuel_pump_transfer, 'siteB_to_use')
+            (fuel_pump_transfer, 'ship_to_portB'), # NEW: Consolidated unloading from ship
+            (fuel_storage, 'port_B'), # NEW: Consolidated storage
+            (fuel_pump_transfer, 'portB_to_truck'), # NEW: Consolidated loading from storage to truck
+            (fuel_road_transport, 'end_leg'), # Unified road transport
+            (fuel_pump_transfer, 'truck_to_siteB'), # NEW: Consolidated unloading from truck to site B
+            (fuel_storage, 'site_B'), # NEW: Consolidated storage
+            (fuel_pump_transfer, 'siteB_to_use') # NEW: Consolidated unloading from site B for final use
         ]
 
         R_current_chem = A_optimized_chem_weight
         data_results_list = []
-        total_opex_money_tc = 0.0
-        total_capex_money_tc = 0.0
+        total_money_tc = 0.0
         total_ener_consumed_tc = 0.0
         total_G_emission_tc = 0.0
         total_S_bog_loss_tc = 0.0
 
         for func_entry in funcs_sequence:
             func_to_call = func_entry
-            leg_type = None
-            transfer_context = None
-            storage_location_type = None
+            leg_type = None # For road transport
+            transfer_context = None # For pump transfer
+            storage_location_type = None # For storage
 
             if isinstance(func_entry, tuple):
                 func_to_call, context_type = func_entry
@@ -1383,77 +1478,63 @@ def run_lca_model(inputs):
 
             process_args_for_this_call_tc = ()
             if func_to_call.__name__ == "site_A_chem_production":
-                process_args_for_this_call_tc = (GWP_chem, INSURANCE_PERCENTAGE_OF_CARGO_VALUE, hydrogen_production_cost, start_country_name, carbon_tax_per_ton_co2_dict_tc)
+                process_args_for_this_call_tc = (GWP_chem,)
             elif func_to_call.__name__ == "site_A_chem_liquification":
-                process_args_for_this_call_tc = (LH2_plant_capacity, EIM_liquefication, specific_heat_chem, start_local_temperature, boiling_point_chem, latent_H_chem, COP_liq, start_electricity_price, CO2e_start, GWP_chem, calculate_liquefaction_capex, start_country_name, carbon_tax_per_ton_co2_dict_tc)
-            elif func_to_call.__name__ == "fuel_pump_transfer":
-                country_for_transfer = ""
+                process_args_for_this_call_tc = (LH2_plant_capacity, EIM_liquefication, specific_heat_chem, start_local_temperature, boiling_point_chem, latent_H_chem, COP_liq, start_electricity_price, CO2e_start, GWP_chem)
+            elif func_to_call.__name__ == "fuel_pump_transfer": 
                 if transfer_context == 'siteA_to_truck':
-                    country_for_transfer = start_country_name
-                    process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_truck_site_A, dBOR_dT, BOR_loading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, start_local_temperature, calculate_loading_unloading_capex, country_for_transfer, carbon_tax_per_ton_co2_dict_tc)
+                    process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_truck_site_A, dBOR_dT, BOR_loading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, start_local_temperature)
                 elif transfer_context == 'portA_to_storage':
-                    country_for_transfer = start_port_country_name
-                    process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_port_A, dBOR_dT, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, start_local_temperature, calculate_loading_unloading_capex, country_for_transfer, carbon_tax_per_ton_co2_dict_tc)
+                    process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_port_A, dBOR_dT, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, start_local_temperature)
                 elif transfer_context == 'ship_to_portB':
-                    country_for_transfer = end_port_country_name
-                    process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_port_B, dBOR_dT, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, end_local_temperature, calculate_loading_unloading_capex, country_for_transfer, carbon_tax_per_ton_co2_dict_tc)
+                    process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_port_B, dBOR_dT, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, end_local_temperature)
                 elif transfer_context == 'portB_to_truck':
-                    country_for_transfer = end_port_country_name
-                    process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_truck_port_B, dBOR_dT, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, end_local_temperature, calculate_loading_unloading_capex, country_for_transfer, carbon_tax_per_ton_co2_dict_tc)
+                    process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_truck_port_B, dBOR_dT, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, end_local_temperature)
                 elif transfer_context == 'truck_to_siteB':
-                    country_for_transfer = end_country_name
-                    process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_site_B, dBOR_dT, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, end_local_temperature, calculate_loading_unloading_capex, country_for_transfer, carbon_tax_per_ton_co2_dict_tc)
+                    process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_site_B, dBOR_dT, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, end_local_temperature)
                 elif transfer_context == 'siteB_to_use':
-                    country_for_transfer = end_country_name
-                    process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_site_B, dBOR_dT, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, end_local_temperature, calculate_loading_unloading_capex, country_for_transfer, carbon_tax_per_ton_co2_dict_tc)
+                    process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_storage_site_B, dBOR_dT, BOR_unloading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end, GWP_chem, end_local_temperature)
 
-            elif func_to_call.__name__ == "fuel_road_transport":
-                country_for_road = ""
+            elif func_to_call.__name__ == "fuel_road_transport": # Unified road transport
                 if leg_type == 'start_leg':
-                    country_for_road = start_country_name
-                    process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_A_to_port, HHV_diesel, diesel_density, diesel_price_start, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, start_local_temperature, COP_refrig, EIM_refrig_eff, duration_A_to_port, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem, driver_daily_salary_start, annual_working_days, MAINTENANCE_COST_PER_KM_TRUCK, truck_capex_params, country_for_road, carbon_tax_per_ton_co2_dict_tc)
+                    process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_A_to_port, HHV_diesel, diesel_density, diesel_price_start, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, start_local_temperature, COP_refrig, EIM_refrig_eff, duration_A_to_port, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem, driver_daily_salary_start, annual_working_days)
                 elif leg_type == 'end_leg':
-                    country_for_road = end_country_name
-                    process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_port_to_B, HHV_diesel, diesel_density, diesel_price_end, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, end_local_temperature, COP_refrig, EIM_refrig_eff, duration_port_to_B, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem, driver_daily_salary_end, annual_working_days, MAINTENANCE_COST_PER_KM_TRUCK, truck_capex_params, country_for_road, carbon_tax_per_ton_co2_dict_tc)
+                    process_args_for_this_call_tc = (road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy, distance_port_to_B, HHV_diesel, diesel_density, diesel_price_end, truck_tank_radius, truck_tank_length, truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness, insulator_thermal_conduct, OHTC_ship, end_local_temperature, COP_refrig, EIM_refrig_eff, duration_port_to_B, dBOR_dT, BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel, GWP_chem, BOG_recirculation_truck, LH2_plant_capacity, EIM_liquefication, fuel_cell_eff, EIM_fuel_cell, LHV_chem, driver_daily_salary_end, annual_working_days)
 
-            elif func_to_call.__name__ == "fuel_storage":
-                country_for_storage = ""
+            elif func_to_call.__name__ == "fuel_storage": 
                 if storage_location_type == 'port_A':
-                    country_for_storage = start_port_country_name
                     process_args_for_this_call_tc = (
                         liquid_chem_density, storage_volume, dBOR_dT,
-                        start_local_temperature,
+                        start_local_temperature, # <--- CORRECTED POSITION
                         BOR_land_storage, storage_time_A, storage_radius, tank_metal_thickness,
                         metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct,
                         COP_refrig, EIM_refrig_eff, start_electricity_price, CO2e_start,
                         GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication,
-                        fuel_cell_eff, EIM_fuel_cell, LHV_chem, calculate_storage_capex, country_for_storage, carbon_tax_per_ton_co2_dict_tc
+                        fuel_cell_eff, EIM_fuel_cell, LHV_chem
                     )
                 elif storage_location_type == 'port_B':
-                    country_for_storage = end_port_country_name
                     process_args_for_this_call_tc = (
                         liquid_chem_density, storage_volume, dBOR_dT,
-                        end_local_temperature,
+                        end_local_temperature, # <--- CORRECTED POSITION
                         BOR_land_storage, storage_time_B, storage_radius, tank_metal_thickness,
                         metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct,
                         COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end,
                         GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication,
-                        fuel_cell_eff, EIM_fuel_cell, LHV_chem, calculate_storage_capex, country_for_storage, carbon_tax_per_ton_co2_dict_tc
+                        fuel_cell_eff, EIM_fuel_cell, LHV_chem
                     )
                 elif storage_location_type == 'site_B':
-                    country_for_storage = end_country_name
                     process_args_for_this_call_tc = (
                         liquid_chem_density, storage_volume, dBOR_dT,
-                        end_local_temperature,
+                        end_local_temperature, # <--- CORRECTED POSITION
                         BOR_land_storage, storage_time_C, storage_radius, tank_metal_thickness,
                         metal_thermal_conduct, tank_insulator_thickness, insulator_thermal_conduct,
                         COP_refrig, EIM_refrig_eff, end_electricity_price, CO2e_end,
                         GWP_chem, BOG_recirculation_storage, LH2_plant_capacity, EIM_liquefication,
-                        fuel_cell_eff, EIM_fuel_cell, LHV_chem, calculate_storage_capex, country_for_storage, carbon_tax_per_ton_co2_dict_tc
+                        fuel_cell_eff, EIM_fuel_cell, LHV_chem
                     )
 
             elif func_to_call.__name__ == "chem_loading_to_ship":
-                process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_ship_port_A, dBOR_dT, start_local_temperature, BOR_loading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, boiling_point_chem, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, storage_area, ship_tank_metal_thickness, ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density, ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat, COP_cooldown, COP_refrig, ship_number_of_tanks, pipe_metal_specific_heat, calculate_loading_unloading_capex, start_country_name, carbon_tax_per_ton_co2_dict_tc)
+                process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_ship_port_A, dBOR_dT, start_local_temperature, BOR_loading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, boiling_point_chem, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, storage_area, ship_tank_metal_thickness, ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density, ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat, COP_cooldown, COP_refrig, ship_number_of_tanks, pipe_metal_specific_heat)
             elif func_to_call.__name__ == "port_to_port":
                 process_args_for_this_call_tc = (
                     start_local_temperature, end_local_temperature, OHTC_ship,
@@ -1463,29 +1544,23 @@ def run_lca_model(inputs):
                     BOG_recirculation_mati_trans, LH2_plant_capacity, EIM_liquefication,
                     fuel_cell_eff, EIM_fuel_cell, LHV_chem,
                     avg_ship_power_kw,
-                    0.45,
-                    GWP_N2O,
-                    MAINTENANCE_COST_PER_KM_SHIP, port_to_port_dis, calculate_voyage_overheads,
-                    selected_ship_params, canal_transits, port_regions, end_country_name, carbon_tax_per_ton_co2_dict_tc,
-                    EU_MEMBER_COUNTRIES # Pass the EU member countries list here
+                    0.45, # Assumed auxiliary engine efficiency (45%)
+                    GWP_N2O
                 )
-            elif func_to_call.__name__ == "chem_convert_to_H2":
-                process_args_for_this_call_tc = (mass_conversion_to_H2, eff_energy_chem_to_H2, energy_chem_to_H2, CO2e_end, end_electricity_price, end_country_name, carbon_tax_per_ton_co2_dict_tc)
 
-            opex_money, capex_money, Y_energy, Z_emission, R_current_chem, S_bog_loss = \
+            X_money, Y_energy, Z_emission, R_current_chem, S_bog_loss = \
                 func_to_call(R_current_chem, B_fuel_type_tc, C_recirculation_BOG_tc, D_truck_apply_tc,
                             E_storage_apply_tc, F_maritime_apply_tc, process_args_for_this_call_tc)
 
-            data_results_list.append([func_to_call.__name__ + (f'_{leg_type}' if leg_type else '') + (f'_{transfer_context}' if transfer_context else '') + (f'_{storage_location_type}' if storage_location_type else ''), opex_money, capex_money, Y_energy, Z_emission, R_current_chem, S_bog_loss])
-            total_opex_money_tc += opex_money
-            total_capex_money_tc += capex_money
+            # Store results with original function name for labeling later
+            data_results_list.append([func_to_call.__name__ + (f'_{leg_type}' if leg_type else '') + (f'_{transfer_context}' if transfer_context else '') + (f'_{storage_location_type}' if storage_location_type else ''), X_money, Y_energy, Z_emission, R_current_chem, S_bog_loss])
+            total_money_tc += X_money
             total_ener_consumed_tc += Y_energy
             total_G_emission_tc += Z_emission
             total_S_bog_loss_tc += S_bog_loss
-        
-        total_money_tc = total_opex_money_tc + total_capex_money_tc
+
         final_total_result_tc = [total_money_tc, total_ener_consumed_tc, total_G_emission_tc, R_current_chem]
-        data_results_list.append(["TOTAL", total_opex_money_tc, total_capex_money_tc, total_ener_consumed_tc, total_G_emission_tc, R_current_chem, total_S_bog_loss_tc])
+        data_results_list.append(["TOTAL", total_money_tc, total_ener_consumed_tc, total_G_emission_tc, R_current_chem, total_S_bog_loss_tc])
 
         return final_total_result_tc, data_results_list
 
@@ -1494,64 +1569,33 @@ def run_lca_model(inputs):
     # =================================================================
 
     def food_harvest_and_prep(A, args):
-        (insurance_percentage_of_cargo_value_arg, price_start_arg, start_country_name_arg, carbon_tax_per_ton_co2_dict_arg) = args
-        opex_money = 0
-        capex_money = 0
-        energy = 0
-        emissions = 0
-        loss = 0
-
-        # Insurance Cost
-        cargo_value = A * price_start_arg
-        insurance_cost = cargo_value * (insurance_percentage_of_cargo_value_arg / 100)
-        opex_money += insurance_cost
-
-        # Carbon Tax (assuming no direct emissions from this step, but if there were, it would apply)
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_country_name_arg, 0) * (emissions / 1000)
-        opex_money += carbon_tax
-
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, energy, emissions, A - loss, loss
+        return 0, 0, 0, A, 0
 
     def food_freezing_process(A, args):
-        params, start_temp, elec_price, co2_factor, facility_capacity_arg, start_country_name_arg, carbon_tax_per_ton_co2_dict_arg = args
-        
-        opex_money = 0
-        capex_money = 0
-
+        params, start_temp, elec_price, co2_factor = args
         energy_sensible_heat1 = A * params['specific_heat_fresh_mj_kgK'] * (start_temp - 0)
         energy_latent_heat = A * params['latent_heat_fusion_mj_kg']
         energy_sensible_heat2 = A * params['specific_heat_frozen_mj_kgK'] * (0 - params['target_temp_celsius'])
         total_heat_to_remove = energy_sensible_heat1 + energy_latent_heat + energy_sensible_heat2
         energy = total_heat_to_remove / params['cop_freezing_system']
-        
-        opex_money += energy * elec_price[2]
-        
-        # CAPEX
-        capex_per_kg = calculate_food_infra_capex("freezing", facility_capacity_arg, A, 0)
-        capex_money += A * capex_per_kg
-        
+        opex_money = energy * elec_price[2]
+        capex_money = 0
+        if include_overheads:
+            capex_per_kg = calculate_food_infra_capex("freezing", facility_capacity, A,0)
+            capex_money = A * capex_per_kg
         emissions = energy * 0.2778 * co2_factor * 0.001
         loss = 0.005 * A
-        
-        # Carbon Tax
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_country_name_arg, 0) * (emissions / 1000)
-        opex_money += carbon_tax
-
         total_money = opex_money + capex_money
-        return opex_money, capex_money, energy, emissions, A - loss, loss
+        return total_money, energy, emissions, A - loss, loss
 
     def food_road_transport(A, args):
-        params, distance, duration_mins, diesel_price, hh_diesel, dens_diesel, co2_diesel, ambient_temp, driver_daily_salary_arg, annual_working_days_arg, maintenance_cost_per_km_truck_arg, truck_capex_params_arg, country_of_road_transport_arg, carbon_tax_per_ton_co2_dict_arg = args
-        
-        opex_money = 0
-        capex_money = 0
-
+        params, distance, duration_mins, diesel_price, hh_diesel, dens_diesel, co2_diesel, ambient_temp, driver_daily_salary_arg, annual_working_days_arg = args # ADDED DRIVER SALARY ARGS
         base_spoilage_rate = params['general_params']['spoilage_rate_per_day']
 
+        # Increase spoilage rate by 20% for every 5 degrees above the ideal temp
         temp_sensitivity_factor = 1 + (0.20 * ((ambient_temp - params['general_params']['target_temp_celsius']) / 5))
         if temp_sensitivity_factor < 1:
-            temp_sensitivity_factor = 1
+            temp_sensitivity_factor = 1 # Spoilage doesn't slow down below target
         dynamic_spoilage_rate = base_spoilage_rate * temp_sensitivity_factor
         LITERS_PER_GALLON = 3.78541
         num_trucks = math.ceil(A / params['general_params']['cargo_per_truck_kg'])
@@ -1561,86 +1605,92 @@ def run_lca_model(inputs):
         diesel_for_reefer_L = params['general_params']['reefer_truck_fuel_consumption_L_hr'] * duration_hr * num_trucks
         total_diesel_L = diesel_for_propulsion_L + diesel_for_reefer_L
         total_diesel_gal = total_diesel_L / LITERS_PER_GALLON
-        
-        opex_money += total_diesel_gal * diesel_price
+        money = total_diesel_gal * diesel_price
         energy = total_diesel_gal * dens_diesel * hh_diesel
         emissions = total_diesel_gal * co2_diesel
         duration_days = duration_hr / 24.0
         loss = A * dynamic_spoilage_rate * duration_days
 
-        # Driver salary cost
-        trip_days = max(1, math.ceil(duration_mins / 1440))
+        # ADDITION: Calculate and add driver salary cost
+        trip_days = max(1, math.ceil(duration_mins / 1440)) # At least 1 day, round up
         driver_cost_per_truck = (driver_daily_salary_arg / annual_working_days_arg) * trip_days
         total_driver_cost = driver_cost_per_truck * num_trucks
-        opex_money += total_driver_cost
+        money += total_driver_cost # Add to total money
 
-        # Maintenance and Repair Cost
-        maintenance_cost = maintenance_cost_per_km_truck_arg * distance * num_trucks
-        opex_money += maintenance_cost
-
-        # Truck CAPEX (using fuel_type 0 for general truck params as a proxy for food trucks)
-        annual_truck_cost_usd = truck_capex_params_arg[0]['cost_usd_per_truck'] * truck_capex_params_arg[0]['annualization_factor']
-        capex_per_truck_trip_usd = annual_truck_cost_usd / 330
-        capex_money += capex_per_truck_trip_usd * num_trucks
-
-        # Carbon Tax
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(country_of_road_transport_arg, 0) * (emissions / 1000)
-        opex_money += carbon_tax
-
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, energy, emissions, A - loss, loss
+        return money, energy, emissions, A - loss, loss
 
     def food_precooling_process(A, args):
-        precool_params, elec_price, co2_factor, facility_capacity_arg, start_country_name_arg, carbon_tax_per_ton_co2_dict_arg = args
+        """
+        Calculates the cost and energy for pre-cooling produce (e.g., forced-air cooling)
+        to remove initial field heat before storage or transport.
+        """
+        # 1. Unpack the arguments passed from the orchestrator
+        # A is the initial weight of the food (in kg)
+        precool_params, elec_price, co2_factor = args
 
-        opex_money = 0
-        capex_money = 0
-
+        # 2. Calculate the total heat that needs to be removed (in MJ)
+        # This is based on the formula: Q = m * c * ΔT
         delta_T = (precool_params['initial_field_heat_celsius'] -
                 precool_params['target_precool_temperature_celsius'])
 
+        # Ensure delta_T is not negative; if it is, no cooling is needed.
         if delta_T <= 0:
-            return 0, 0, 0, 0, A, 0
+            return 0, 0, 0, A, 0
 
+        # Q (heat to remove) = mass * specific heat * change in temperature
         heat_to_remove_mj = A * precool_params['specific_heat_fresh_mj_kgK'] * delta_T
+
+        # 3. Calculate the actual energy consumed by the cooling system
+        # Energy = Heat Removed / Coefficient of Performance (COP) of the system
         energy_mj = heat_to_remove_mj / precool_params['cop_precooling_system']
 
-        opex_money += energy_mj * elec_price[2]
-        
-        # CAPEX
-        capex_per_kg = calculate_food_infra_capex("precool", facility_capacity_arg, A, 0)
-        capex_money += A * capex_per_kg
-        
+        # 4. Calculate the financial cost and CO2 emissions
+        opex_money = energy_mj * elec_price[2] # elec_price[2] is the price per MJ
+        capex_money = 0
+        if include_overheads:
+            capex_per_kg = calculate_food_infra_capex("precool", facility_capacity, A,0)
+            capex_money = A * capex_per_kg
+        total_money = opex_money + capex_money
+        # Convert MJ to kWh for emission calculation (1 MJ ≈ 0.2778 kWh)
         emissions = energy_mj * 0.2778 * co2_factor * 0.001
+
+        # 5. Calculate weight loss due to moisture evaporation during forced-air cooling
         loss = A * precool_params['moisture_loss_percent']
 
-        # Carbon Tax
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_country_name_arg, 0) * (emissions / 1000)
-        opex_money += carbon_tax
-
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, energy_mj, emissions, A - loss, loss
+        # 6. Return the standard tuple of results
+        return total_money, energy_mj, emissions, A - loss, loss
 
     def calculate_ca_energy_kwh(A, food_params, duration_hrs):
+        """
+        Calculates the energy consumption of a Controlled Atmosphere system
+        based on physics and biological properties.
+        """
         if not food_params.get('process_flags', {}).get('needs_controlled_atmosphere', False):
-            return 0
+            return 0 # No CA needed for this fruit
 
         ca_p = food_params['ca_params']
         gen_p = food_params['general_params']
 
         num_containers = math.ceil(A / gen_p['cargo_per_truck_kg'])
-        container_volume_m3 = 76
+        container_volume_m3 = 76 # Approx. volume of a 40ft container
 
+        # 1. Energy for Nitrogen Generation (to counter leakage)
+        # Total volume of air that leaks in and must be displaced by N2
         leaked_air_m3 = num_containers * container_volume_m3 * ca_p['container_leakage_rate_ach'] * duration_hrs
         energy_n2_kwh = leaked_air_m3 * ca_p['n2_generator_efficiency_kwh_per_m3']
 
+        # 2. Energy for CO2 Scrubbing (to counter respiration)
+        # Convert mL CO2 -> L -> m3 -> kg
         co2_density_kg_per_m3 = 1.98
         total_co2_produced_kg = (A * ca_p['respiration_rate_ml_co2_per_kg_hr'] * duration_hrs) / 1000000 * co2_density_kg_per_m3
         energy_co2_scrub_kwh = total_co2_produced_kg * ca_p['co2_scrubber_efficiency_kwh_per_kg_co2']
 
+        # 3. Energy for Humidification (simplified)
+        # Assume we need to add ~2 liters of water per container per day to maintain humidity
         water_to_add_liters = num_containers * 2.0 * (duration_hrs / 24.0)
         energy_humidity_kwh = water_to_add_liters * ca_p['humidifier_efficiency_kwh_per_liter']
 
+        # 4. Energy for Baseline Controls
         energy_base_kwh = num_containers * ca_p['base_control_power_kw'] * duration_hrs
 
         total_ca_energy_kwh = energy_n2_kwh + energy_co2_scrub_kwh + energy_humidity_kwh + energy_base_kwh
@@ -1648,147 +1698,96 @@ def run_lca_model(inputs):
         return total_ca_energy_kwh
 
     def food_sea_transport(A, args):
-        food_params, duration_hrs, selected_fuel, avg_ship_kw, maintenance_cost_per_km_ship_arg, port_to_port_dis_arg, calculate_voyage_overheads_helper_arg, selected_ship_params_arg, canal_transits_arg, port_regions_arg, end_country_name_arg, carbon_tax_per_ton_co2_dict_arg, eu_member_countries_arg = args # Added eu_member_countries_arg
+        """
+        Calculates energy for the sea voyage, with DECOUPLED calculations for
+        propulsion and auxiliary engine fuel consumption.
+        """
+        # Unpack arguments
+        food_params, duration_hrs, selected_fuel, avg_ship_kw = args
 
-        opex_money = 0
-        capex_money = 0
+        # --- 1. Calculate Fuel Mass for Each System ---
 
+        # A) Auxiliary Fuel for Reefers and CA Systems
         total_auxiliary_energy_kwh = calculate_ca_energy_kwh(A, food_params, duration_hrs)
         reefer_power_kw = math.ceil(A / food_params['general_params']['cargo_per_truck_kg']) * food_params['general_params']['reefer_container_power_kw']
         total_auxiliary_energy_kwh += reefer_power_kw * duration_hrs
 
-        aux_sfoc_g_kwh = 200
+        aux_sfoc_g_kwh = 200 # g/kWh for auxiliary engines
         fuel_for_auxiliary_kg = (total_auxiliary_energy_kwh * aux_sfoc_g_kwh) / 1000.0
 
+        # B) Propulsion Fuel for Main Engine
         propulsion_work_kwh = avg_ship_kw * duration_hrs
         fuel_for_propulsion_kg = (propulsion_work_kwh * selected_fuel['sfoc_g_per_kwh']) / 1000.0
 
+        # --- 2. Calculate Cost, Energy, and Emissions for Each Fuel SEPARATELY ---
+
+        # A) For Auxiliary Fuel (MGO)
         money_aux = (fuel_for_auxiliary_kg / 1000.0) * auxiliary_fuel_params['price_usd_per_ton']
         energy_aux_mj = fuel_for_auxiliary_kg * auxiliary_fuel_params['hhv_mj_per_kg']
         emissions_aux = fuel_for_auxiliary_kg * auxiliary_fuel_params['co2_emissions_factor_kg_per_kg_fuel']
 
+        # B) For Propulsion Fuel (User's Choice)
         money_prop = (fuel_for_propulsion_kg / 1000.0) * selected_fuel['price_usd_per_ton']
         energy_prop_mj = fuel_for_propulsion_kg * selected_fuel['hhv_mj_per_kg']
         emissions_prop = fuel_for_propulsion_kg * selected_fuel['co2_emissions_factor_kg_per_kg_fuel']
+        # Note: We can add separate N2O/Methane slip emissions here if needed for propulsion fuel
 
-        opex_money += money_aux + money_prop
+        # --- 3. Sum the Results for the Final Totals ---
+        total_money = money_aux + money_prop
         total_energy_mj = energy_aux_mj + energy_prop_mj
         total_emissions = emissions_aux + emissions_prop
 
-        # Maintenance and Repair Cost
-        maintenance_cost = maintenance_cost_per_km_ship_arg * port_to_port_dis_arg
-        opex_money += maintenance_cost
-
-        # Voyage CAPEX (from calculate_voyage_overheads)
-        voyage_duration_days = duration_hrs / 24.0
-        voyage_capex_total = calculate_voyage_overheads_helper_arg(voyage_duration_days, selected_ship_params_arg, canal_transits_arg, port_regions_arg)
-        capex_money += voyage_capex_total
-
+        # Spoilage calculation remains the same
         duration_days = duration_hrs / 24.0
-        spoilage_rate = food_params['general_params']['spoilage_rate_per_day']
+        spoilage_rate = food_params['general_params']['spoilage_rate_per_day'] # Default rate
         if food_params['process_flags'].get('needs_controlled_atmosphere'):
+            # If CA is active, use the lower spoilage rate
             spoilage_rate = food_params['general_params']['spoilage_rate_ca_per_day']
         loss = A * spoilage_rate * duration_days
-
-        # Carbon Tax (General)
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0) * (total_emissions / 1000)
-        opex_money += carbon_tax
-
-        # EU ETS Carbon Tax (if applicable)
-        eu_ets_tax = 0
-        if end_country_name_arg in eu_member_countries_arg:
-            eu_ets_emissions_tons = (total_emissions / 1000) * 0.50
-            eu_ets_tax = eu_ets_emissions_tons * carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0)
-            opex_money += eu_ets_tax # Add to opex_money
-
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, total_energy_mj, total_emissions, A - loss, loss
+        return total_money, total_energy_mj, total_emissions, A - loss, loss
 
     def food_cold_storage(A, args):
-        params, storage_days, elec_price, co2_factor, ambient_temp, facility_capacity_arg, country_of_storage_arg, carbon_tax_per_ton_co2_dict_arg = args
+        params, storage_days, elec_price, co2_factor, ambient_temp = args
 
-        opex_money = 0
-        capex_money = 0
-
+        # The 'params' dictionary now has a nested 'general_params' key
         volume_m3 = A / params['general_params']['density_kg_per_m3']
 
+        # The rest of the dynamic calculation uses the 'ambient_temp' passed into the function
         base_energy_factor_kwh_m3_day = 0.5
         temp_adjustment_factor = 1 + (0.03 * (ambient_temp - 20))
         if temp_adjustment_factor < 0.5:
-            temp_adjustment_factor = 0.5
+            temp_adjustment_factor = 0.5 # Set a floor
 
         dynamic_energy_factor = base_energy_factor_kwh_m3_day * temp_adjustment_factor
         energy_kwh_per_day = dynamic_energy_factor * volume_m3
         total_energy_kwh = energy_kwh_per_day * storage_days
 
         energy_mj = total_energy_kwh * 3.6
-        opex_money += energy_mj * elec_price[2]
-        
-        # CAPEX
-        capex_per_kg = calculate_food_infra_capex("cold_storage", facility_capacity_arg, A, storage_days)
-        capex_money += A * capex_per_kg
-        
+        opex_money = energy_mj * elec_price[2]
+        capex_money = 0
+        if include_overheads:
+            capex_per_kg = calculate_food_infra_capex("cold_storage", facility_capacity, A, storage_days)
+            capex_money = A * capex_per_kg
+        total_money = opex_money + capex_money
         emissions = energy_mj * 0.2778 * co2_factor * 0.001
-        spoilage_rate = params['general_params']['spoilage_rate_per_day']
+        # Spoilage calculation becomes dynamic
+        spoilage_rate = params['general_params']['spoilage_rate_per_day'] # Default rate
         if params['process_flags'].get('needs_controlled_atmosphere'):
+            # If CA is active, use the lower spoilage rate
             spoilage_rate = params['general_params']['spoilage_rate_ca_per_day']
         loss = A * spoilage_rate * storage_days
 
-        # Carbon Tax
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(country_of_storage_arg, 0) * (emissions / 1000)
-        opex_money += carbon_tax
+        return total_money, energy_mj, emissions, A - loss, loss
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, energy_mj, emissions, A - loss, loss
+# REPLACE your old total_food_lca function with this one
 
-    def calculate_food_infra_capex(process_name, capacity_tons_per_day, A, storage_days):
-        """
-        Estimates the amortized capital cost per kg for food processing facilities.
-        Source: Based on general industry capital cost estimates for food processing and cold chain logistics.
-        Parameters:
-            process_name: Type of facility (e.g., 'cold_storage')
-            capacity_tons_per_day: Daily throughput in tons (used for precool/freezing)
-            A: Total mass held in kg (used for cold storage)
-            storage_days: Average storage duration in days
-        Returns:
-            Amortized CAPEX per kg in USD
-        """
-        cost_models = {
-            "precool": {"base_cost_M_usd": 1.5, "power_law_exp": 0.6, "reference_capacity": 50},
-            "freezing": {"base_cost_M_usd": 3, "power_law_exp": 0.65, "reference_capacity": 30},
-            "cold_storage": {"base_cost_M_usd": 0.82, "power_law_exp": 0.7, "reference_capacity": 5000000}
-        }
-
-        model = cost_models.get(process_name)
-        if not model:
-            return 0
-
-        if process_name == "cold_storage":
-            total_capex_usd = (model['base_cost_M_usd'] * 1000000) * (A / model['reference_capacity']) ** model['power_law_exp']
-        else:
-            total_capex_usd = (model['base_cost_M_usd'] * 1000000) * (capacity_tons_per_day / model['reference_capacity']) ** model['power_law_exp']
-
-        annualized_capex = total_capex_usd * 0.1
-
-        if process_name == "cold_storage":
-            if storage_days == 0:
-                return 0
-            cycles_per_year = 330 / storage_days
-            annual_throughput_kg = A * cycles_per_year
-        else:
-            annual_throughput_kg = capacity_tons_per_day * 1000 * 330
-
-        if annual_throughput_kg == 0:
-            return 0
-
-        capex_per_kg = annualized_capex / annual_throughput_kg
-        return capex_per_kg
-
-    def total_food_lca(initial_weight, food_params, carbon_tax_per_ton_co2_dict_tl): # Added carbon_tax_per_ton_co2_dict_tl
+    def total_food_lca(initial_weight, food_params):
+        # Start with a base list of processes that always happen
         food_funcs_sequence = [
             (food_harvest_and_prep, "Harvesting & Preparation"),
         ]
 
+        # Dynamically add steps based on the food's flags
         flags = food_params['process_flags']
         if flags.get('needs_precooling', False):
             food_funcs_sequence.append((food_precooling_process, f"Pre-cooling in {start}"))
@@ -1796,12 +1795,14 @@ def run_lca_model(inputs):
         if flags.get('needs_freezing', False):
             food_funcs_sequence.append((food_freezing_process, f"Freezing in {start}"))
 
+        # Add the universal transport and storage steps
         food_funcs_sequence.extend([
             (food_road_transport, f"Road Transport: {start} to {start_port_name}"),
             (food_cold_storage, f"Cold Storage at {start_port_name}"),
             (food_sea_transport, f"Marine Transport: {start_port_name} to {end_port_name}")
         ])
 
+        # Add the remaining universal steps
         food_funcs_sequence.extend([
             (food_cold_storage, f"Cold Storage at {end_port_name}"),
             (food_road_transport, f"Road Transport: {end_port_name} to {end}"),
@@ -1812,42 +1813,45 @@ def run_lca_model(inputs):
         results_list = []
         for func, label in food_funcs_sequence:
             args_for_func = ()
-            opex_m = 0
-            capex_m = 0
-            energy = 0
-            emissions = 0
-            loss = 0
-
-            if func == food_harvest_and_prep:
-                args_for_func = (INSURANCE_PERCENTAGE_OF_CARGO_VALUE, price_start, start_country_name, carbon_tax_per_ton_co2_dict_tl)
-            elif func == food_precooling_process:
+            if func == food_precooling_process:
                 precooling_full_params = {**food_params['precooling_params'], **food_params['general_params']}
-                args_for_func = (precooling_full_params, start_electricity_price, CO2e_start, facility_capacity, start_country_name, carbon_tax_per_ton_co2_dict_tl)
+                args_for_func = (precooling_full_params, start_electricity_price, CO2e_start)
             elif func == food_freezing_process:
                 freezing_full_params = {**food_params.get('freezing_params', {}), **food_params['general_params']}
-                args_for_func = (freezing_full_params, start_local_temperature, start_electricity_price, CO2e_start, facility_capacity, start_country_name, carbon_tax_per_ton_co2_dict_tl)
+                args_for_func = (freezing_full_params, start_local_temperature, start_electricity_price, CO2e_start)
             elif func == food_road_transport and start_port_name in label:
-                args_for_func = (food_params, distance_A_to_port, duration_A_to_port, diesel_price_start, HHV_diesel, diesel_density, CO2e_diesel, start_local_temperature, driver_daily_salary_start, annual_working_days, MAINTENANCE_COST_PER_KM_TRUCK, truck_capex_params, start_country_name, carbon_tax_per_ton_co2_dict_tl)
+                # This is the first leg: from start city TO start port
+                args_for_func = (food_params, distance_A_to_port, duration_A_to_port, diesel_price_start, HHV_diesel, diesel_density, CO2e_diesel, start_local_temperature, driver_daily_salary_start, annual_working_days)
             elif func == food_road_transport and end_port_name in label:
-                args_for_func = (food_params, distance_port_to_B, duration_port_to_B, diesel_price_end, HHV_diesel, diesel_density, CO2e_diesel, end_local_temperature, driver_daily_salary_end, annual_working_days, MAINTENANCE_COST_PER_KM_TRUCK, truck_capex_params, end_country_name, carbon_tax_per_ton_co2_dict_tl)
+                # This is the second leg: from end port TO end city
+                args_for_func = (food_params, distance_port_to_B, duration_port_to_B, diesel_price_end, HHV_diesel, diesel_density, CO2e_diesel, end_local_temperature, driver_daily_salary_end, annual_working_days)
             elif func == food_sea_transport:
-                args_for_func = (food_params, port_to_port_duration, selected_marine_fuel_params, avg_ship_power_kw, MAINTENANCE_COST_PER_KM_SHIP, port_to_port_dis, calculate_voyage_overheads, selected_ship_params, canal_transits, port_regions, end_country_name, carbon_tax_per_ton_co2_dict_tl, EU_MEMBER_COUNTRIES)
+                args_for_func = (food_params, port_to_port_duration, selected_marine_fuel_params, avg_ship_power_kw)
             elif func == food_cold_storage and "at " + start_port_name in label:
-                args_for_func = (food_params, storage_time_A, start_port_electricity_price, CO2e_start, start_local_temperature, facility_capacity, start_port_country_name, carbon_tax_per_ton_co2_dict_tl)
+                args_for_func = (food_params, storage_time_A, start_port_electricity_price, CO2e_start, start_local_temperature)
             elif func == food_cold_storage and "at " + end_port_name in label:
-                args_for_func = (food_params, storage_time_B, end_port_electricity_price, CO2e_end, end_local_temperature, facility_capacity, end_port_country_name, carbon_tax_per_ton_co2_dict_tl)
+                args_for_func = (food_params, storage_time_B, end_port_electricity_price, CO2e_end, end_local_temperature)
             elif func == food_cold_storage and "Destination" in label:
-                args_for_func = (food_params, storage_time_C, end_electricity_price, CO2e_end, end_local_temperature, facility_capacity, end_country_name, carbon_tax_per_ton_co2_dict_tl)
-            
-            opex_m, capex_m, energy, emissions, current_weight, loss = func(current_weight, args_for_func)
-            results_list.append([label, opex_m, capex_m, energy, emissions, current_weight, loss])
+                args_for_func = (food_params, storage_time_C, end_electricity_price, CO2e_end, end_local_temperature)
+            elif func == food_harvest_and_prep:
+                args_for_func = ()
+            else:
+                args_for_func = (food_params,)
+
+            money, energy, emissions, current_weight, loss = func(current_weight, args_for_func)
+            results_list.append([label, money, energy, emissions, current_weight, loss])
 
         return results_list
 
     def openai_get_food_price(food_name, location_name):
+        """
+        Uses an AI model to find, parse, and convert the retail price of a
+        food item to USD per kg for a given location.
+        """
         from openai import OpenAI
         client = OpenAI(api_key=api_key_openAI)
 
+        # Improved prompt to handle broader locations
         prompt_messages = [
             {
                 "role": "system",
@@ -1864,12 +1868,13 @@ def run_lca_model(inputs):
             response = client.chat.completions.create(
                 model="gpt-4o",
                 response_format={"type": "json_object"},
-                temperature=0,
+                temperature=0, # Set to 0 for more deterministic, factual responses
                 messages=prompt_messages
             )
             result = json.loads(response.choices[0].message.content)
             price = result.get("price_usd_per_kg")
 
+            # Ensure the price is a valid number, return None otherwise
             if isinstance(price, (int, float)):
                 return price
             else:
@@ -1880,9 +1885,14 @@ def run_lca_model(inputs):
             return None
 
     def openai_get_nearest_farm_region(food_name, location_name):
+        """
+        Uses an AI model to find a major commercial farming region for a food item
+        nearest to a given destination.
+        """
         from openai import OpenAI
         client = OpenAI(api_key=api_key_openAI)
 
+        # This prompt guides the AI to provide a realistic, commercially viable origin
         prompt_messages = [
             {
                 "role": "system",
@@ -1904,6 +1914,7 @@ def run_lca_model(inputs):
             )
             result = json.loads(response.choices[0].message.content)
 
+            # Ensure all keys exist and are valid before returning
             if all(k in result for k in ['farm_region_name', 'latitude', 'longitude']) and isinstance(result['latitude'], (int, float)):
                 return result
             else:
@@ -1914,31 +1925,44 @@ def run_lca_model(inputs):
             return None
 
     def detect_canal_transit(route_object):
+        """
+        Inspects the route's geographic coordinates to detect major canal transits.
+        This is more reliable than checking text-based properties.
+        Returns a dictionary with flags for each major canal.
+        """
         transits = {
             "suez": False,
             "panama": False
         }
 
+        # Define the geographic bounding boxes for the canals.
+        # Format is (min_longitude, min_latitude, max_longitude, max_latitude)
         PANAMA_CANAL_BBOX = (-80.5, 8.5, -78.5, 9.5)
         SUEZ_CANAL_BBOX = (32.0, 29.5, 33.0, 31.5)
 
         try:
+            # The coordinates from searoute are in [longitude, latitude] format.
             route_coords = route_object.geometry['coordinates']
 
             for lon, lat in route_coords:
+                # Check for Panama Canal transit
                 if (PANAMA_CANAL_BBOX[0] <= lon <= PANAMA_CANAL_BBOX[2] and
                     PANAMA_CANAL_BBOX[1] <= lat <= PANAMA_CANAL_BBOX[3]):
                     transits["panama"] = True
-                    break
+                    break  # Exit the loop once a transit is confirmed
 
+                # Check for Suez Canal transit
                 if (SUEZ_CANAL_BBOX[0] <= lon <= SUEZ_CANAL_BBOX[2] and
                     SUEZ_CANAL_BBOX[1] <= lat <= SUEZ_CANAL_BBOX[3]):
                     transits["suez"] = True
-                    break
+                    break # Exit the loop once a transit is confirmed
 
+            # If we finished the loop and found a transit, we don't need to do the old check.
             if transits["panama"] or transits["suez"]:
                 return transits
 
+            # Fallback to the old method just in case, though less likely to be needed.
+            # This part can be removed if you trust the geographic check completely.
             route_info_string = json.dumps(route_object.properties).lower()
             if "suez" in route_info_string:
                 transits["suez"] = True
@@ -1950,21 +1974,89 @@ def run_lca_model(inputs):
 
         return transits
 
+    def calculate_voyage_overheads(voyage_duration_days, ship_params, canal_transits, port_regions):
+        ship_gt = ship_params['gross_tonnage']
+        overheads = VOYAGE_OVERHEADS_DATA.get(ship_params.get('key', 'standard'), VOYAGE_OVERHEADS_DATA['standard'])
+       # 1. Daily Operating Cost (OPEX)
+        opex_cost = overheads['daily_operating_cost_usd'] * voyage_duration_days
+        # 2. Daily Capital Cost (CAPEX)
+        capex_cost = overheads['daily_capital_cost_usd'] * voyage_duration_days
+        # 3. Port Fees (assumed for 2 ports: origin and destination)
+        port_fees_cost = overheads['port_fee_usd'] * 2
+        # 4. Canal Transit Fees
+        canal_fees_cost = 0
+        if canal_transits.get("suez"):
+            canal_fees_cost = ship_gt * overheads['suez_toll_per_gt_usd']
+        elif canal_transits.get("panama"):
+            canal_fees_cost = ship_gt * overheads['panama_toll_per_gt_usd']
+
+        # 5. Total Overhead Calculation
+        total_overheads = opex_cost + capex_cost + port_fees_cost + canal_fees_cost
+        return total_overheads
+
     def calculate_single_reefer_service_cost(duration_hrs, food_params):
 
+        # Calculate energy needed for the reefer unit + CA system for one container
+        # Dummy mass of 1kg is used because the CA energy function scales by container, not mass
         ca_energy_kwh_per_container = calculate_ca_energy_kwh(1, food_params, duration_hrs)
         reefer_energy_kwh_per_container = food_params['general_params']['reefer_container_power_kw'] * duration_hrs
 
         total_energy_kwh = ca_energy_kwh_per_container + reefer_energy_kwh_per_container
 
-        aux_sfoc_g_kwh = 200
+        # Calculate fuel burned by auxiliary engine to provide this electricity
+        aux_sfoc_g_kwh = 200 # g/kWh for auxiliary engines
         fuel_kg = (total_energy_kwh * aux_sfoc_g_kwh) / 1000.0
 
+        # Calculate cost, energy, and emissions from that fuel
         cost = (fuel_kg / 1000.0) * auxiliary_fuel_params['price_usd_per_ton']
         energy_mj = fuel_kg * auxiliary_fuel_params['hhv_mj_per_kg']
         emissions = fuel_kg * auxiliary_fuel_params['co2_emissions_factor_kg_per_kg_fuel']
 
         return cost, energy_mj, emissions
+
+    def calculate_food_infra_capex(process_name, capacity_tons_per_day, A, storage_days):
+        """
+        Estimates the amortized capital cost per kg for food processing facilities.
+        Source: Based on general industry capital cost estimates for food processing and cold chain logistics.
+        Parameters:
+            process_name: Type of facility (e.g., 'cold_storage')
+            capacity_tons_per_day: Daily throughput in tons (used for precool/freezing)
+            A: Total mass held in kg (used for cold storage)
+            storage_days: Average storage duration in days
+        """
+        cost_models = {
+            "precool": {"base_cost_M_usd": 1.5, "power_law_exp": 0.6, "reference_capacity": 50},
+            "freezing": {"base_cost_M_usd": 3, "power_law_exp": 0.65, "reference_capacity": 30},
+            "cold_storage": {"base_cost_M_usd": 0.82, "power_law_exp": 0.7, "reference_capacity": 5000000}  # 5,000 tons = 5M kg
+        }
+
+        model = cost_models.get(process_name)
+        if not model:
+            return 0
+
+        # Calculate total capital cost using a power law
+        if process_name == "cold_storage":
+            total_capex_usd = (model['base_cost_M_usd'] * 1000000) * (A / model['reference_capacity']) ** model['power_law_exp']
+        else:
+            total_capex_usd = (model['base_cost_M_usd'] * 1000000) * (capacity_tons_per_day / model['reference_capacity']) ** model['power_law_exp']
+
+        # Amortize over 20 years with 8% cost of capital
+        annualized_capex = total_capex_usd * 0.1
+
+        # Calculate capex_per_kg
+        if process_name == "cold_storage":
+            if storage_days == 0:
+                return 0  # Facility not used
+            cycles_per_year = 330 / storage_days  # Number of storage cycles per year
+            annual_throughput_kg = A * cycles_per_year  # Total kg processed annually
+        else:
+            annual_throughput_kg = capacity_tons_per_day * 1000 * 330  # Throughput for precool/freezing
+
+        if annual_throughput_kg == 0:
+            return 0
+
+        capex_per_kg = annualized_capex / annual_throughput_kg
+        return capex_per_kg
 
     # =================================================================
     # <<< MAIN CONDITIONAL BRANCH STARTS HERE >>>
@@ -1975,6 +2067,7 @@ def run_lca_model(inputs):
     end = inputs['end']
     commodity_type = inputs.get('commodity_type', 'fuel')
     marine_fuel_choice = inputs.get('marine_fuel_choice', 'VLSFO')
+    include_overheads = inputs.get('include_overheads', True)
     storage_time_A = inputs['storage_time_A']
     storage_time_B = inputs['storage_time_B']
     storage_time_C = inputs['storage_time_C']
@@ -1999,7 +2092,7 @@ def run_lca_model(inputs):
 
     start_local_temperature = local_temperature(coor_start_lat, coor_start_lng)
     end_local_temperature = local_temperature(coor_end_lat, coor_end_lng)
-    port_to_port_duration = float(port_to_port_dis) / (16 * 1.852)
+    port_to_port_duration = float(port_to_port_dis) / (16 * 1.852) # Avg ship speed 16 knots
 
     CO2e_start = carbon_intensity(coor_start_lat, coor_start_lng)
     CO2e_end = carbon_intensity(coor_end_lat, coor_end_lng)
@@ -2012,23 +2105,407 @@ def run_lca_model(inputs):
     road_route_start_coords = extract_route_coor((coor_start_lat, coor_start_lng), (start_port_lat, start_port_lng))
     road_route_end_coords = extract_route_coor((end_port_lat, end_port_lng), (coor_end_lat, end_port_lng))
     diesel_price_country = {
-        "Venezuela": 0.016, "Iran": 0.022, "Libya": 0.104, "Algeria": 0.834, "Turkmenistan": 1.082, "Egypt": 1.181, "Angola": 1.238, "Kuwait": 1.419, "Saudi Arabia": 1.675, "Ecuador": 1.798, "Bahrain": 1.807, "Qatar": 2.027, "Bolivia": 2.038, "Kazakhstan": 2.145, "Nigeria": 2.222, "Azerbaijan": 2.227, "Syria": 2.389, "Trinidad and Tobago": 2.46, "Trinidad & Tobago": 2.46, "Malaysia": 2.47, "Sudan": 2.482, "United Arab Emirates": 2.525, "UAE": 2.525, "Oman": 2.54, "Vietnam": 2.553, "Colombia": 2.553, "Bhutan": 2.58, "Lebanon": 2.673, "Tunisia": 2.797, "Myanmar": 2.907, "Burma": 2.907, "Panama": 2.917, "Puerto Rico": 2.949, "Belarus": 3.006, "Guyana": 3.044, "Honduras": 3.059, "Indonesia": 3.07, "Afghanistan": 3.101, "Taiwan": 3.128, "Bangladesh": 3.158, "Laos": 3.185, "Kyrgyzstan": 3.189, "Ethiopia": 3.228, "Paraguay": 3.278, "El Salvador": 3.3, "Cambodia": 3.304, "Curacao": 3.379, "Russia": 3.404, "Pakistan": 3.405, "Maldives": 3.408, "Guatemala": 3.412, "China": 3.442, "United States": 3.452, "USA": 3.452, "Jordan": 3.47, "Philippines": 3.502, "Zambia": 3.54, "Liberia": 3.546, "Uzbekistan": 3.59, "Peru": 3.648, "Fiji": 3.677, "Thailand": 3.703, "Dominican Republic": 3.751, "Dom. Rep.": 3.751, "Gabon": 3.78, "Chile": 3.839, "Congo, Dem. Rep.": 3.882, "DR Congo": 3.882, "Georgia": 3.91, "Canada": 3.934, "Nepal": 3.947, "Aruba": 3.951, "Brazil": 3.977, "Grenada": 3.978, "Australia": 3.988, "India": 3.998, "Cape Verde": 4.032, "Tanzania": 4.036, "Costa Rica": 4.051, "Moldova": 4.071, "Sri Lanka": 4.108, "Japan": 4.143, "Cuba": 4.147, "Lesotho": 4.194, "Botswana": 4.212, "Mongolia": 4.229, "Argentina": 4.24, "Madagascar": 4.246, "Uruguay": 4.268, "New Zealand": 4.271, "South Korea": 4.31, "Suriname": 4.315, "Namibia": 4.357, "Jamaica": 4.389, "Rwanda": 4.404, "Burkina Faso": 4.438, "Nicaragua": 4.444, "Turkey": 4.462, "South Africa": 4.473, "Eswatini": 4.523, "Swaziland": 4.523, "North Macedonia": 4.548, "N. Maced.": 4.548, "Togo": 4.569, "Dominica": 4.58, "Ivory Coast": 4.602, "Côte d'Ivoire": 4.602, "Morocco": 4.633, "Haiti": 4.734, "Benin": 4.734, "Mali": 4.767, "Uganda": 4.788, "Kenya": 4.793, "Ghana": 4.801, "Armenia": 4.832, "Bahamas": 4.869, "Mauritius": 4.912, "Bosnia and Herzegovina": 4.917, "Bosnia-Herzegovina": 4.917, "Ukraine": 4.94, "Senegal": 4.964, "Burundi": 4.989, "Cayman Islands": 5.023, "Mexico": 5.056, "Saint Lucia": 5.084, "Seychelles": 5.094, "Andorra": 5.105, "Mozambique": 5.141, "Malta": 5.208, "Guinea": 5.239, "Sierra Leone": 5.271, "Bulgaria": 5.328, "Cameroon": 5.444, "Montenegro": 5.509, "Belize": 5.606, "Czech Republic": 5.631, "Zimbabwe": 5.754, "Poland": 5.789, "Spain": 5.817, "Luxembourg": 5.871, "Estonia": 5.914, "Malawi": 5.966, "Mayotte": 5.983, "Cyprus": 6.0, "Slovakia": 6.039, "Romania": 6.058, "Lithuania": 6.09, "Croatia": 6.142, "Latvia": 6.159, "Slovenia": 6.168, "Hungary": 6.195, "Sweden": 6.266, "Austria": 6.314, "San Marino": 6.318, "Greece": 6.344, "Barbados": 6.374, "Portugal": 6.512, "Germany": 6.615, "Monaco": 6.624, "France": 6.655, "Belgium": 6.787, "Serbia": 6.866, "Italy": 6.892, "Netherlands": 6.912, "Finland": 7.011, "Norway": 7.026, "United Kingdom": 7.067, "UK": 7.067, "Ireland": 7.114, "Wallis and Futuna": 7.114, "Singapore": 7.195, "Israel": 7.538, "Albania": 7.597, "Denmark": 7.649, "Switzerland": 8.213, "Central African Republic": 8.218, "C. Afr. Rep.": 8.218, "Liechtenstein": 8.36, "Iceland": 9.437, "Hong Kong": 12.666
+        "Venezuela": 0.016,
+        "Iran": 0.022,
+        "Libya": 0.104,
+        "Algeria": 0.834,
+        "Turkmenistan": 1.082,
+        "Egypt": 1.181,
+        "Angola": 1.238,
+        "Kuwait": 1.419,
+        "Saudi Arabia": 1.675,
+        "Ecuador": 1.798,
+        "Bahrain": 1.807,
+        "Qatar": 2.027,
+        "Bolivia": 2.038,
+        "Kazakhstan": 2.145,
+        "Nigeria": 2.222,
+        "Azerbaijan": 2.227,
+        "Syria": 2.389,
+        "Trinidad and Tobago": 2.46,
+        "Trinidad & Tobago": 2.46,
+        "Malaysia": 2.47,
+        "Sudan": 2.482,
+        "United Arab Emirates": 2.525,
+        "UAE": 2.525,
+        "Oman": 2.54,
+        "Vietnam": 2.553,
+        "Colombia": 2.553,
+        "Bhutan": 2.58,
+        "Lebanon": 2.673,
+        "Tunisia": 2.797,
+        "Myanmar": 2.907,
+        "Burma": 2.907,
+        "Panama": 2.917,
+        "Puerto Rico": 2.949,
+        "Belarus": 3.006,
+        "Guyana": 3.044,
+        "Honduras": 3.059,
+        "Indonesia": 3.07,
+        "Afghanistan": 3.101,
+        "Taiwan": 3.128,
+        "Bangladesh": 3.158,
+        "Laos": 3.185,
+        "Kyrgyzstan": 3.189,
+        "Ethiopia": 3.228,
+        "Paraguay": 3.278,
+        "El Salvador": 3.3,
+        "Cambodia": 3.304,
+        "Curacao": 3.379,
+        "Russia": 3.404,
+        "Pakistan": 3.405,
+        "Maldives": 3.408,
+        "Guatemala": 3.412,
+        "China": 3.442,
+        "United States": 3.452,
+        "USA": 3.452,
+        "Jordan": 3.47,
+        "Philippines": 3.502,
+        "Zambia": 3.54,
+        "Liberia": 3.546,
+        "Uzbekistan": 3.59,
+        "Peru": 3.648,
+        "Fiji": 3.677,
+        "Thailand": 3.703,
+        "Dominican Republic": 3.751,
+        "Dom. Rep.": 3.751,
+        "Gabon": 3.78,
+        "Chile": 3.839,
+        "Congo, Dem. Rep.": 3.882,
+        "DR Congo": 3.882,
+        "Georgia": 3.91,
+        "Canada": 3.934,
+        "Nepal": 3.947,
+        "Aruba": 3.951,
+        "Brazil": 3.977,
+        "Grenada": 3.978,
+        "Australia": 3.988,
+        "India": 3.998,
+        "Cape Verde": 4.032,
+        "Tanzania": 4.036,
+        "Costa Rica": 4.051,
+        "Moldova": 4.071,
+        "Sri Lanka": 4.108,
+        "Japan": 4.143,
+        "Cuba": 4.147,
+        "Lesotho": 4.194,
+        "Botswana": 4.212,
+        "Mongolia": 4.229,
+        "Argentina": 4.24,
+        "Madagascar": 4.246,
+        "Uruguay": 4.268,
+        "New Zealand": 4.271,
+        "South Korea": 4.31,
+        "Suriname": 4.315,
+        "Namibia": 4.357,
+        "Jamaica": 4.389,
+        "Rwanda": 4.404,
+        "Burkina Faso": 4.438,
+        "Nicaragua": 4.444,
+        "Turkey": 4.462,
+        "South Africa": 4.473,
+        "Eswatini": 4.523,
+        "Swaziland": 4.523,
+        "North Macedonia": 4.548,
+        "N. Maced.": 4.548,
+        "Togo": 4.569,
+        "Dominica": 4.58,
+        "Ivory Coast": 4.602,
+        "Côte d'Ivoire": 4.602,
+        "Morocco": 4.633,
+        "Haiti": 4.734,
+        "Benin": 4.734,
+        "Mali": 4.767,
+        "Uganda": 4.788,
+        "Kenya": 4.793,
+        "Ghana": 4.801,
+        "Armenia": 4.832,
+        "Bahamas": 4.869,
+        "Mauritius": 4.912,
+        "Bosnia and Herzegovina": 4.917,
+        "Bosnia-Herzegovina": 4.917,
+        "Ukraine": 4.94,
+        "Senegal": 4.964,
+        "Burundi": 4.989,
+        "Cayman Islands": 5.023,
+        "Mexico": 5.056,
+        "Saint Lucia": 5.084,
+        "Seychelles": 5.094,
+        "Andorra": 5.105,
+        "Mozambique": 5.141,
+        "Malta": 5.208,
+        "Guinea": 5.239,
+        "Sierra Leone": 5.271,
+        "Bulgaria": 5.328,
+        "Cameroon": 5.444,
+        "Montenegro": 5.509,
+        "Belize": 5.606,
+        "Czech Republic": 5.631,
+        "Zimbabwe": 5.754,
+        "Poland": 5.789,
+        "Spain": 5.817,
+        "Luxembourg": 5.871,
+        "Estonia": 5.914,
+        "Malawi": 5.966,
+        "Mayotte": 5.983,
+        "Cyprus": 6.0,
+        "Slovakia": 6.039,
+        "Romania": 6.058,
+        "Lithuania": 6.09,
+        "Croatia": 6.142,
+        "Latvia": 6.159,
+        "Slovenia": 6.168,
+        "Hungary": 6.195,
+        "Sweden": 6.266,
+        "Austria": 6.314,
+        "San Marino": 6.318,
+        "Greece": 6.344,
+        "Barbados": 6.374,
+        "Portugal": 6.512,
+        "Germany": 6.615,
+        "Monaco": 6.624,
+        "France": 6.655,
+        "Belgium": 6.787,
+        "Serbia": 6.866,
+        "Italy": 6.892,
+        "Netherlands": 6.912,
+        "Finland": 7.011,
+        "Norway": 7.026,
+        "United Kingdom": 7.067,
+        "UK": 7.067,
+        "Ireland": 7.114,
+        "Wallis and Futuna": 7.114,
+        "Singapore": 7.195,
+        "Israel": 7.538,
+        "Albania": 7.597,
+        "Denmark": 7.649,
+        "Switzerland": 8.213,
+        "Central African Republic": 8.218,
+        "C. Afr. Rep.": 8.218,
+        "Liechtenstein": 8.36,
+        "Iceland": 9.437,
+        "Hong Kong": 12.666
     }
     diesel_price_start = get_diesel_price(coor_start_lat, coor_start_lng, diesel_price_country)
     diesel_price_end = get_diesel_price(end_port_lat, end_port_lng, diesel_price_country)
 
     truck_driver_annual_salaries = {
-        "Afghanistan": 3535.00, "Albania": 9366.00, "Algeria": 9366.00, "Andorra": 49000.00, "Angola": 9366.00, "Antigua and Barbuda": 14895.00, "Argentina": 7466.00, "Armenia": 8022.00, "Australia": 67568.00, "Austria": 52886.00, "Azerbaijan": 8022.00, "Bahamas": 35452.00, "Bahrain": 27627.00, "Bangladesh": 3535.00, "Barbados": 14895.00, "Belarus": 5040.00, "Belgium": 55097.00, "Belize": 10243.00, "Benin": 9366.00, "Bhutan": 3535.00, "Bolivia": 10243.00, "Bosnia and Herzegovina": 12812.00, "Bosnia-Herzegovina": 12812.00, "Botswana": 9366.00, "Brazil": 10875.00, "Trinidad and Tobago": 12800.00, "Trinidad & Tobago": 12800.00, "Brunei": 40149.00, "Bulgaria": 14901.00, "Burkina Faso": 9366.00, "Burundi": 3535.00, "Cambodia": 4652.00, "Cameroon": 9366.00, "Canada": 46276.00, "Cape Verde": 9366.00, "Central African Republic": 9366.00, "C. Afr. Rep.": 9366.00, "Chad": 9366.00, "Chile": 14675.00, "China": 16881.00, "Colombia": 10494.00, "Comoros": 9366.00, "Congo, Dem. Rep.": 9366.00, "DR Congo": 9366.00, "Congo, Rep.": 9366.00, "Costa Rica": 18581.00, "Croatia": 19858.00, "Cuba": 10243.00, "Cyprus": 27225.00, "Czech Republic": 22545.00, "Denmark": 64323.00, "Djibouti": 9366.00, "Dominica": 14895.00, "Dominican Republic": 6623.00, "Dom. Rep.": 6623.00, "Ecuador": 13737.00, "Egypt": 3363.00, "El Salvador": 10243.00, "Equatorial Guinea": 9366.00, "Eritrea": 9366.00, "Estonia": 20789.00, "Eswatini": 9366.00, "Swaziland": 9366.00, "Ethiopia": 9366.00, "Fiji": 10243.00, "Finland": 52822.00, "France": 39047.00, "Gabon": 9366.00, "Gambia": 9366.00, "Georgia": 8022.00, "Germany": 49000.00, "Ghana": 9366.00, "Greece": 27225.00, "Grenada": 14895.00, "Guatemala": 11533.00, "Guinea": 9366.00, "Guinea-Bissau": 9366.00, "Guyana": 10243.00, "Haiti": 10243.00, "Honduras": 10243.00, "Hong Kong": 40678.00, "Hungary": 17505.00, "Iceland": 66184.00, "India": 7116.00, "Indonesia": 12778.00, "Iran": 14022.00, "Iraq": 14022.00, "Ireland": 51465.00, "Israel": 32004.00, "Italy": 37483.00, "Ivory Coast": 9366.00, "Côte d'Ivoire": 9366.00, "Jamaica": 12018.00, "Japan": 30959.00, "Jordan": 9366.00, "Kazakhstan": 12955.00, "Kenya": 9366.00, "Kiribati": 10243.00, "Kuwait": 27627.00, "Kyrgyzstan": 5040.00, "Laos": 4652.00, "Latvia": 17458.00, "Lebanon": 9366.00, "Lesotho": 9366.00, "Liberia": 9366.00, "Libya": 9366.00, "Liechtenstein": 82171.00, "Lithuania": 21632.00, "Luxembourg": 62117.00, "Madagascar": 9366.00, "Malawi": 9366.00, "Malaysia": 11903.00, "Maldives": 12778.00, "Mali": 9366.00, "Malta": 25803.00, "Marshall Islands": 10243.00, "Mauritania": 9366.00, "Mauritius": 9366.00, "Mexico": 11622.00, "Micronesia": 10243.00, "Moldova": 5040.00, "Monaco": 82171.00, "Mongolia": 5040.00, "Montenegro": 12812.00, "Morocco": 11351.00, "Mozambique": 9366.00, "Myanmar": 3535.00, "Burma": 3535.00, "Namibia": 9366.00, "Nauru": 10243.00, "Nepal": 3535.00, "Netherlands": 49758.00, "New Zealand": 43970.00, "Nicaragua": 10243.00, "Niger": 9366.00, "Nigeria": 9366.00, "North Korea": 5000.00, "North Macedonia": 12812.00, "N. Maced.": 12812.00, "Norway": 48295.00, "Oman": 27627.00, "Pakistan": 3537.00, "Palau": 10243.00, "Panama": 19593.00, "Papua New Guinea": 10243.00, "Paraguay": 10243.00, "Peru": 10149.00, "Philippines": 6312.00, "Poland": 23511.00, "Portugal": 26116.00, "Qatar": 27627.00, "Romania": 21847.00, "Russia": 9382.00, "Rwanda": 9366.00, "Saint Kitts and Nevis": 14895.00, "Saint Lucia": 14895.00, "Saint Vincent and the Grenadines": 14895.00, "Samoa": 10243.00, "San Marino": 37483.00, "Sao Tome and Principe": 9366.00, "Saudi Arabia": 27627.00, "Senegal": 9366.00, "Serbia": 12812.00, "Seychelles": 9366.00, "Sierra Leone": 9366.00, "Singapore": 40104.00, "Slovakia": 22517.00, "Slovenia": 27225.00, "Solomon Islands": 10243.00, "Somalia": 3535.00, "South Africa": 14510.00, "South Korea": 31721.00, "South Sudan": 9366.00, "Spain": 35413.00, "Sri Lanka": 3535.00, "Sudan": 9366.00, "Suriname": 10243.00, "Sweden": 46322.00, "Switzerland": 82171.00, "Syria": 9366.00, "Taiwan": 26178.00, "Tajikistan": 5040.00, "Tanzania": 9366.00, "Thailand": 10455.00, "Timor-Leste": 10243.00, "Togo": 9366.00, "Tonga": 10243.00, "Tunisia": 9366.00, "Turkey": 17788.00, "Turkmenistan": 5040.00, "Tuvalu": 10243.00, "Uganda": 9366.00, "Ukraine": 6539.00, "United Arab Emirates": 35608.00, "UAE": 35608.00, "United Kingdom": 47179.00, "UK": 47179.00, "United States": 72415.00, "USA": 72415.00, "Uruguay": 14959.00, "Uzbekistan": 5040.00, "Vanuatu": 10243.00, "Venezuela": 10243.00, "Vietnam": 4652.00, "Yemen": 9366.00, "Zambia": 9366.00, "Zimbabwe": 9366.00
+        "Afghanistan": 3535.00,
+        "Albania": 9366.00,
+        "Algeria": 9366.00,
+        "Andorra": 49000.00,
+        "Angola": 9366.00,
+        "Antigua and Barbuda": 14895.00,
+        "Argentina": 7466.00,
+        "Armenia": 8022.00,
+        "Australia": 67568.00,
+        "Austria": 52886.00,
+        "Azerbaijan": 8022.00,
+        "Bahamas": 35452.00,
+        "Bahrain": 27627.00,
+        "Bangladesh": 3535.00,
+        "Barbados": 14895.00,
+        "Belarus": 5040.00,
+        "Belgium": 55097.00,
+        "Belize": 10243.00,
+        "Benin": 9366.00,
+        "Bhutan": 3535.00,
+        "Bolivia": 10243.00,
+        "Bosnia and Herzegovina": 12812.00,
+        "Bosnia-Herzegovina": 12812.00,
+        "Botswana": 9366.00,
+        "Brazil": 10875.00,
+        "Trinidad and Tobago": 12800.00,
+        "Trinidad & Tobago": 12800.00,
+        "Brunei": 40149.00,
+        "Bulgaria": 14901.00,
+        "Burkina Faso": 9366.00,
+        "Burundi": 3535.00,
+        "Cambodia": 4652.00,
+        "Cameroon": 9366.00,
+        "Canada": 46276.00,
+        "Cape Verde": 9366.00,
+        "Central African Republic": 9366.00,
+        "C. Afr. Rep.": 9366.00,
+        "Chad": 9366.00,
+        "Chile": 14675.00,
+        "China": 16881.00,
+        "Colombia": 10494.00,
+        "Comoros": 9366.00,
+        "Congo, Dem. Rep.": 9366.00,
+        "DR Congo": 9366.00,
+        "Congo, Rep.": 9366.00,
+        "Costa Rica": 18581.00,
+        "Croatia": 19858.00,
+        "Cuba": 10243.00,
+        "Cyprus": 27225.00,
+        "Czech Republic": 22545.00,
+        "Denmark": 64323.00,
+        "Djibouti": 9366.00,
+        "Dominica": 14895.00,
+        "Dominican Republic": 6623.00,
+        "Dom. Rep.": 6623.00,
+        "Ecuador": 13737.00,
+        "Egypt": 3363.00,
+        "El Salvador": 10243.00,
+        "Equatorial Guinea": 9366.00,
+        "Eritrea": 9366.00,
+        "Estonia": 20789.00,
+        "Eswatini": 9366.00,
+        "Swaziland": 9366.00,
+        "Ethiopia": 9366.00,
+        "Fiji": 10243.00,
+        "Finland": 52822.00,
+        "France": 39047.00,
+        "Gabon": 9366.00,
+        "Gambia": 9366.00,
+        "Georgia": 8022.00,
+        "Germany": 49000.00,
+        "Ghana": 9366.00,
+        "Greece": 27225.00,
+        "Grenada": 14895.00,
+        "Guatemala": 11533.00,
+        "Guinea": 9366.00,
+        "Guinea-Bissau": 9366.00,
+        "Guyana": 10243.00,
+        "Haiti": 10243.00,
+        "Honduras": 10243.00,
+        "Hong Kong": 40678.00,
+        "Hungary": 17505.00,
+        "Iceland": 66184.00,
+        "India": 7116.00,
+        "Indonesia": 12778.00,
+        "Iran": 14022.00,
+        "Iraq": 14022.00,
+        "Ireland": 51465.00,
+        "Israel": 32004.00,
+        "Italy": 37483.00,
+        "Ivory Coast": 9366.00,
+        "Côte d'Ivoire": 9366.00,
+        "Jamaica": 12018.00,
+        "Japan": 30959.00,
+        "Jordan": 9366.00,
+        "Kazakhstan": 12955.00,
+        "Kenya": 9366.00,
+        "Kiribati": 10243.00,
+        "Kuwait": 27627.00,
+        "Kyrgyzstan": 5040.00,
+        "Laos": 4652.00,
+        "Latvia": 17458.00,
+        "Lebanon": 9366.00,
+        "Lesotho": 9366.00,
+        "Liberia": 9366.00,
+        "Libya": 9366.00,
+        "Liechtenstein": 82171.00,
+        "Lithuania": 21632.00,
+        "Luxembourg": 62117.00,
+        "Madagascar": 9366.00,
+        "Malawi": 9366.00,
+        "Malaysia": 11903.00,
+        "Maldives": 12778.00,
+        "Mali": 9366.00,
+        "Malta": 25803.00,
+        "Marshall Islands": 10243.00,
+        "Mauritania": 9366.00,
+        "Mauritius": 9366.00,
+        "Mexico": 11622.00,
+        "Micronesia": 10243.00,
+        "Moldova": 5040.00,
+        "Monaco": 82171.00,
+        "Mongolia": 5040.00,
+        "Montenegro": 12812.00,
+        "Morocco": 11351.00,
+        "Mozambique": 9366.00,
+        "Myanmar": 3535.00,
+        "Burma": 3535.00,
+        "Namibia": 9366.00,
+        "Nauru": 10243.00,
+        "Nepal": 3535.00,
+        "Netherlands": 49758.00,
+        "New Zealand": 43970.00,
+        "Nicaragua": 10243.00,
+        "Niger": 9366.00,
+        "Nigeria": 9366.00,
+        "North Korea": 5000.00,
+        "North Macedonia": 12812.00,
+        "N. Maced.": 12812.00,
+        "Norway": 48295.00,
+        "Oman": 27627.00,
+        "Pakistan": 3537.00,
+        "Palau": 10243.00,
+        "Panama": 19593.00,
+        "Papua New Guinea": 10243.00,
+        "Paraguay": 10243.00,
+        "Peru": 10149.00,
+        "Philippines": 6312.00,
+        "Poland": 23511.00,
+        "Portugal": 26116.00,
+        "Qatar": 27627.00,
+        "Romania": 21847.00,
+        "Russia": 9382.00,
+        "Rwanda": 9366.00,
+        "Saint Kitts and Nevis": 14895.00,
+        "Saint Lucia": 14895.00,
+        "Saint Vincent and the Grenadines": 14895.00,
+        "Samoa": 10243.00,
+        "San Marino": 37483.00,
+        "Sao Tome and Principe": 9366.00,
+        "Saudi Arabia": 27627.00,
+        "Senegal": 9366.00,
+        "Serbia": 12812.00,
+        "Seychelles": 9366.00,
+        "Sierra Leone": 9366.00,
+        "Singapore": 40104.00,
+        "Slovakia": 22517.00,
+        "Slovenia": 27225.00,
+        "Solomon Islands": 10243.00,
+        "Somalia": 3535.00,
+        "South Africa": 14510.00,
+        "South Korea": 31721.00,
+        "South Sudan": 9366.00,
+        "Spain": 35413.00,
+        "Sri Lanka": 3535.00,
+        "Sudan": 9366.00,
+        "Suriname": 10243.00,
+        "Sweden": 46322.00,
+        "Switzerland": 82171.00,
+        "Syria": 9366.00,
+        "Taiwan": 26178.00,
+        "Tajikistan": 5040.00,
+        "Tanzania": 9366.00,
+        "Thailand": 10455.00,
+        "Timor-Leste": 10243.00,
+        "Togo": 9366.00,
+        "Tonga": 10243.00,
+        "Tunisia": 9366.00,
+        "Turkey": 17788.00,
+        "Turkmenistan": 5040.00,
+        "Tuvalu": 10243.00,
+        "Uganda": 9366.00,
+        "Ukraine": 6539.00,
+        "United Arab Emirates": 35608.00,
+        "UAE": 35608.00,
+        "United Kingdom": 47179.00,
+        "UK": 47179.00,
+        "United States": 72415.00,
+        "USA": 72415.00,
+        "Uruguay": 14959.00,
+        "Uzbekistan": 5040.00,
+        "Vanuatu": 10243.00,
+        "Venezuela": 10243.00,
+        "Vietnam": 4652.00,
+        "Yemen": 9366.00,
+        "Zambia": 9366.00,
+        "Zimbabwe": 9366.00
     }
 
     start_country_name = get_country_from_coords(coor_start_lat, coor_start_lng)
     end_country_name = get_country_from_coords(coor_end_lat, coor_end_lng)
-    start_port_country_name = get_country_from_coords(start_port_lat, start_port_lng)
-    end_port_country_name = get_country_from_coords(end_port_lat, end_port_lng)
 
-    driver_daily_salary_start = truck_driver_annual_salaries.get(start_country_name, 30000) / 330
-    driver_daily_salary_end = truck_driver_annual_salaries.get(end_country_name, 30000) / 330
-    annual_working_days = 330
+    driver_daily_salary_start = truck_driver_annual_salaries.get(start_country_name, 30000) / 330 # Default to 30k if not found
+    driver_daily_salary_end = truck_driver_annual_salaries.get(end_country_name, 30000) / 330 # Default to 30k if not found
+    annual_working_days = 330 # Standard assumption for working days in a year for a truck driver
+
 
     _, dynamic_price = openai_get_marine_fuel_price(marine_fuel_choice, (start_port_lat, start_port_lng), start_port_name)
 
@@ -2041,20 +2518,26 @@ def run_lca_model(inputs):
         'q-max':    {'name': 'Q-Max Carrier', 'volume_m3': 266000, 'num_tanks': 5, 'shape': 1, 'reefer_slots': 2000, 'gross_tonnage': 215000}
     }
     REGIONAL_PORT_FEE_DATA = {
-        'North Europe': 3.50, 'US West Coast': 3.20, 'US East Coast': 3.00, 'East Asia': 2.80, 'Middle East': 2.50, 'Default': 3.00
+        # Source: Estimates derived from various port authority tariff sheets and maritime economic reports
+        'North Europe': 3.50,
+        'US West Coast': 3.20,
+        'US East Coast': 3.00,
+        'East Asia': 2.80,
+        'Middle East': 2.50,
+        'Default': 3.00 # A global average fallback
     }
-    # Define port_regions here, using the REGIONAL_PORT_FEE_DATA
-    port_regions = REGIONAL_PORT_FEE_DATA
-
     if ship_archetype_key == 'custom':
+        # Custom ship logic...
         selected_ship_params = {
             'volume_m3': inputs['total_ship_volume'],
             'num_tanks': inputs['ship_number_of_tanks'],
             'shape': inputs['ship_tank_shape'],
+            # Estimate GT for custom ships, e.g., by scaling from standard
             'gross_tonnage': 165000 * (inputs['total_ship_volume'] / 174000)
         }
     else:
         selected_ship_params = ship_archetypes[ship_archetype_key]
+        # Add the key to the params for later lookup
         selected_ship_params['key'] = ship_archetype_key
     total_ship_volume = selected_ship_params['volume_m3']
     ship_number_of_tanks = selected_ship_params['num_tanks']
@@ -2071,12 +2554,12 @@ def run_lca_model(inputs):
     selected_marine_fuel_params['price_usd_per_ton'] = dynamic_price
     auxiliary_fuel_params = {
         'name': 'Marine Gas Oil (MGO)',
-        'price_usd_per_ton': 750.0,
+        'price_usd_per_ton': 750.0,  # Price can be different from main fuels
         'hhv_mj_per_kg': 45.5,
-        'co2_emissions_factor_kg_per_kg_fuel': 3.206
+        'co2_emissions_factor_kg_per_kg_fuel': 3.206 # Specific CO2 factor for MGO
     }
     HHV_diesel = 45.6
-    diesel_density = 3.22
+    diesel_density = 3.22 # kg per gal
     CO2e_diesel = 10.21
     VOYAGE_OVERHEADS_DATA = {
         'small':    {'daily_operating_cost_usd': 8500, 'daily_capital_cost_usd': 10000, 'port_fee_usd': 30000, 'suez_toll_per_gt_usd': 9.00, 'panama_toll_per_gt_usd': 9.00},
@@ -2087,104 +2570,104 @@ def run_lca_model(inputs):
     }
     food_params = {
                 'strawberry': {
-                    'name': 'Strawberry',
-                    'process_flags': {
-                        'needs_precooling': True,
-                        'needs_freezing': True,
-                        'needs_controlled_atmosphere': False,
+                    'name': 'Strawberry', # The common name for the commodity.
+                    'process_flags': { # These flags determine which process functions are called for this commodity.
+                        'needs_precooling': True, # Set to True because rapid cooling after harvest is critical for berries. Source: Postharvest handling guides.
+                        'needs_freezing': True, # This model assumes strawberries are transported frozen for long-distance sea freight. Source: Industry practice.
+                        'needs_controlled_atmosphere': False, # Typically not required for frozen products. Source: CA storage guides.
                     },
-                    'general_params': {
-                        'density_kg_per_m3': 600,
-                        'target_temp_celsius': -24.0,
-                        'spoilage_rate_per_day': 0.0001,
-                        'reefer_container_power_kw': 3.5,
-                        'cargo_per_truck_kg': 20000,
-                        'specific_heat_fresh_mj_kgK': 0.0039,
+                    'general_params': { # Parameters used across multiple stages of the supply chain.
+                        'density_kg_per_m3': 600, # The bulk density of whole strawberries in a container. Source: Food engineering databases.
+                        'target_temp_celsius': -24.0, # Standard international temperature for frozen goods. Source: ISO standards, food logistics guides.
+                        'spoilage_rate_per_day': 0.0001, # Estimated degradation/loss rate for frozen products, representing handling/quality loss. Source: Shelf-life studies.
+                        'reefer_container_power_kw': 3.5, # Average power draw for a reefer container holding frozen goods. Source: Reefer manufacturer specifications (e.g., Carrier, Thermo King).
+                        'cargo_per_truck_kg': 20000, # Standard maximum payload for a 40ft refrigerated container. Source: Freight and logistics industry standards.
+                        'specific_heat_fresh_mj_kgK': 0.0039, # Thermodynamic property based on high water content (~91%). Source: Food science literature, ASHRAE handbooks.
                         'reefer_truck_fuel_consumption_L_hr': 1.5,
-                        'production_CO2e_kg_per_kg': 0.747,
+                        'production_CO2e_kg_per_kg': 0.747, # Average CO2 emissions from strawberry production per kg. Source: Reducing food’s environmental impacts through producers and consumers.
                     },
-                    'precooling_params': {
-                        'initial_field_heat_celsius': 28.0,
-                        'target_precool_temperature_celsius': 1.0,
-                        'cop_precooling_system': 2.0,
-                        'moisture_loss_percent': 0.015,
+                    'precooling_params': { # Parameters for the initial pre-cooling process.
+                        'initial_field_heat_celsius': 28.0, # Represents a typical ambient temperature during a summer harvest season in a region like California. Source: Agricultural and meteorological data.
+                        'target_precool_temperature_celsius': 1.0, # Ideal temperature to reach before freezing to ensure quality. Source: Postharvest handling guides (e.g., UC Davis).
+                        'cop_precooling_system': 2.0, # Coefficient of Performance for a typical forced-air cooling system. Source: HVAC/R engineering principles (ASHRAE).
+                        'moisture_loss_percent': 0.015, # Estimated water weight loss during forced-air cooling. Source: Postharvest studies on berry desiccation.
                     },
-                    'freezing_params': {
-                        'specific_heat_frozen_mj_kgK': 0.0018,
-                        'latent_heat_fusion_mj_kg': 0.300,
-                        'cop_freezing_system': 2.5
+                    'freezing_params': { # Parameters for the main freezing process.
+                        'specific_heat_frozen_mj_kgK': 0.0018, # Thermodynamic property of the frozen product (ice has a lower specific heat than water). Source: Food science literature.
+                        'latent_heat_fusion_mj_kg': 0.300, # Energy required to freeze the water content of the fruit. Source: Physics handbooks, food engineering data.
+                        'cop_freezing_system': 2.5 # Coefficient of Performance for an industrial blast freezer. Source: HVAC/R engineering principles (ASHRAE).
                     }
                 },
                 'hass_avocado': {
-                    'name': 'Hass Avocado',
-                    'process_flags': {
-                        'needs_precooling': True,
-                        'needs_freezing': False,
-                        'needs_controlled_atmosphere': True,
+                    'name': 'Hass Avocado', # The common name for the commodity.
+                    'process_flags': { # These flags determine which process functions are called for this commodity.
+                        'needs_precooling': True, # Pre-cooling is essential for avocados. Source: Postharvest handling guides.
+                        'needs_freezing': False, # Avocados are shipped chilled, not frozen. Source: Industry practice.
+                        'needs_controlled_atmosphere': True, # CA is critical for extending the shelf-life of avocados. Source: CA storage guides, UC Davis Postharvest Center.
                     },
-                    'general_params': {
-                        'density_kg_per_m3': 600,
-                        'target_temp_celsius': 5.0,
-                        'spoilage_rate_per_day': 0.0005,
-                        'spoilage_rate_ca_per_day': 0.0002,
-                        'reefer_container_power_kw': 1.5,
-                        'cargo_per_truck_kg': 20000,
-                        'specific_heat_fresh_mj_kgK': 0.0035,
+                    'general_params': { # Parameters used across multiple stages of the supply chain.
+                        'density_kg_per_m3': 600, # Bulk density of whole avocados. Source: Food engineering databases.
+                        'target_temp_celsius': 5.0, # Optimal transport temperature for Hass avocados to control ripening. Source: UC Davis Postharvest Technology Center.
+                        'spoilage_rate_per_day': 0.0005, # Estimated loss rate for chilled avocados under CA. Source: Shelf-life studies.
+                        'spoilage_rate_ca_per_day': 0.0002, # Lower spoilage rate under CA
+                        'reefer_container_power_kw': 1.5, # Lower average power draw for chilled goods compared to frozen. Source: Reefer manufacturer specifications.
+                        'cargo_per_truck_kg': 20000, # Standard maximum payload for a 40ft refrigerated container. Source: Freight and logistics industry standards.
+                        'specific_heat_fresh_mj_kgK': 0.0035, # Thermodynamic property based on the fruit's composition. Source: Food science literature.
                         'reefer_truck_fuel_consumption_L_hr': 1.5,
-                        'production_CO2e_kg_per_kg': 1.725,
+                        'production_CO2e_kg_per_kg': 1.725, # Average CO2 emissions from strawberry production per kg. Source: Carbon Cloud.
                     },
-                    'precooling_params': {
-                        'initial_field_heat_celsius': 25.0,
-                        'target_precool_temperature_celsius': 6.0,
-                        'cop_precooling_system': 2.0,
-                        'moisture_loss_percent': 0.01,
+                    'precooling_params': { # Parameters for the initial pre-cooling process.
+                        'initial_field_heat_celsius': 25.0, # A typical field heat for avocados from subtropical/tropical climates. Source: Agricultural data.
+                        'target_precool_temperature_celsius': 6.0, # Target temperature after pre-cooling. Source: Postharvest handling guides.
+                        'cop_precooling_system': 2.0, # Coefficient of Performance for a forced-air cooling system. Source: HVAC/R engineering principles.
+                        'moisture_loss_percent': 0.01, # Estimated water weight loss. Source: Postharvest studies.
                     },
-                    'ca_params': {
-                        'o2_target_percent': 5.0,
-                        'co2_target_percent': 5.0,
-                        'humidity_target_rh_percent': 90.0,
-                        'respiration_rate_ml_co2_per_kg_hr': 15.0,
-                        'container_leakage_rate_ach': 0.02,
-                        'n2_generator_efficiency_kwh_per_m3': 0.4,
-                        'co2_scrubber_efficiency_kwh_per_kg_co2': 0.2,
-                        'humidifier_efficiency_kwh_per_liter': 0.05,
-                        'base_control_power_kw': 0.1
+                    'ca_params': { # Parameters for the Controlled Atmosphere system.
+                        'o2_target_percent': 5.0, # Optimal low-oxygen level for avocados. Source: UC Davis Postharvest Technology Center.
+                        'co2_target_percent': 5.0, # Optimal carbon dioxide level to slow ripening. Source: UC Davis Postharvest Technology Center.
+                        'humidity_target_rh_percent': 90.0, # Target relative humidity to prevent shriveling. Source: Postharvest handling guides.
+                        'respiration_rate_ml_co2_per_kg_hr': 15.0, # A typical respiration rate for avocados at their target temperature. Source: Postharvest biology research papers.
+                        'container_leakage_rate_ach': 0.02, # Air Changes per Hour, representing the leakiness of a modern container. Source: ISO standards for freight containers.
+                        'n2_generator_efficiency_kwh_per_m3': 0.4, # Energy needed for an onboard nitrogen generator to produce 1 m³ of N2. Source: Manufacturer specifications.
+                        'co2_scrubber_efficiency_kwh_per_kg_co2': 0.2, # Energy needed for a CO2 scrubber to remove 1 kg of CO2. Source: Chemical engineering process design.
+                        'humidifier_efficiency_kwh_per_liter': 0.05, # Energy to atomize 1 liter of water for humidification. Source: HVAC/R equipment specifications.
+                        'base_control_power_kw': 0.1 # Baseline constant power draw for sensors and control units. Source: Equipment specifications.
                     }
                 },
                 'banana': {
-                    'name': 'Banana',
-                    'process_flags': {
-                        'needs_precooling': True,
-                        'needs_freezing': False,
-                        'needs_controlled_atmosphere': True,
+                    'name': 'Banana', # The common name for the commodity.
+                    'process_flags': { # These flags determine which process functions are called for this commodity.
+                        'needs_precooling': True, # Pre-cooling is standard practice. Source: Postharvest handling guides for bananas.
+                        'needs_freezing': False, # Bananas are highly sensitive to cold and are never frozen for fresh market. Source: Industry practice.
+                        'needs_controlled_atmosphere': True, # CA is widely used to manage ripening during long sea voyages. Source: Postharvest handling guides.
                     },
-                    'general_params': {
-                        'density_kg_per_m3': 650,
-                        'target_temp_celsius': 13.5,
-                        'spoilage_rate_per_day': 0.001,
-                        'spoilage_rate_ca_per_day': 0.0004,
-                        'reefer_container_power_kw': 1.8,
-                        'cargo_per_truck_kg': 20000,
-                        'specific_heat_fresh_mj_kgK': 0.0033,
+                    'general_params': { # Parameters used across multiple stages of the supply chain.
+                        'density_kg_per_m3': 650, # Bulk density for hands of bananas in cartons. Source: Food engineering databases.
+                        'target_temp_celsius': 13.5, # Critical temperature to prevent chilling injury while managing ripening. Source: UC Davis Postharvest Technology Center.
+                        'spoilage_rate_per_day': 0.001, # Higher spoilage rate due to sensitivity. Source: Shelf-life studies on bananas.
+                        'spoilage_rate_ca_per_day': 0.0004, # Lower spoilage rate under CA
+                        'reefer_container_power_kw': 1.8, # Power draw for this specific chilled temperature. Source: Reefer manufacturer specifications.
+                        'cargo_per_truck_kg': 20000, # Standard maximum payload for a 40ft refrigerated container. Source: Freight and logistics industry standards.
+                        'specific_heat_fresh_mj_kgK': 0.0033, # Thermodynamic property. Source: Food science literature.
                         'reefer_truck_fuel_consumption_L_hr': 1.5,
-                        'production_CO2e_kg_per_kg': 0.241,
+                        'production_CO2e_kg_per_kg': 0.241, # Average CO2 emissions from banana production per kg. Source: Reducing food’s environmental impacts through producers and consumers.
                     },
-                    'precooling_params': {
-                        'initial_field_heat_celsius': 30.0,
-                        'target_precool_temperature_celsius': 14.0,
-                        'cop_precooling_system': 2.0,
-                        'moisture_loss_percent': 0.01,
+                    'precooling_params': { # Parameters for the initial pre-cooling process.
+                        'initial_field_heat_celsius': 30.0, # Represents a typical field heat in a tropical harvesting environment. Source: Agricultural and meteorological data.
+                        'target_precool_temperature_celsius': 14.0, # Target temperature after pre-cooling. Source: Postharvest handling guides.
+                        'cop_precooling_system': 2.0, # COP for forced-air cooling rooms at packing houses. Source: HVAC/R engineering principles.
+                        'moisture_loss_percent': 0.01, # Estimated water weight loss. Source: Postharvest studies.
                     },
-                    'ca_params': {
-                        'o2_target_percent': 2.0,
-                        'co2_target_percent': 5.0,
-                        'humidity_target_rh_percent': 90.0,
-                        'respiration_rate_ml_co2_per_kg_hr': 25.0,
-                        'container_leakage_rate_ach': 0.02,
-                        'n2_generator_efficiency_kwh_per_m3': 0.4,
-                        'co2_scrubber_efficiency_kwh_per_kg_co2': 0.2,
-                        'humidifier_efficiency_kwh_per_liter': 0.05,
-                        'base_control_power_kw': 0.1
+                    'ca_params': { # Parameters for the Controlled Atmosphere system.
+                        'o2_target_percent': 2.0, # Very low oxygen is needed to put bananas "to sleep". Source: UC Davis Postharvest Technology Center.
+                        'co2_target_percent': 5.0, # High CO2 level helps inhibit ripening. Source: UC Davis Postharvest Technology Center.
+                        'humidity_target_rh_percent': 90.0, # Target relative humidity. Source: Postharvest handling guides.
+                        'respiration_rate_ml_co2_per_kg_hr': 25.0, # Bananas have a very high respiration rate compared to other fruits. Source: Postharvest biology research papers.
+                        'container_leakage_rate_ach': 0.02, # Air Changes per Hour for the container. Source: ISO standards.
+                        'n2_generator_efficiency_kwh_per_m3': 0.4, # Equipment efficiency. Source: Manufacturer specifications.
+                        'co2_scrubber_efficiency_kwh_per_kg_co2': 0.2, # Equipment efficiency. Source: Chemical engineering process design.
+                        'humidifier_efficiency_kwh_per_liter': 0.05, # Equipment efficiency. Source: HVAC/R equipment specifications.
+                        'base_control_power_kw': 0.1 # Baseline power draw for control systems. Source: Equipment specifications.
                     }
                 }
             }
@@ -2192,6 +2675,7 @@ def run_lca_model(inputs):
     data_raw = []
     response_data = {}
     if commodity_type == 'fuel':
+        # --- Unpack FUEL specific inputs ---
         fuel_type = inputs['fuel_type']
         recirculation_BOG = inputs['recirculation_BOG']
         BOG_recirculation_truck = inputs['BOG_recirculation_truck']
@@ -2203,17 +2687,19 @@ def run_lca_model(inputs):
         user_define = [0, fuel_type, int(recirculation_BOG), int(BOG_recirculation_truck_apply), int(BOG_recirculation_storage_apply), int(BOG_recirculation_mati_trans_apply)]
         LH2_plant_capacity = facility_capacity
         volume_per_tank = total_ship_volume / ship_number_of_tanks
-        if ship_tank_shape == 1:
+        if ship_tank_shape == 1: # Capsule (Membrane)
+            # Derived from volume formula V = (4/3)*pi*r^3 + pi*r^2*h where h = 8r
             ship_tank_radius = np.cbrt(volume_per_tank/( (4/3)*np.pi + 8*np.pi ))
-            ship_tank_height = 8 * ship_tank_radius
+            ship_tank_height = 8 * ship_tank_radius # Assuming a standard aspect ratio for capsule tanks
             storage_area = 2*np.pi*(ship_tank_radius*ship_tank_height) + 4*np.pi*ship_tank_radius**2
-        else:
+        else: # Spherical
             ship_tank_radius = np.cbrt(volume_per_tank/(4/3*np.pi))
             storage_area = 4*np.pi*ship_tank_radius**2
+        # ALL Parameters from your script are here
         HHV_chem = [142, 22.5, 22.7]; LHV_chem = [120, 18.6, 19.9]; boiling_point_chem = [20, 239.66, 337.7];
         latent_H_chem = [449.6/1000, 1.37, 1.1]; specific_heat_chem = [14.3/1000, 4.7/1000, 2.5/1000];
         HHV_heavy_fuel = 40; HHV_diesel = 45.6; liquid_chem_density = [71, 682, 805];
-        CO2e_diesel = 10.21; CO2e_heavy_fuel = 11.27; GWP_chem = [33, 0, 0]; GWP_N2O = 273;
+        CO2e_diesel = 10.21; CO2e_heavy_fuel = 11.27; GWP_chem = [33, 0, 0]; GWP_N2O = 273; # GWP for Nitrous Oxide (IPCC AR6)
         fuel_cell_eff = 0.65; road_delivery_ener = [0.0455/500, 0.022/500, 0.022/500];
         BOR_land_storage = [0.0032, 0.0001, 0.0000032]; BOR_loading = [0.0086, 0.00022, 0.0001667];
         BOR_truck_trans = [0.005, 0.00024, 0.000005]; BOR_ship_trans = [0.00326, 0.00024, 0.000005];
@@ -2233,118 +2719,110 @@ def run_lca_model(inputs):
         COP_cooldown = [0.131, 1.714, 2]; COP_liq = [0.131, 1.714, 2]; COP_refrig = [0.036, 1.636, 2];
         dBOR_dT = [(0.02538-0.02283)/(45-15)/4, (0.000406-0.0006122)/(45-15)/4, 0];
         EIM_liquefication=100; EIM_cryo_pump=100; EIM_truck_eff=100; EIM_ship_eff=100; EIM_refrig_eff=100; EIM_fuel_cell=100;
-        diesel_density = 3.22;
+        diesel_density = 3.22; #kg per gal
         diesel_engine_eff = 0.4; heavy_fuel_density = 3.6; propul_eff = 0.55;
         NH3_ship_cosumption = (18.8*682*4170)/20000
-        mass_conversion_to_H2 = [1, 0.176, 0.1875]
+        # Need to check the numbers below for accuracy
+        mass_conversion_to_H2 = [1, 0.176, 0.1875] # NH3, CH3OH
         eff_energy_chem_to_H2 = [0, 0.7, 0.75]
         energy_chem_to_H2 = [0, 9.3, 5.3]
         PH2_storage_V = 150.0
         numbers_of_PH2_storage_at_start = 50.0
         multistage_eff = 0.85
-        pipeline_diameter = 0.5
-        epsilon = 0.000045
-        compressor_velocity = 20.0
-        gas_chem_density = [0.08, 0.73, 1.42]
-        target_pressure_site_B = 300
-        latent_H_H2 = 0.4496
-        specific_heat_H2 = 14.3
+        pipeline_diameter = 0.5 # meters
+        epsilon = 0.000045 # pipe roughness
+        compressor_velocity = 20.0 # m/s
+        gas_chem_density = [0.08, 0.73, 1.42] # H2, NH3, CH3OH densities at STP
+        target_pressure_site_B = 300 # bar
+        latent_H_H2 = 0.4496 # MJ/kg
+        specific_heat_H2 = 14.3 # MJ/kg-K
         numbers_of_PH2_storage = 50.0
         ship_engine_eff = 0.6
         PH2_pressure = 800
-        truck_economy = [13.84, 10.14, 9.66]
+        truck_economy = [13.84, 10.14, 9.66]  # km/gal Grok Analysis
 
-        ship_tank_metal_specific_heat = 0.47 / 1000
-        ship_tank_insulation_specific_heat = 1.5 / 1000
-        ship_tank_metal_density = 7900
-        ship_tank_insulation_density = 100
-        pipe_metal_specific_heat = 0.5 / 1000
-        ship_tank_metal_thickness = 0.05
-        ship_tank_insulation_thickness = [0.66, 0.09, 0]
+        # ADD THESE NEW PARAMETERS FOR TANK COOLDOWN
+        # Sourced from Table 2 in the provided study
+        ship_tank_metal_specific_heat = 0.47 / 1000  # MJ/kg-K
+        ship_tank_insulation_specific_heat = 1.5 / 1000 # MJ/kg-K
+        ship_tank_metal_density = 7900  # kg/m^3
+        ship_tank_insulation_density = 100 # kg/m^3
+        pipe_metal_specific_heat = 0.5 / 1000  # MJ/kg-K (for stainless steel)
+        # Sourced from the study's text and Table 6
+        ship_tank_metal_thickness = 0.05 # m
+        # Using onshore storage insulation thickness as a proxy from the study
+        ship_tank_insulation_thickness = [0.66, 0.09, 0] # m (H2, NH3, Methanol)
 
-        COP_cooldown = [0.131, 1.714, 0]
-        SMR_EMISSIONS_KG_PER_KG_H2 = 9.3
+        # Sourced from Table 6 for the "Cooldown" scenario
+        COP_cooldown = [0.131, 1.714, 0] # (H2, NH3, Methanol)
+        SMR_EMISSIONS_KG_PER_KG_H2 = 9.3 # kg CO2e / kg H2 for unabated Steam Methane Reforming
 
-        truck_capex_params = {
-            0: {'cost_usd_per_truck': 1500000, 'useful_life_years': 10, 'annualization_factor': 0.15},
-            1: {'cost_usd_per_truck': 800000,  'useful_life_years': 10, 'annualization_factor': 0.15},
-            2: {'cost_usd_per_truck': 200000,  'useful_life_years': 10, 'annualization_factor': 0.15}
-        }
-
-        loading_unloading_capex_params = {
-            0: {'total_capex_M_usd': 500, 'annualization_factor': 0.08},
-            1: {'total_capex_M_usd': 200, 'annualization_factor': 0.08},
-            2: {'total_capex_M_usd': 80,  'annualization_factor': 0.08}
-        }
-        reference_annual_throughput_tons = {
-            0: 1000000,
-            1: 5000000,
-            2: 10000000
-        }
-
-        target_weight = total_ship_volume * liquid_chem_density[fuel_type] * 0.98
+        # --- 5. Optimization ---
+        target_weight = total_ship_volume * liquid_chem_density[fuel_type] * 0.98  # kg, ref [3] section 2.1:  the filling limit is defined as 98% for ships cargo tank.
 
         con = {'type': 'ineq', 'fun': constraint}
 
+        # This is the target_weight for the optimization
+        target_weight = total_ship_volume * liquid_chem_density[fuel_type] * 0.98
+
+        # List of the first 7 process function objects for optimization
         process_funcs_for_optimization = [
             site_A_chem_production, site_A_chem_liquification,
-            (fuel_pump_transfer, 'siteA_to_truck'),
-            (fuel_road_transport, 'start_leg'),
-            (fuel_pump_transfer, 'portA_to_storage'),
-            (fuel_storage, 'port_A'),
-            chem_loading_to_ship
+            (fuel_pump_transfer, 'siteA_to_truck'), # NEW: Consolidated loading to truck for optimizer
+            (fuel_road_transport, 'start_leg'), # Unified road transport for optimizer
+            (fuel_pump_transfer, 'portA_to_storage'), # NEW: Consolidated unloading to storage for optimizer
+            (fuel_storage, 'port_A'), # NEW: Consolidated storage for optimizer
+            chem_loading_to_ship # Remains separate for now due to unique cooldown
         ]
 
+        # Bundle ALL shared parameters that ANY of the first 7 functions might need.
+        # The order here MUST MATCH the unpacking order in optimization_chem_weight.
         all_shared_params_tuple = (
             LH2_plant_capacity, EIM_liquefication, specific_heat_chem,
             start_local_temperature, boiling_point_chem, latent_H_chem,
-            COP_liq, start_electricity_price, CO2e_start, GWP_chem,
-            V_flowrate,
+            COP_liq, start_electricity_price, CO2e_start, GWP_chem, # GWP_chem must be the full list
+            V_flowrate, # Full list
             number_of_cryo_pump_load_truck_site_A,
             number_of_cryo_pump_load_storage_port_A,
             number_of_cryo_pump_load_ship_port_A,
-            dBOR_dT,
-            BOR_loading,
-            BOR_unloading,
+            dBOR_dT, # Full list
+            BOR_loading, # Full list
+            BOR_unloading, # Full list
             head_pump, pump_power_factor, EIM_cryo_pump,
             ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick,
-            COP_refrig,
-            EIM_refrig_eff, pipe_metal_specific_heat, COP_cooldown,
-            road_delivery_ener,
-            HHV_chem,
-            chem_in_truck_weight,
-            truck_economy,
+            COP_refrig, # Full list
+            EIM_refrig_eff, pipe_metal_specific_heat, COP_cooldown, # COP_cooldown is also a list
+            road_delivery_ener, # Full list
+            HHV_chem, # Full list
+            chem_in_truck_weight, # Full list
+            truck_economy, # Full list
             truck_tank_radius, truck_tank_length,
             truck_tank_metal_thickness, metal_thermal_conduct,
             truck_tank_insulator_thickness, insulator_thermal_conduct,
-            OHTC_ship,
-            BOR_truck_trans,
+            OHTC_ship, # Full list
+            BOR_truck_trans, # Full list
             HHV_diesel, diesel_engine_eff, EIM_truck_eff,
             diesel_density, CO2e_diesel,
             BOG_recirculation_truck,
-            fuel_cell_eff, EIM_fuel_cell, LHV_chem,
-            storage_time_A, liquid_chem_density,
-            storage_volume,
-            storage_radius,
-            BOR_land_storage,
+            fuel_cell_eff, EIM_fuel_cell, LHV_chem, # Full list
+            storage_time_A, liquid_chem_density, # Full list
+            storage_volume, # Full list
+            storage_radius, # Full list
+            BOR_land_storage, # Full list
             tank_metal_thickness,
             tank_insulator_thickness, BOG_recirculation_storage,
-            distance_A_to_port, duration_A_to_port, diesel_price_start, driver_daily_salary_start, annual_working_days,
-            calculate_liquefaction_capex, calculate_loading_unloading_capex,
-            calculate_storage_capex, truck_capex_params,
-            MAINTENANCE_COST_PER_KM_TRUCK, MAINTENANCE_COST_PER_KM_SHIP,
-            INSURANCE_PERCENTAGE_OF_CARGO_VALUE, hydrogen_production_cost,
-            start_country_name, start_port_country_name, CARBON_TAX_PER_TON_CO2_DICT, # Passed directly as an element
-            port_regions
+            distance_A_to_port, duration_A_to_port, diesel_price_start, driver_daily_salary_start, annual_working_days
         )
+        # This is the tuple that will be passed to scipy.optimize.minimize
         args_for_optimizer_tuple = (
-            user_define,
-            process_funcs_for_optimization,
-            all_shared_params_tuple
+            user_define,                      # Contains B,C,D,E,F parameters
+            process_funcs_for_optimization,   # List of function objects
+            all_shared_params_tuple           # Tuple of all other parameters
         )
 
-        initial_guess = [target_weight / 0.9]
+        initial_guess = [target_weight / 0.9] # Initial guess assuming ~10% loss
 
+        # Call minimize, passing the new args_for_optimizer_tuple
         result = minimize(optimization_chem_weight,
                         initial_guess,
                         args=(args_for_optimizer_tuple,),
@@ -2355,49 +2833,192 @@ def run_lca_model(inputs):
         if result.success:
             chem_weight = result.x[0]
         else:
+            # If the optimization fails, raise an exception with the optimizer's message.
+            # This will be caught by the main try...except block and returned as a JSON error.
             raise Exception(f"Optimization failed: {result.message}")
+
+        # --- 6. Final Calculation ---
+
         final_results_raw, data_raw = total_chem_base(chem_weight, user_define[1], user_define[2],
-                                                    user_define[3], user_define[4], user_define[5], CARBON_TAX_PER_TON_CO2_DICT) # Corrected this line
+                                                    user_define[3], user_define[4], user_define[5])
+
+        # --- Correctly Handle Overheads and Infrastructure CAPEX ---
+        if include_overheads:
+            # --- 1. Calculate Voyage Overheads (Non-Fuel Ship Costs) ---
+            start_port_country = get_country_from_coords(start_port_lat, start_port_lng)
+            end_port_country = get_country_from_coords(end_port_lat, end_port_lng) 
+            port_regions = {'start': start_port_country, 'end': end_port_country}
+            voyage_duration_days = port_to_port_duration / 24.0
+            total_voyage_overheads = calculate_voyage_overheads(voyage_duration_days, selected_ship_params, canal_transits, port_regions)
+
+            # --- 2. Calculate Prorated Infrastructure CAPEX (Liquefaction & Storage) ---
+            # Get the amortized $/kg rates for the facilities
+            liquefaction_capex_per_kg = calculate_liquefaction_capex(LH2_plant_capacity, fuel_type)
+
+            # Calculate the CAPEX cost for this specific shipment
+            # Liquefaction happens once at the start with the initial weight
+            total_liquefaction_capex = liquefaction_capex_per_kg * chem_weight
+
+            # Storage happens multiple times. We find the weight at each stage from the results.
+            total_storage_capex = 0
+            storage_A_weight = next((row[4] for row in data_raw if row[0] == "fuel_storage_port_A"), 0) # Updated label
+            storage_B_weight = next((row[4] for row in data_raw if row[0] == "fuel_storage_port_B"), 0) # Updated label
+            storage_C_weight = next((row[4] for row in data_raw if row[0] == "fuel_storage_site_B"), 0) # Updated label
+            storage_capex_A_per_kg = calculate_storage_capex(fuel_type, LH2_plant_capacity, storage_A_weight, storage_time_A)
+            storage_capex_B_per_kg = calculate_storage_capex(fuel_type, LH2_plant_capacity, storage_B_weight, storage_time_B)
+            storage_capex_C_per_kg = calculate_storage_capex(fuel_type, LH2_plant_capacity, storage_C_weight, storage_time_C)
+
+            total_storage_capex += storage_capex_A_per_kg * storage_A_weight
+            total_storage_capex += storage_capex_B_per_kg * storage_B_weight
+            total_storage_capex += storage_capex_C_per_kg * storage_C_weight
+
+            truck_capex_params = {
+                0: {'cost_usd_per_truck': 1500000, 'useful_life_years': 10, 'annualization_factor': 0.15}, # LH2 specialized cryogenic
+                1: {'cost_usd_per_truck': 800000,  'useful_life_years': 10, 'annualization_factor': 0.15}, # Ammonia specialized pressurized/cryogenic
+                2: {'cost_usd_per_truck': 200000,  'useful_life_years': 10, 'annualization_factor': 0.15}  # Methanol standard chemical tanker
+            }
+
+            truck_model = truck_capex_params.get(fuel_type, truck_capex_params[0]) # Default to LH2 if not found
+            annual_truck_cost_usd = truck_model['cost_usd_per_truck'] * truck_model['annualization_factor']
+
+            loading_unloading_capex_params = {
+                0: {'total_capex_M_usd': 500, 'annualization_factor': 0.08}, # LH2 (very high due to cryogenics, safety, specialized equipment)
+                1: {'total_capex_M_usd': 200, 'annualization_factor': 0.08}, # Ammonia (still high due to pressure/cryo, toxicity, safety)
+                2: {'total_capex_M_usd': 80,  'annualization_factor': 0.08}  # Methanol (standard chemical liquid terminal)
+            }
+            # Reference annual throughput for these terminals (metric tons per year)
+            # This is a critical assumption for prorating CAPEX per kg.
+            reference_annual_throughput_tons = {
+                0: 1000000, # 1 Million tons/year LH2 terminal
+                1: 5000000, # 5 Million tons/year Ammonia terminal
+                2: 10000000 # 10 Million tons/year Methanol terminal
+            }
+            capex_rate_loading_unloading_per_kg = calculate_loading_unloading_capex(fuel_type)
+            amount_loaded_onto_ship = next((row[4] for row in data_raw if row[0] == "chem_loading_to_ship"), 0)
+            amount_unloaded_from_ship = next((row[4] for row in data_raw if row[0] == "fuel_pump_transfer_ship_to_portB"), 0) # Updated label
+            capex_loading_origin = capex_rate_loading_unloading_per_kg * amount_loaded_onto_ship
+            capex_unloading_destination = capex_rate_loading_unloading_per_kg * amount_unloaded_from_ship
+            total_loading_unloading_capex = capex_loading_origin + capex_unloading_destination
+
+            # To prorate by distance and number of trucks/trips:
+            # We need the number of trucks for each leg, and their daily utilization/throughput.
+            # A common way to allocate truck CAPEX is per tonne-km or per trip.
+            # For simplicity in an LCA, we can estimate based on number of trucks * number of trips annually
+            # or based on the total mass moved and distance.
+
+            # We'll use the 'number_of_trucks' values from the respective transport steps.
+            # Assuming these trucks are utilized for 330 days/year, handling capacity_tpd
+            # This is an estimate, a detailed fleet model would be more precise.
+
+            # Re-calculate number of trucks for initial leg A->Port A based on initial chem_weight
+            num_trucks_A_to_PortA = math.ceil(chem_weight / chem_in_truck_weight[fuel_type])
+            # Re-calculate number of trucks for final leg Port B->B based on final delivered weight (final_results_raw[3])
+            final_delivered_weight = final_results_raw[3] # This is the final remaining chemical
+            num_trucks_PortB_to_B = math.ceil(final_delivered_weight / chem_in_truck_weight[fuel_type])
+
+            # Calculate the amortized cost per truck trip. Assume trucks average 100,000 km/year, useful life 10 years.
+            # A more direct way: Annual cost of truck / (Annual km / avg_trip_km) / truck_capacity
+            # Simpler: Amortized cost per truck trip = Annual truck cost / (Annual operating days * Trips per day)
+            # Let's assume a truck can make 1 round trip per day for this distance.
+            # Annual trips per truck = 330 days * 1 trip/day = 330 trips
+            annual_trips_per_truck = 330
+
+            capex_per_truck_trip_usd = annual_truck_cost_usd / annual_trips_per_truck if annual_trips_per_truck > 0 else 0
+
+            # Total trucking CAPEX for this single shipment
+            # Assuming each truck contributes its amortized cost per trip it makes for THIS specific shipment
+            total_trucking_capex = 0
+            if num_trucks_A_to_PortA > 0:
+                total_trucking_capex += capex_per_truck_trip_usd * num_trucks_A_to_PortA
+            if num_trucks_PortB_to_B > 0:
+                total_trucking_capex += capex_per_truck_trip_usd * num_trucks_PortB_to_B
+
+            # --- 3. Add All Calculated CAPEX and Overheads to Final Totals and Insert Rows for Display ---
+            final_results_raw[0] += total_voyage_overheads
+            final_results_raw[0] += total_liquefaction_capex
+            final_results_raw[0] += total_storage_capex
+            final_results_raw[0] += total_trucking_capex
+            final_results_raw[0] += total_loading_unloading_capex
+
+            # Create and insert display rows into the detailed data list
+            # Insert Voyage Overheads row after marine transport
+            marine_transport_index = next((i for i, row in enumerate(data_raw) if row[0] == "port_to_port"), -1)
+            if marine_transport_index != -1:
+                overhead_row = ["Voyage Overheads", total_voyage_overheads, 0, 0, data_raw[marine_transport_index][4], 0]
+                data_raw.insert(marine_transport_index + 1, overhead_row)
+
+            # Insert Liquefaction CAPEX row after liquefaction OPEX
+            liquefaction_index = next((i for i, row in enumerate(data_raw) if row[0] == "site_A_chem_liquification"), -1)
+            if liquefaction_index != -1:
+                liquefaction_capex_row = ["Liquefaction Facility CAPEX", total_liquefaction_capex, 0, 0, chem_weight, 0]
+                data_raw.insert(liquefaction_index + 1, liquefaction_capex_row)
+
+            # Insert Storage CAPEX row (we'll add one consolidated row for simplicity)
+            # Find the index of the last storage step to insert after it
+            last_storage_index = next((i for i, row in reversed(list(enumerate(data_raw))) if "fuel_storage" in row[0]), -1) # Updated label
+            if last_storage_index != -1:
+                storage_capex_row = ["Storage Facilities CAPEX (Total)", total_storage_capex, 0, 0, data_raw[last_storage_index][4], 0]
+                data_raw.insert(last_storage_index + 1, storage_capex_row)
+
+            # NEW: Insert Trucking CAPEX row
+            # Best place to insert is after the first road transport or consolidated.
+            # Let's insert it after the first road transport for chronological order.
+            road_transport_A_index = next((i for i, row in enumerate(data_raw) if row[0] == "fuel_road_transport_start_leg"), -1)
+            if road_transport_A_index != -1:
+                trucking_capex_row = ["Trucking System CAPEX (Total)", total_trucking_capex, 0, 0, data_raw[road_transport_A_index][4], 0]
+                data_raw.insert(road_transport_A_index + 1, trucking_capex_row)
+
+            ship_loading_index = next((i for i, row in enumerate(data_raw) if row[0] == "chem_loading_to_ship"), -1)
+            if ship_loading_index != -1:
+                loading_unloading_capex_row = ["Loading/Unloading Infrastructure CAPEX", total_loading_unloading_capex, 0, 0, data_raw[ship_loading_index][4], 0]
+                data_raw.insert(ship_loading_index + 1, loading_unloading_capex_row)
+
+        # 2. If the fuel is not H2, run the conversion step and update the raw results
         if user_define[1] != 0:
             amount_before_conversion = final_results_raw[3]
-            args_for_conversion = (mass_conversion_to_H2, eff_energy_chem_to_H2, energy_chem_to_H2, CO2e_end, end_electricity_price, end_country_name, CARBON_TAX_PER_TON_CO2_DICT) 
-            opex_conv, capex_conv, energy_conv, emission_conv, amount_after_conversion, bog_conv = \
+            args_for_conversion = (mass_conversion_to_H2, eff_energy_chem_to_H2, energy_chem_to_H2, CO2e_end, end_electricity_price)
+
+            money_conv, energy_conv, emission_conv, amount_after_conversion, bog_conv = \
                 chem_convert_to_H2(amount_before_conversion, user_define[1], user_define[2], user_define[3],
                                 user_define[4], user_define[5], args_for_conversion)
 
-            data_raw.insert(-1, ["chem_convert_to_H2", opex_conv, capex_conv, energy_conv, emission_conv, amount_after_conversion, bog_conv])
+            data_raw.insert(-1, ["chem_convert_to_H2", money_conv, energy_conv, emission_conv, amount_after_conversion, bog_conv])
 
-            final_results_raw[0] += (opex_conv + capex_conv) # Update total money
+            final_results_raw[0] += money_conv
             final_results_raw[1] += energy_conv
             final_results_raw[2] += emission_conv
             final_results_raw[3] = amount_after_conversion
 
-            # Update the TOTAL row to reflect the new total money, energy, emissions, and final amount
-            data_raw[-1] = ["TOTAL", sum(row[1] for row in data_raw[:-1]), sum(row[2] for row in data_raw[:-1]), final_results_raw[1], final_results_raw[2], final_results_raw[3], 0]
+            data_raw[-1] = ["TOTAL", final_results_raw[0], final_results_raw[1], final_results_raw[2], final_results_raw[3], 0]
 
-
+        # 3. Now that all calculations are done, define the final denominators
         final_chem_kg_denominator = final_results_raw[3]
+        # NEW: Calculate final energy in GigaJoules (MJ / 1000)
         final_energy_gj_denominator = (final_results_raw[3] * HHV_chem[fuel_type]) / 1000 if final_chem_kg_denominator > 0 else 0
 
+        # 4. Create the final data list, now including the "per unit" calculations
         data_with_all_columns = []
         for row in data_raw:
-            current_opex = float(row[1])
-            current_capex = float(row[2])
-            current_total_cost = current_opex + current_capex
-            current_emission = float(row[4])
+            current_cost = float(row[1])
+            current_emission = float(row[3])
 
-            cost_per_kg = current_total_cost / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-            cost_per_gj = current_total_cost / final_energy_gj_denominator if final_energy_gj_denominator > 0 else 0
+            cost_per_kg = current_cost / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+            # NEW: Calculate "Cost per GJ"
+            cost_per_gj = current_cost / final_energy_gj_denominator if final_energy_gj_denominator > 0 else 0
 
             emission_per_kg = current_emission / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+            # NEW: Calculate "eCO2 per GJ"
             emission_per_gj = current_emission / final_energy_gj_denominator if final_energy_gj_denominator > 0 else 0
 
+            # Append the new values in the correct order
             new_row_with_additions = list(row) + [cost_per_kg, cost_per_gj, emission_per_kg, emission_per_gj]
             data_with_all_columns.append(new_row_with_additions)
 
+        # 5. Assign the fully processed data to the final variables
         data = data_with_all_columns
-        total_results = final_results_raw
+        total_results = final_results_raw # This already holds the correct total values
 
+        # --- 7. Format Results for Frontend ---
         final_weight = total_results[3]
         chem_cost = total_results[0] / final_weight if final_weight > 0 else 0
         chem_energy = total_results[1] / final_weight if final_weight > 0 else 0
@@ -2405,35 +3026,38 @@ def run_lca_model(inputs):
         final_energy_output_mj = final_weight * HHV_chem[fuel_type]
         final_energy_output_gj = final_energy_output_mj / 1000
 
+        # Define human-readable labels
         fuel_names = ['Liquid Hydrogen', 'Ammonia', 'Methanol']
         selected_fuel_name = fuel_names[fuel_type]
 
+        # --- FIX IS HERE: Added the missing key for "site_A_chem_production" ---
         label_map = {
             "site_A_chem_production": "Initial Production (Placeholder)",
             "site_A_chem_liquification": f"Liquifaction in {start}",
-            "fuel_pump_transfer_siteA_to_truck": f"Loading {selected_fuel_name} on trucks (Site A)",
-            "fuel_road_transport_start_leg": f"Road transport: {start} to {start_port_name}",
-            "fuel_pump_transfer_portA_to_storage": f"Unloading at {start_port_name} (to Storage)",
-            "fuel_storage_port_A": f"Storing {selected_fuel_name} at {start_port_name}",
+            "fuel_pump_transfer_siteA_to_truck": f"Loading {selected_fuel_name} on trucks (Site A)", # NEW Label
+            "fuel_road_transport_start_leg": f"Road transport: {start} to {start_port_name}", # NEW Label
+            "fuel_pump_transfer_portA_to_storage": f"Unloading at {start_port_name} (to Storage)", # NEW Label
+            "fuel_storage_port_A": f"Storing {selected_fuel_name} at {start_port_name}", # NEW Label
             "chem_loading_to_ship": f"Loading {selected_fuel_name} on Ship",
             "port_to_port": f"Marine transport: {start_port_name} to {end_port_name}",
-            "fuel_pump_transfer_ship_to_portB": f"Unloading {selected_fuel_name} from Ship (to Port B)",
-            "fuel_storage_port_B": f"Storing {selected_fuel_name} at {end_port_name}",
-            "fuel_pump_transfer_portB_to_truck": "Loading from Storage to Truck (Port B)",
-            "fuel_road_transport_end_leg": f"Road transport: {end_port_name} to {end}",
-            "fuel_pump_transfer_truck_to_siteB": f"Unloading {selected_fuel_name} at {end} (to Site B Storage)",
-            "fuel_storage_site_B": f"Storing {selected_fuel_name} at {end} (Site B)",
-            "fuel_pump_transfer_siteB_to_use": "Unloading for final use (Site B)",
+            "fuel_pump_transfer_ship_to_portB": f"Unloading {selected_fuel_name} from Ship (to Port B)", # NEW Label
+            "fuel_storage_port_B": f"Storing {selected_fuel_name} at {end_port_name}", # NEW Label
+            "fuel_pump_transfer_portB_to_truck": "Loading from Storage to Truck (Port B)", # NEW Label
+            "fuel_road_transport_end_leg": f"Road transport: {end_port_name} to {end}", # NEW Label
+            "fuel_pump_transfer_truck_to_siteB": f"Unloading {selected_fuel_name} at {end} (to Site B Storage)", # NEW Label
+            "fuel_storage_site_B": f"Storing {selected_fuel_name} at {end} (Site B)", # NEW Label
+            "fuel_pump_transfer_siteB_to_use": "Unloading for final use (Site B)", # NEW Label
             "chem_convert_to_H2": "Cracking/Reforming to H2",
-            "PH2_pressurization_at_site_A": "Pressurization at Site A",
-            "PH2_site_A_to_port_A": f"Pipeline Transport: {start} to {start_port_name}",
-            "port_A_liquification": f"Liquefaction at {start_port_name}",
-            "H2_pressurization_at_port_B": f"Pressurization at {end_port_name}",
-            "PH2_port_B_to_site_B": f"Pipeline Transport: {end_port_name} to {end}",
-            "PH2_storage_at_site_B": f"Storing {selected_fuel_name} at {end} (Site B)",
+            "Voyage Overheads": "Voyage Overheads (Non-Fuel)", # Keep consistent label for clarity
+            "Liquefaction Facility CAPEX": "Liquefaction Facility CAPEX",
+            "Storage Facilities CAPEX (Total)": "Storage Facilities CAPEX (Total)",
+            "Trucking System CAPEX (Total)": "Trucking System CAPEX (Total)",
+            "Loading/Unloading Infrastructure CAPEX": "Loading/Unloading Infrastructure CAPEX",
             "TOTAL": "TOTAL"
         }
 
+
+        # Apply the new labels to the data
         relabeled_data = []
         for row in data:
             function_name = row[0]
@@ -2444,13 +3068,24 @@ def run_lca_model(inputs):
             else:
                 relabeled_data.append(row[:])
 
+        # Apply filtering correctly for table and charts
+        # This filter will now work correctly because the placeholder is in the map.
         detailed_data_formatted = [row for row in relabeled_data if row[0] != label_map.get("site_A_chem_production")]
         data_for_display_common = [row for row in detailed_data_formatted if row[0] != "TOTAL"]
 
-        emission_chart_exclusions = ["TOTAL"]
+        emission_chart_exclusions = [
+            "Voyage Overheads",
+            "Liquefaction Facility CAPEX",
+            "Trucking System CAPEX (Total)",
+            "Loading/Unloading Infrastructure CAPEX",
+            "Storage Facilities CAPEX (Total)",
+            "TOTAL" # Still exclude the total row for the chart
+        ]
 
+        # Filter for the charts (removes the placeholder AND the TOTAL row)
         data_for_emission_chart = [row for row in data_for_display_common if row[0] not in emission_chart_exclusions]
 
+        # --- PREPARE CONTEXTUAL OVERLAY TEXT FOR CHARTS ---
         cost_overlay_text = ""
         if hydrogen_production_cost > 0:
             ratio_cost = chem_cost / hydrogen_production_cost
@@ -2472,29 +3107,28 @@ def run_lca_model(inputs):
                 f"• Total Transport Emission: {chem_CO2e:.2f} kg CO2eq/kg\n"
                 f"• Transport emission is {ratio_emission:.1f} times the SMR emission."
             )
-        new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Energy (MJ)", "CO2eq (kg)", "Chem (kg)", "BOG (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "CO2eq/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
-        opex_per_kg_index = new_detailed_headers.index("Opex/kg ($/kg)")
-        capex_per_kg_index = new_detailed_headers.index("Capex/kg ($/kg)")
+
+        # --- DEFINE HEADERS, INDICES, AND PACKAGE FINAL RESPONSE ---
+        new_detailed_headers = ["Process Step", "Cost ($)", "Energy (MJ)", "CO2eq (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "CO2eq/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
+        csv_data = [new_detailed_headers] + detailed_data_formatted
+        cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
         eco2_per_kg_index = new_detailed_headers.index("CO2eq/kg (kg/kg)")
 
         cost_chart_base64 = create_breakdown_chart(
             data_for_display_common,
-            opex_per_kg_index,
-            capex_per_kg_index,
-            'Cost Breakdown per kg of Delivered Fuel', # Title
-            'Cost ($/kg)',                          # X-label
-            overlay_text=cost_overlay_text,
-            is_emission_chart=False # Explicitly state it's not an emission chart
+            cost_per_kg_index,
+            'Cost Breakdown per kg of Delivered Fuel',
+            'Cost ($/kg)',
+            overlay_text=cost_overlay_text
         )
         emission_chart_base64 = create_breakdown_chart(
             data_for_emission_chart,
             eco2_per_kg_index,
-            eco2_per_kg_index, # This argument is effectively ignored for emission charts
-            'CO2eq Breakdown per kg of Delivered Fuel', # Title
-            'CO2eq (kg/kg)',                            # X-label
-            overlay_text=emission_overlay_text,
-            is_emission_chart=True # Explicitly state it's an emission chart
+            'CO2eq Breakdown per kg of Delivered Fuel',
+            'CO2eq (kg/kg)',
+            overlay_text=emission_overlay_text
         )
+
         summary1_data = [
             ["Cost ($/kg chemical)", f"{chem_cost:.2f}"],
             ["Consumed Energy (MJ/kg chemical)", f"{chem_energy:.2f}"],
@@ -2515,7 +3149,7 @@ def run_lca_model(inputs):
             [f"Marine Fuel ({marine_fuel_choice}) Price at {start_port_name}*", f"{dynamic_price:.2f} $/ton"],
             [f"Green H2 Production Price at {start}*", f"{hydrogen_production_cost:.2f} $/kg"],
         ]
-        csv_data = [new_detailed_headers] + detailed_data_formatted
+
         response = {
             "status": "success",
             "map_data": {
@@ -2534,7 +3168,7 @@ def run_lca_model(inputs):
                 "summary2_headers": ["Per Energy Output", "Value"], "summary2_data": summary2_data,
                 "assumed_prices_headers": ["Assumed Price", "Value"], "assumed_prices_data": assumed_prices_data
             },
-            "csv_data": csv_data, # Now csv_data is defined
+            "csv_data": csv_data,
             "charts": {
                 "cost_chart_base64": cost_chart_base64,
                 "emission_chart_base64": emission_chart_base64
@@ -2543,6 +3177,7 @@ def run_lca_model(inputs):
         return response
     
     elif commodity_type == 'food':
+        # --- 1. UNPACK INPUTS & GET SHIP DETAILS ---
         food_type = inputs.get('food_type')
         shipment_size_containers = inputs.get('shipment_size_containers', 10)
         current_food_params = food_params[food_type]
@@ -2554,22 +3189,37 @@ def run_lca_model(inputs):
         price_start_text = f"${price_start:.2f}/kg" if price_start is not None else "Not available"
         price_end_text = f"${price_end:.2f}/kg" if price_end is not None else "Not available"
         
+        # Initialize final_commodity_kg to avoid UnboundLocalError
         final_commodity_kg = 0
-        total_opex_money = 0
-        total_capex_money = 0
+        total_money = 0
         total_energy = 0
         total_emissions = 0
 
+        # Get total container capacity of the selected ship
         total_ship_container_capacity = math.floor(total_ship_volume / 76)
 
+        # --- RUN LAND-BASED LCA & INITIAL PRORATED SEA COSTS BEFORE LOCAL SOURCING ---
         initial_weight = shipment_size_containers * current_food_params['general_params']['cargo_per_truck_kg']
-        data_raw = total_food_lca(initial_weight, current_food_params, CARBON_TAX_PER_TON_CO2_DICT) # Corrected this line
+        data_raw = total_food_lca(initial_weight, current_food_params)
         
-        # Calculate BASE costs (Propulsion) for the ENTIRE SHIP
+        # Calculate BASE costs (Propulsion + Overheads) for the ENTIRE SHIP
         propulsion_fuel_kwh = avg_ship_power_kw * port_to_port_duration
         propulsion_fuel_kg = (propulsion_fuel_kwh * selected_marine_fuel_params['sfoc_g_per_kwh']) / 1000.0
         propulsion_cost = (propulsion_fuel_kg / 1000.0) * selected_marine_fuel_params['price_usd_per_ton']
         
+        voyage_duration_days = port_to_port_duration / 24.0
+        total_overhead_cost = 0
+        if include_overheads:
+            start_port_country = get_country_from_coords(start_port_lat, start_port_lng)
+            end_port_country = get_country_from_coords(end_port_lat, end_port_lng)
+            port_regions = {'start': start_port_country, 'end': end_port_country} 
+            voyage_duration_days = port_to_port_duration / 24.0
+            total_overhead_cost = calculate_voyage_overheads(voyage_duration_days, selected_ship_params, canal_transits, port_regions)
+
+        # Calculate the BASE COST PER DRY SLOT on the ship
+        total_base_voyage_cost = propulsion_cost
+        base_cost_per_slot = total_base_voyage_cost / total_ship_container_capacity if total_ship_container_capacity > 0 else 0
+
         # Calculate the ADDITIONAL cost for the REEFER SERVICE for ONE container
         reefer_service_cost, reefer_service_energy, reefer_service_emissions = calculate_single_reefer_service_cost(port_to_port_duration, current_food_params)
         
@@ -2577,71 +3227,84 @@ def run_lca_model(inputs):
         marine_transport_index = next((i for i, row in enumerate(data_raw) if "Marine Transport" in row[0]), -1)
         if marine_transport_index != -1:
             # Base freight cost for the user's shipment
-            base_freight_cost = (propulsion_cost / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0
+            base_freight_cost = base_cost_per_slot * shipment_size_containers
             
             # Preserve the commodity weight at this stage
-            commodity_weight_at_marine_transport = data_raw[marine_transport_index][5] # Adjusted index for new data format
+            commodity_weight_at_marine_transport = data_raw[marine_transport_index][4]
 
-            # Update the existing marine transport row (which now represents base freight OPEX)
             data_raw[marine_transport_index][0] = "Marine Transport (Base Freight)"
-            data_raw[marine_transport_index][1] = base_freight_cost # Opex
-            data_raw[marine_transport_index][2] = 0 # Capex (base freight is operational)
-            
+            data_raw[marine_transport_index][1] = base_freight_cost
+            # We can approximate propulsion energy/emissions for the user's share
             propulsion_emissions = (propulsion_fuel_kg * selected_marine_fuel_params['co2_emissions_factor_kg_per_kg_fuel'])
-            data_raw[marine_transport_index][4] = (propulsion_emissions / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0 # Emissions
-            data_raw[marine_transport_index][3] = (propulsion_fuel_kwh * 3.6 / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0 # Energy
+            data_raw[marine_transport_index][3] = (propulsion_emissions / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0
+            data_raw[marine_transport_index][2] = (propulsion_fuel_kwh * 3.6 / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0
 
-            # Add a new row for the reefer service cost (OPEX)
+            # Add a new row for the reefer service cost
             reefer_service_total_cost = reefer_service_cost * shipment_size_containers
             reefer_service_total_energy = reefer_service_energy * shipment_size_containers
             reefer_service_total_emissions = reefer_service_emissions * shipment_size_containers
-            reefer_row = ["Reefer & CA Services", reefer_service_total_cost, 0, reefer_service_total_energy, reefer_service_total_emissions, commodity_weight_at_marine_transport, 0]
+            reefer_row = ["Reefer & CA Services", reefer_service_total_cost, reefer_service_total_energy, reefer_service_total_emissions, commodity_weight_at_marine_transport, 0]
             data_raw.insert(marine_transport_index + 1, reefer_row)
 
+            # Add a new row for Overheads if included
+            if include_overheads:
+                prorated_overhead_cost = (total_overhead_cost / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0
+                overhead_row = ["Voyage Overheads (Prorated)", prorated_overhead_cost, 0, 0, commodity_weight_at_marine_transport, 0]
+                data_raw.insert(marine_transport_index + 1, overhead_row)
+
         # Now, calculate the overall totals *after* all rows have been adjusted/inserted
-        total_opex_money = sum(row[1] for row in data_raw)
-        total_capex_money = sum(row[2] for row in data_raw)
-        total_money = total_opex_money + total_capex_money
-        total_energy = sum(row[3] for row in data_raw)
-        total_emissions = sum(row[4] for row in data_raw)
-        final_weight = data_raw[-1][5]
-        final_commodity_kg = final_weight
+        total_money = sum(row[1] for row in data_raw)
+        total_energy = sum(row[2] for row in data_raw)
+        total_emissions = sum(row[3] for row in data_raw)
+        final_weight = data_raw[-1][4] # The last row from total_food_lca is the overall total
+        final_commodity_kg = final_weight # Now final_commodity_kg is correctly defined and up-to-date
         
+        # --- LOCAL SOURCING COMPARISON (Can now safely use final_commodity_kg) ---
         local_sourcing_results = None
         green_premium_data = None
-        farm_name = None
-        price_farm = None
+        farm_name = None # Ensure farm_name is initialized for checks outside the if block
+        price_farm = None # Ensure price_farm is initialized for checks outside the if block
 
         farm_region = openai_get_nearest_farm_region(current_food_params['name'], end_country)
 
         if farm_region:
+            # We have a local farm, now calculate the logistics from farm to destination
             farm_lat = farm_region['latitude']
             farm_lon = farm_region['longitude']
             farm_name = farm_region['farm_region_name']
             price_farm = openai_get_food_price(current_food_params['name'], farm_name)
             
+            # Calculate local trucking distance and duration
             local_dist_str, local_dur_str = inland_routes_cal((farm_lat, farm_lon), (coor_end_lat, coor_end_lng))
             local_distance_km = float(re.sub(r'[^\d.]', '', local_dist_str))
             local_duration_mins = time_to_minutes(local_dur_str)
             
+            # Use the final delivered weight for an apples-to-apples comparison
             comparison_weight = final_commodity_kg
-            local_precool_opex, local_precool_capex, local_precool_energy, local_precool_emissions, _, _ = food_precooling_process(comparison_weight, (precooling_full_params, end_electricity_price, CO2e_end, facility_capacity, end_country_name, CARBON_TAX_PER_TON_CO2_DICT)) 
-            local_freeze_opex, local_freeze_capex, local_freeze_energy, local_freeze_emissions = 0, 0, 0, 0
+            
+            # Initialize local processing costs to zero
+            local_precool_money, local_precool_energy, local_precool_emissions = 0, 0, 0
+            local_freeze_money, local_freeze_energy, local_freeze_emissions = 0, 0, 0
 
+            # Conditionally calculate pre-cooling costs if needed
             if current_food_params['process_flags'].get('needs_precooling'):
                 precooling_full_params = {**current_food_params.get('precooling_params', {}), **current_food_params.get('general_params', {})}
-                local_precool_opex, local_precool_capex, local_precool_energy, local_precool_emissions, _, _ = food_precooling_process(comparison_weight, (precooling_full_params, end_electricity_price, CO2e_end, facility_capacity, end_country_name, CARBON_TAX_PER_TON_CO2_DICT))
+                local_precool_money, local_precool_energy, local_precool_emissions, _, _ = food_precooling_process(comparison_weight, (precooling_full_params, end_electricity_price, CO2e_end))
 
+            # Conditionally calculate freezing costs if needed
             if current_food_params['process_flags'].get('needs_freezing'):
                 freezing_full_params = {**current_food_params.get('freezing_params', {}), **current_food_params.get('general_params', {})}
-                local_freeze_opex, local_freeze_capex, local_freeze_energy, local_freeze_emissions, _, _ = food_freezing_process(comparison_weight, (freezing_full_params, end_local_temperature, end_electricity_price, CO2e_end, facility_capacity, end_country_name, CARBON_TAX_PER_TON_CO2_DICT)) # Corrected this line
+                local_freeze_money, local_freeze_energy, local_freeze_emissions, _, _ = food_freezing_process(comparison_weight, (freezing_full_params, end_local_temperature, end_electricity_price, CO2e_end))
 
-            local_trucking_args = (current_food_params, local_distance_km, local_duration_mins, diesel_price_end, HHV_diesel, diesel_density, CO2e_diesel, end_local_temperature, driver_daily_salary_end, annual_working_days, MAINTENANCE_COST_PER_KM_TRUCK, truck_capex_params, end_country_name, CARBON_TAX_PER_TON_CO2_DICT) # Corrected this line
-            local_trucking_opex, local_trucking_capex, local_trucking_energy, local_trucking_emissions, _, _ = food_road_transport(comparison_weight, local_trucking_args)
+            # Calculate local trucking costs (this call is already correct)
+            local_trucking_args = (current_food_params, local_distance_km, local_duration_mins, diesel_price_end, HHV_diesel, diesel_density, CO2e_diesel, end_local_temperature)
+            local_trucking_money, local_trucking_energy, local_trucking_emissions, _, _ = food_road_transport(comparison_weight, local_trucking_args)
 
-            local_total_money = (local_precool_opex + local_precool_capex) + (local_freeze_opex + local_freeze_capex) + (local_trucking_opex + local_trucking_capex)
+            # Sum all costs for the local scenario
+            local_total_money = local_precool_money + local_freeze_money + local_trucking_money
             local_total_emissions = local_precool_emissions + local_freeze_emissions + local_trucking_emissions
             
+            # Store the results
             local_sourcing_results = {
                 "source_name": farm_name,
                 "distance_km": local_distance_km,
@@ -2650,29 +3313,37 @@ def run_lca_model(inputs):
             }        
 
             if price_farm is None:
-                price_farm = price_end
+                price_farm = price_end # Use the national UK price as a fallback
 
             green_premium_data = None
+            # Only proceed if we have valid prices for comparison
             if price_farm is not None and price_start is not None and final_commodity_kg > 0 and comparison_weight > 0:
+                # Calculate total landed cost per kg for both scenarios
                 cost_international_transport_per_kg = total_money / final_commodity_kg
                 landed_cost_international_per_kg = price_start + cost_international_transport_per_kg
 
                 cost_local_sourcing_per_kg = local_total_money / comparison_weight
                 landed_cost_local_per_kg = price_farm + cost_local_sourcing_per_kg
 
+                # Calculate total emissions per kg for both scenarios
                 emissions_international_per_kg = total_emissions / final_commodity_kg
                 emissions_local_per_kg = local_total_emissions / comparison_weight
 
+                # Calculate the difference in cost and emissions
                 cost_difference_per_kg = landed_cost_local_per_kg - landed_cost_international_per_kg
                 emissions_saved_per_kg = emissions_international_per_kg - emissions_local_per_kg
 
+                # Calculate the Green Premium (cost of carbon abatement)
                 green_premium_usd_per_ton_co2 = "N/A (No emission savings)"
                 if emissions_saved_per_kg > 0:
+                    # Formula: ($/kg_food) / (kg_CO2/kg_food) -> $/kg_CO2. Then * 1000 for $/ton_CO2
                     premium_raw = cost_difference_per_kg / emissions_saved_per_kg
                     green_premium_usd_per_ton_co2 = f"${(premium_raw * 1000):,.2f}"
                 elif cost_difference_per_kg < 0:
+                    # Cheaper AND lower emissions
                     green_premium_usd_per_ton_co2 = "Negative (Win-Win Scenario)"
                 
+                # Package the data for the frontend table
                 green_premium_data = [
                     ["Landed Cost (International Shipment)", f"${landed_cost_international_per_kg:.2f}/kg"],
                     ["Landed Cost (Local Sourcing)", f"${landed_cost_local_per_kg:.2f}/kg"],
@@ -2681,7 +3352,9 @@ def run_lca_model(inputs):
                     ["Green Premium (Cost per ton of CO₂ saved)", f"{green_premium_usd_per_ton_co2}"]
                 ]
                     
-        data_raw.append(["TOTAL", total_opex_money, total_capex_money, total_energy, total_emissions, final_commodity_kg, sum(row[6] for row in data_raw[:-1])])
+        # --- 4. PROCESS FINAL DATA FOR TABLES AND CHARTS ---
+        # Add the final TOTAL row after all dynamic insertions
+        data_raw.append(["TOTAL", total_money, total_energy, total_emissions, final_commodity_kg, sum(row[5] for row in data_raw[:-1])])
         
         energy_content = current_food_params.get('general_params', {}).get('energy_content_mj_per_kg', 1)
         final_energy_output_mj = final_commodity_kg * energy_content
@@ -2689,34 +3362,25 @@ def run_lca_model(inputs):
 
         data_with_all_columns = []
         for row in data_raw:
-            current_opex = float(row[1])
-            current_capex = float(row[2])
-            current_total_cost = current_opex + current_capex
-            current_emission = float(row[4])
-
-            # Recalculate these for food context
-            opex_per_kg = current_opex / final_commodity_kg if final_commodity_kg > 0 else 0
-            capex_per_kg = current_capex / final_commodity_kg if final_commodity_kg > 0 else 0
-
-            cost_per_kg = current_total_cost / final_commodity_kg if final_commodity_kg > 0 else 0
-            cost_per_gj = current_total_cost / final_energy_output_gj if final_energy_output_gj > 0 else 0 # Use final_energy_output_gj from food section
-
-            emission_per_kg = current_emission / final_commodity_kg if final_commodity_kg > 0 else 0
-            emission_per_gj = current_emission / final_energy_output_gj if final_energy_output_gj > 0 else 0 # Use final_energy_output_gj from food section
-
-            new_row_with_additions = list(row) + [opex_per_kg, capex_per_kg, cost_per_kg, cost_per_gj, emission_per_kg, emission_per_gj]
-            data_with_all_columns.append(new_row_with_additions)
-                        
+            new_row = list(row) + [
+                row[1] / final_commodity_kg if final_commodity_kg > 0 else 0, # cost/kg
+                row[1] / final_energy_output_gj if final_energy_output_gj > 0 else 0, # cost/gj
+                row[3] / final_commodity_kg if final_commodity_kg > 0 else 0, # emission/kg
+                row[3] / final_energy_output_gj if final_energy_output_gj > 0 else 0, # emission/gj
+            ]
+            data_with_all_columns.append(new_row)
+            
         detailed_data_formatted = data_with_all_columns
         data_for_display_common = [row for row in detailed_data_formatted if row[0] != "TOTAL"]
-        emission_chart_exclusions_food = [] # No exclusions needed if all costs/emissions are now integrated
+        emission_chart_exclusions_food = [
+            "Voyage Overheads (Prorated)", # For food, this is 'Prorated'
+        ]
         data_for_emission_chart = [row for row in data_for_display_common if row[0] not in emission_chart_exclusions_food]
+        new_detailed_headers = ["Process Step", "Cost ($)", "Energy (MJ)", "eCO2 (kg)", "Commodity (kg)", "Spoilage (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
+        cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
+        eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)")
         
-        new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Energy (MJ)", "eCO2 (kg)", "Commodity (kg)", "Spoilage (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
-        opex_per_kg_index = new_detailed_headers.index("Opex/kg ($/kg)")
-        capex_per_kg_index = new_detailed_headers.index("Capex/kg ($/kg)")
-        eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)") # Note: This was "CO2eq/kg" in your fuel section. Ensure consistency if possible. I've updated it to match your food section header.
-        
+        # Calculate per-kg metrics for summary table 1
         cost_per_kg = total_money / final_commodity_kg if final_commodity_kg > 0 else 0
         energy_per_kg = total_energy / final_commodity_kg if final_commodity_kg > 0 else 0
         emissions_per_kg = total_emissions / final_commodity_kg if final_commodity_kg > 0 else 0
@@ -2727,6 +3391,7 @@ def run_lca_model(inputs):
             ["Emission (kg CO2eq/kg food)", f"{emissions_per_kg:.2f}"]
         ]
 
+        # Calculate per-GJ metrics for summary table 2
         summary2_data = [
             ["Cost ($/GJ)", f"{total_money / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
             ["Energy consumed (MJ_in/GJ_out)", f"{total_energy / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
@@ -2739,11 +3404,15 @@ def run_lca_model(inputs):
             [f"Diesel Price at {start}", f"{diesel_price_start:.2f} $/gal"],
             [f"Diesel Price at {end_port_name}", f"{diesel_price_end:.2f} $/gal"],
             [f"Marine Fuel ({marine_fuel_choice}) Price at {start_port_name}*", f"{dynamic_price:.2f} $/ton"],
-            [f"Green H2 Production Price at {start}*", f"{hydrogen_production_cost:.2f} $/kg"],
+            [f"{food_name_for_lookup} Price in {start_country}*", f"${price_start:.2f}/kg" if price_start is not None else "N/A"],
+            [f"{food_name_for_lookup} Price in {end_country}*", f"${price_end:.2f}/kg" if price_end is not None else "N/A"],
         ]
         if 'farm_name' in locals() and 'price_farm' in locals() and price_farm is not None:
             assumed_prices_data.append([f"{food_name_for_lookup} Price at {farm_name}*", f"${price_farm:.2f}/kg"])
 
+        # --- 5. CREATE CHARTS AND CONTEXT ---
+
+# --- 5. CREATE CHARTS AND CONTEXT ---
         cost_overlay_text = (
             f"Context:\n"
             f"• Retail price in {start_country}: {price_start_text}\n"
@@ -2761,22 +3430,9 @@ def run_lca_model(inputs):
                 f"• Farming Emissions alone for {current_food_params['name']}: {production_co2e:.2f} kg CO2eq/kg\n"
                 f"• Logistics add {ratio_emission:.1f}X the farming emissions."
             )
-        cost_chart_base64 = create_breakdown_chart(
-            data_for_display_common,
-            opex_per_kg_index,
-            capex_per_kg_index,
-            'Cost Breakdown per kg of Delivered Food', # Title (changed from 'Fuel' to 'Food')
-            'Cost ($/kg)',                           # X-label
-            overlay_text=cost_overlay_text
-        )
-        emission_chart_base64 = create_breakdown_chart(
-            data_for_emission_chart,
-            eco2_per_kg_index,
-            eco2_per_kg_index, # Pass the same index if not stacking emissions by type
-            'CO2eq Breakdown per kg of Delivered Food', # Title (changed from 'Fuel' to 'Food')
-            'CO2eq (kg/kg)',                            # X-label
-            overlay_text=emission_overlay_text
-        )
+        cost_chart_base64 = create_breakdown_chart(data_for_display_common, cost_per_kg_index, f'Cost Breakdown per kg of Delivered {current_food_params["name"]}', 'Cost ($/kg)', overlay_text=cost_overlay_text)
+        emission_chart_base64 = create_breakdown_chart(data_for_emission_chart, eco2_per_kg_index, f'CO2eq Breakdown per kg of Delivered {current_food_params["name"]}', 'CO2eq (kg/kg)', overlay_text=emission_overlay_text)
+            
         response = {
             "status": "success",
             "map_data": { "coor_start": {"lat": coor_start_lat, "lng": coor_start_lng}, "coor_end": {"lat": coor_end_lat, "lng": coor_end_lng}, "start_port": {"lat": start_port_lat, "lng": start_port_lng, "name": start_port_name}, "end_port": {"lat": end_port_lat, "lng": end_port_lng, "name": end_port_name}, "road_route_start_coords": road_route_start_coords, "road_route_end_coords": road_route_end_coords, "sea_route_coords": searoute_coor },
