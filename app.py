@@ -1749,8 +1749,8 @@ def run_lca_model(inputs):
             eu_ets_emissions_tons = (total_emissions / 1000) * 0.50
             eu_ets_tax = eu_ets_emissions_tons * carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0)
             carbon_tax_money += eu_ets_tax # Add to carbon_tax_money
-
-        total_energy_consumed_mj = total_fuel_consumed_kg * fuel_hhv_mj_per_kg
+        total_fuel_consumed_kg = fuel_for_propulsion_kg + fuel_for_auxiliary_kg
+        total_energy_consumed_mj = total_fuel_consumed_kg * selected_fuel['hhv_mj_per_kg']
         return opex_money, capex_money, carbon_tax_money, total_energy_consumed_mj, total_emissions, A - loss, loss
 
     def food_cold_storage(A, args):
@@ -2447,53 +2447,35 @@ def run_lca_model(inputs):
             current_energy = float(row[4])    # Get energy
             current_emission = float(row[5])  # Correct index for CO2eq/eCO2
 
-            current_total_cost = current_opex + current_capex + current_carbon_tax # Now includes carbon tax
+            current_total_cost = current_opex + current_capex + current_carbon_tax #
 
-            # Calculate denominators (final_chem_kg_denominator/final_commodity_kg, final_energy_output_gj)
-            # These should be defined *outside* this loop, using the final "TOTAL" row's values.
-            # Assuming they are correctly calculated as `final_chem_kg_denominator` (fuel) or `final_commodity_kg` (food) and `final_energy_output_gj`.
-
-            cost_per_kg = current_total_cost / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-            cost_per_gj = current_total_cost / final_energy_output_gj if final_energy_output_gj > 0 else 0
-
-            emission_per_kg = current_emission / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-            emission_per_gj = current_emission / final_energy_output_gj if final_energy_output_gj > 0 else 0
-
+            # Calculate individual cost components PER KG
+            # Ensure final_chem_kg_denominator is defined correctly for 'TOTAL' row before this loop
             opex_per_kg = current_opex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             capex_per_kg = current_capex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             carbon_tax_per_kg = current_carbon_tax / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
 
+            # --- Insurance Calculation for 'site_A_chem_production' ---
             insurance_per_kg = 0
-            if row[0] == "site_A_chem_production":
-                # This needs to come from the 'site_A_chem_production' function's calculation
-                # For now, let's assume it's directly available or calculable here if not explicitly returned.
-                # If 'insurance_cost' is directly part of 'opex_money' for that step,
-                # you might need to adjust the 'site_A_chem_production' function to return it separately,
-                # or deduce it here.
-                # For a quick fix, if insurance_cost is passed as a separate argument to the function
-                # site_A_chem_production (as INSURANCE_PERCENTAGE_OF_CARGO_VALUE * hydrogen_production_cost),
-                # you can calculate it again, or ideally, have the function return it.
-
-                # Based on your site_A_chem_production:
-                # insurance_cost = cargo_value * (insurance_percentage_of_cargo_value_arg / 100)
-                # opex_money += insurance_cost
-                # To extract it:
-                cargo_value_at_production = float(row[6]) * hydrogen_production_cost # row[6] is 'Chem (kg)'
-                insurance_cost_absolute = cargo_value_at_production * (INSURANCE_PERCENTAGE_OF_CARGO_VALUE / 100)
+            if row[0] == "site_A_chem_production": # Check if it's the production step
+                # Assuming row[6] contains the 'Chem (kg)' for this specific step
+                cargo_value_at_production_step = float(row[6]) * hydrogen_production_cost
+                insurance_cost_absolute = cargo_value_at_production_step * (INSURANCE_PERCENTAGE_OF_CARGO_VALUE / 100)
                 insurance_per_kg = insurance_cost_absolute / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-                # Reduce opex_per_kg for the 'site_A_chem_production' step by this insurance_per_kg
-                if row[0] == "site_A_chem_production":
-                    opex_per_kg -= insurance_per_kg # Deduct from OPEX for accurate breakdown
+                # Deduct insurance from OPEX to make it a distinct category in the chart
+                opex_per_kg -= insurance_per_kg
 
-            current_total_cost = current_opex + current_capex + current_carbon_tax # Sum of total values.
+            # Calculate total cost per kg (sum of per-kg components)
+            cost_per_kg_total = opex_per_kg + capex_per_kg + carbon_tax_per_kg + insurance_per_kg
 
-            cost_per_kg_total = current_total_cost / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+            # Calculate other 'per GJ' and 'per kg' values
+            # These are for the table, not directly for the breakdown chart components
             cost_per_gj = current_total_cost / final_energy_output_gj if final_energy_output_gj > 0 else 0
-
             emission_per_kg = current_emission / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             emission_per_gj = current_emission / final_energy_output_gj if final_energy_output_gj > 0 else 0
 
-            # Add all the new per-kg columns, including the total cost per kg
+
+            # Append ALL values (total and per-kg) to the row for detailed display
             new_row_with_additions = list(row) + [opex_per_kg, capex_per_kg, carbon_tax_per_kg, insurance_per_kg, cost_per_kg_total, cost_per_gj, emission_per_kg, emission_per_gj]
             data_with_all_columns.append(new_row_with_additions)
             
@@ -2574,35 +2556,36 @@ def run_lca_model(inputs):
                 f"• Total Transport Emission: {chem_CO2e:.2f} kg CO2eq/kg\n"
                 f"• Transport emission is {ratio_emission:.1f} times the SMR emission."
             )
+
         new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Carbon Tax ($)", "Energy (MJ)", "CO2eq (kg)", "Chem (kg)", "BOG (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Carbon Tax/kg ($/kg)", "Insurance/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "CO2eq/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
-        opex_per_kg_index = new_detailed_headers.index("Opex/kg ($/kg)")
-        capex_per_kg_index = new_detailed_headers.index("Capex/kg ($/kg)")
-        carbon_tax_index = new_detailed_headers.index("Carbon Tax/kg ($/kg)") # Changed to point to per-kg value
-        insurance_index = new_detailed_headers.index("Insurance/kg ($/kg)") # New index
-        eco2_per_kg_index = new_detailed_headers.index("CO2eq/kg (kg/kg)")
-        carbon_tax_index = 3 # Assuming carbon tax is at index 3 in data_raw, which is the 4th column
-        insurance_index = 1 # Insurance is part of OPEX for now, but its specific value should be filtered in the chart. For this, we treat it as its own index for chart's parsing logic.
+        opex_per_kg_for_chart_idx = new_detailed_headers.index("Opex/kg ($/kg)")
+        capex_per_kg_for_chart_idx = new_detailed_headers.index("Capex/kg ($/kg)")
+        carbon_tax_per_kg_for_chart_idx = new_detailed_headers.index("Carbon Tax/kg ($/kg)")
+        insurance_per_kg_for_chart_idx = new_detailed_headers.index("Insurance/kg ($/kg)")
+        eco2_per_kg_for_chart_idx = new_detailed_headers.index("CO2eq/kg (kg/kg)")
+
         cost_chart_base64 = create_breakdown_chart(
             data_for_display_common,
-            opex_per_kg_index,
-            capex_per_kg_index,
-            carbon_tax_index,
-            insurance_index,
-            'Cost Breakdown per kg of Delivered Fuel', # Title
-            'Cost ($/kg)',                          # X-label
+            opex_per_kg_for_chart_idx,      # Use the correct per-kg index
+            capex_per_kg_for_chart_idx,     # Use the correct per-kg index
+            carbon_tax_per_kg_for_chart_idx, # Use the correct per-kg index
+            insurance_per_kg_for_chart_idx, # Use the correct per-kg index
+            'Cost Breakdown per kg of Delivered Fuel',
+            'Cost ($/kg)',
             overlay_text=cost_overlay_text,
-            is_emission_chart=False # Explicitly state it's not an emission chart
+            is_emission_chart=False
         )
+
         emission_chart_base64 = create_breakdown_chart(
             data_for_emission_chart,
-            eco2_per_kg_index,
-            eco2_per_kg_index, # This argument is effectively ignored for emission charts
-            carbon_tax_index,  # ADDED
-            insurance_index,   # ADDED
-            'CO2eq Breakdown per kg of Delivered Fuel', # Title
-            'CO2eq (kg/kg)',                            # X-label
+            eco2_per_kg_for_chart_idx,      # Emissions chart uses this as its primary value
+            eco2_per_kg_for_chart_idx,      # Placeholder, will be ignored for emission charts
+            eco2_per_kg_for_chart_idx,      # Placeholder, will be ignored for emission charts
+            eco2_per_kg_for_chart_idx,      # Placeholder, will be ignored for emission charts
+            'CO2eq Breakdown per kg of Delivered Fuel',
+            'CO2eq (kg/kg)',
             overlay_text=emission_overlay_text,
-            is_emission_chart=True # Explicitly state it's an emission chart
+            is_emission_chart=True
         )
         summary1_data = [
             ["Cost ($/kg chemical)", f"{chem_cost:.2f}"],
@@ -2795,55 +2778,90 @@ def run_lca_model(inputs):
         energy_content = current_food_params.get('general_params', {}).get('energy_content_mj_per_kg', 1)
         final_energy_output_mj = final_commodity_kg * energy_content
         final_energy_output_gj = final_energy_output_mj / 1000
+
         data_with_all_columns = []
         for row in data_raw:
-            # Ensure row has enough elements for proper indexing
             if len(row) < 6: # At least up to emissions data
-                print(f"Warning: Row has insufficient data points: {row}. Skipping 'per unit' calculations for this row.")
+                print(f"Warning: Food row has insufficient data points: {row}. Skipping 'per unit' calculations for this row.")
                 data_with_all_columns.append(list(row) + [0]*6) # Append zeros for missing 'per unit' columns
                 continue
 
             current_opex = float(row[1])
             current_capex = float(row[2])
             current_carbon_tax = float(row[3]) # Get carbon tax
-            current_energy = float(row[4])    # Get energy
-            current_emission = float(row[5])  # Correct index for CO2eq/eCO2
+            current_energy_total = float(row[4]) # Total energy
+            current_emission_total = float(row[5]) # Total emissions
 
-            current_total_cost = current_opex + current_capex + current_carbon_tax # Now includes carbon tax
+            # Calculate individual cost components PER KG
+            opex_per_kg = current_opex / final_commodity_kg if final_commodity_kg > 0 else 0
+            capex_per_kg = current_capex / final_commodity_kg if final_commodity_kg > 0 else 0
+            carbon_tax_per_kg = current_carbon_tax / final_commodity_kg if final_commodity_kg > 0 else 0
 
-            # Calculate denominators (final_chem_kg_denominator/final_commodity_kg, final_energy_output_gj)
-            # These should be defined *outside* this loop, using the final "TOTAL" row's values.
-            # Assuming they are correctly calculated as `final_chem_kg_denominator` (fuel) or `final_commodity_kg` (food) and `final_energy_output_gj`.
+            # --- Insurance Calculation for 'Harvesting & Preparation' ---
+            insurance_per_kg = 0
+            # Assuming the first step "Harvesting & Preparation" is where insurance applies
+            if row[0] == "Harvesting & Preparation":
+                # Assuming row[6] contains the commodity weight at this step
+                cargo_value_at_harvest = float(row[6]) * price_start if price_start is not None else 0
+                insurance_cost_absolute = cargo_value_at_harvest * (INSURANCE_PERCENTAGE_OF_CARGO_VALUE / 100)
+                insurance_per_kg = insurance_cost_absolute / final_commodity_kg if final_commodity_kg > 0 else 0
+                # Deduct insurance from OPEX
+                opex_per_kg -= insurance_per_kg
 
-            cost_per_kg = current_total_cost / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+            # Calculate total cost per kg (sum of per-kg components)
+            cost_per_kg_total = opex_per_kg + capex_per_kg + carbon_tax_per_kg + insurance_per_kg
+
+            # Calculate other 'per GJ' and 'per kg' values for the table
             cost_per_gj = current_total_cost / final_energy_output_gj if final_energy_output_gj > 0 else 0
+            emission_per_kg = current_emission_total / final_commodity_kg if final_commodity_kg > 0 else 0
+            emission_per_gj = current_emission_total / final_energy_output_gj if final_energy_output_gj > 0 else 0
 
-            emission_per_kg = current_emission / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-            emission_per_gj = current_emission / final_energy_output_gj if final_energy_output_gj > 0 else 0
-
-            opex_per_kg = current_opex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-            capex_per_kg = current_capex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-
-            new_row_with_additions = list(row) + [opex_per_kg, capex_per_kg, cost_per_kg, cost_per_gj, emission_per_kg, emission_per_gj]
+            # Add all the new per-kg columns, including the total cost per kg
+            new_row_with_additions = list(row) + [opex_per_kg, capex_per_kg, carbon_tax_per_kg, insurance_per_kg, cost_per_kg_total, cost_per_gj, emission_per_kg, emission_per_gj]
             data_with_all_columns.append(new_row_with_additions)
-                                    
+                                                
         detailed_data_formatted = data_with_all_columns
         data_for_display_common = [row for row in detailed_data_formatted if row[0] != "TOTAL" and row[0] != "Harvesting & Preparation"]
         emission_chart_exclusions_food = [] # No exclusions needed if all costs/emissions are now integrated
         data_for_emission_chart = [row for row in data_for_display_common if row[0] not in emission_chart_exclusions_food]
         carbon_tax_index = 3 # Assuming carbon tax is at index 3 in data_raw, which is the 4th column
         insurance_index = 1 # Insurance is part of OPEX for now, but its specific value should be filtered in the chart's parsing logic        
+
         new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Carbon Tax ($)", "Energy (MJ)", "eCO2 (kg)", "Commodity (kg)", "Spoilage (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Carbon Tax/kg ($/kg)", "Insurance/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
-        opex_per_kg_index = new_detailed_headers.index("Opex/kg ($/kg)")
-        capex_per_kg_index = new_detailed_headers.index("Capex/kg ($/kg)")
-        carbon_tax_index = new_detailed_headers.index("Carbon Tax/kg ($/kg)") # Changed to point to per-kg value
-        insurance_index = new_detailed_headers.index("Insurance/kg ($/kg)") # New index
-        eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)")
-        
-        cost_per_kg = total_money / final_commodity_kg if final_commodity_kg > 0 else 0
-        energy_per_kg = total_energy / final_commodity_kg if final_commodity_kg > 0 else 0
-        emissions_per_kg = total_emissions / final_commodity_kg if final_commodity_kg > 0 else 0
-        
+
+        # CORRECT INDICES for the PER-KG values in the data_with_all_columns
+        opex_per_kg_for_chart_idx = new_detailed_headers.index("Opex/kg ($/kg)")
+        capex_per_kg_for_chart_idx = new_detailed_headers.index("Capex/kg ($/kg)")
+        carbon_tax_per_kg_for_chart_idx = new_detailed_headers.index("Carbon Tax/kg ($/kg)")
+        insurance_per_kg_for_chart_idx = new_detailed_headers.index("Insurance/kg ($/kg)")
+        eco2_per_kg_for_chart_idx = new_detailed_headers.index("eCO2/kg (kg/kg)")
+        cost_per_kg = total_money / final_commodity_kg if final_commodity_kg > 0 else 0 #
+        energy_per_kg = total_energy / final_commodity_kg if final_commodity_kg > 0 else 0 #
+        emissions_per_kg = total_emissions / final_commodity_kg if final_commodity_kg > 0 else 0 #
+
+        cost_chart_base64 = create_breakdown_chart(
+            data_for_display_common,
+            opex_per_kg_for_chart_idx,      # Use the correct per-kg index
+            capex_per_kg_for_chart_idx,     # Use the correct per-kg index
+            carbon_tax_per_kg_for_chart_idx, # Use the correct per-kg index
+            insurance_per_kg_for_chart_idx, # Use the correct per-kg index
+            'Cost Breakdown per kg of Delivered Food',
+            'Cost ($/kg)',
+            overlay_text=cost_overlay_text,
+            is_emission_chart=False
+        )
+
+        emission_chart_base64 = create_breakdown_chart(
+            data_for_emission_chart,
+            eco2_per_kg_for_chart_idx,      # Emissions chart uses this as its primary value
+            eco2_per_kg_for_chart_idx,      # Placeholder, will be ignored for emission charts
+            eco2_per_kg_for_chart_idx,      # Placeholder, will be ignored for emission charts
+            eco2_per_kg_for_chart_idx,      # Placeholder, will be ignored for emission charts
+            'CO2eq Breakdown per kg of Delivered Food',
+            'CO2eq (kg/kg)',
+            overlay_text=emission_overlay_text,
+            is_emission_chart=True
+        )        
         summary1_data = [
             ["Cost ($/kg food)", f"{cost_per_kg:.2f}"],
             ["Consumed Energy (MJ/kg food)", f"{energy_per_kg:.2f}"],
@@ -2884,27 +2902,6 @@ def run_lca_model(inputs):
                 f"• Farming Emissions alone for {current_food_params['name']}: {production_co2e:.2f} kg CO2eq/kg\n"
                 f"• Logistics add {ratio_emission:.1f}X the farming emissions."
             )
-        cost_chart_base64 = create_breakdown_chart(
-            data_for_display_common,
-            opex_per_kg_index,
-            capex_per_kg_index,
-            carbon_tax_index,
-            insurance_index,
-            'Cost Breakdown per kg of Delivered Food', # Title (changed from 'Fuel' to 'Food')
-            'Cost ($/kg)',                           # X-label
-            overlay_text=cost_overlay_text
-        )
-        emission_chart_base64 = create_breakdown_chart(
-            data_for_emission_chart,
-            eco2_per_kg_index,
-            eco2_per_kg_index, # This argument is effectively ignored for emission charts as per your function logic
-            carbon_tax_index, # ADDED: This will be ignored for emission charts by your function, but needs to be present.
-            insurance_index,  # ADDED: This will be ignored for emission charts by your function, but needs to be present.
-            'CO2eq Breakdown per kg of Delivered Food', # Title (changed from 'Fuel' to 'Food')
-            'CO2eq (kg/kg)',                            # X-label
-            overlay_text=emission_overlay_text,
-            is_emission_chart=True # Ensure this is explicitly set to True for emission charts
-        )
         response = {
             "status": "success",
             "map_data": { "coor_start": {"lat": coor_start_lat, "lng": coor_start_lng}, "coor_end": {"lat": coor_end_lat, "lng": coor_end_lng}, "start_port": {"lat": start_port_lat, "lng": start_port_lng, "name": start_port_name}, "end_port": {"lat": end_port_lat, "lng": end_port_lng, "name": end_port_name}, "road_route_start_coords": road_route_start_coords, "road_route_end_coords": road_route_end_coords, "sea_route_coords": searoute_coor },
