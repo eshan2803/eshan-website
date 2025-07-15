@@ -449,7 +449,6 @@ def run_lca_model(inputs):
         # Carbon Tax
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_country_name_arg, 0) * (G_emission / 1000)
         carbon_tax_money += carbon_tax
-
         return opex_money, capex_money, carbon_tax_money, liquify_ener_consumed, G_emission, A_after_loss, BOG_loss
 
     def fuel_pump_transfer(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
@@ -1507,7 +1506,7 @@ def run_lca_model(inputs):
             opex_money, capex_money, carbon_tax_money_current, Y_energy, Z_emission, R_current_chem, S_bog_loss = \
                 func_to_call(R_current_chem, B_fuel_type_tc, C_recirculation_BOG_tc, D_truck_apply_tc,
                             E_storage_apply_tc, F_maritime_apply_tc, process_args_for_this_call_tc)
-
+                
             # Store the individual cost components in data_results_list
             data_results_list.append([
                 func_to_call.__name__ + (f'_{leg_type}' if leg_type else '') + (f'_{transfer_context}' if transfer_context else '') + (f'_{storage_location_type}' if storage_location_type else ''),
@@ -2433,21 +2432,36 @@ def run_lca_model(inputs):
 
         data_with_all_columns = []
         for row in data_raw:
+            # Ensure row has enough elements for proper indexing
+            if len(row) < 6: # At least up to emissions data
+                print(f"Warning: Row has insufficient data points: {row}. Skipping 'per unit' calculations for this row.")
+                data_with_all_columns.append(list(row) + [0]*6) # Append zeros for missing 'per unit' columns
+                continue
+
             current_opex = float(row[1])
             current_capex = float(row[2])
-            current_total_cost = current_opex + current_capex
-            current_emission = float(row[4])
+            current_carbon_tax = float(row[3]) # Get carbon tax
+            current_energy = float(row[4])    # Get energy
+            current_emission = float(row[5])  # Correct index for CO2eq/eCO2
+
+            current_total_cost = current_opex + current_capex + current_carbon_tax # Now includes carbon tax
+
+            # Calculate denominators (final_chem_kg_denominator/final_commodity_kg, final_energy_output_gj)
+            # These should be defined *outside* this loop, using the final "TOTAL" row's values.
+            # Assuming they are correctly calculated as `final_chem_kg_denominator` (fuel) or `final_commodity_kg` (food) and `final_energy_output_gj`.
 
             cost_per_kg = current_total_cost / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-            cost_per_gj = current_total_cost / final_energy_gj_denominator if final_energy_gj_denominator > 0 else 0
+            cost_per_gj = current_total_cost / final_energy_output_gj if final_energy_output_gj > 0 else 0
 
             emission_per_kg = current_emission / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-            emission_per_gj = current_emission / final_energy_gj_denominator if final_energy_gj_denominator > 0 else 0
+            emission_per_gj = current_emission / final_energy_output_gj if final_energy_output_gj > 0 else 0
+
             opex_per_kg = current_opex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             capex_per_kg = current_capex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-            new_row_with_additions = list(row) + [opex_per_kg, capex_per_kg, cost_per_kg, cost_per_gj, emission_per_kg, emission_per_gj] # Add opex_per_kg and capex_per_kg
-            data_with_all_columns.append(new_row_with_additions)
 
+            new_row_with_additions = list(row) + [opex_per_kg, capex_per_kg, cost_per_kg, cost_per_gj, emission_per_kg, emission_per_gj]
+            data_with_all_columns.append(new_row_with_additions)
+            
         data = data_with_all_columns
         total_results = final_results_raw
 
@@ -2525,7 +2539,7 @@ def run_lca_model(inputs):
                 f"• Total Transport Emission: {chem_CO2e:.2f} kg CO2eq/kg\n"
                 f"• Transport emission is {ratio_emission:.1f} times the SMR emission."
             )
-        new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Energy (MJ)", "CO2eq (kg)", "Chem (kg)", "BOG (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "CO2eq/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
+        new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Carbon Tax ($)", "Energy (MJ)", "CO2eq (kg)", "Chem (kg)", "BOG (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "CO2eq/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
         opex_per_kg_index = new_detailed_headers.index("Opex/kg ($/kg)")
         capex_per_kg_index = new_detailed_headers.index("Capex/kg ($/kg)")
         eco2_per_kg_index = new_detailed_headers.index("CO2eq/kg (kg/kg)")
@@ -2746,30 +2760,43 @@ def run_lca_model(inputs):
         final_energy_output_gj = final_energy_output_mj / 1000
         data_with_all_columns = []
         for row in data_raw:
+            # Ensure row has enough elements for proper indexing
+            if len(row) < 6: # At least up to emissions data
+                print(f"Warning: Row has insufficient data points: {row}. Skipping 'per unit' calculations for this row.")
+                data_with_all_columns.append(list(row) + [0]*6) # Append zeros for missing 'per unit' columns
+                continue
+
             current_opex = float(row[1])
             current_capex = float(row[2])
-            current_total_cost = current_opex + current_capex
-            current_emission = float(row[4])
+            current_carbon_tax = float(row[3]) # Get carbon tax
+            current_energy = float(row[4])    # Get energy
+            current_emission = float(row[5])  # Correct index for CO2eq/eCO2
 
-            opex_per_kg = current_opex / final_commodity_kg if final_commodity_kg > 0 else 0
-            capex_per_kg = current_capex / final_commodity_kg if final_commodity_kg > 0 else 0
+            current_total_cost = current_opex + current_capex + current_carbon_tax # Now includes carbon tax
 
-            cost_per_kg = current_total_cost / final_commodity_kg if final_commodity_kg > 0 else 0
-            cost_per_gj = current_total_cost / final_energy_output_gj if final_energy_output_gj > 0 else 0 # Use final_energy_output_gj from food section
+            # Calculate denominators (final_chem_kg_denominator/final_commodity_kg, final_energy_output_gj)
+            # These should be defined *outside* this loop, using the final "TOTAL" row's values.
+            # Assuming they are correctly calculated as `final_chem_kg_denominator` (fuel) or `final_commodity_kg` (food) and `final_energy_output_gj`.
 
-            emission_per_kg = current_emission / final_commodity_kg if final_commodity_kg > 0 else 0
-            emission_per_gj = current_emission / final_energy_output_gj if final_energy_output_gj > 0 else 0 # Use final_energy_output_gj from food section
+            cost_per_kg = current_total_cost / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+            cost_per_gj = current_total_cost / final_energy_output_gj if final_energy_output_gj > 0 else 0
+
+            emission_per_kg = current_emission / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+            emission_per_gj = current_emission / final_energy_output_gj if final_energy_output_gj > 0 else 0
+
+            opex_per_kg = current_opex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+            capex_per_kg = current_capex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
 
             new_row_with_additions = list(row) + [opex_per_kg, capex_per_kg, cost_per_kg, cost_per_gj, emission_per_kg, emission_per_gj]
             data_with_all_columns.append(new_row_with_additions)
-                        
+                                    
         detailed_data_formatted = data_with_all_columns
         data_for_display_common = [row for row in detailed_data_formatted if row[0] != "TOTAL" and row[0] != "Harvesting & Preparation"]
         emission_chart_exclusions_food = [] # No exclusions needed if all costs/emissions are now integrated
         data_for_emission_chart = [row for row in data_for_display_common if row[0] not in emission_chart_exclusions_food]
         carbon_tax_index = 3 # Assuming carbon tax is at index 3 in data_raw, which is the 4th column
         insurance_index = 1 # Insurance is part of OPEX for now, but its specific value should be filtered in the chart's parsing logic        
-        new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Energy (MJ)", "eCO2 (kg)", "Commodity (kg)", "Spoilage (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
+        new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Carbon Tax ($)", "Energy (MJ)", "eCO2 (kg)", "Commodity (kg)", "Spoilage (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
         opex_per_kg_index = new_detailed_headers.index("Opex/kg ($/kg)")
         capex_per_kg_index = new_detailed_headers.index("Capex/kg ($/kg)")
         eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)") # Note: This was "CO2eq/kg" in your fuel section. Ensure consistency if possible. I've updated it to match your food section header.
