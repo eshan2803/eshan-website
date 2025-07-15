@@ -2758,15 +2758,15 @@ def run_lca_model(inputs):
             data_for_display_common,
             opex_per_kg_index,
             capex_per_kg_index,
-            'Cost Breakdown per kg of Delivered Fuel', # Title
-            'Cost ($/kg)',                          # X-label
+            'Cost Breakdown per kg of Delivered Food', # Title (changed from 'Fuel' to 'Food')
+            'Cost ($/kg)',                           # X-label
             overlay_text=cost_overlay_text
         )
         emission_chart_base64 = create_breakdown_chart(
             data_for_emission_chart,
             eco2_per_kg_index,
-            eco2_per_kg_index, # For emissions, you'd likely still want a single bar unless you also break down emission types
-            'CO2eq Breakdown per kg of Delivered Fuel', # Title
+            eco2_per_kg_index, # Pass the same index if not stacking emissions by type
+            'CO2eq Breakdown per kg of Delivered Food', # Title (changed from 'Fuel' to 'Food')
             'CO2eq (kg/kg)',                            # X-label
             overlay_text=emission_overlay_text
         )
