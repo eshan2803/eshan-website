@@ -83,8 +83,12 @@ def run_lca_model(inputs):
     # =================================================================
     # <<<                       HELPER FUNCTIONS                    >>>
     # =================================================================
-    final_energy_output_gj = 0.0  # Add this line
-
+    final_energy_output_gj = 0.0 
+    opex_per_kg_for_chart_idx = 0
+    capex_per_kg_for_chart_idx = 0
+    carbon_tax_per_kg_for_chart_idx = 0
+    insurance_per_kg_for_chart_idx = 0
+    eco2_per_kg_for_chart_idx = 0
     def extract_lat_long(address_or_postalcode):
         endpoint = f'https://maps.googleapis.com/maps/api/geocode/json'
         params = {'address': address_or_postalcode, 'key': api_key_google}
@@ -2627,7 +2631,7 @@ def run_lca_model(inputs):
         opex_per_kg_for_chart_idx = new_detailed_headers.index("Opex/kg ($/kg)")
         capex_per_kg_for_chart_idx = new_detailed_headers.index("Capex/kg ($/kg)")
         carbon_tax_per_kg_for_chart_idx = new_detailed_headers.index("Carbon Tax/kg ($/kg)")
-        insurance_per_kg_for_chart_idx = new_detailed_headers.index("Insurance/kg ($/kg)") # This should now be correct
+        insurance_per_kg_for_chart_idx = new_detailed_headers.index("Insurance/kg ($/kg)")
         eco2_per_kg_for_chart_idx = new_detailed_headers.index("CO2eq/kg (kg/kg)")
         cost_chart_base64 = create_breakdown_chart(
             data_for_display_common,
@@ -2886,12 +2890,10 @@ def run_lca_model(inputs):
             current_opex = float(row[1])
             current_capex = float(row[2])
             current_carbon_tax = float(row[3])
-            # The 'insurance_m' from food_harvest_and_prep is already in row[4] here.
-            current_insurance_from_func = float(row[4]) 
-            current_energy_total = float(row[5])
-            current_emission_total = float(row[6])
-            current_commodity_kg_at_step = float(row[7]) # This is the `A` value for the step
-            current_spoilage_loss = float(row[8])
+            current_energy_total = float(row[4])
+            current_emission_total = float(row[5])
+            current_commodity_kg_at_step = float(row[6]) # This is the `A` value for the step
+            current_spoilage_loss = float(row[7])
 
             # Calculate individual cost components PER KG
             opex_per_kg = current_opex / final_commodity_kg if final_commodity_kg > 0 else 0
