@@ -2467,22 +2467,24 @@ def run_lca_model(inputs):
                 f"• Transport emission is {ratio_emission:.1f} times the SMR emission."
             )
         new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Energy (MJ)", "CO2eq (kg)", "Chem (kg)", "BOG (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "CO2eq/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
-        csv_data = [new_detailed_headers] + detailed_data_formatted
-        cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
+        opex_per_kg_index = new_detailed_headers.index("Opex/kg ($/kg)")
+        capex_per_kg_index = new_detailed_headers.index("Capex/kg ($/kg)")
         eco2_per_kg_index = new_detailed_headers.index("CO2eq/kg (kg/kg)")
 
         cost_chart_base64 = create_breakdown_chart(
             data_for_display_common,
-            cost_per_kg_index,
-            'Cost Breakdown per kg of Delivered Fuel',
-            'Cost ($/kg)',
+            opex_per_kg_index,
+            capex_per_kg_index,
+            'Cost Breakdown per kg of Delivered Fuel', # Title
+            'Cost ($/kg)',                          # X-label
             overlay_text=cost_overlay_text
         )
         emission_chart_base64 = create_breakdown_chart(
             data_for_emission_chart,
             eco2_per_kg_index,
-            'CO2eq Breakdown per kg of Delivered Fuel',
-            'CO2eq (kg/kg)',
+            eco2_per_kg_index, # For emissions, you'd likely still want a single bar unless you also break down emission types
+            'CO2eq Breakdown per kg of Delivered Fuel', # Title
+            'CO2eq (kg/kg)',                            # X-label
             overlay_text=emission_overlay_text
         )
 
@@ -2703,11 +2705,10 @@ def run_lca_model(inputs):
         emission_chart_exclusions_food = [] # No exclusions needed if all costs/emissions are now integrated
         data_for_emission_chart = [row for row in data_for_display_common if row[0] not in emission_chart_exclusions_food]
         
-        new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Energy (MJ)", "eCO2 (kg)", "Commodity (kg)", "Spoilage (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
-        cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
+        new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Energy (MJ)", "eCO2 (kg)", "Commodity (kg)", "Spoilage (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
         opex_per_kg_index = new_detailed_headers.index("Opex/kg ($/kg)")
         capex_per_kg_index = new_detailed_headers.index("Capex/kg ($/kg)")
-        eco2_per_kg_index = new_detailed_headers.index("CO2eq/kg (kg/kg)") # This index remains the same
+        eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)") # Note: This was "CO2eq/kg" in your fuel section. Ensure consistency if possible. I've updated it to match your food section header.
         
         cost_per_kg = total_money / final_commodity_kg if final_commodity_kg > 0 else 0
         energy_per_kg = total_energy / final_commodity_kg if final_commodity_kg > 0 else 0
@@ -2755,20 +2756,20 @@ def run_lca_model(inputs):
             )
         cost_chart_base64 = create_breakdown_chart(
             data_for_display_common,
-            opex_per_kg_index, # Pass OPEX index
-            capex_per_kg_index, # Pass CAPEX index
-            'Cost Breakdown per kg of Delivered Fuel',
-            'Cost ($/kg)',
+            opex_per_kg_index,
+            capex_per_kg_index,
+            'Cost Breakdown per kg of Delivered Fuel', # Title
+            'Cost ($/kg)',                          # X-label
             overlay_text=cost_overlay_text
         )
         emission_chart_base64 = create_breakdown_chart(
             data_for_emission_chart,
+            eco2_per_kg_index,
             eco2_per_kg_index, # For emissions, you'd likely still want a single bar unless you also break down emission types
-            eco2_per_kg_index, # Pass the same index if not stacking emissions by type
-            'CO2eq Breakdown per kg of Delivered Fuel',
-            'CO2eq (kg/kg)',
+            'CO2eq Breakdown per kg of Delivered Fuel', # Title
+            'CO2eq (kg/kg)',                            # X-label
             overlay_text=emission_overlay_text
-        )            
+        )
         response = {
             "status": "success",
             "map_data": { "coor_start": {"lat": coor_start_lat, "lng": coor_start_lng}, "coor_end": {"lat": coor_end_lat, "lng": coor_end_lng}, "start_port": {"lat": start_port_lat, "lng": start_port_lng, "name": start_port_name}, "end_port": {"lat": end_port_lat, "lng": end_port_lng, "name": end_port_name}, "road_route_start_coords": road_route_start_coords, "road_route_end_coords": road_route_end_coords, "sea_route_coords": searoute_coor },
