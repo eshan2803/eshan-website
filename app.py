@@ -2730,12 +2730,7 @@ def run_lca_model(inputs):
 
         reefer_service_cost_per_container, reefer_service_capex_per_container, reefer_service_carbon_tax_per_container, reefer_service_energy_per_container, reefer_service_emissions_per_container, _, _ = calculate_single_reefer_service_cost(port_to_port_duration, current_food_params)
 
-        reefer_service_total_cost = reefer_service_cost_per_container * shipment_size_containers
-        reefer_service_total_capex = reefer_service_capex_per_container * shipment_size_containers # ADD THIS LINE
-        reefer_service_total_carbon_tax = reefer_service_carbon_tax_per_container * shipment_size_containers # ADD THIS LINE
-        reefer_service_total_energy = reefer_service_energy_per_container * shipment_size_containers
-        reefer_service_total_emissions = reefer_service_emissions_per_container * shipment_size_containers
-
+        reefer_row = ["Reefer & CA Services", reefer_service_total_cost, reefer_service_total_capex, reefer_service_total_carbon_tax, reefer_service_total_energy, reefer_service_total_emissions, commodity_weight_at_marine_transport, 0]
         # Inject the new, more detailed sea transport costs into the results
         marine_transport_index = next((i for i, row in enumerate(data_raw) if "Marine Transport" in row[0]), -1)
 
@@ -2756,9 +2751,9 @@ def run_lca_model(inputs):
             data_raw[marine_transport_index][3] = (propulsion_fuel_kwh * 3.6 / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0 # Energy
 
             # Add a new row for the reefer service cost (OPEX)
-            reefer_service_total_cost = reefer_service_cost * shipment_size_containers
-            reefer_service_total_energy = reefer_service_energy * shipment_size_containers
-            reefer_service_total_emissions = reefer_service_emissions * shipment_size_containers
+            reefer_service_total_cost = reefer_service_cost_per_container * shipment_size_containers
+            reefer_service_total_capex = reefer_service_capex_per_container * shipment_size_containers
+            reefer_service_total_carbon_tax = reefer_service_carbon_tax_per_container * shipment_size_containers            
             reefer_row = ["Reefer & CA Services", reefer_service_total_cost, reefer_service_total_capex, reefer_service_total_carbon_tax, reefer_service_total_energy, reefer_service_total_emissions, commodity_weight_at_marine_transport, 0]
             data_raw.insert(marine_transport_index + 1, reefer_row)
 
