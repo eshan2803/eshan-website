@@ -277,33 +277,46 @@ def run_lca_model(inputs):
         volumes_m3 = [p[0] for p in power_scaling_data]
         powers_kw = [p[1] for p in power_scaling_data]
         return np.interp(ship_volume_m3, volumes_m3, powers_kw)
-
-    def create_breakdown_chart(data, column_index, title, x_label, overlay_text=None):
+    
+    def create_breakdown_chart(data, opex_column_index, capex_column_index, title, x_label, overlay_text=None):
         try:
             if not data:
                 print("Chart creation skipped: No data provided.")
                 return ""
             labels = [row[0] for row in data]
-            values = []
+            opex_values = []
+            capex_values = []
             for row in data:
                 try:
-                    values.append(float(row[column_index]))
+                    opex_values.append(float(row[opex_column_index]))
+                    capex_values.append(float(row[capex_column_index]))
                 except (ValueError, TypeError):
-                    values.append(0.0)
-                    print(f"Warning: Could not convert value '{row[column_index]}' to a number for chart '{title}'. Defaulting to 0.")
+                    opex_values.append(0.0)
+                    capex_values.append(0.0)
+                    print(f"Warning: Could not convert value to a number for chart '{title}'. Defaulting to 0.")
+
             plt.style.use('seaborn-v0_8-whitegrid')
             fig, ax = plt.subplots(figsize=(10, len(labels) * 0.5))
 
             y_pos = np.arange(len(labels))
-            ax.barh(y_pos, values, align='center', color='#4CAF50', edgecolor='black')
+
+            # Plot OPEX
+            ax.barh(y_pos, opex_values, align='center', color='#8BC34A', edgecolor='black', label='OPEX') # Lighter Green
+            # Plot CAPEX on top of OPEX
+            ax.barh(y_pos, capex_values, left=opex_values, align='center', color='#4CAF50', edgecolor='black', label='CAPEX') # Original Green
+
             ax.set_yticks(y_pos)
             ax.set_yticklabels(labels, fontsize=12)
             ax.invert_yaxis()  # labels read top-to-bottom
             ax.set_xlabel(x_label, fontsize=14, weight='bold')
             ax.set_title(title, fontsize=16, weight='bold', pad=20)
 
-            for i, v in enumerate(values):
-                ax.text(v, i, f' {v:,.2f}', color='black', va='center', fontweight='bold')
+            # Add values for total (OPEX + CAPEX)
+            for i, (o, c) in enumerate(zip(opex_values, capex_values)):
+                total_value = o + c
+                ax.text(total_value, i, f' {total_value:,.2f}', color='black', va='center', fontweight='bold')
+
+            ax.legend(loc='lower right', fontsize=10) # Add legend for OPEX/CAPEX
 
             plt.tight_layout(pad=2.0)
 
@@ -326,7 +339,8 @@ def run_lca_model(inputs):
             import traceback
             traceback.print_exc()
             print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-            return ""
+            return ""    
+
     # =================================================================
     # <<<                   FUEL PROCESS FUNCTIONS                  >>>
     # =================================================================
@@ -1960,48 +1974,6 @@ def run_lca_model(inputs):
     storage_time_C = inputs['storage_time_C']
     facility_capacity = inputs['LH2_plant_capacity']
 
-    # NEW GLOBAL PARAMETERS
-    MAINTENANCE_COST_PER_KM_TRUCK = 0.05 # $/km
-    MAINTENANCE_COST_PER_KM_SHIP = 0.10 # $/km
-    INSURANCE_PERCENTAGE_OF_CARGO_VALUE = 1.0 # 1%
-    CARBON_TAX_PER_TON_CO2_COUNTRY_DICT = {
-        "Sweden": 144.62,          # 2025 rate from Tax Foundation
-        "Switzerland": 136.04,     # 2025 rate from Tax Foundation
-        "Liechtenstein": 136.04,   # 2025 rate from Tax Foundation
-        "Poland": 0.10,            # 2025 rate from Tax Foundation
-        "Ukraine": 0.73,           # 2025 rate from Tax Foundation
-        "Norway": 107.78,          # 2024 rate from World Population Review
-        "Finland": 100.02,         # 2024 rate from World Population Review
-        "Netherlands": 71.51,      # 2024 rate from World Population Review
-        "Portugal": 60.48,         # 2024 rate from World Population Review
-        "Ireland": 60.22,          # 2024 rate from World Population Review
-        "Luxembourg": 49.92,       # 2024 rate from World Population Review
-        "Germany": 48.39,          # 2024 rate from World Population Review
-        "Austria": 48.37,          # 2024 rate from World Population Review
-        "France": 47.96,           # 2024 rate from World Population Review
-        "Iceland": 36.51,          # 2024 rate from World Population Review
-        "Denmark": 28.10,          # 2024 rate from World Population Review
-        "United Kingdom": 22.62,   # 2024 rate from World Population Review
-        "Slovenia": 18.60,         # 2024 rate from World Population Review
-        "Spain": 16.13,            # 2024 rate from World Population Review
-        "Latvia": 16.13,           # 2024 rate from World Population Review
-        "Estonia": 2.18,           # 2024 rate from World Population Review
-        "South Africa": 10.69,     # 2024 rate from World Population Review
-        "Singapore": 19.55,        # 2024 rate from World Population Review
-        "Uruguay": 167.00,         # 2024 rate from Statista
-        "Japan": 2.65              # Rate from academic sources, stable since implementation
-    }
-
-    # List of current EU Member Countries (as of July 2025)
-    EU_MEMBER_COUNTRIES = [
-        "Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus", "Czech Republic",
-        "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary",
-        "Ireland", "Italy", "Latvia", "Lithuania", "Luxembourg", "Malta",
-        "Netherlands", "Poland", "Portugal", "Romania", "Slovakia", "Slovenia",
-        "Spain", "Sweden"
-    ]
-
-
     coor_start_lat, coor_start_lng, _ = extract_lat_long(start)
     coor_end_lat, coor_end_lng, _ = extract_lat_long(end)
     start_port_lat, start_port_lng, start_port_name = openai_get_nearest_port(f"{coor_start_lat},{coor_start_lng}")
@@ -2494,8 +2466,7 @@ def run_lca_model(inputs):
                 f"• Total Transport Emission: {chem_CO2e:.2f} kg CO2eq/kg\n"
                 f"• Transport emission is {ratio_emission:.1f} times the SMR emission."
             )
-
-        new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Energy (MJ)", "CO2eq (kg)", "Chem (kg)", "BOG (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "CO2eq/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
+        new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Energy (MJ)", "CO2eq (kg)", "Chem (kg)", "BOG (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "CO2eq/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
         csv_data = [new_detailed_headers] + detailed_data_formatted
         cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
         eco2_per_kg_index = new_detailed_headers.index("CO2eq/kg (kg/kg)")
@@ -2714,12 +2685,17 @@ def run_lca_model(inputs):
             current_total_cost = current_opex + current_capex
             current_emission = float(row[4])
 
-            cost_per_kg = current_total_cost / final_commodity_kg if final_commodity_kg > 0 else 0
-            cost_per_gj = current_total_cost / final_energy_output_gj if final_energy_output_gj > 0 else 0
-            emission_per_kg = current_emission / final_commodity_kg if final_commodity_kg > 0 else 0
-            emission_per_gj = current_emission / final_energy_output_gj if final_energy_output_gj > 0 else 0
+            # Calculate Opex/kg and Capex/kg
+            opex_per_kg = current_opex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+            capex_per_kg = current_capex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
 
-            new_row_with_additions = list(row) + [cost_per_kg, cost_per_gj, emission_per_kg, emission_per_gj]
+            cost_per_kg = current_total_cost / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+            cost_per_gj = current_total_cost / final_energy_gj_denominator if final_energy_gj_denominator > 0 else 0
+
+            emission_per_kg = current_emission / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+            emission_per_gj = current_emission / final_energy_gj_denominator if final_energy_gj_denominator > 0 else 0
+
+            new_row_with_additions = list(row) + [opex_per_kg, capex_per_kg, cost_per_kg, cost_per_gj, emission_per_kg, emission_per_gj]
             data_with_all_columns.append(new_row_with_additions)
             
         detailed_data_formatted = data_with_all_columns
@@ -2729,7 +2705,9 @@ def run_lca_model(inputs):
         
         new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Energy (MJ)", "eCO2 (kg)", "Commodity (kg)", "Spoilage (kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
         cost_per_kg_index = new_detailed_headers.index("Cost/kg ($/kg)")
-        eco2_per_kg_index = new_detailed_headers.index("eCO2/kg (kg/kg)")
+        opex_per_kg_index = new_detailed_headers.index("Opex/kg ($/kg)")
+        capex_per_kg_index = new_detailed_headers.index("Capex/kg ($/kg)")
+        eco2_per_kg_index = new_detailed_headers.index("CO2eq/kg (kg/kg)") # This index remains the same
         
         cost_per_kg = total_money / final_commodity_kg if final_commodity_kg > 0 else 0
         energy_per_kg = total_energy / final_commodity_kg if final_commodity_kg > 0 else 0
@@ -2775,9 +2753,22 @@ def run_lca_model(inputs):
                 f"• Farming Emissions alone for {current_food_params['name']}: {production_co2e:.2f} kg CO2eq/kg\n"
                 f"• Logistics add {ratio_emission:.1f}X the farming emissions."
             )
-        cost_chart_base64 = create_breakdown_chart(data_for_display_common, cost_per_kg_index, f'Cost Breakdown per kg of Delivered {current_food_params["name"]}', 'Cost ($/kg)', overlay_text=cost_overlay_text)
-        emission_chart_base64 = create_breakdown_chart(data_for_emission_chart, eco2_per_kg_index, f'CO2eq Breakdown per kg of Delivered {current_food_params["name"]}', 'CO2eq (kg/kg)', overlay_text=emission_overlay_text)
-            
+        cost_chart_base64 = create_breakdown_chart(
+            data_for_display_common,
+            opex_per_kg_index, # Pass OPEX index
+            capex_per_kg_index, # Pass CAPEX index
+            'Cost Breakdown per kg of Delivered Fuel',
+            'Cost ($/kg)',
+            overlay_text=cost_overlay_text
+        )
+        emission_chart_base64 = create_breakdown_chart(
+            data_for_emission_chart,
+            eco2_per_kg_index, # For emissions, you'd likely still want a single bar unless you also break down emission types
+            eco2_per_kg_index, # Pass the same index if not stacking emissions by type
+            'CO2eq Breakdown per kg of Delivered Fuel',
+            'CO2eq (kg/kg)',
+            overlay_text=emission_overlay_text
+        )            
         response = {
             "status": "success",
             "map_data": { "coor_start": {"lat": coor_start_lat, "lng": coor_start_lng}, "coor_end": {"lat": coor_end_lat, "lng": coor_end_lng}, "start_port": {"lat": start_port_lat, "lng": start_port_lng, "name": start_port_name}, "end_port": {"lat": end_port_lat, "lng": end_port_lng, "name": end_port_name}, "road_route_start_coords": road_route_start_coords, "road_route_end_coords": road_route_end_coords, "sea_route_coords": searoute_coor },
