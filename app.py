@@ -2287,7 +2287,7 @@ def run_lca_model(inputs):
             storage_area = 4*np.pi*ship_tank_radius**2
         HHV_chem = [142, 22.5, 22.7]; LHV_chem = [120, 18.6, 19.9]; boiling_point_chem = [20, 239.66, 337.7];
         latent_H_chem = [449.6/1000, 1.37, 1.1]; specific_heat_chem = [14.3/1000, 4.7/1000, 2.5/1000];
-        HHV_diesel = 45.6; liquid_chem_density = [71, 682, 805];
+        liquid_chem_density = [71, 682, 805];
         GWP_chem = [33, 0, 0]; GWP_N2O = 273;
         fuel_cell_eff = 0.65; road_delivery_ener = [0.0455/500, 0.022/500, 0.022/500];
         BOR_land_storage = [0.0032, 0.0001, 0.0000032]; BOR_loading = [0.0086, 0.00022, 0.0001667];
@@ -2308,7 +2308,6 @@ def run_lca_model(inputs):
         COP_cooldown = [0.131, 1.714, 2]; COP_liq = [0.131, 1.714, 2]; COP_refrig = [0.036, 1.636, 2];
         dBOR_dT = [(0.02538-0.02283)/(45-15)/4, (0.000406-0.0006122)/(45-15)/4, 0];
         EIM_liquefication=100; EIM_cryo_pump=100; EIM_truck_eff=100; EIM_ship_eff=100; EIM_refrig_eff=100; EIM_fuel_cell=100;
-        diesel_density = 3.22;
         diesel_engine_eff = 0.4; heavy_fuel_density = 3.6; propul_eff = 0.55;
         NH3_ship_cosumption = (18.8*682*4170)/20000
         mass_conversion_to_H2 = [1, 0.176, 0.1875]
