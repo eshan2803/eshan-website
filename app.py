@@ -2035,7 +2035,6 @@ def run_lca_model(inputs):
         return transits
 
     def calculate_single_reefer_service_cost(duration_hrs, food_params):
-
         ca_energy_kwh_per_container = calculate_ca_energy_kwh(1, food_params, duration_hrs)
         reefer_energy_kwh_per_container = food_params['general_params']['reefer_container_power_kw'] * duration_hrs
 
@@ -2044,17 +2043,60 @@ def run_lca_model(inputs):
         aux_sfoc_g_kwh = 200
         fuel_kg = (total_energy_kwh * aux_sfoc_g_kwh) / 1000.0
 
-        cost = (fuel_kg / 1000.0) * auxiliary_fuel_params['price_usd_per_ton']
+        opex_money = (fuel_kg / 1000.0) * auxiliary_fuel_params['price_usd_per_ton']
         energy_mj = fuel_kg * auxiliary_fuel_params['hhv_mj_per_kg']
         emissions = fuel_kg * auxiliary_fuel_params['co2_emissions_factor_kg_per_kg_fuel']
 
-        return cost, energy_mj, emissions
+        capex_money = 0  # No CAPEX directly attributed to single reefer service in this function
+        carbon_tax_money = 0  # Carbon tax is typically handled at the higher 'food_sea_transport' level
+        current_weight = 1  # Represents the 'per container' basis of this calculation
+        loss = 0  # No direct loss (spoilage) calculated at this micro-level
 
+        return opex_money, capex_money, carbon_tax_money, energy_mj, emissions, current_weight, loss
+    
     # =================================================================
     # <<< MAIN CONDITIONAL BRANCH STARTS HERE >>>
     # =================================================================
 
     # --- 1. Unpack user inputs from the frontend ---
+    # ... (earlier code, e.g., global parameters and function definitions) ...
+
+    # Define label_map here, accessible to both fuel and food sections
+    label_map = {
+        # Fuel-specific labels (keep these as they are used dynamically)
+        "site_A_chem_production": "Initial Production (Placeholder)",
+        "site_A_chem_liquification": "Liquefaction at Site A",
+        "fuel_pump_transfer_siteA_to_truck": "Loading to Truck (Site A)",
+        "fuel_road_transport_start_leg": "Road Transport: Site A to Port A",
+        "fuel_pump_transfer_portA_to_storage": "Unloading at Port A (to Storage)",
+        "fuel_storage_port_A": "Storage at Port A",
+        "chem_loading_to_ship": "Loading to Ship",
+        "port_to_port": "Marine Transport",
+        "fuel_pump_transfer_ship_to_portB": "Unloading from Ship (Port B)",
+        "fuel_storage_port_B": "Storage at Port B",
+        "fuel_pump_transfer_portB_to_truck": "Loading to Truck (Port B)",
+        "fuel_road_transport_end_leg": "Road Transport: Port B to Site B",
+        "fuel_pump_transfer_truck_to_siteB": "Unloading at Site B (to Storage)",
+        "fuel_storage_site_B": "Storage at Site B",
+        "fuel_pump_transfer_siteB_to_use": "Unloading for Final Use (Site B)",
+        "chem_convert_to_H2": "Cracking/Reforming to H2",
+        "PH2_pressurization_at_site_A": "Pressurization at Site A",
+        "PH2_site_A_to_port_A": "Pipeline Transport: Site A to Port A",
+        "port_A_liquification": "Liquefaction at Port A",
+        "H2_pressurization_at_port_B": "Pressurization at Port B",
+        "PH2_port_B_to_site_B": "Pipeline Transport: Port B to Site B",
+        "PH2_storage_at_site_B": "Storage at Site B",
+        "TOTAL": "TOTAL",
+        # Add food-specific labels that might be generic or need mapping
+        "Harvesting & Preparation": "Harvesting & Preparation",
+        "Pre-cooling": "Pre-cooling", # Generic, as total_food_lca adds location
+        "Freezing": "Freezing", # Generic, as total_food_lca adds location
+        "Road Transport": "Road Transport", # Generic, as total_food_lca adds location
+        "Cold Storage": "Cold Storage", # Generic, as total_food_lca adds location
+        "Marine Transport (Base Freight)": "Marine Transport (Base Freight)", # Explicitly added
+        "Reefer & CA Services": "Reefer & CA Services", # Explicitly added
+    }
+
     start = inputs['start']
     end = inputs['end']
     commodity_type = inputs.get('commodity_type', 'fuel')
@@ -2513,31 +2555,6 @@ def run_lca_model(inputs):
                 cost_per_kg_total, cost_per_gj, emission_per_kg, emission_per_gj # Derived per-unit values
             ]
             data_with_all_columns.append(new_row_with_additions)
-        label_map = {
-            "site_A_chem_production": "Initial Production (Placeholder)",
-            "site_A_chem_liquification": f"Liquifaction in {start}",
-            "fuel_pump_transfer_siteA_to_truck": f"Loading {selected_fuel_name} on trucks (Site A)",
-            "fuel_road_transport_start_leg": f"Road transport: {start} to {start_port_name}",
-            "fuel_pump_transfer_portA_to_storage": f"Unloading at {start_port_name} (to Storage)",
-            "fuel_storage_port_A": f"Storing {selected_fuel_name} at {start_port_name}",
-            "chem_loading_to_ship": f"Loading {selected_fuel_name} on Ship",
-            "port_to_port": f"Marine transport: {start_port_name} to {end_port_name}",
-            "fuel_pump_transfer_ship_to_portB": f"Unloading {selected_fuel_name} from Ship (to Port B)",
-            "fuel_storage_port_B": f"Storing {selected_fuel_name} at {end_port_name}",
-            "fuel_pump_transfer_portB_to_truck": "Loading from Storage to Truck (Port B)",
-            "fuel_road_transport_end_leg": f"Road transport: {end_port_name} to {end}",
-            "fuel_pump_transfer_truck_to_siteB": f"Unloading {selected_fuel_name} at {end} (to Site B Storage)",
-            "fuel_storage_site_B": f"Storing {selected_fuel_name} at {end} (Site B)",
-            "fuel_pump_transfer_siteB_to_use": "Unloading for final use (Site B)",
-            "chem_convert_to_H2": "Cracking/Reforming to H2",
-            "PH2_pressurization_at_site_A": "Pressurization at Site A",
-            "PH2_site_A_to_port_A": f"Pipeline Transport: {start} to {start_port_name}",
-            "port_A_liquification": f"Liquefaction at {start_port_name}",
-            "H2_pressurization_at_port_B": f"Pressurization at {end_port_name}",
-            "PH2_port_B_to_site_B": f"Pipeline Transport: {end_port_name} to {end}",
-            "PH2_storage_at_site_B": f"Storing {selected_fuel_name} at {end} (Site B)",
-            "TOTAL": "TOTAL"
-        }
 
         relabeled_data = []
         for row in data_with_all_columns:
@@ -2710,12 +2727,18 @@ def run_lca_model(inputs):
         propulsion_fuel_kwh = avg_ship_power_kw * port_to_port_duration
         propulsion_fuel_kg = (propulsion_fuel_kwh * selected_marine_fuel_params['sfoc_g_per_kwh']) / 1000.0
         propulsion_cost = (propulsion_fuel_kg / 1000.0) * selected_marine_fuel_params['price_usd_per_ton']
-        
-        # Calculate the ADDITIONAL cost for the REEFER SERVICE for ONE container
-        reefer_service_cost, reefer_service_energy, reefer_service_emissions = calculate_single_reefer_service_cost(port_to_port_duration, current_food_params)
-        
+
+        reefer_service_cost_per_container, reefer_service_capex_per_container, reefer_service_carbon_tax_per_container, reefer_service_energy_per_container, reefer_service_emissions_per_container, _, _ = calculate_single_reefer_service_cost(port_to_port_duration, current_food_params)
+
+        reefer_service_total_cost = reefer_service_cost_per_container * shipment_size_containers
+        reefer_service_total_capex = reefer_service_capex_per_container * shipment_size_containers # ADD THIS LINE
+        reefer_service_total_carbon_tax = reefer_service_carbon_tax_per_container * shipment_size_containers # ADD THIS LINE
+        reefer_service_total_energy = reefer_service_energy_per_container * shipment_size_containers
+        reefer_service_total_emissions = reefer_service_emissions_per_container * shipment_size_containers
+
         # Inject the new, more detailed sea transport costs into the results
         marine_transport_index = next((i for i, row in enumerate(data_raw) if "Marine Transport" in row[0]), -1)
+
         if marine_transport_index != -1:
             # Base freight cost for the user's shipment
             base_freight_cost = (propulsion_cost / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0
@@ -2736,7 +2759,7 @@ def run_lca_model(inputs):
             reefer_service_total_cost = reefer_service_cost * shipment_size_containers
             reefer_service_total_energy = reefer_service_energy * shipment_size_containers
             reefer_service_total_emissions = reefer_service_emissions * shipment_size_containers
-            reefer_row = ["Reefer & CA Services", reefer_service_total_cost, 0, 0, reefer_service_total_energy, reefer_service_total_emissions, commodity_weight_at_marine_transport, 0]
+            reefer_row = ["Reefer & CA Services", reefer_service_total_cost, reefer_service_total_capex, reefer_service_total_carbon_tax, reefer_service_total_energy, reefer_service_total_emissions, commodity_weight_at_marine_transport, 0]
             data_raw.insert(marine_transport_index + 1, reefer_row)
 
         total_opex_money = sum(row[1] for row in data_raw if row[0] != "TOTAL")
