@@ -2829,10 +2829,13 @@ def run_lca_model(inputs):
         emission_chart_base64 = create_breakdown_chart(
             data_for_emission_chart,
             eco2_per_kg_index,
-            eco2_per_kg_index, # Pass the same index if not stacking emissions by type
+            eco2_per_kg_index, # This argument is effectively ignored for emission charts as per your function logic
+            carbon_tax_index, # ADDED: This will be ignored for emission charts by your function, but needs to be present.
+            insurance_index,  # ADDED: This will be ignored for emission charts by your function, but needs to be present.
             'CO2eq Breakdown per kg of Delivered Food', # Title (changed from 'Fuel' to 'Food')
             'CO2eq (kg/kg)',                            # X-label
-            overlay_text=emission_overlay_text
+            overlay_text=emission_overlay_text,
+            is_emission_chart=True # Ensure this is explicitly set to True for emission charts
         )
         response = {
             "status": "success",
