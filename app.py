@@ -2258,6 +2258,8 @@ def run_lca_model(inputs):
     response_data = {}
     if commodity_type == 'fuel':
         fuel_type = inputs['fuel_type']
+        fuel_names = ['Liquid Hydrogen', 'Ammonia', 'Methanol']
+        selected_fuel_name = fuel_names[fuel_type] # <<< ADD THIS LINE HERE
         recirculation_BOG = inputs['recirculation_BOG']
         BOG_recirculation_truck = inputs['BOG_recirculation_truck']
         BOG_recirculation_truck_apply = inputs['BOG_recirculation_truck_apply']
