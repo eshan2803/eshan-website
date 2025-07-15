@@ -2719,7 +2719,6 @@ def run_lca_model(inputs):
         total_emissions = 0
 
         total_ship_container_capacity = math.floor(total_ship_volume / 76)
-
         initial_weight = shipment_size_containers * current_food_params['general_params']['cargo_per_truck_kg']
         data_raw = total_food_lca(initial_weight, current_food_params, CARBON_TAX_PER_TON_CO2_DICT, HHV_diesel, diesel_density, CO2e_diesel)
         
@@ -2728,44 +2727,48 @@ def run_lca_model(inputs):
         propulsion_fuel_kg = (propulsion_fuel_kwh * selected_marine_fuel_params['sfoc_g_per_kwh']) / 1000.0
         propulsion_cost = (propulsion_fuel_kg / 1000.0) * selected_marine_fuel_params['price_usd_per_ton']
 
-        reefer_service_cost_per_container, reefer_service_capex_per_container, reefer_service_carbon_tax_per_container, reefer_service_energy_per_container, reefer_service_emissions_per_container, _, _ = calculate_single_reefer_service_cost(port_to_port_duration, current_food_params)
-
-        reefer_row = ["Reefer & CA Services", reefer_service_total_cost, reefer_service_total_capex, reefer_service_total_carbon_tax, reefer_service_total_energy, reefer_service_total_emissions, commodity_weight_at_marine_transport, 0]
         # Inject the new, more detailed sea transport costs into the results
         marine_transport_index = next((i for i, row in enumerate(data_raw) if "Marine Transport" in row[0]), -1)
 
         if marine_transport_index != -1:
-            # Base freight cost for the user's shipment
-            base_freight_cost = (propulsion_cost / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0
-            
-            # Preserve the commodity weight at this stage
-            commodity_weight_at_marine_transport = data_raw[marine_transport_index][5] # Adjusted index for new data format
+            # Preserve the commodity weight at this stage (before reefer_row calculation)
+            commodity_weight_at_marine_transport = data_raw[marine_transport_index][6] # Adjusted index for new data format (index 6 is current_weight)
 
-            # Update the existing marine transport row (which now represents base freight OPEX)
-            data_raw[marine_transport_index][0] = "Marine Transport (Base Freight)"
-            data_raw[marine_transport_index][1] = base_freight_cost # Opex
-            data_raw[marine_transport_index][2] = 0 # Capex (base freight is operational)
-            
-            propulsion_emissions = (propulsion_fuel_kg * selected_marine_fuel_params['co2_emissions_factor_kg_per_kg_fuel'])
-            data_raw[marine_transport_index][4] = (propulsion_emissions / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0 # Emissions
-            data_raw[marine_transport_index][3] = (propulsion_fuel_kwh * 3.6 / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0 # Energy
+            # Calculate per-container reefer service costs
+            reefer_service_cost_per_container, reefer_service_capex_per_container, reefer_service_carbon_tax_per_container, reefer_service_energy_per_container, reefer_service_emissions_per_container, _, _ = calculate_single_reefer_service_cost(port_to_port_duration, current_food_params)
 
-            # Add a new row for the reefer service cost (OPEX)
+            # Calculate TOTAL reefer service costs for the entire shipment
             reefer_service_total_cost = reefer_service_cost_per_container * shipment_size_containers
             reefer_service_total_capex = reefer_service_capex_per_container * shipment_size_containers
             reefer_service_total_carbon_tax = reefer_service_carbon_tax_per_container * shipment_size_containers            
+            reefer_service_total_energy = reefer_service_energy_per_container * shipment_size_containers # You were missing total for energy/emissions
+            reefer_service_total_emissions = reefer_service_emissions_per_container * shipment_size_containers # You were missing total for energy/emissions
+
+            # Update the existing marine transport row (which now represents base freight OPEX)
+            # Ensure the correct index for 'Commodity (kg)' is used, which is 6 in the 8-element row.
+            data_raw[marine_transport_index][0] = "Marine Transport (Base Freight)"
+            data_raw[marine_transport_index][1] = (propulsion_cost / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0 # Opex
+            data_raw[marine_transport_index][2] = 0 # Capex (base freight is operational)
+            
+            propulsion_emissions = (propulsion_fuel_kg * selected_marine_fuel_params['co2_emissions_factor_kg_per_kg_fuel'])
+            data_raw[marine_transport_index][4] = (propulsion_emissions / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0 # Emissions (this is now index 5 for total_food_lca's results)
+            data_raw[marine_transport_index][3] = (propulsion_fuel_kwh * 3.6 / total_ship_container_capacity) * shipment_size_containers if total_ship_container_capacity > 0 else 0 # Energy (this is now index 4 for total_food_lca's results)
+
+            # Create the reefer_row AFTER all its components are calculated
             reefer_row = ["Reefer & CA Services", reefer_service_total_cost, reefer_service_total_capex, reefer_service_total_carbon_tax, reefer_service_total_energy, reefer_service_total_emissions, commodity_weight_at_marine_transport, 0]
             data_raw.insert(marine_transport_index + 1, reefer_row)
 
         total_opex_money = sum(row[1] for row in data_raw if row[0] != "TOTAL")
         total_capex_money = sum(row[2] for row in data_raw if row[0] != "TOTAL")
-        total_carbon_tax_money = sum(row[3] for row in data_raw if row[0] != "TOTAL") # Sum this from data_raw
-        total_energy = sum(row[4] for row in data_raw if row[0] != "TOTAL") # Sum this from data_raw
-        total_emissions = sum(row[5] for row in data_raw if row[0] != "TOTAL") # Sum this from data_raw
+        total_carbon_tax_money = sum(row[3] for row in data_raw if row[0] != "TOTAL")
+        total_energy = sum(row[4] for row in data_raw if row[0] != "TOTAL")
+        total_emissions = sum(row[5] for row in data_raw if row[0] != "TOTAL")
 
         # The last row of data_raw is "TOTAL", so final_weight should be from there.
-        final_weight = data_raw[-1][6] if data_raw and len(data_raw[-1]) > 6 else 0.0 # From data_raw's last row (TOTAL), its commodity quantity
-        final_commodity_kg = final_weight # This is your delivered quantity
+        # total_food_lca appends an 8-element list. The final_commodity_kg is at index 6.
+        final_weight = data_raw[-1][6] if data_raw and len(data_raw[-1]) > 6 else 0.0
+        final_commodity_kg = final_weight
+        # ... (rest of the code) ...
 
         total_money = total_opex_money + total_capex_money + total_carbon_tax_money # Sum all three cost types
 
