@@ -351,18 +351,18 @@ def run_lca_model(inputs):
 
             ax.legend(loc='lower right', fontsize=10)
 
-            plt.tight_layout(pad=2.0)
+            plt.tight_layout(pad=2.0) # Keep this line for good spacing
 
             if overlay_text:
-                # Adjust position to be above the lower right legend
-                # x=0.92 to keep it right-aligned, y=0.15 to place it above the lower-right legend.
-                # va='bottom' ensures the bottom of the text box is at the specified y-coordinate.
-                fig.text(0.92, 0.15, overlay_text, # Adjusted y-coordinate
-                        ha='right', va='bottom', size=10, # Changed va to 'bottom'
-                        bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.6))
+                fig.set_size_inches(10, len(labels) * 0.5 + 2) # Increase figure height to make space below
+
+                fig.text(0.1, -0.05, overlay_text, # x=0.1 (left-aligned), y=-0.05 (below the bottom of the figure)
+                         ha='left', va='top', size=10,
+                         bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.6),
+                         transform=ax.transAxes) # Use ax.transAxes to keep it relative to the axes
 
             buf = io.BytesIO()
-            plt.savefig(buf, format='png', dpi=100)
+            plt.savefig(buf, format='png', dpi=100, bbox_inches='tight') # Add bbox_inches='tight' for better fit
             buf.seek(0)
             img_base64 = base64.b64encode(buf.read()).decode('utf-8')
             plt.close(fig)
@@ -2435,50 +2435,51 @@ def run_lca_model(inputs):
 
         data_with_all_columns = []
         for row in data_raw:
-            # Ensure row has enough elements for proper indexing
             if len(row) < 6: # At least up to emissions data
                 print(f"Warning: Row has insufficient data points: {row}. Skipping 'per unit' calculations for this row.")
-                data_with_all_columns.append(list(row) + [0]*6) # Append zeros for missing 'per unit' columns
+                data_with_all_columns.append(list(row) + [0]*8) # Adjusted to 8 zeros for all new per-kg columns
                 continue
 
             current_opex = float(row[1])
             current_capex = float(row[2])
-            current_carbon_tax = float(row[3]) # Get carbon tax
-            current_energy = float(row[4])    # Get energy
-            current_emission = float(row[5])  # Correct index for CO2eq/eCO2
+            current_carbon_tax = float(row[3])
+            current_energy = float(row[4])
+            current_emission = float(row[5])
+            
+            # Initialize insurance_per_kg to 0 for all rows
+            insurance_per_kg = 0.0
 
-            current_total_cost = current_opex + current_capex + current_carbon_tax #
-
-            # Calculate individual cost components PER KG
-            # Ensure final_chem_kg_denominator is defined correctly for 'TOTAL' row before this loop
+            # Calculate individual cost components PER KG based on current row's totals
             opex_per_kg = current_opex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             capex_per_kg = current_capex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             carbon_tax_per_kg = current_carbon_tax / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
 
             # --- Insurance Calculation for 'site_A_chem_production' ---
-            insurance_per_kg = 0
-            if row[0] == "site_A_chem_production": # Check if it's the production step
-                # Assuming row[6] contains the 'Chem (kg)' for this specific step
+            # This logic should extract the portion of opex that IS insurance.
+            if row[0] == "site_A_chem_production":
                 cargo_value_at_production_step = float(row[6]) * hydrogen_production_cost
                 insurance_cost_absolute = cargo_value_at_production_step * (INSURANCE_PERCENTAGE_OF_CARGO_VALUE / 100)
                 insurance_per_kg = insurance_cost_absolute / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-                # Deduct insurance from OPEX to make it a distinct category in the chart
-                opex_per_kg -= insurance_per_kg
+                # CRITICAL: Subtract insurance from OPEX_PER_KG for this specific step
+                # so OPEX and Insurance are distinct in the stacked bar chart.
+                opex_per_kg = max(0, opex_per_kg - insurance_per_kg) # Ensure it doesn't go negative
 
             # Calculate total cost per kg (sum of per-kg components)
             cost_per_kg_total = opex_per_kg + capex_per_kg + carbon_tax_per_kg + insurance_per_kg
 
-            # Calculate other 'per GJ' and 'per kg' values
-            # These are for the table, not directly for the breakdown chart components
-            cost_per_gj = current_total_cost / final_energy_output_gj if final_energy_output_gj > 0 else 0
+            # Calculate other 'per GJ' and 'per kg' values for the table
+            # You might need to redefine current_total_cost here for the per_gj calculation if not already defined for the row.
+            # Assuming current_total_cost refers to the sum of the original row's total costs (opex, capex, carbon_tax)
+            current_total_cost_row = current_opex + current_capex + current_carbon_tax # This was missing in the food section, now explicitly here for consistency
+            cost_per_gj = current_total_cost_row / final_energy_output_gj if final_energy_output_gj > 0 else 0
             emission_per_kg = current_emission / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             emission_per_gj = current_emission / final_energy_output_gj if final_energy_output_gj > 0 else 0
 
-
             # Append ALL values (total and per-kg) to the row for detailed display
+            # Make sure the order matches new_detailed_headers
             new_row_with_additions = list(row) + [opex_per_kg, capex_per_kg, carbon_tax_per_kg, insurance_per_kg, cost_per_kg_total, cost_per_gj, emission_per_kg, emission_per_gj]
-            data_with_all_columns.append(new_row_with_additions)
-            
+            data_with_all_columns.append(new_row_with_additions) 
+                       
         data = data_with_all_columns
         total_results = final_results_raw
 
@@ -2561,20 +2562,19 @@ def run_lca_model(inputs):
         opex_per_kg_for_chart_idx = new_detailed_headers.index("Opex/kg ($/kg)")
         capex_per_kg_for_chart_idx = new_detailed_headers.index("Capex/kg ($/kg)")
         carbon_tax_per_kg_for_chart_idx = new_detailed_headers.index("Carbon Tax/kg ($/kg)")
-        insurance_per_kg_for_chart_idx = new_detailed_headers.index("Insurance/kg ($/kg)")
+        insurance_per_kg_for_chart_idx = new_detailed_headers.index("Insurance/kg ($/kg)") # This should now be correct
         eco2_per_kg_for_chart_idx = new_detailed_headers.index("CO2eq/kg (kg/kg)")
-
         cost_chart_base64 = create_breakdown_chart(
             data_for_display_common,
-            opex_per_kg_for_chart_idx,      # Use the correct per-kg index
-            capex_per_kg_for_chart_idx,     # Use the correct per-kg index
-            carbon_tax_per_kg_for_chart_idx, # Use the correct per-kg index
-            insurance_per_kg_for_chart_idx, # Use the correct per-kg index
+            opex_per_kg_for_chart_idx,
+            capex_per_kg_for_chart_idx,
+            carbon_tax_per_kg_for_chart_idx,
+            insurance_per_kg_for_chart_idx, # Ensure this index is passed
             'Cost Breakdown per kg of Delivered Fuel',
             'Cost ($/kg)',
             overlay_text=cost_overlay_text,
             is_emission_chart=False
-        )
+        )        
 
         emission_chart_base64 = create_breakdown_chart(
             data_for_emission_chart,
@@ -2783,7 +2783,7 @@ def run_lca_model(inputs):
         for row in data_raw:
             if len(row) < 6: # At least up to emissions data
                 print(f"Warning: Food row has insufficient data points: {row}. Skipping 'per unit' calculations for this row.")
-                data_with_all_columns.append(list(row) + [0]*6) # Append zeros for missing 'per unit' columns
+                data_with_all_columns.append(list(row) + [0]*8) # Adjusted to 8 zeros
                 continue
 
             current_opex = float(row[1])
@@ -2792,34 +2792,37 @@ def run_lca_model(inputs):
             current_energy_total = float(row[4]) # Total energy
             current_emission_total = float(row[5]) # Total emissions
 
+            # Initialize insurance_per_kg to 0 for all rows
+            insurance_per_kg = 0.0
+
             # Calculate individual cost components PER KG
             opex_per_kg = current_opex / final_commodity_kg if final_commodity_kg > 0 else 0
             capex_per_kg = current_capex / final_commodity_kg if final_commodity_kg > 0 else 0
             carbon_tax_per_kg = current_carbon_tax / final_commodity_kg if final_commodity_kg > 0 else 0
 
             # --- Insurance Calculation for 'Harvesting & Preparation' ---
-            insurance_per_kg = 0
-            # Assuming the first step "Harvesting & Preparation" is where insurance applies
+            # This logic should extract the portion of opex that IS insurance.
             if row[0] == "Harvesting & Preparation":
                 # Assuming row[6] contains the commodity weight at this step
                 cargo_value_at_harvest = float(row[6]) * price_start if price_start is not None else 0
                 insurance_cost_absolute = cargo_value_at_harvest * (INSURANCE_PERCENTAGE_OF_CARGO_VALUE / 100)
                 insurance_per_kg = insurance_cost_absolute / final_commodity_kg if final_commodity_kg > 0 else 0
-                # Deduct insurance from OPEX
-                opex_per_kg -= insurance_per_kg
+                # CRITICAL: Deduct insurance from OPEX_PER_KG for this specific step
+                opex_per_kg = max(0, opex_per_kg - insurance_per_kg) # Ensure it doesn't go negative
 
             # Calculate total cost per kg (sum of per-kg components)
             cost_per_kg_total = opex_per_kg + capex_per_kg + carbon_tax_per_kg + insurance_per_kg
 
             # Calculate other 'per GJ' and 'per kg' values for the table
-            cost_per_gj = current_total_cost / final_energy_output_gj if final_energy_output_gj > 0 else 0
+            current_total_cost_row = current_opex + current_capex + current_carbon_tax # Ensure this is defined for the row
+            cost_per_gj = current_total_cost_row / final_energy_output_gj if final_energy_output_gj > 0 else 0
             emission_per_kg = current_emission_total / final_commodity_kg if final_commodity_kg > 0 else 0
             emission_per_gj = current_emission_total / final_energy_output_gj if final_energy_output_gj > 0 else 0
 
             # Add all the new per-kg columns, including the total cost per kg
             new_row_with_additions = list(row) + [opex_per_kg, capex_per_kg, carbon_tax_per_kg, insurance_per_kg, cost_per_kg_total, cost_per_gj, emission_per_kg, emission_per_gj]
-            data_with_all_columns.append(new_row_with_additions)
-                                                
+            data_with_all_columns.append(new_row_with_additions)    
+                                                        
         detailed_data_formatted = data_with_all_columns
         data_for_display_common = [row for row in detailed_data_formatted if row[0] != "TOTAL" and row[0] != "Harvesting & Preparation"]
         emission_chart_exclusions_food = [] # No exclusions needed if all costs/emissions are now integrated
@@ -2828,12 +2831,10 @@ def run_lca_model(inputs):
         insurance_index = 1 # Insurance is part of OPEX for now, but its specific value should be filtered in the chart's parsing logic        
 
         new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Carbon Tax ($)", "Energy (MJ)", "eCO2 (kg)", "Commodity (kg)", "Spoilage (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Carbon Tax/kg ($/kg)", "Insurance/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
-
-        # CORRECT INDICES for the PER-KG values in the data_with_all_columns
         opex_per_kg_for_chart_idx = new_detailed_headers.index("Opex/kg ($/kg)")
         capex_per_kg_for_chart_idx = new_detailed_headers.index("Capex/kg ($/kg)")
         carbon_tax_per_kg_for_chart_idx = new_detailed_headers.index("Carbon Tax/kg ($/kg)")
-        insurance_per_kg_for_chart_idx = new_detailed_headers.index("Insurance/kg ($/kg)")
+        insurance_per_kg_for_chart_idx = new_detailed_headers.index("Insurance/kg ($/kg)") # This should now be correct
         eco2_per_kg_for_chart_idx = new_detailed_headers.index("eCO2/kg (kg/kg)")
         cost_per_kg = total_money / final_commodity_kg if final_commodity_kg > 0 else 0 #
         energy_per_kg = total_energy / final_commodity_kg if final_commodity_kg > 0 else 0 #
@@ -2841,16 +2842,15 @@ def run_lca_model(inputs):
 
         cost_chart_base64 = create_breakdown_chart(
             data_for_display_common,
-            opex_per_kg_for_chart_idx,      # Use the correct per-kg index
-            capex_per_kg_for_chart_idx,     # Use the correct per-kg index
-            carbon_tax_per_kg_for_chart_idx, # Use the correct per-kg index
-            insurance_per_kg_for_chart_idx, # Use the correct per-kg index
+            opex_per_kg_for_chart_idx,
+            capex_per_kg_for_chart_idx,
+            carbon_tax_per_kg_for_chart_idx,
+            insurance_per_kg_for_chart_idx, # Ensure this index is passed
             'Cost Breakdown per kg of Delivered Food',
             'Cost ($/kg)',
             overlay_text=cost_overlay_text,
             is_emission_chart=False
         )
-
         emission_chart_base64 = create_breakdown_chart(
             data_for_emission_chart,
             eco2_per_kg_for_chart_idx,      # Emissions chart uses this as its primary value
