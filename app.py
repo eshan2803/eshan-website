@@ -2793,21 +2793,21 @@ def run_lca_model(inputs):
             
             comparison_weight = final_commodity_kg
             precooling_full_params = {**current_food_params.get('precooling_params', {}), **current_food_params.get('general_params', {})}
-            local_precool_opex, local_precool_capex, local_precool_carbon_tax, local_precool_energy, local_precool_emissions, _, _ = (0, 0, 0, 0, 0, 0, 0) 
+            local_precool_opex, local_precool_capex, local_precool_carbon_tax, local_precool_energy, local_precool_emissions, _, _ = food_precooling_process(comparison_weight, (precooling_full_params, end_electricity_price, CO2e_end, facility_capacity, end_country_name, CARBON_TAX_PER_TON_CO2_DICT))
             if current_food_params['process_flags'].get('needs_precooling'):
                 local_precool_opex, local_precool_capex, local_precool_energy, local_precool_emissions, _, _ = food_precooling_process(comparison_weight, (precooling_full_params, end_electricity_price, CO2e_end, facility_capacity, end_country_name, CARBON_TAX_PER_TON_CO2_DICT))
 
             freezing_full_params = {**current_food_params.get('freezing_params', {}), **current_food_params.get('general_params', {})} # Define it here
-            local_freeze_opex, local_freeze_capex, local_freeze_carbon_tax, local_freeze_energy, local_freeze_emissions, _, _ = (0, 0, 0, 0, 0, 0, 0) # Initialize with zeros
+            local_freeze_opex, local_freeze_capex, local_freeze_carbon_tax, local_freeze_energy, local_freeze_emissions, _, _ = food_freezing_process(comparison_weight, (freezing_full_params, end_local_temperature, end_electricity_price, CO2e_end, facility_capacity, end_country_name, CARBON_TAX_PER_TON_CO2_DICT))
             if current_food_params['process_flags'].get('needs_freezing'):
                 local_freeze_opex, local_freeze_capex, local_freeze_carbon_tax, local_freeze_energy, local_freeze_emissions, _, _ = food_freezing_process(comparison_weight, (freezing_full_params, end_local_temperature, end_electricity_price, CO2e_end, facility_capacity, end_country_name, CARBON_TAX_PER_TON_CO2_DICT))
 
             local_trucking_args = (current_food_params, local_distance_km, local_duration_mins, diesel_price_end, HHV_diesel, diesel_density, CO2e_diesel, end_local_temperature, driver_daily_salary_end, annual_working_days, MAINTENANCE_COST_PER_KM_TRUCK, truck_capex_params, end_country_name, CARBON_TAX_PER_TON_CO2_DICT) # Corrected this line
-            local_trucking_opex, local_trucking_capex, local_trucking_energy, local_trucking_emissions, _, _ = food_road_transport(comparison_weight, local_trucking_args)
-
-            local_total_money = (local_precool_opex + local_precool_capex) + (local_freeze_opex + local_freeze_capex) + (local_trucking_opex + local_trucking_capex)
-            local_total_emissions = local_precool_emissions + local_freeze_emissions + local_trucking_emissions
-            
+            local_trucking_opex, local_trucking_capex, local_trucking_carbon_tax, local_trucking_energy, local_trucking_emissions, _, _ = food_road_transport(comparison_weight, local_trucking_args)
+            local_total_money = (local_precool_opex + local_precool_capex + local_precool_carbon_tax) + \
+                                (local_freeze_opex + local_freeze_capex + local_freeze_carbon_tax) + \
+                                (local_trucking_opex + local_trucking_capex + local_trucking_carbon_tax) 
+            local_total_emissions = local_precool_emissions + local_freeze_emissions + local_trucking_emissions            
             local_sourcing_results = {
                 "source_name": farm_name,
                 "distance_km": local_distance_km,
@@ -2847,7 +2847,7 @@ def run_lca_model(inputs):
                     ["Green Premium (Cost per ton of CO₂ saved)", f"{green_premium_usd_per_ton_co2}"]
                 ]
                     
-        data_raw.append(["TOTAL", total_opex_money, total_capex_money, total_energy, total_emissions, final_commodity_kg, sum(row[6] for row in data_raw[:-1])])
+        data_raw.append(["TOTAL", total_opex_money, total_capex_money, total_carbon_tax_money, total_energy, total_emissions, final_commodity_kg, sum(row[7] for row in data_raw[:-1])]) 
         
         energy_content = current_food_params.get('general_params', {}).get('energy_content_mj_per_kg', 1)
         final_energy_output_mj = final_commodity_kg * energy_content
