@@ -278,26 +278,38 @@ def run_lca_model(inputs):
         powers_kw = [p[1] for p in power_scaling_data]
         return np.interp(ship_volume_m3, volumes_m3, powers_kw)
     
-    def create_breakdown_chart(data, primary_value_column_index, secondary_value_column_index, title, x_label, overlay_text=None, is_emission_chart=False):
+    def create_breakdown_chart(data, opex_col_idx, capex_col_idx, carbon_tax_col_idx, insurance_col_idx, title, x_label, overlay_text=None, is_emission_chart=False):
         try:
             if not data:
                 print("Chart creation skipped: No data provided.")
                 return ""
             labels = [row[0] for row in data]
-            primary_values = []
-            secondary_values = [] # This will be all zeros for emission chart
+            # Initialize lists for all component values
+            opex_values = []
+            capex_values = []
+            carbon_tax_values = []
+            insurance_values = []
 
             for row in data:
                 try:
-                    primary_values.append(float(row[primary_value_column_index]))
-                    if not is_emission_chart: # Only get secondary values if it's a cost chart
-                        secondary_values.append(float(row[secondary_value_column_index]))
+                    if is_emission_chart: # For emission chart, only use the primary value
+                        opex_values.append(float(row[opex_col_idx])) # This is actually the emission value
+                        capex_values.append(0.0)
+                        carbon_tax_values.append(0.0)
+                        insurance_values.append(0.0)
                     else:
-                        secondary_values.append(0.0) # For emission chart, secondary is zero
-                except (ValueError, TypeError, IndexError) as e: # Added IndexError here
+                        # Ensure values are floats, handle potential errors
+                        opex_values.append(float(row[opex_col_idx]))
+                        capex_values.append(float(row[capex_col_idx]))
+                        carbon_tax_values.append(float(row[carbon_tax_col_idx]))
+                        insurance_values.append(float(row[insurance_col_idx]))
+                except (ValueError, TypeError, IndexError) as e:
                     print(f"DEBUG: Error processing row for chart '{title}': {row}. Error: {e}")
-                    primary_values.append(0.0)
-                    secondary_values.append(0.0)
+                    # Default to zeros if conversion fails to avoid breaking chart
+                    opex_values.append(0.0)
+                    capex_values.append(0.0)
+                    carbon_tax_values.append(0.0)
+                    insurance_values.append(0.0)
                     print(f"Warning: Could not convert value to a number for chart '{title}'. Defaulting to 0.")
 
             plt.style.use('seaborn-v0_8-whitegrid')
@@ -306,11 +318,17 @@ def run_lca_model(inputs):
             y_pos = np.arange(len(labels))
 
             if is_emission_chart:
-                ax.barh(y_pos, primary_values, align='center', color='#4CAF50', edgecolor='black', label='Emissions')
+                ax.barh(y_pos, opex_values, align='center', color='#4CAF50', edgecolor='black', label='Emissions')
             else:
-                ax.barh(y_pos, primary_values, align='center', color='#8BC34A', edgecolor='black', label='OPEX') # Lighter Green
-                ax.barh(y_pos, secondary_values, left=primary_values, align='center', color='#4CAF50', edgecolor='black', label='CAPEX') # Original Green
-
+                # Stacked bars for cost components
+                # Insurance (new distinct color)
+                ax.barh(y_pos, insurance_values, align='center', color='#800080', edgecolor='black', label='Insurance') # Purple
+                # OPEX on top of Insurance
+                ax.barh(y_pos, opex_values, left=insurance_values, align='center', color='#8BC34A', edgecolor='black', label='OPEX') # Lighter Green
+                # CAPEX on top of OPEX and Insurance
+                ax.barh(y_pos, capex_values, left=np.array(insurance_values) + np.array(opex_values), align='center', color='#4CAF50', edgecolor='black', label='CAPEX') # Original Green
+                # Carbon Tax on top of CAPEX, OPEX and Insurance
+                ax.barh(y_pos, carbon_tax_values, left=np.array(insurance_values) + np.array(opex_values) + np.array(capex_values), align='center', color='#FFC107', edgecolor='black', label='Carbon Tax') # Amber
 
             ax.set_yticks(y_pos)
             ax.set_yticklabels(labels, fontsize=12)
@@ -318,9 +336,15 @@ def run_lca_model(inputs):
             ax.set_xlabel(x_label, fontsize=14, weight='bold')
             ax.set_title(title, fontsize=16, weight='bold', pad=20)
 
-            # Add values for total (Primary + Secondary for cost, just Primary for emission)
-            for i, (p, s) in enumerate(zip(primary_values, secondary_values)):
-                total_value = p + s if not is_emission_chart else p
+            # Add values for total (sum of all components for cost, just primary for emission)
+            for i in range(len(labels)):
+                total_value = 0
+                if is_emission_chart:
+                    total_value = opex_values[i] # Just the emission value
+                else:
+                    total_value = opex_values[i] + capex_values[i] + carbon_tax_values[i] + insurance_values[i]
+                
+                # Position text slightly right of the end of the total bar
                 ax.text(total_value, i, f' {total_value:,.2f}', color='black', va='center', fontweight='bold')
 
             ax.legend(loc='lower right', fontsize=10)
@@ -328,8 +352,9 @@ def run_lca_model(inputs):
             plt.tight_layout(pad=2.0)
 
             if overlay_text:
-                fig.text(0.95, 0.15, overlay_text,
-                        ha='right', va='bottom', size=10,
+                # Adjust position: 0.95 -> 0.92 for x-coordinate to move left, and 0.9 -> 0.98 for y-coordinate to move higher
+                fig.text(0.92, 0.98, overlay_text,
+                        ha='right', va='top', size=10, # Changed va to 'top'
                         bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.6))
 
             buf = io.BytesIO()
@@ -370,22 +395,26 @@ def run_lca_model(inputs):
 
         opex_money = 0
         capex_money = 0
-        convert_energy_consumed = 0
-        G_emission = 0
-        BOG_loss = 0
+        carbon_tax_money = 0 # New variable for carbon tax
 
-        # Insurance Cost
+        # Insurance Cost (this is the only relevant cost for this step in the breakdown)
         cargo_value = A * hydrogen_production_cost_arg
         insurance_cost = cargo_value * (insurance_percentage_of_cargo_value_arg / 100)
-        opex_money += insurance_cost
+        opex_money += insurance_cost # Add to OPEX, which will be filtered as "Insurance" in chart
 
         # Carbon Tax (if any, though production emissions might be covered elsewhere or be zero for green H2)
+        # Assuming G_emission is 0 for this step, carbon_tax will also be 0, but keeping the structure
+        G_emission = 0 # Remains 0 for this step (emissions from actual production are external to transport model)
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_country_name_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
-        
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, convert_energy_consumed, G_emission, A, BOG_loss
+        carbon_tax_money += carbon_tax # Add to carbon tax
 
+        convert_energy_consumed = 0 # Remains 0 for this step
+        BOG_loss = 0 # Remains 0 for this step
+
+        # Return the new carbon_tax_money, and ensure insurance_cost is passed as part of opex_money for now
+        # The chart will then use specific indices to pick them out.
+        return opex_money, capex_money, carbon_tax_money, convert_energy_consumed, G_emission, A, BOG_loss
+    
     def site_A_chem_liquification(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_specific_args_tuple):
         (LH2_plant_capacity_arg, EIM_liquefication_arg, specific_heat_chem_arg, 
         start_local_temperature_arg, boiling_point_chem_arg, latent_H_chem_arg, 
@@ -394,6 +423,7 @@ def run_lca_model(inputs):
 
         opex_money = 0
         capex_money = 0
+        carbon_tax_money = 0 # New variable
 
         if B_fuel_type == 0:  # LH2
             liquify_energy_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
@@ -418,10 +448,9 @@ def run_lca_model(inputs):
 
         # Carbon Tax
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_country_name_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
+        carbon_tax_money += carbon_tax
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, liquify_ener_consumed, G_emission, A_after_loss, BOG_loss
+        return opex_money, capex_money, carbon_tax_money, liquify_ener_consumed, G_emission, A_after_loss, BOG_loss
 
     def fuel_pump_transfer(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         (V_flowrate_arg, number_of_cryo_pump_load_arg, dBOR_dT_arg, 
@@ -434,6 +463,7 @@ def run_lca_model(inputs):
 
         opex_money = 0
         capex_money = 0
+        carbon_tax_money = 0 # New variable
 
         duration = A / (V_flowrate_arg[B_fuel_type]) / number_of_cryo_pump_load_arg
         local_BOR_transfer = dBOR_dT_arg[B_fuel_type] * (local_temperature_arg - 25) + BOR_transfer_arg[B_fuel_type]
@@ -464,10 +494,9 @@ def run_lca_model(inputs):
 
         # Carbon Tax
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(country_of_transfer_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
+        carbon_tax_money += carbon_tax
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, ener_consumed, G_emission, A_after_loss, BOG_loss
+        return opex_money, capex_money, carbon_tax_money, ener_consumed, G_emission, A_after_loss, BOG_loss
 
     def fuel_road_transport(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         (road_delivery_ener_arg, HHV_chem_arg, chem_in_truck_weight_arg, truck_economy_arg, 
@@ -484,6 +513,7 @@ def run_lca_model(inputs):
 
         opex_money = 0
         capex_money = 0
+        carbon_tax_money = 0 # New variable
         total_energy = 0
 
         number_of_trucks = math.ceil(A / chem_in_truck_weight_arg[B_fuel_type])
@@ -561,10 +591,9 @@ def run_lca_model(inputs):
 
         # Carbon Tax
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(country_of_road_transport_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
+        carbon_tax_money += carbon_tax
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, total_energy, G_emission, A_after_loss, net_BOG_loss
+        return opex_money, capex_money, carbon_tax_money, total_energy, G_emission, A_after_loss, net_BOG_loss
 
     def fuel_storage(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         (liquid_chem_density_arg, storage_volume_arg, dBOR_dT_arg, local_temperature_arg, 
@@ -578,6 +607,7 @@ def run_lca_model(inputs):
 
         opex_money = 0
         capex_money = 0
+        carbon_tax_money = 0 # New variable
         total_energy_consumed = 0
 
         number_of_storage = math.ceil(A / liquid_chem_density_arg[B_fuel_type] / storage_volume_arg[B_fuel_type])
@@ -637,10 +667,9 @@ def run_lca_model(inputs):
 
         # Carbon Tax
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(country_of_storage_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
+        carbon_tax_money += carbon_tax
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, total_energy_consumed, G_emission, A_after_loss, net_BOG_loss
+        return opex_money, capex_money, carbon_tax_money, total_energy_consumed, G_emission, A_after_loss, net_BOG_loss
 
     def chem_loading_to_ship(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         (V_flowrate_arg, number_of_cryo_pump_load_ship_port_A_arg, dBOR_dT_arg,
@@ -655,6 +684,7 @@ def run_lca_model(inputs):
 
         opex_money = 0
         capex_money = 0
+        carbon_tax_money = 0 # New variable
 
         duration = A / (V_flowrate_arg[B_fuel_type]) / number_of_cryo_pump_load_ship_port_A_arg
         local_BOR_loading_val = dBOR_dT_arg[B_fuel_type] * (start_local_temperature_arg - 25) + BOR_loading_arg[B_fuel_type]
@@ -717,10 +747,9 @@ def run_lca_model(inputs):
 
         # Carbon Tax
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_country_name_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
+        carbon_tax_money += carbon_tax
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, ener_consumed, G_emission, A_after_loss, BOG_loss
+        return opex_money, capex_money, carbon_tax_money, ener_consumed, G_emission, A_after_loss, BOG_loss
 
     def port_to_port(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         (start_local_temperature_arg, end_local_temperature_arg, OHTC_ship_arg,
@@ -736,6 +765,7 @@ def run_lca_model(inputs):
 
         opex_money = 0
         capex_money = 0
+        carbon_tax_money = 0 # New variable
 
         propulsion_work_kwh = avg_ship_power_kw_arg * port_to_port_duration_arg
 
@@ -800,7 +830,7 @@ def run_lca_model(inputs):
 
         # Carbon Tax (General)
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0) * (total_G_emission / 1000)
-        opex_money += carbon_tax
+        carbon_tax_money += carbon_tax
 
         # EU ETS Carbon Tax (if applicable)
         eu_ets_tax = 0
@@ -808,11 +838,10 @@ def run_lca_model(inputs):
             # As of 2025, 50% of emissions for inbound voyages are covered by EU ETS
             eu_ets_emissions_tons = (total_G_emission / 1000) * 0.50
             eu_ets_tax = eu_ets_emissions_tons * carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0)
-            opex_money += eu_ets_tax # Add to opex_money
+            carbon_tax_money += eu_ets_tax # Add to carbon_tax_money
 
         total_energy_consumed_mj = total_fuel_consumed_kg * fuel_hhv_mj_per_kg
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, total_energy_consumed_mj, total_G_emission, A_after_loss, net_BOG_loss
+        return opex_money, capex_money, carbon_tax_money, total_energy_consumed_mj, total_G_emission, A_after_loss, net_BOG_loss
 
     def chem_convert_to_H2(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         (mass_conversion_to_H2_arg, eff_energy_chem_to_H2_arg, energy_chem_to_H2_arg, 
@@ -820,6 +849,7 @@ def run_lca_model(inputs):
 
         opex_money = 0
         capex_money = 0
+        carbon_tax_money = 0 # New variable
         convert_energy = 0
         G_emission = 0
         BOG_loss = 0
@@ -835,12 +865,11 @@ def run_lca_model(inputs):
             
             # Carbon Tax
             carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0) * (G_emission / 1000)
-            opex_money += carbon_tax
+            carbon_tax_money += carbon_tax
 
             A = convert_to_H2_weight
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, convert_energy, G_emission, A, BOG_loss
+        return opex_money, capex_money, carbon_tax_money, convert_energy, G_emission, A, BOG_loss
 
     def PH2_pressurization_at_site_A(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         (PH2_storage_V_arg, numbers_of_PH2_storage_at_start_arg, PH2_pressure_fnc_helper, 
@@ -849,6 +878,7 @@ def run_lca_model(inputs):
 
         opex_money = 0
         capex_money = 0
+        carbon_tax_money = 0 # New variable
 
         PH2_density = A / (PH2_storage_V_arg * numbers_of_PH2_storage_at_start_arg)
         PH2_pressure = PH2_pressure_fnc_helper(PH2_density)
@@ -862,10 +892,9 @@ def run_lca_model(inputs):
 
         # Carbon Tax
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_country_name_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
+        carbon_tax_money += carbon_tax
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, compress_energy, G_emission, A, leak_loss
+        return opex_money, capex_money, carbon_tax_money, compress_energy, G_emission, A, leak_loss
 
     def PH2_site_A_to_port_A(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         (PH2_storage_V_arg, numbers_of_PH2_storage_at_start_arg, PH2_pressure_fnc_helper, 
@@ -877,6 +906,7 @@ def run_lca_model(inputs):
 
         opex_money = 0
         capex_money = 0
+        carbon_tax_money = 0 # New variable
 
         PH2_density = A / (PH2_storage_V_arg * numbers_of_PH2_storage_at_start_arg)
         PH2_pressure = PH2_pressure_fnc_helper(PH2_density)
@@ -909,10 +939,9 @@ def run_lca_model(inputs):
 
         # Carbon Tax
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_country_name_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
+        carbon_tax_money += carbon_tax
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, ener_consumed, G_emission, A_final, trans_loss
+        return opex_money, capex_money, carbon_tax_money, ener_consumed, G_emission, A_final, trans_loss
 
     def port_A_liquification(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         (liquification_data_fitting_helper, LH2_plant_capacity_arg, EIM_liquefication_arg, 
@@ -921,9 +950,10 @@ def run_lca_model(inputs):
 
         opex_money = 0
         capex_money = 0
+        carbon_tax_money = 0 # New variable
 
         if B_fuel_type != 0:
-            return 0, 0, 0, 0, A, 0
+            return 0, 0, 0, 0, A, 0, 0
 
         LH2_energy_required = liquification_data_fitting_helper(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
         LH2_ener_consumed = LH2_energy_required * A
@@ -940,10 +970,9 @@ def run_lca_model(inputs):
 
         # Carbon Tax
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_port_country_name_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
+        carbon_tax_money += carbon_tax
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, LH2_ener_consumed, G_emission, A, BOG_loss
+        return opex_money, capex_money, carbon_tax_money, LH2_ener_consumed, G_emission, A, BOG_loss
 
     def H2_pressurization_at_port_B(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         (latent_H_H2_arg, specific_heat_H2_arg, PH2_storage_V_arg, 
@@ -953,9 +982,10 @@ def run_lca_model(inputs):
 
         opex_money = 0
         capex_money = 0
+        carbon_tax_money = 0 # New variable
 
         if B_fuel_type != 0:
-            return 0, 0, 0, 0, A, 0
+            return 0, 0, 0, 0, A, 0, 0
 
         Q_latent = latent_H_H2_arg * A
         Q_sensible = A * specific_heat_H2_arg * (300 - 20)
@@ -974,10 +1004,9 @@ def run_lca_model(inputs):
 
         # Carbon Tax
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(end_port_country_name_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
+        carbon_tax_money += carbon_tax
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, total_energy_consumed, G_emission, A, leak_loss
+        return opex_money, capex_money, carbon_tax_money, total_energy_consumed, G_emission, A, leak_loss
 
     def PH2_port_B_to_site_B(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         (PH2_density_fnc_helper, target_pressure_site_B_arg, PH2_storage_V_arg, 
@@ -989,9 +1018,10 @@ def run_lca_model(inputs):
 
         opex_money = 0
         capex_money = 0
+        carbon_tax_money = 0 # New variable
 
         if B_fuel_type != 0:
-            return 0, 0, 0, 0, A, 0
+            return 0, 0, 0, 0, A, 0, 0
 
         initial_PH2_density_at_port_B = A / (PH2_storage_V_arg * numbers_of_PH2_storage_at_port_B_arg)
         initial_PH2_pressure_at_port_B = PH2_pressure_fnc_helper(initial_PH2_density_at_port_B)
@@ -1025,10 +1055,9 @@ def run_lca_model(inputs):
 
         # Carbon Tax
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
+        carbon_tax_money += carbon_tax
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, ener_consumed, G_emission, A_final, trans_loss
+        return opex_money, capex_money, carbon_tax_money, ener_consumed, G_emission, A_final, trans_loss
 
     def PH2_storage_at_site_B(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         (PH2_storage_V_at_site_B_arg, numbers_of_PH2_storage_at_site_B_arg, PH2_pressure_fnc_helper,
@@ -1036,9 +1065,10 @@ def run_lca_model(inputs):
 
         opex_money = 0
         capex_money = 0
+        carbon_tax_money = 0 # New variable
 
         if B_fuel_type != 0:
-            return 0, 0, 0, 0, A, 0
+            return 0, 0, 0, 0, A, 0, 0
 
         if PH2_storage_V_at_site_B_arg <= 0 or numbers_of_PH2_storage_at_site_B_arg <= 0:
             PH2_density = 0
@@ -1053,10 +1083,9 @@ def run_lca_model(inputs):
 
         # Carbon Tax (if any emissions from storage, though typically zero for PH2)
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0) * (G_emission / 1000)
-        opex_money += carbon_tax
+        carbon_tax_money += carbon_tax
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, ener_consumed, G_emission, A, BOG_loss
+        return opex_money, capex_money, carbon_tax_money, ener_consumed, G_emission, A, BOG_loss
 
     def optimization_chem_weight(A_initial_guess, args_for_optimizer_tuple):
         user_define_params, process_funcs_for_optimization, all_shared_params_tuple = args_for_optimizer_tuple
@@ -1190,7 +1219,8 @@ def run_lca_model(inputs):
                 )
             
             # Call the current process function with its tailored arguments
-            opex_m, capex_m, Y_energy, Z_emission, X, S_bog_loss = func_to_call(X,
+            # Update the return signature of func_to_call to include carbon_tax_money
+            opex_m, capex_m, carbon_tax_m, Y_energy, Z_emission, X, S_bog_loss = func_to_call(X,
                                         user_define_params[1],
                                         user_define_params[2],
                                         user_define_params[3],
@@ -1338,8 +1368,9 @@ def run_lca_model(inputs):
         total_overheads = opex_cost + capex_cost + port_fees_cost + canal_fees_cost
         return total_overheads
 
+    ### CHANGE START ###
     def total_chem_base(A_optimized_chem_weight, B_fuel_type_tc, C_recirculation_BOG_tc,
-                        D_truck_apply_tc, E_storage_apply_tc, F_maritime_apply_tc, carbon_tax_per_ton_co2_dict_tc): # Added carbon_tax_per_ton_co2_dict_tc
+                        D_truck_apply_tc, E_storage_apply_tc, F_maritime_apply_tc, carbon_tax_per_ton_co2_dict_tc):
 
         funcs_sequence = [
             site_A_chem_production, site_A_chem_liquification,
@@ -1362,6 +1393,7 @@ def run_lca_model(inputs):
         data_results_list = []
         total_opex_money_tc = 0.0
         total_capex_money_tc = 0.0
+        total_carbon_tax_money_tc = 0.0 # New total for carbon tax
         total_ener_consumed_tc = 0.0
         total_G_emission_tc = 0.0
         total_S_bog_loss_tc = 0.0
@@ -1471,20 +1503,34 @@ def run_lca_model(inputs):
             elif func_to_call.__name__ == "chem_convert_to_H2":
                 process_args_for_this_call_tc = (mass_conversion_to_H2, eff_energy_chem_to_H2, energy_chem_to_H2, CO2e_end, end_electricity_price, end_country_name, carbon_tax_per_ton_co2_dict_tc)
 
-            opex_money, capex_money, Y_energy, Z_emission, R_current_chem, S_bog_loss = \
+            # Update the call to function to receive carbon_tax_money
+            opex_money, capex_money, carbon_tax_money_current, Y_energy, Z_emission, R_current_chem, S_bog_loss = \
                 func_to_call(R_current_chem, B_fuel_type_tc, C_recirculation_BOG_tc, D_truck_apply_tc,
                             E_storage_apply_tc, F_maritime_apply_tc, process_args_for_this_call_tc)
 
-            data_results_list.append([func_to_call.__name__ + (f'_{leg_type}' if leg_type else '') + (f'_{transfer_context}' if transfer_context else '') + (f'_{storage_location_type}' if storage_location_type else ''), opex_money, capex_money, Y_energy, Z_emission, R_current_chem, S_bog_loss])
+            # Store the individual cost components in data_results_list
+            data_results_list.append([
+                func_to_call.__name__ + (f'_{leg_type}' if leg_type else '') + (f'_{transfer_context}' if transfer_context else '') + (f'_{storage_location_type}' if storage_location_type else ''),
+                opex_money,
+                capex_money,
+                carbon_tax_money_current, # New column for carbon tax
+                Y_energy,
+                Z_emission,
+                R_current_chem,
+                S_bog_loss
+            ])
             total_opex_money_tc += opex_money
             total_capex_money_tc += capex_money
+            total_carbon_tax_money_tc += carbon_tax_money_current # Accumulate total carbon tax
             total_ener_consumed_tc += Y_energy
             total_G_emission_tc += Z_emission
             total_S_bog_loss_tc += S_bog_loss
         
-        total_money_tc = total_opex_money_tc + total_capex_money_tc
+        total_money_tc = total_opex_money_tc + total_capex_money_tc + total_carbon_tax_money_tc # Sum all three cost types
         final_total_result_tc = [total_money_tc, total_ener_consumed_tc, total_G_emission_tc, R_current_chem]
-        data_results_list.append(["TOTAL", total_opex_money_tc, total_capex_money_tc, total_ener_consumed_tc, total_G_emission_tc, R_current_chem, total_S_bog_loss_tc])
+        
+        # Update TOTAL row to include carbon_tax_money_tc
+        data_results_list.append(["TOTAL", total_opex_money_tc, total_capex_money_tc, total_carbon_tax_money_tc, total_ener_consumed_tc, total_G_emission_tc, R_current_chem, total_S_bog_loss_tc])
 
         return final_total_result_tc, data_results_list
 
@@ -1496,27 +1542,28 @@ def run_lca_model(inputs):
         (insurance_percentage_of_cargo_value_arg, price_start_arg, start_country_name_arg, carbon_tax_per_ton_co2_dict_arg) = args
         opex_money = 0
         capex_money = 0
+        carbon_tax_money = 0 # New variable
         energy = 0
         emissions = 0
         loss = 0
 
-        # Insurance Cost
+        # Insurance Cost (Only relevant cost for this "production" step shown in breakdown)
         cargo_value = A * price_start_arg
         insurance_cost = cargo_value * (insurance_percentage_of_cargo_value_arg / 100)
-        opex_money += insurance_cost
+        opex_money += insurance_cost # Add to OPEX, will be treated as Insurance in chart
 
         # Carbon Tax (assuming no direct emissions from this step, but if there were, it would apply)
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_country_name_arg, 0) * (emissions / 1000)
-        opex_money += carbon_tax
+        carbon_tax_money += carbon_tax
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, energy, emissions, A - loss, loss
-
+        return opex_money, capex_money, carbon_tax_money, energy, emissions, A - loss, loss
+    
     def food_freezing_process(A, args):
         params, start_temp, elec_price, co2_factor, facility_capacity_arg, start_country_name_arg, carbon_tax_per_ton_co2_dict_arg = args
         
         opex_money = 0
         capex_money = 0
+        carbon_tax_money = 0 # New variable
 
         energy_sensible_heat1 = A * params['specific_heat_fresh_mj_kgK'] * (start_temp - 0)
         energy_latent_heat = A * params['latent_heat_fusion_mj_kg']
@@ -1535,16 +1582,16 @@ def run_lca_model(inputs):
         
         # Carbon Tax
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_country_name_arg, 0) * (emissions / 1000)
-        opex_money += carbon_tax
+        carbon_tax_money += carbon_tax
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, energy, emissions, A - loss, loss
+        return opex_money, capex_money, carbon_tax_money, energy, emissions, A - loss, loss
 
     def food_road_transport(A, args):
         params, distance, duration_mins, diesel_price, hh_diesel, dens_diesel, co2_diesel, ambient_temp, driver_daily_salary_arg, annual_working_days_arg, maintenance_cost_per_km_truck_arg, truck_capex_params_arg, country_of_road_transport_arg, carbon_tax_per_ton_co2_dict_arg = args
         
         opex_money = 0
         capex_money = 0
+        carbon_tax_money = 0 # New variable
 
         base_spoilage_rate = params['general_params']['spoilage_rate_per_day']
 
@@ -1579,27 +1626,27 @@ def run_lca_model(inputs):
 
         # Truck CAPEX (using fuel_type 0 for general truck params as a proxy for food trucks)
         annual_truck_cost_usd = truck_capex_params_arg[0]['cost_usd_per_truck'] * truck_capex_params_arg[0]['annualization_factor']
-        capex_per_truck_trip_usd = annual_truck_cost_usd / 330
+        capex_per_truck_trip_usd = annual_truck_cost_usd / 330 # Assuming 330 annual trips
         capex_money += capex_per_truck_trip_usd * num_trucks
 
         # Carbon Tax
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(country_of_road_transport_arg, 0) * (emissions / 1000)
-        opex_money += carbon_tax
+        carbon_tax_money += carbon_tax
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, energy, emissions, A - loss, loss
+        return opex_money, capex_money, carbon_tax_money, energy, emissions, A - loss, loss
 
     def food_precooling_process(A, args):
         precool_params, elec_price, co2_factor, facility_capacity_arg, start_country_name_arg, carbon_tax_per_ton_co2_dict_arg = args
 
         opex_money = 0
         capex_money = 0
+        carbon_tax_money = 0 # New variable
 
         delta_T = (precool_params['initial_field_heat_celsius'] -
                 precool_params['target_precool_temperature_celsius'])
 
         if delta_T <= 0:
-            return 0, 0, 0, 0, A, 0
+            return 0, 0, 0, 0, A, 0, 0
 
         heat_to_remove_mj = A * precool_params['specific_heat_fresh_mj_kgK'] * delta_T
         energy_mj = heat_to_remove_mj / precool_params['cop_precooling_system']
@@ -1615,10 +1662,9 @@ def run_lca_model(inputs):
 
         # Carbon Tax
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_country_name_arg, 0) * (emissions / 1000)
-        opex_money += carbon_tax
+        carbon_tax_money += carbon_tax
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, energy_mj, emissions, A - loss, loss
+        return opex_money, capex_money, carbon_tax_money, energy_mj, emissions, A - loss, loss
 
     def calculate_ca_energy_kwh(A, food_params, duration_hrs):
         if not food_params.get('process_flags', {}).get('needs_controlled_atmosphere', False):
@@ -1651,6 +1697,7 @@ def run_lca_model(inputs):
 
         opex_money = 0
         capex_money = 0
+        carbon_tax_money = 0 # New variable
 
         total_auxiliary_energy_kwh = calculate_ca_energy_kwh(A, food_params, duration_hrs)
         reefer_power_kw = math.ceil(A / food_params['general_params']['cargo_per_truck_kg']) * food_params['general_params']['reefer_container_power_kw']
@@ -1691,23 +1738,24 @@ def run_lca_model(inputs):
 
         # Carbon Tax (General)
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0) * (total_emissions / 1000)
-        opex_money += carbon_tax
+        carbon_tax_money += carbon_tax
 
         # EU ETS Carbon Tax (if applicable)
         eu_ets_tax = 0
         if end_country_name_arg in eu_member_countries_arg:
             eu_ets_emissions_tons = (total_emissions / 1000) * 0.50
             eu_ets_tax = eu_ets_emissions_tons * carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0)
-            opex_money += eu_ets_tax # Add to opex_money
+            carbon_tax_money += eu_ets_tax # Add to carbon_tax_money
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, total_energy_mj, total_emissions, A - loss, loss
+        total_energy_consumed_mj = total_fuel_consumed_kg * fuel_hhv_mj_per_kg
+        return opex_money, capex_money, carbon_tax_money, total_energy_consumed_mj, total_emissions, A - loss, loss
 
     def food_cold_storage(A, args):
         params, storage_days, elec_price, co2_factor, ambient_temp, facility_capacity_arg, country_of_storage_arg, carbon_tax_per_ton_co2_dict_arg = args
 
         opex_money = 0
         capex_money = 0
+        carbon_tax_money = 0 # New variable
 
         volume_m3 = A / params['general_params']['density_kg_per_m3']
 
@@ -1735,10 +1783,9 @@ def run_lca_model(inputs):
 
         # Carbon Tax
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(country_of_storage_arg, 0) * (emissions / 1000)
-        opex_money += carbon_tax
+        carbon_tax_money += carbon_tax
 
-        total_money = opex_money + capex_money
-        return opex_money, capex_money, energy_mj, emissions, A - loss, loss
+        return opex_money, capex_money, carbon_tax_money, energy_mj, emissions, A - loss, loss
 
     def calculate_food_infra_capex(process_name, capacity_tons_per_day, A, storage_days):
         """
@@ -1783,7 +1830,8 @@ def run_lca_model(inputs):
         capex_per_kg = annualized_capex / annual_throughput_kg
         return capex_per_kg
 
-    def total_food_lca(initial_weight, food_params, carbon_tax_per_ton_co2_dict_tl): # Added carbon_tax_per_ton_co2_dict_tl
+    def total_food_lca(initial_weight, food_params, carbon_tax_per_ton_co2_dict_tl):
+
         food_funcs_sequence = [
             (food_harvest_and_prep, "Harvesting & Preparation"),
         ]
@@ -1813,6 +1861,7 @@ def run_lca_model(inputs):
             args_for_func = ()
             opex_m = 0
             capex_m = 0
+            carbon_tax_m = 0 # New variable
             energy = 0
             emissions = 0
             loss = 0
@@ -1838,10 +1887,14 @@ def run_lca_model(inputs):
             elif func == food_cold_storage and "Destination" in label:
                 args_for_func = (food_params, storage_time_C, end_electricity_price, CO2e_end, end_local_temperature, facility_capacity, end_country_name, carbon_tax_per_ton_co2_dict_tl)
             
-            opex_m, capex_m, energy, emissions, current_weight, loss = func(current_weight, args_for_func)
-            results_list.append([label, opex_m, capex_m, energy, emissions, current_weight, loss])
+            # Update the call to function to receive carbon_tax_money
+            opex_m, capex_m, carbon_tax_m, energy, emissions, current_weight, loss = func(current_weight, args_for_func)
+            
+            # Store the individual cost components in results_list
+            results_list.append([label, opex_m, capex_m, carbon_tax_m, energy, emissions, current_weight, loss])
 
         return results_list
+    ### CHANGE END ###
 
     def openai_get_food_price(food_name, location_name):
         from openai import OpenAI
@@ -2476,11 +2529,14 @@ def run_lca_model(inputs):
         opex_per_kg_index = new_detailed_headers.index("Opex/kg ($/kg)")
         capex_per_kg_index = new_detailed_headers.index("Capex/kg ($/kg)")
         eco2_per_kg_index = new_detailed_headers.index("CO2eq/kg (kg/kg)")
-
+        carbon_tax_index = 3 # Assuming carbon tax is at index 3 in data_raw, which is the 4th column
+        insurance_index = 1 # Insurance is part of OPEX for now, but its specific value should be filtered in the chart. For this, we treat it as its own index for chart's parsing logic.
         cost_chart_base64 = create_breakdown_chart(
             data_for_display_common,
             opex_per_kg_index,
             capex_per_kg_index,
+            carbon_tax_index, # New argument
+            insurance_index,  # New argument
             'Cost Breakdown per kg of Delivered Fuel', # Title
             'Cost ($/kg)',                          # X-label
             overlay_text=cost_overlay_text,
@@ -2706,10 +2762,11 @@ def run_lca_model(inputs):
             data_with_all_columns.append(new_row_with_additions)
                         
         detailed_data_formatted = data_with_all_columns
-        data_for_display_common = [row for row in detailed_data_formatted if row[0] != "TOTAL"]
+        data_for_display_common = [row for row in detailed_data_formatted if row[0] != "TOTAL" and row[0] != "Harvesting & Preparation"]
         emission_chart_exclusions_food = [] # No exclusions needed if all costs/emissions are now integrated
         data_for_emission_chart = [row for row in data_for_display_common if row[0] not in emission_chart_exclusions_food]
-        
+        carbon_tax_index = 3 # Assuming carbon tax is at index 3 in data_raw, which is the 4th column
+        insurance_index = 1 # Insurance is part of OPEX for now, but its specific value should be filtered in the chart's parsing logic        
         new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Energy (MJ)", "eCO2 (kg)", "Commodity (kg)", "Spoilage (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
         opex_per_kg_index = new_detailed_headers.index("Opex/kg ($/kg)")
         capex_per_kg_index = new_detailed_headers.index("Capex/kg ($/kg)")
@@ -2763,6 +2820,8 @@ def run_lca_model(inputs):
             data_for_display_common,
             opex_per_kg_index,
             capex_per_kg_index,
+            carbon_tax_index, # New argument
+            insurance_index,  # New argument
             'Cost Breakdown per kg of Delivered Food', # Title (changed from 'Fuel' to 'Food')
             'Cost ($/kg)',                           # X-label
             overlay_text=cost_overlay_text
