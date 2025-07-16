@@ -2388,7 +2388,8 @@ def run_lca_model(inputs):
     final_chem_kg_denominator = 0.0
     SMR_EMISSIONS_KG_PER_KG_H2 = 9.3 # kg CO2e per kg H2 produced via SMR
     final_commodity_kg = 0.0
-
+    target_weight = 0.0
+    initial_weight = 0.0
     initial_cargo_value_total = 0.0
     commodity_type_for_insurance = ""
     
