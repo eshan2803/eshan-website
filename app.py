@@ -2649,10 +2649,21 @@ def run_lca_model(inputs):
             current_chem_kg_at_step = float(row[6])
             current_bog_loss = float(row[7])
 
-            opex_per_kg = current_opex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+            opex_per_kg = 0.0
+            insurance_per_kg = 0.0
+
+            if process_label_raw == "Insurance":
+                # For the 'Insurance' row, its original 'current_opex' value (which is total_insurance_money)
+                # should be assigned directly to insurance_per_kg.
+                insurance_per_kg = current_opex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0.0
+                # Opex_per_kg for the 'Insurance' row itself should be 0, as it's not a regular OPEX.
+                opex_per_kg = 0.0
+            else:
+                # For all other rows, calculate opex_per_kg as usual.
+                opex_per_kg = current_opex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0.0
+                insurance_per_kg = 0.0 # Ensure it's 0 for non-insurance rows.
             capex_per_kg = current_capex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             carbon_tax_per_kg = current_carbon_tax / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-            insurance_per_kg = total_insurance_money / final_chem_kg_denominator if final_chem_kg_denominator > 0 and process_label_raw == "Insurance" else 0.0
 
             cost_per_kg_total = opex_per_kg + capex_per_kg + carbon_tax_per_kg + insurance_per_kg
             current_total_cost_row = current_opex + current_capex + current_carbon_tax
