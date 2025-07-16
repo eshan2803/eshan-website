@@ -434,8 +434,8 @@ def run_lca_model(inputs):
 
             if is_emission_chart:
                 ax.barh(y_pos, opex_values, align='center', color='#4CAF50', edgecolor='black', label='Emissions')
-            else:
-                ax.barh(y_pos, insurance_values, align='center', color='#800080', edgecolor='black', label='Insurance')
+            else: # This is the cost chart block
+                ax.barh(y_pos, insurance_values, align='center', color='#800080', edgecolor='black', label='Insurance') 
                 ax.barh(y_pos, opex_values, left=insurance_values, align='center', color='#8BC34A', edgecolor='black', label='OPEX')
                 ax.barh(y_pos, capex_values, left=np.array(insurance_values) + np.array(opex_values), align='center', color='#4CAF50', edgecolor='black', label='CAPEX')
                 ax.barh(y_pos, carbon_tax_values, left=np.array(insurance_values) + np.array(opex_values) + np.array(capex_values), align='center', color='#FFC107', edgecolor='black', label='Carbon Tax')
@@ -2732,7 +2732,7 @@ def run_lca_model(inputs):
 
         emission_chart_exclusions = ["TOTAL", "Initial Production (Placeholder)", "Insurance"]
         data_for_emission_chart = [row for row in relabeled_data if row[0] not in emission_chart_exclusions]
-
+        data_for_cost_chart_display = []
         cost_overlay_text = ""
         if hydrogen_production_cost > 0:
             ratio_cost = chem_cost / hydrogen_production_cost
@@ -3038,11 +3038,7 @@ def run_lca_model(inputs):
         final_energy_output_gj = final_energy_output_mj / 1000
 
         data_with_all_columns = []
-        # No need to initialize extracted_insurance_row_for_chart_food here again, it's done above.
-
         for row in data_raw:
-            # Based on your total_food_lca function, results_list has 8 elements per row:
-            # [label, opex_m, capex_m, carbon_tax_m, energy, emissions, current_weight, loss]
             if len(row) < 8: # Check for 8 columns now
                 print(f"Warning: Food row has insufficient data points: {row}. Skipping 'per unit' calculations for this row.")
                 data_with_all_columns.append(list(row) + [0]*(16 - len(row)))
