@@ -2636,30 +2636,22 @@ def run_lca_model(inputs):
             current_carbon_tax = float(row[3])
             current_energy = float(row[4])
             current_emission = float(row[5])
-            current_chem_kg_at_step = float(row[6])  # This is the `A` value for the step
+            current_chem_kg_at_step = float(row[6])
             current_bog_loss = float(row[7])
 
-            # Calculate individual cost components PER KG
             opex_per_kg = current_opex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             capex_per_kg = current_capex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             carbon_tax_per_kg = current_carbon_tax / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-            insurance_per_kg = 0.0  # Default for all rows
-            if process_label_raw == "Insurance":
-                insurance_per_kg = total_insurance_money / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
+            insurance_per_kg = total_insurance_money / final_chem_kg_denominator if final_chem_kg_denominator > 0 and process_label_raw == "Insurance" else 0.0
 
-            # Calculate total cost per kg for this specific row
             cost_per_kg_total = opex_per_kg + capex_per_kg + carbon_tax_per_kg + insurance_per_kg
-            
-            # Recalculate current_total_cost_row based on the original totals
             current_total_cost_row = current_opex + current_capex + current_carbon_tax
-            
             cost_per_gj = current_total_cost_row / final_energy_output_gj if final_energy_output_gj > 0 else 0
             emission_per_kg = current_emission / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             emission_per_gj = current_emission / final_energy_output_gj if final_energy_output_gj > 0 else 0
             new_row_with_additions = [
-                process_label_raw,  # Process Step
-                current_opex, current_capex, current_carbon_tax, current_energy, current_emission, current_chem_kg_at_step, current_bog_loss,
-                opex_per_kg, capex_per_kg, carbon_tax_per_kg, insurance_per_kg,
+                process_label_raw, current_opex, current_capex, current_carbon_tax, current_energy, current_emission,
+                current_chem_kg_at_step, current_bog_loss, opex_per_kg, capex_per_kg, carbon_tax_per_kg, insurance_per_kg,
                 cost_per_kg_total, cost_per_gj, emission_per_kg, emission_per_gj
             ]
             data_with_all_columns.append(new_row_with_additions)
@@ -2669,10 +2661,13 @@ def run_lca_model(inputs):
             relabel_key = row[0]
             new_label = label_map.get(relabel_key, relabel_key)
             relabeled_data.append([new_label] + row[1:])
-
         data_for_cost_chart_display = [
             row for row in relabeled_data if row[0] not in ["TOTAL", "Initial Production (Placeholder)"]
         ]
+        # Add the Insurance row explicitly if it's not already included
+        insurance_row = next((row for row in relabeled_data if row[0] == "Insurance"), None)
+        if insurance_row and insurance_row not in data_for_cost_chart_display:
+            data_for_cost_chart_display.append(insurance_row)
 
         detailed_data_formatted = []
         for row in relabeled_data:
@@ -3012,19 +3007,16 @@ def run_lca_model(inputs):
             current_carbon_tax = float(row[3])
             current_energy_total = float(row[4])
             current_emission_total = float(row[5])
-            current_commodity_kg_at_step = float(row[6])  # This is the `A` value for the step
+            current_commodity_kg_at_step = float(row[6])
             current_spoilage_loss = float(row[7])
 
             opex_per_kg = current_opex / final_commodity_kg if final_commodity_kg > 0 else 0
             capex_per_kg = current_capex / final_commodity_kg if final_commodity_kg > 0 else 0
             carbon_tax_per_kg = current_carbon_tax / final_commodity_kg if final_commodity_kg > 0 else 0
-            insurance_per_kg = 0.0  # Default for all rows
-            if process_label_raw == "Insurance":
-                insurance_per_kg = current_opex / final_commodity_kg if final_commodity_kg > 0 else 0
+            insurance_per_kg = current_opex / final_commodity_kg if final_commodity_kg > 0 and process_label_raw == "Insurance" else 0.0
 
             cost_per_kg_total = opex_per_kg + capex_per_kg + carbon_tax_per_kg + insurance_per_kg
             current_total_cost_row = current_opex + current_capex + current_carbon_tax
-            
             cost_per_gj = current_total_cost_row / final_energy_output_gj if final_energy_output_gj > 0 else 0
             emission_per_kg = current_emission_total / final_commodity_kg if final_commodity_kg > 0 else 0
             emission_per_gj = current_emission_total / final_energy_output_gj if final_energy_output_gj > 0 else 0
@@ -3041,9 +3033,13 @@ def run_lca_model(inputs):
             relabel_key = row[0]
             new_label = label_map.get(relabel_key, relabel_key)
             relabeled_data.append([new_label] + row[1:])
+
         data_for_cost_chart_display = [
             row for row in relabeled_data if row[0] not in ["TOTAL", "Harvesting & Preparation"]
         ]
+        insurance_row = next((row for row in relabeled_data if row[0] == "Insurance"), None)
+        if insurance_row and insurance_row not in data_for_cost_chart_display:
+            data_for_cost_chart_display.append(insurance_row)
         
         emission_chart_exclusions_food = ["TOTAL", "Harvesting & Preparation", "Insurance"] # Still refers to original labels here
         data_for_emission_chart = [row for row in relabeled_data if row[0] not in emission_chart_exclusions_food]
