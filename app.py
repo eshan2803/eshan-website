@@ -1982,12 +1982,7 @@ def run_lca_model(inputs):
     def openai_get_food_price(food_name, location_name):
         from openai import OpenAI
         client = OpenAI(api_key=api_key_openAI)
-        FOOD_PRICE_DEFAULTS = {
-            "Strawberry": {"USA": 3.0, "Spain": 2.5, "Default": 2.0},
-            "Hass Avocado": {"Mexico": 2.0, "USA": 2.5, "Default": 2.0},
-            "Banana": {"Costa Rica": 1.0, "USA": 1.5, "Default": 1.2}
-        }
-        default_price = FOOD_PRICE_DEFAULTS.get(food_name, {}).get("Default", 1.0)
+
         prompt_messages = [
             {
                 "role": "system",
@@ -2000,6 +1995,7 @@ def run_lca_model(inputs):
         ]
 
         try:
+            print(f"Requesting AI price analysis for: {food_name} in {location_name}")
             response = client.chat.completions.create(
                 model="gpt-4o",
                 response_format={"type": "json_object"},
@@ -2012,10 +2008,11 @@ def run_lca_model(inputs):
             if isinstance(price, (int, float)):
                 return price
             else:
-                return default_price
+                return None
 
         except Exception as e:
-            return FOOD_PRICE_DEFAULTS.get(food_name, {}).get(location_name, default_price)
+            print(f"AI price lookup failed: {e}")
+            return None
     
     def openai_get_nearest_farm_region(food_name, location_name):
         from openai import OpenAI
