@@ -2402,15 +2402,6 @@ def run_lca_model(inputs):
         initial_cargo_value_total = initial_weight * price_start if price_start is not None else 0.0 # initial_weight is total kg
         commodity_type_for_insurance = current_food_params['name'] # e.g., 'Strawberry'
 
-    # --- Calculate the total insurance cost for the entire shipment ---
-    # Call the new, more nuanced insurance calculation function
-    total_insurance_money = calculate_total_insurance_cost(
-        initial_cargo_value_total,
-        commodity_type_for_insurance,
-        searoute_coor,          # Pass the sea route coordinates
-        port_to_port_duration   # Pass total marine duration in hours
-    )
-    
     if commodity_type == 'fuel':
         fuel_type = inputs['fuel_type']
         fuel_names = ['Liquid Hydrogen', 'Ammonia', 'Methanol']
@@ -2498,6 +2489,16 @@ def run_lca_model(inputs):
         }
 
         target_weight = total_ship_volume * liquid_chem_density[fuel_type] * 0.98
+
+        initial_cargo_value_total = target_weight * hydrogen_production_cost 
+        commodity_type_for_insurance = selected_fuel_name
+
+        total_insurance_money = calculate_total_insurance_cost(
+            initial_cargo_value_total,
+            commodity_type_for_insurance,
+            searoute_coor,
+            port_to_port_duration
+        )
 
         con = {'type': 'ineq', 'fun': constraint}
 
@@ -2725,7 +2726,6 @@ def run_lca_model(inputs):
         fuel_names = ['Liquid Hydrogen', 'Ammonia', 'Methanol']
         selected_fuel_name = fuel_names[fuel_type]
 
-        data_for_cost_chart_display = []
         for row in relabeled_data:
             if row[0] not in ["Initial Production (Placeholder)", "TOTAL"]:
                 data_for_cost_chart_display.append(row)
@@ -2853,6 +2853,14 @@ def run_lca_model(inputs):
         total_ship_container_capacity = math.floor(total_ship_volume / 76)
 
         initial_weight = shipment_size_containers * current_food_params['general_params']['cargo_per_truck_kg']
+        initial_cargo_value_total = initial_weight * price_start if price_start is not None else 0.0
+        commodity_type_for_insurance = current_food_params['name']
+        total_insurance_money = calculate_total_insurance_cost(
+            initial_cargo_value_total,
+            commodity_type_for_insurance,
+            searoute_coor,
+            port_to_port_duration
+        )        
         data_raw = total_food_lca(initial_weight, current_food_params, CARBON_TAX_PER_TON_CO2_DICT, HHV_diesel, diesel_density, CO2e_diesel)
         
         total_opex_money_pre_insurance = sum(row[1] for row in data_raw if row[0] != "TOTAL")
