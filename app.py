@@ -2732,7 +2732,6 @@ def run_lca_model(inputs):
 
         emission_chart_exclusions = ["TOTAL", "Initial Production (Placeholder)", "Insurance"]
         data_for_emission_chart = [row for row in relabeled_data if row[0] not in emission_chart_exclusions]
-        data_for_cost_chart_display = []
         cost_overlay_text = ""
         if hydrogen_production_cost > 0:
             ratio_cost = chem_cost / hydrogen_production_cost
