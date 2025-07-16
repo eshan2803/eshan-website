@@ -103,6 +103,7 @@ ROUTE_RISK_ZONES = [
     {"name": "South China Sea", "bbox": {"lon_min": 105.0, "lat_min": 0.0, "lon_max": 120.0, "lat_max": 20.0}, "risk_multiplier": 1.3},
     {"name": "Hurricane Alley (Atlantic)", "bbox": {"lon_min": -95.0, "lat_min": 10.0, "lon_max": -40.0, "lat_max": 40.0}, "risk_multiplier": 1.15},
 ]
+api_cache = {}
 # ==============================================================================
 # MAIN CALCULATION FUNCTION
 # ==============================================================================
@@ -2594,7 +2595,7 @@ def run_lca_model(inputs):
             total_carbon_tax_money = sum(row[3] for row in data_raw if row[0] != "TOTAL")
             total_energy = sum(row[4] for row in data_raw if row[0] != "TOTAL")
             total_emissions = sum(row[5] for row in data_raw if row[0] != "TOTAL")
-            final_chem_kg_denominator = final_results_raw[3] # From total_chem_base's final result
+            final_chem_kg_denominator = final_results_raw[3] 
 
         # Insert Insurance row into data_raw after all other steps are in
         # The total_insurance_money is already calculated at the top level
@@ -2609,22 +2610,21 @@ def run_lca_model(inputs):
             final_chem_kg_denominator, # Associate with total quantity
             0.0 # Loss
         ]
-        # Insert before the "TOTAL" row, if it exists, otherwise at the end.
-        if data_raw and data_raw[-1][0] == "TOTAL":
-            data_raw.insert(len(data_raw) - 1, insurance_row_for_data_raw)
-        else:
-            data_raw.append(insurance_row_for_data_raw)
-
-        # Now, recalculate totals to include the inserted insurance row
-        total_opex_money = sum(row[1] for row in data_raw if row[0] != "TOTAL")
+        # After inserting the insurance row into data_raw
+        total_opex_money = sum(row[1] for row in data_raw if row[0] != "TOTAL" and row[0] != "Insurance")
         total_capex_money = sum(row[2] for row in data_raw if row[0] != "TOTAL")
         total_carbon_tax_money = sum(row[3] for row in data_raw if row[0] != "TOTAL")
         total_energy = sum(row[4] for row in data_raw if row[0] != "TOTAL")
         total_emissions = sum(row[5] for row in data_raw if row[0] != "TOTAL")
 
-        # Recalculate total_money based on all distinct cost components
-        total_money = total_opex_money + total_capex_money + total_carbon_tax_money
+        # Recalculate total_money based on distinct cost components
+        total_money = total_opex_money + total_capex_money + total_carbon_tax_money + total_insurance_money  # Add insurance separately
 
+        # Update the TOTAL row
+        if data_raw and data_raw[-1][0] == "TOTAL":
+            data_raw[-1] = ["TOTAL", total_opex_money, total_capex_money, total_carbon_tax_money, total_energy, total_emissions, final_chem_kg_denominator, sum(row[7] for row in data_raw if row[0] != "TOTAL")]
+        else:
+            data_raw.append(["TOTAL", total_opex_money, total_capex_money, total_carbon_tax_money, total_energy, total_emissions, final_chem_kg_denominator, sum(row[7] for row in data_raw)])        
         final_energy_output_mj = final_chem_kg_denominator * HHV_chem[fuel_type] # Corrected variable name
         final_energy_output_gj = final_energy_output_mj / 1000
 
@@ -2906,22 +2906,25 @@ def run_lca_model(inputs):
             reefer_row = ["Reefer & CA Services", reefer_service_total_cost, reefer_service_total_capex, reefer_service_total_carbon_tax, reefer_service_total_energy, reefer_service_total_emissions, commodity_weight_at_marine_transport, 0]
             data_raw.insert(marine_transport_index + 1, reefer_row)
 
-        total_opex_money = sum(row[1] for row in data_raw if row[0] != "TOTAL")
+        # After inserting the insurance row into data_raw
+        total_opex_money = sum(row[1] for row in data_raw if row[0] != "TOTAL" and row[0] != "Insurance")
         total_capex_money = sum(row[2] for row in data_raw if row[0] != "TOTAL")
         total_carbon_tax_money = sum(row[3] for row in data_raw if row[0] != "TOTAL")
         total_energy = sum(row[4] for row in data_raw if row[0] != "TOTAL")
         total_emissions = sum(row[5] for row in data_raw if row[0] != "TOTAL")
-        # And then the final total_money:
-        total_money = total_opex_money + total_capex_money + total_carbon_tax_money
+
+        # Recalculate total_money
+        total_money = total_opex_money + total_capex_money + total_carbon_tax_money + total_insurance_money  # Add insurance separately
+
+        # Update the TOTAL row
+        if data_raw and data_raw[-1][0] == "TOTAL":
+            data_raw[-1] = ["TOTAL", total_opex_money, total_capex_money, total_carbon_tax_money, total_energy, total_emissions, final_commodity_kg, sum(row[7] for row in data_raw if row[0] != "TOTAL")]
+        else:
+            data_raw.append(["TOTAL", total_opex_money, total_capex_money, total_carbon_tax_money, total_energy, total_emissions, final_commodity_kg, sum(row[7] for row in data_raw[:-1])])
 
         # The last row of data_raw is "TOTAL", so final_weight should be from there.
         final_weight = data_raw[-1][6] if data_raw and len(data_raw[-1]) > 6 else 0.0 # From data_raw's last row (TOTAL), its commodity quantity
         final_commodity_kg = final_weight # This is your delivered quantity
-
-        if data_raw and data_raw[-1][0] == "TOTAL":
-            data_raw[-1] = ["TOTAL", total_opex_money, total_capex_money, total_carbon_tax_money, total_energy, total_emissions, final_commodity_kg, sum(row[7] for row in data_raw if row[0] != "TOTAL")]
-        else: # Should not happen if TOTAL is always added by total_food_lca
-            data_raw.append(["TOTAL", total_opex_money, total_capex_money, total_carbon_tax_money, total_energy, total_emissions, final_commodity_kg, sum(row[7] for row in data_raw)])
 
         local_sourcing_results = None
         green_premium_data = None
