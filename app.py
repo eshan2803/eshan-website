@@ -2726,10 +2726,6 @@ def run_lca_model(inputs):
         fuel_names = ['Liquid Hydrogen', 'Ammonia', 'Methanol']
         selected_fuel_name = fuel_names[fuel_type]
 
-        for row in relabeled_data:
-            if row[0] not in ["Initial Production (Placeholder)", "TOTAL"]:
-                data_for_cost_chart_display.append(row)
-
         emission_chart_exclusions = ["TOTAL", "Initial Production (Placeholder)", "Insurance"]
         data_for_emission_chart = [row for row in relabeled_data if row[0] not in emission_chart_exclusions]
         cost_overlay_text = ""
