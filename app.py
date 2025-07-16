@@ -2392,7 +2392,7 @@ def run_lca_model(inputs):
     initial_weight = 0.0
     initial_cargo_value_total = 0.0
     commodity_type_for_insurance = ""
-    
+    selected_fuel_name = ""
     if commodity_type == 'fuel':
         # Assuming target_weight is the desired delivered quantity, use this for initial cargo value.
         # This might need refinement if initial production is more than target delivered.
