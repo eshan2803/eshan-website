@@ -2815,11 +2815,16 @@ def run_lca_model(inputs):
         food_type = inputs.get('food_type')
         shipment_size_containers = inputs.get('shipment_size_containers', 10)
         current_food_params = food_params[food_type]
-        food_name_for_lookup = current_food_params["name"]        
+        food_name_for_lookup = current_food_params["name"]   
+                
+        price_start = None
+        price_end = None
+
         start_country = get_country_from_coords(coor_start_lat, coor_start_lng) or start
         end_country = get_country_from_coords(coor_end_lat, coor_end_lng) or end
+
         price_start = openai_get_food_price(food_name_for_lookup, start_country)
-        price_end = openai_get_food_price(food_name_for_lookup, end_country)
+        price_end = openai_get_food_price(food_name_for_lookup, end_country)             
         price_start_text = f"${price_start:.2f}/kg" if price_start is not None else "Not available"
         price_end_text = f"${price_end:.2f}/kg" if price_end is not None else "Not available"
         
