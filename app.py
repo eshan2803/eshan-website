@@ -2597,10 +2597,6 @@ def run_lca_model(inputs):
             total_emissions = sum(row[5] for row in data_raw if row[0] != "TOTAL")
             final_chem_kg_denominator = final_results_raw[3] 
 
-        # Insert Insurance row into data_raw after all other steps are in
-        # The total_insurance_money is already calculated at the top level
-        # IMPORTANT: Ensure final_chem_kg_denominator is defined before this.
-        # It's better to insert this *after* all steps are in data_raw and final_chem_kg_denominator is known.
         insurance_row_for_data_raw = [
             "Insurance",
             total_insurance_money, # OPEX portion of insurance
@@ -2610,23 +2606,37 @@ def run_lca_model(inputs):
             final_chem_kg_denominator, # Associate with total quantity
             0.0 # Loss
         ]
-        # After inserting the insurance row into data_raw
-        total_opex_money = sum(row[1] for row in data_raw if row[0] != "TOTAL" and row[0] != "Insurance")
+
+        # 2. Find the index of the existing "TOTAL" row in data_raw
+        total_row_index = -1
+        for i, row in enumerate(data_raw):
+            if row[0] == "TOTAL":
+                total_row_index = i
+                break
+
+        # 3. Insert the insurance row before the "TOTAL" row
+        if total_row_index != -1:
+            data_raw.insert(total_row_index, insurance_row_for_data_raw)
+        else:
+            # Fallback: if 'TOTAL' row is missing, just append (less likely to be needed)
+            data_raw.append(insurance_row_for_data_raw)
+
+        total_opex_money = sum(row[1] for row in data_raw if row[0] != "TOTAL" and row[0] != "Insurance") # Sum actual OPEX from processes
         total_capex_money = sum(row[2] for row in data_raw if row[0] != "TOTAL")
         total_carbon_tax_money = sum(row[3] for row in data_raw if row[0] != "TOTAL")
         total_energy = sum(row[4] for row in data_raw if row[0] != "TOTAL")
         total_emissions = sum(row[5] for row in data_raw if row[0] != "TOTAL")
 
-        # Recalculate total_money based on distinct cost components
-        total_money = total_opex_money + total_capex_money + total_carbon_tax_money + total_insurance_money  # Add insurance separately
+        # Now, recalculate total_money by explicitly adding total_insurance_money
+        total_money = total_opex_money + total_capex_money + total_carbon_tax_money + total_insurance_money
 
-        # Update the TOTAL row
+        # 5. Update the existing "TOTAL" row with the newly calculated sums
         if data_raw and data_raw[-1][0] == "TOTAL":
             data_raw[-1] = ["TOTAL", total_opex_money, total_capex_money, total_carbon_tax_money, total_energy, total_emissions, final_chem_kg_denominator, sum(row[7] for row in data_raw if row[0] != "TOTAL")]
-        else:
-            data_raw.append(["TOTAL", total_opex_money, total_capex_money, total_carbon_tax_money, total_energy, total_emissions, final_chem_kg_denominator, sum(row[7] for row in data_raw)])        
+
         final_energy_output_mj = final_chem_kg_denominator * HHV_chem[fuel_type] # Corrected variable name
         final_energy_output_gj = final_energy_output_mj / 1000
+
 
         data_with_all_columns = []
         for row in data_raw:
