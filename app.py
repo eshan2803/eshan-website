@@ -1845,42 +1845,60 @@ def run_lca_model(inputs):
         return total_ca_energy_kwh
 
     def food_sea_transport(A, args):
-        food_params, duration_hrs, selected_fuel, avg_ship_kw, maintenance_cost_per_km_ship_arg, port_to_port_dis_arg, calculate_voyage_overheads_helper_arg, selected_ship_params_arg, canal_transits_arg, port_regions_arg, end_country_name_arg, carbon_tax_per_ton_co2_dict_arg, eu_member_countries_arg = args # Added eu_member_countries_arg
+        food_params, duration_hrs, selected_fuel, avg_ship_kw, maintenance_cost_per_km_ship_arg, port_to_port_dis_arg, calculate_voyage_overheads_helper_arg, selected_ship_params_arg, canal_transits_arg, port_regions_arg, end_country_name_arg, carbon_tax_per_ton_co2_dict_arg, eu_member_countries_arg, shipment_size_containers_arg, total_ship_container_capacity_arg = args # ADDED new args: shipment_size_containers_arg, total_ship_container_capacity_arg
 
         opex_money = 0
         capex_money = 0
-        carbon_tax_money = 0 # New variable
+        carbon_tax_money = 0
+        
+        # Calculate reefer and CA services per container
+        reefer_service_cost_per_container, _, _, reefer_service_energy_per_container, reefer_service_emissions_per_container, _, _, _ = calculate_single_reefer_service_cost(duration_hrs, food_params)
 
-        total_auxiliary_energy_kwh = calculate_ca_energy_kwh(A, food_params, duration_hrs)
-        reefer_power_kw = math.ceil(A / food_params['general_params']['cargo_per_truck_kg']) * food_params['general_params']['reefer_container_power_kw']
-        total_auxiliary_energy_kwh += reefer_power_kw * duration_hrs
+        # Scale reefer and CA services for the entire shipment being transported
+        total_reefer_cost_shipment = reefer_service_cost_per_container * shipment_size_containers_arg
+        total_reefer_energy_shipment = reefer_service_energy_per_container * shipment_size_containers_arg
+        total_reefer_emissions_shipment = reefer_service_emissions_per_container * shipment_size_containers_arg
 
-        aux_sfoc_g_kwh = 200
-        fuel_for_auxiliary_kg = (total_auxiliary_energy_kwh * aux_sfoc_g_kwh) / 1000.0
+        # Ship Propulsion Cost (scaled by portion of ship used for this cargo)
+        # Assuming avg_ship_kw is total ship power, scale it by cargo volume.
+        # A simpler approach might be to calculate total ship propulsion cost,
+        # and then apportion it based on the user's shipment size relative to total ship capacity.
+        # Let's use the latter for clarity and consistency with previous logic.
 
-        propulsion_work_kwh = avg_ship_kw * duration_hrs
-        fuel_for_propulsion_kg = (propulsion_work_kwh * selected_fuel['sfoc_g_per_kwh']) / 1000.0
-        total_fuel_consumed_kg = fuel_for_propulsion_kg + fuel_for_auxiliary_kg
-        money_aux = (fuel_for_auxiliary_kg / 1000.0) * auxiliary_fuel_params['price_usd_per_ton']
-        energy_aux_mj = fuel_for_auxiliary_kg * auxiliary_fuel_params['hhv_mj_per_kg']
-        emissions_aux = fuel_for_auxiliary_kg * auxiliary_fuel_params['co2_emissions_factor_kg_per_kg_fuel']
+        # Total propulsion work for the entire ship for this leg
+        total_ship_propulsion_work_kwh = avg_ship_kw * duration_hrs
+        total_ship_propulsion_fuel_kg = (total_ship_propulsion_work_kwh * selected_fuel['sfoc_g_per_kwh']) / 1000.0
+        total_ship_propulsion_cost = (total_ship_propulsion_fuel_kg / 1000.0) * selected_fuel['price_usd_per_ton']
+        total_ship_propulsion_emissions = total_ship_propulsion_fuel_kg * selected_fuel['co2_emissions_factor_kg_per_kg_fuel']
+        total_ship_propulsion_energy_mj = total_ship_propulsion_fuel_kg * selected_fuel['hhv_mj_per_kg']
 
-        money_prop = (fuel_for_propulsion_kg / 1000.0) * selected_fuel['price_usd_per_ton']
-        energy_prop_mj = fuel_for_propulsion_kg * selected_fuel['hhv_mj_per_kg']
-        emissions_prop = fuel_for_propulsion_kg * selected_fuel['co2_emissions_factor_kg_per_kg_fuel']
+        # Apportion propulsion cost/emissions based on containers used
+        propulsion_cost_for_shipment = (total_ship_propulsion_cost / total_ship_container_capacity_arg) * shipment_size_containers_arg if total_ship_container_capacity_arg > 0 else 0
+        propulsion_emissions_for_shipment = (total_ship_propulsion_emissions / total_ship_container_capacity_arg) * shipment_size_containers_arg if total_ship_container_capacity_arg > 0 else 0
+        propulsion_energy_for_shipment = (total_ship_propulsion_energy_mj / total_ship_container_capacity_arg) * shipment_size_containers_arg if total_ship_container_capacity_arg > 0 else 0
 
-        opex_money += money_aux + money_prop
-        total_energy_mj = energy_aux_mj + energy_prop_mj
-        total_emissions = emissions_aux + emissions_prop
 
-        # Maintenance and Repair Cost
+        opex_money += total_reefer_cost_shipment + propulsion_cost_for_shipment
+        total_energy_mj = total_reefer_energy_shipment + propulsion_energy_for_shipment
+        total_emissions = total_reefer_emissions_shipment + propulsion_emissions_for_shipment
+
+        # Maintenance and Repair Cost (this should also be apportioned to the shipment if possible)
+        # For now, let's assume it's part of the general overheads or fixed per voyage.
+        # If it's a fixed cost per km of ship, this needs review.
+        # Assuming it's already accounted for in `calculate_voyage_overheads` or is a minor fixed cost.
         maintenance_cost = maintenance_cost_per_km_ship_arg * port_to_port_dis_arg
-        opex_money += maintenance_cost
+        # If this maintenance is for the WHOLE SHIP, and `total_ship_container_capacity` is total containers,
+        # then it should be apportioned too.
+        maintenance_cost_for_shipment = (maintenance_cost / total_ship_container_capacity_arg) * shipment_size_containers_arg if total_ship_container_capacity_arg > 0 else 0
+        opex_money += maintenance_cost_for_shipment
+
 
         # Voyage CAPEX (from calculate_voyage_overheads)
         voyage_duration_days = duration_hrs / 24.0
-        voyage_capex_total = calculate_voyage_overheads_helper_arg(voyage_duration_days, selected_ship_params_arg, canal_transits_arg, port_regions_arg)
-        capex_money += voyage_capex_total
+        total_voyage_capex = calculate_voyage_overheads_helper_arg(voyage_duration_days, selected_ship_params_arg, canal_transits_arg, port_regions_arg)
+        # Apportion total voyage capex based on containers for the shipment
+        capex_money_for_shipment = (total_voyage_capex / total_ship_container_capacity_arg) * shipment_size_containers_arg if total_ship_container_capacity_arg > 0 else 0
+        capex_money += capex_money_for_shipment
 
         duration_days = duration_hrs / 24.0
         spoilage_rate = food_params['general_params']['spoilage_rate_per_day']
@@ -1897,11 +1915,10 @@ def run_lca_model(inputs):
         if end_country_name_arg in eu_member_countries_arg:
             eu_ets_emissions_tons = (total_emissions / 1000) * 0.50
             eu_ets_tax = eu_ets_emissions_tons * carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0)
-            carbon_tax_money += eu_ets_tax # Add to carbon_tax_money
-        total_fuel_consumed_kg = fuel_for_propulsion_kg + fuel_for_auxiliary_kg
-        total_energy_consumed_mj = total_fuel_consumed_kg * selected_fuel['hhv_mj_per_kg']
-        return opex_money, capex_money, carbon_tax_money, total_energy_consumed_mj, total_emissions, A - loss, loss, 0 # Added 0 for insurance
-
+            carbon_tax_money += eu_ets_tax
+        
+        return opex_money, capex_money, carbon_tax_money, total_energy_mj, total_emissions, A - loss, loss, 0 # Added 0 for insurance
+    
     def food_cold_storage(A, args):
         params, storage_days, elec_price, co2_factor, ambient_temp, facility_capacity_arg, country_of_storage_arg, carbon_tax_per_ton_co2_dict_arg = args
 
@@ -2036,7 +2053,7 @@ def run_lca_model(inputs):
             elif func_to_call == food_road_transport and end_port_name in label:
                 args_for_func = (food_params, distance_port_to_B, duration_port_to_B, diesel_price_end, HHV_diesel_tl, diesel_density_tl, CO2e_diesel_tl, end_local_temperature, driver_daily_salary_end, annual_working_days, MAINTENANCE_COST_PER_KM_TRUCK, truck_capex_params, end_country_name, carbon_tax_per_ton_co2_dict_tl)
             elif func_to_call == food_sea_transport:
-                args_for_func = (food_params, port_to_port_duration, selected_marine_fuel_params, avg_ship_power_kw, MAINTENANCE_COST_PER_KM_SHIP, port_to_port_dis, calculate_voyage_overheads, selected_ship_params, canal_transits, port_regions, end_country_name, carbon_tax_per_ton_co2_dict_tl, EU_MEMBER_COUNTRIES)
+                args_for_func = (food_params, port_to_port_duration, selected_marine_fuel_params, avg_ship_power_kw, MAINTENANCE_COST_PER_KM_SHIP, port_to_port_dis, calculate_voyage_overheads, selected_ship_params, canal_transits, port_regions, end_country_name, carbon_tax_per_ton_co2_dict_tl, EU_MEMBER_COUNTRIES, shipment_size_containers, total_ship_container_capacity) 
             elif func_to_call == food_cold_storage and "at " + start_port_name in label:
                 args_for_func = (food_params, storage_time_A, start_port_electricity_price, CO2e_start, start_local_temperature, facility_capacity, start_port_country_name, carbon_tax_per_ton_co2_dict_tl)
             elif func_to_call == food_cold_storage and "at " + end_port_name in label:
