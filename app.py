@@ -102,8 +102,7 @@ ROUTE_RISK_ZONES = [
     {"name": "South China Sea", "bbox": {"lon_min": 105.0, "lat_min": 0.0, "lon_max": 120.0, "lat_max": 20.0}, "risk_multiplier": 1.3},
     {"name": "Hurricane Alley (Atlantic)", "bbox": {"lon_min": -95.0, "lat_min": 10.0, "lon_max": -40.0, "lat_max": 40.0}, "risk_multiplier": 1.15},
 ]
-
-
+api_cache = {}
 # ==============================================================================
 # MAIN CALCULATION FUNCTION
 # ==============================================================================
@@ -124,16 +123,29 @@ def run_lca_model(inputs):
     eco2_per_kg_for_chart_idx = 0
     
     def extract_lat_long(address_or_postalcode):
+        cache_key = f"extract_lat_long_{address_or_postalcode}"
+        if cache_key in api_cache:
+            return api_cache[cache_key]
+
         endpoint = f'https://maps.googleapis.com/maps/api/geocode/json'
         params = {'address': address_or_postalcode, 'key': api_key_google}
         url = f'{endpoint}?{urlencode(params)}'
         r = requests.get(url)
-        if r.status_code not in range(200, 299): return None, None, None
+        if r.status_code not in range(200, 299):
+            cached_value = (None, None, None)
+            api_cache[cache_key] = cached_value
+            return cached_value
         data = r.json()
-        if not data.get('results'): return None, None, None
+        if not data.get('results'):
+            cached_value = (None, None, None)
+            api_cache[cache_key] = cached_value
+            return cached_value
         latlng = data['results'][0]['geometry']['location']
         state_name = next((comp['long_name'] for comp in data['results'][0]['address_components'] if 'administrative_area_level_1' in comp['types']), None)
-        return latlng.get("lat"), latlng.get("lng"), state_name
+        
+        cached_value = (latlng.get("lat"), latlng.get("lng"), state_name)
+        api_cache[cache_key] = cached_value
+        return cached_value
 
     def decode_polyline(polyline_str):
         index, lat, lng = 0, 0, 0
@@ -166,6 +178,9 @@ def run_lca_model(inputs):
         return decode_polyline(points)
 
     def openai_get_nearest_port(port_coor_str):
+        cache_key = f"nearest_port_{port_coor_str}"
+        if cache_key in api_cache:
+            return api_cache[cache_key]        
         from openai import OpenAI
         client = OpenAI(api_key=api_key_openAI)
         response = client.chat.completions.create(
@@ -182,7 +197,6 @@ def run_lca_model(inputs):
 
         lat = None
         lon = None
-
         try:
             if lat_str is not None:
                 lat = float(str(lat_str).strip().replace(',', ''))
@@ -190,16 +204,30 @@ def run_lca_model(inputs):
                 lon = float(str(lon_str).strip().replace(',', ''))
         except ValueError:
             print(f"DEBUG: Could not convert latitude '{lat_str}' or longitude '{lon_str}' to float.")
-            return None, None, None
-        return lat, lon, port_name
+            return None, None, None # Cache None results too, if appropriate
+
+        cached_value = (lat, lon, port_name)
+        api_cache[cache_key] = cached_value
+        return cached_value
 
     def inland_routes_cal(start_coords, end_coords):
+        cache_key = f"inland_routes_cal_{start_coords[0]},{start_coords[1]}_{end_coords[0]},{end_coords[1]}"
+        if cache_key in api_cache:
+            return api_cache[cache_key]
+
         endpoint = f'https://maps.googleapis.com/maps/api/distancematrix/json'
         params = {"origins": f"{start_coords[0]},{start_coords[1]}", "destinations": f"{end_coords[0]},{end_coords[1]}", "key": api_key_google}
         output = requests.get(f'{endpoint}?{urlencode(params)}').json()
         if output.get('rows') and output['rows'][0].get('elements') and output['rows'][0]['elements'][0].get('distance'):
-            return output['rows'][0]['elements'][0]['distance']['text'], output['rows'][0]['elements'][0]['duration']['text']
-        return "0 km", "0 min"
+            distance_text = output['rows'][0]['elements'][0]['distance']['text']
+            duration_text = output['rows'][0]['elements'][0]['duration']['text']
+            cached_value = (distance_text, duration_text)
+            api_cache[cache_key] = cached_value
+            return cached_value
+        
+        cached_value = ("0 km", "0 min")
+        api_cache[cache_key] = cached_value
+        return cached_value
 
     def time_to_minutes(time_str):
         time_str = str(time_str)
@@ -209,30 +237,65 @@ def run_lca_model(inputs):
         return days + hours + minutes
 
     def local_temperature(lat, lon):
+        cache_key = f"local_temperature_{lat}_{lon}"
+        if cache_key in api_cache:
+            return api_cache[cache_key]
+
         url = f"http://api.weatherapi.com/v1/current.json?key={api_key_weather}&q={lat},{lon}"
         response = requests.get(url)
-        if response.status_code == 200: return response.json()['current']['temp_c']
-        return 25.0
+        if response.status_code == 200:
+            temp_c = response.json()['current']['temp_c']
+            api_cache[cache_key] = temp_c
+            return temp_c
+        
+        default_temp = 25.0
+        api_cache[cache_key] = default_temp
+        return default_temp
 
     def carbon_intensity(lat, lng):
+        cache_key = f"carbon_intensity_{lat}_{lng}"
+        if cache_key in api_cache:
+            return api_cache[cache_key]
+
         url = "https://api.electricitymap.org/v3/carbon-intensity/latest"
         headers = {"auth-token": api_key_electricity_map}
         response = requests.get(url, headers=headers, params={"lat": lat, "lon": lng})
-        if response.status_code == 200: return float(response.json()['carbonIntensity'])
-        return 200.0
+        if response.status_code == 200:
+            intensity = float(response.json()['carbonIntensity'])
+            api_cache[cache_key] = intensity
+            return intensity
+        
+        default_intensity = 200.0
+        api_cache[cache_key] = default_intensity
+        return default_intensity
 
     def get_country_from_coords(lat, lon):
+        cache_key = f"country_from_coords_{lat}_{lon}"
+        if cache_key in api_cache:
+            return api_cache[cache_key]
+
         url = (
             f"https://maps.googleapis.com/maps/api/geocode/json?"
             f"latlng={lat},{lon}&key={api_key_google}"
         )
         response = requests.get(url)
-        if response.status_code != 200: raise Exception("Google Maps API error")
+        if response.status_code != 200:
+            # Cache None for API errors too, to prevent repeated failing calls
+            api_cache[cache_key] = None
+            raise Exception("Google Maps API error")
         data = response.json()
-        if data['status'] != 'OK': raise Exception(f"Geocoding error: {data['status']}")
+        if data['status'] != 'OK':
+            api_cache[cache_key] = None
+            raise Exception(f"Geocoding error: {data['status']}")
+        
+        country_name = None
         for component in data['results'][0]['address_components']:
-            if 'country' in component['types']: return component['long_name']
-        return None
+            if 'country' in component['types']:
+                country_name = component['long_name']
+                break
+        
+        api_cache[cache_key] = country_name
+        return country_name
 
     def get_diesel_price(lat, lon, diesel_price_country_dict):
         country = get_country_from_coords(lat, lon)
@@ -240,9 +303,14 @@ def run_lca_model(inputs):
         return 4.0 if diesel_price is None else diesel_price
 
     def openai_get_electricity_price(coords_str):
+        cache_key = f"electricity_price_{coords_str}"
+        if cache_key in api_cache:
+            return api_cache[cache_key]
+
         from openai import OpenAI
         client = OpenAI(api_key=api_key_openAI)
         default_price_mj = 0.03
+        
         try:
             response = client.chat.completions.create(
                 model="gpt-4o",
@@ -255,21 +323,38 @@ def run_lca_model(inputs):
             )
             result = json.loads(response.choices[0].message.content)
             price_mj = result.get("average_price_mj")
+            
+            lat = result.get("latitude")
+            lon = result.get("longitude")
+            
             if price_mj is not None:
-                return result.get("latitude"), result.get("longitude"), float(price_mj)
-            return result.get("latitude"), result.get("longitude"), default_price_mj
-        except Exception:
-            coords = coords_str.split(',')
-            return float(coords[0]), float(coords[1]), default_price_mj
+                cached_value = (lat, lon, float(price_mj))
+                api_cache[cache_key] = cached_value
+                return cached_value
+            
+            # If price_mj is None from API, use default
+            cached_value = (lat, lon, default_price_mj)
+            api_cache[cache_key] = cached_value
+            return cached_value
+        except Exception as e:
+            print(f"OpenAI Electricity Price API error for {coords_str}: {e}")
+            coords = [float(c) for c in coords_str.split(',')] # Fallback to parsing coords even on error
+            cached_value = (coords[0], coords[1], default_price_mj)
+            api_cache[cache_key] = cached_value
+            return cached_value
 
     def openai_get_hydrogen_cost(coords_str):
+        cache_key = f"hydrogen_cost_{coords_str}"
+        if cache_key in api_cache:
+            return api_cache[cache_key]
+
         from openai import OpenAI
         client = OpenAI(api_key=api_key_openAI)
         default_price_usd_per_kg = 6.5
 
         try:
             prompt = f"""
-            You are an expert in hydrogen markets with access to real-time data as of June 27, 2025. Provide the latest delivered hydrogen cost in USD per kilogram (USD/kg) for the location specified by the coordinates {coords_str} (latitude, longitude). The cost should include production, compression, storage, and distribution expenses, as relevant for transportation applications (e.g., fuel cell vehicles). Use reliable sources such as S&P Global, IEA, Hydrogen Council, or Argus Media for current prices. If specific data for the location or delivered cost is unavailable, estimate the price based on regional or global averages for the most relevant hydrogen type (grey, blue, or green) and indicate the estimation basis. Return only the price in USD/kg as a float, without additional text or explanation.
+            You are an expert in hydrogen markets with access to real-time data as of July 16, 2025. Provide the latest delivered hydrogen cost in USD per kilogram (USD/kg) for the location specified by the coordinates {coords_str} (latitude, longitude). The cost should include production, compression, storage, and distribution expenses, as relevant for transportation applications (e.g., fuel cell vehicles). Use reliable sources such as S&P Global, IEA, Hydrogen Council, or Argus Media for current prices. If specific data for the location or delivered cost is unavailable, estimate the price based on regional or global averages for the most relevant hydrogen type (grey, blue, or green) and indicate the estimation basis. Return only the price in USD/kg as a float, without additional text or explanation.
             """
 
             response = client.chat.completions.create(
@@ -283,11 +368,20 @@ def run_lca_model(inputs):
             )
 
             price = float(response.choices[0].message.content.strip())
-            return coords_str, price
-        except Exception:
-            return coords_str, default_price_usd_per_kg
+            cached_value = (coords_str, price)
+            api_cache[cache_key] = cached_value
+            return cached_value
+        except Exception as e:
+            print(f"OpenAI Hydrogen Cost API error for {coords_str}: {e}")
+            cached_value = (coords_str, default_price_usd_per_kg)
+            api_cache[cache_key] = cached_value
+            return cached_value
 
     def openai_get_marine_fuel_price(fuel_name, port_coords_tuple, port_name_str):
+        cache_key = f"marine_fuel_price_{fuel_name}_{port_coords_tuple[0]}_{port_coords_tuple[1]}"
+        if cache_key in api_cache:
+            return api_cache[cache_key]
+
         from openai import OpenAI
         client = OpenAI(api_key=api_key_openAI)
         default_prices = {'VLSFO': 650.0, 'LNG': 550.0, 'Methanol': 700.0, 'Ammonia': 800.0}
@@ -295,7 +389,7 @@ def run_lca_model(inputs):
 
         try:
             prompt = f"""
-            You are an expert in marine fuel markets with access to real-time data as of June 27, 2025. Provide the latest bunker fuel price in USD per metric ton (USD/mt) for {fuel_name} at the port of {port_name_str} (coordinates: {port_coords_tuple[0]}, {port_coords_tuple[1]}). Use reliable sources such as Ship & Bunker, Argus Media, or S&P Global for current prices. If specific data for {port_name_str} or {fuel_name} is unavailable, estimate the price based on global averages or trends for similar ports and fuel types, and indicate the estimation basis. Return only the price in USD/mt as a float, without additional text or explanation.
+            You are an expert in marine fuel markets with access to real-time data as of July 16, 2025. Provide the latest bunker fuel price in USD per metric ton (USD/mt) for {fuel_name} at the port of {port_name_str} (coordinates: {port_coords_tuple[0]}, {port_coords_tuple[1]}). Use reliable sources such as Ship & Bunker, Argus Media, or S&P Global for current prices. If specific data for {port_name_str} or {fuel_name} is unavailable, estimate the price based on global averages or trends for similar ports and fuel types, and indicate the estimation basis. Return only the price in USD/mt as a float, without additional text or explanation.
             """
             response = client.chat.completions.create(
                 model="gpt-4o",
@@ -308,9 +402,14 @@ def run_lca_model(inputs):
             )
 
             price = float(response.choices[0].message.content.strip())
-            return port_name_str, price
-        except Exception:
-            return port_name_str, default_price_usd_per_mt
+            cached_value = (port_name_str, price)
+            api_cache[cache_key] = cached_value
+            return cached_value
+        except Exception as e:
+            print(f"OpenAI Marine Fuel Price API error for {fuel_name} at {port_name_str}: {e}")
+            cached_value = (port_name_str, default_price_usd_per_mt)
+            api_cache[cache_key] = cached_value
+            return cached_value
 
     def calculate_ship_power_kw(ship_volume_m3):
         power_scaling_data = [(20000, 7000), (90000, 15000), (174000, 19900), (210000, 25000), (266000, 43540)]
@@ -2061,7 +2160,6 @@ def run_lca_model(inputs):
             elif func_to_call == food_cold_storage and "Destination" in label:
                 args_for_func = (food_params, storage_time_C, end_electricity_price, CO2e_end, end_local_temperature, facility_capacity, end_country_name, carbon_tax_per_ton_co2_dict_tl)
             
-            # Updated call to function to receive carbon_tax_money AND insurance_money
             opex_m, capex_m, carbon_tax_m, energy, emissions, current_weight, loss, insurance_m = func_to_call(current_weight, args_for_func) # Added insurance_m
 
             # For 'Harvesting & Preparation', split out insurance into a separate line
@@ -2097,8 +2195,18 @@ def run_lca_model(inputs):
         return results_list
 
     def openai_get_food_price(food_name, location_name):
+        cache_key = f"food_price_{food_name}_{location_name}"
+        if cache_key in api_cache:
+            return api_cache[cache_key]
+
         from openai import OpenAI
         client = OpenAI(api_key=api_key_openAI)
+        FOOD_PRICE_DEFAULTS = { # Moved inside for scope, or make global if used elsewhere
+            "Strawberry": {"USA": 3.0, "Spain": 2.5, "Default": 2.0},
+            "Hass Avocado": {"Mexico": 2.0, "USA": 2.5, "Default": 2.0},
+            "Banana": {"Costa Rica": 1.0, "USA": 1.5, "Default": 1.2}
+        }
+        default_price = FOOD_PRICE_DEFAULTS.get(food_name, {}).get("Default", 1.0) # Fallback to 1.0 if not found
 
         prompt_messages = [
             {
@@ -2123,15 +2231,25 @@ def run_lca_model(inputs):
             price = result.get("price_usd_per_kg")
 
             if isinstance(price, (int, float)):
+                api_cache[cache_key] = price
                 return price
             else:
-                return None
+                # Cache default if API returns null/invalid
+                api_cache[cache_key] = default_price 
+                return default_price
 
         except Exception as e:
-            print(f"AI price lookup failed: {e}")
-            return None
+            print(f"Error fetching food price for {food_name} in {location_name}: {e}")
+            # Cache location-specific default on error
+            price_from_default_dict = FOOD_PRICE_DEFAULTS.get(food_name, {}).get(location_name, default_price)
+            api_cache[cache_key] = price_from_default_dict
+            return price_from_default_dict
 
     def openai_get_nearest_farm_region(food_name, location_name):
+        cache_key = f"nearest_farm_region_{food_name}_{location_name}"
+        if cache_key in api_cache:
+            return api_cache[cache_key]
+
         from openai import OpenAI
         client = OpenAI(api_key=api_key_openAI)
 
@@ -2157,12 +2275,15 @@ def run_lca_model(inputs):
             result = json.loads(response.choices[0].message.content)
 
             if all(k in result for k in ['farm_region_name', 'latitude', 'longitude']) and isinstance(result['latitude'], (int, float)):
+                api_cache[cache_key] = result
                 return result
             else:
+                api_cache[cache_key] = None
                 return None
 
         except Exception as e:
             print(f"AI farm region lookup failed: {e}")
+            api_cache[cache_key] = None
             return None
 
     def detect_canal_transit(route_object):
