@@ -1860,7 +1860,7 @@ def run_lca_model(inputs):
 
         propulsion_work_kwh = avg_ship_kw * duration_hrs
         fuel_for_propulsion_kg = (propulsion_work_kwh * selected_fuel['sfoc_g_per_kwh']) / 1000.0
-
+        total_fuel_consumed_kg = fuel_for_propulsion_kg + fuel_for_auxiliary_kg
         money_aux = (fuel_for_auxiliary_kg / 1000.0) * auxiliary_fuel_params['price_usd_per_ton']
         energy_aux_mj = fuel_for_auxiliary_kg * auxiliary_fuel_params['hhv_mj_per_kg']
         emissions_aux = fuel_for_auxiliary_kg * auxiliary_fuel_params['co2_emissions_factor_kg_per_kg_fuel']
@@ -2186,8 +2186,9 @@ def run_lca_model(inputs):
         return transits
 
     def calculate_single_reefer_service_cost(duration_hrs, food_params):
+        
         ca_energy_kwh_per_container = calculate_ca_energy_kwh(1, food_params, duration_hrs)
-        reefer_energy_kwh_per_container = food_params['general_params']['reefer_container_power_kw'] * duration_hrs
+        reefer_energy_kwh_per_container = food_params['general_params']['reefer_container_power_kw'] * duration_hrs        
 
         total_energy_kwh = ca_energy_kwh_per_container + reefer_energy_kwh_per_container
 
@@ -2868,39 +2869,43 @@ def run_lca_model(inputs):
         price_start_text = f"${price_start:.2f}/kg" if price_start is not None else "Not available"
         price_end_text = f"${price_end:.2f}/kg" if price_end is not None else "Not available"
         
-        final_commodity_kg = 0
+        final_commodity_kg = 0 # Will be updated after LCA run
         total_opex_money = 0
         total_capex_money = 0
         total_energy = 0
         total_emissions = 0
         total_carbon_tax_money = 0 # Ensure this is initialized
 
+        # total_ship_container_capacity and related propulsion_cost/reefer_service_cost_per_container
+        # are now used *within* food_sea_transport and calculate_single_reefer_service_cost,
+        # so they don't need to overwrite data_raw here.
+        # Keeping these variables defined as they might be used for other context or comparisons,
+        # but the logic for modifying data_raw directly should be removed.
         total_ship_container_capacity = math.floor(total_ship_volume / 76)
-
+        
+        # Calculate initial_weight as before
         initial_weight = shipment_size_containers * current_food_params['general_params']['cargo_per_truck_kg']
         
-        # Pass new insurance-related args to total_food_lca
+        # Call total_food_lca; it should correctly populate data_raw including all costs and insurance
         data_raw = total_food_lca(
             initial_weight, current_food_params, CARBON_TAX_PER_TON_CO2_DICT, 
             HHV_diesel, diesel_density, CO2e_diesel,
             food_name_for_lookup, searoute_coor, port_to_port_duration
         )
         
-        # Calculate BASE costs (Propulsion) for the ENTIRE SHIP (This is for context, not directly added to data_raw here anymore)
-        propulsion_fuel_kwh = avg_ship_power_kw * port_to_port_duration
-        propulsion_fuel_kg = (propulsion_fuel_kwh * selected_marine_fuel_params['sfoc_g_per_kwh']) / 1000.0
-        propulsion_cost = (propulsion_fuel_kg / 1000.0) * selected_marine_fuel_params['price_usd_per_ton']
-
-        # Calculate per-container reefer service costs (also for context/separate line item)
-        reefer_service_cost_per_container, reefer_service_capex_per_container, reefer_service_carbon_tax_per_container, reefer_service_energy_per_container, reefer_service_emissions_per_container, _, _, _ = calculate_single_reefer_service_cost(port_to_port_duration, current_food_params) # Unpacked 8 elements
-
-        # Now, total up the costs and emissions from data_raw (which already includes distinct insurance and detailed marine transport)
-        total_opex_money = sum(row[1] for row in data_raw if row[0] != "TOTAL" and row[0] != "Insurance") # Exclude the distinct "Insurance" OPEX
+        # Recalculate totals after all steps are processed and potentially re-inserted by total_food_lca
+        total_opex_money = sum(row[1] for row in data_raw if row[0] != "TOTAL" and row[0] != "Insurance")
         total_capex_money = sum(row[2] for row in data_raw if row[0] != "TOTAL")
         total_carbon_tax_money = sum(row[3] for row in data_raw if row[0] != "TOTAL")
         total_energy = sum(row[4] for row in data_raw if row[0] != "TOTAL")
         total_emissions = sum(row[5] for row in data_raw if row[0] != "TOTAL")
         total_spoilage_loss = sum(row[7] for row in data_raw if row[0] != "TOTAL")
+        total_insurance_money = sum(row[1] for row in data_raw if row[0] == "Insurance") # Sum value stored in 'opex_m' for 'Insurance' row
+
+        final_commodity_kg = data_raw[-1][6] if data_raw and len(data_raw[-1]) > 6 else 0.0 # From the last (TOTAL) row
+
+        # Calculate total_money as the sum of all distinct cost components
+        total_money = total_opex_money + total_capex_money + total_carbon_tax_money + total_insurance_money
 
         # Sum total insurance from the dedicated "Insurance" row in data_raw
         total_insurance_money = sum(row[1] for row in data_raw if row[0] == "Insurance") # Sum value stored in 'opex_m' for 'Insurance' row
