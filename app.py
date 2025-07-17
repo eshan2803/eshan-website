@@ -2832,7 +2832,9 @@ def run_lca_model(inputs):
         end_country = get_country_from_coords(coor_end_lat, coor_end_lng) or end
 
         try:
+            print(f"Calling openai_get_food_price with {food_name_for_lookup}, {start_country}")
             price_start = openai_get_food_price(food_name_for_lookup, start_country)
+            print(f"price_start assigned: {price_start}")
         except Exception as e:
             print(f"Failed to fetch price_start for {food_name_for_lookup} in {start_country}: {e}")
             price_start = 1.0  
