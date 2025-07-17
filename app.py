@@ -85,25 +85,7 @@ EU_MEMBER_COUNTRIES = [
     "Netherlands", "Poland", "Portugal", "Romania", "Slovakia", "Slovenia",
     "Spain", "Sweden"
 ]
-BASE_PER_TRANSIT_INSURANCE_PERCENTAGE = 0.25  # Recommended: 0.2% - 0.5% (start with 0.25%)
-MINIMUM_INSURANCE_PREMIUM_USD = 750           # Recommended: e.g., $500 - $1,000
 
-COMMODITY_RISK_FACTORS = {
-    "Liquid Hydrogen": 1.5,
-    "Ammonia": 1.2,
-    "Methanol": 0.8,
-    "Strawberry": 0.6,
-    "Hass Avocado": 0.7,
-    "Banana": 0.75,
-}
-
-ROUTE_RISK_ZONES = [
-    {"name": "Gulf of Aden/Somali Basin", "bbox": {"lon_min": 42.5, "lat_min": 10.0, "lon_max": 55.0, "lat_max": 18.0}, "risk_multiplier": 2.5},
-    {"name": "West African Coast", "bbox": {"lon_min": 0.0, "lat_min": 0.0, "lon_max": 15.0, "lat_max": 10.0}, "risk_multiplier": 1.8},
-    {"name": "South China Sea", "bbox": {"lon_min": 105.0, "lat_min": 0.0, "lon_max": 120.0, "lat_max": 20.0}, "risk_multiplier": 1.3},
-    {"name": "Hurricane Alley (Atlantic)", "bbox": {"lon_min": -95.0, "lat_min": 10.0, "lon_max": -40.0, "lat_max": 40.0}, "risk_multiplier": 1.15},
-]
-api_cache = {}
 # ==============================================================================
 # MAIN CALCULATION FUNCTION
 # ==============================================================================
@@ -189,6 +171,7 @@ def run_lca_model(inputs):
             if lon_str is not None:
                 lon = float(str(lon_str).strip().replace(',', ''))
         except ValueError:
+            print(f"DEBUG: Could not convert latitude '{lat_str}' or longitude '{lon_str}' to float.")
             return None, None, None
         return lat, lon, port_name
 
@@ -316,157 +299,113 @@ def run_lca_model(inputs):
         volumes_m3 = [p[0] for p in power_scaling_data]
         powers_kw = [p[1] for p in power_scaling_data]
         return np.interp(ship_volume_m3, volumes_m3, powers_kw)
-
-    def calculate_route_risk_multiplier(searoute_coords, route_risk_zones):
-        """
-        Calculates a risk multiplier based on whether the marine route passes through high-risk zones.
-        Args:
-            searoute_coords (list of lists): List of [lat, lon] coordinates for the sea route.
-            route_risk_zones (list of dicts): Global data structure defining risk zones.
-        Returns:
-            float: A multiplier >= 1.0.
-        """
-        max_risk_multiplier = 1.0
-
-        for zone in route_risk_zones:
-            bbox = zone["bbox"]
-            for lat, lon in searoute_coords:
-                if (bbox["lon_min"] <= lon <= bbox["lon_max"] and
-                    bbox["lat_min"] <= lat <= bbox["lat_max"]):
-                    max_risk_multiplier = max(max_risk_multiplier, zone["risk_multiplier"])
-                    break
-        return max_risk_multiplier    
-
-    def calculate_total_insurance_cost(initial_cargo_value_usd, commodity_type_str, searoute_coords_list, port_to_port_duration_hrs):
-        """
-        Calculates the total insurance cost for a shipment, considering commodity risk, route risk,
-        a base per-transit rate, and a minimum premium.
-        Args:
-            initial_cargo_value_usd (float): Total value of the cargo in USD.
-            commodity_type_str (str): The name of the commodity (e.g., 'Liquid Hydrogen', 'Strawberry').
-            searoute_coords_list (list of lists): List of [lat, lon] coordinates for the sea route.
-                                                Pass [] if no marine transport.
-            port_to_port_duration_hrs (float): Duration of the marine transport in hours.
-                                                Pass 0 if no marine transport.
-        Returns:
-            float: Total insurance cost in USD.
-        """
-        # 1. Base Rate (per transit)
-        base_rate_per_transit = BASE_PER_TRANSIT_INSURANCE_PERCENTAGE / 100.0 # Convert % to decimal
-
-        # 2. Commodity Risk Adjustment
-        # Use 1.0 as default if commodity type not found to avoid errors
-        commodity_risk_factor = COMMODITY_RISK_FACTORS.get(commodity_type_str, 1.0)
-
-        # 3. Route Risk Adjustment (applies only if there is a marine leg)
-        route_risk_factor = 1.0
-        if searoute_coords_list and port_to_port_duration_hrs > 0:
-            route_risk_factor = calculate_route_risk_multiplier(searoute_coords_list, ROUTE_RISK_ZONES)
-
-        # Combine factors for the adjusted effective per-transit rate
-        # Note: Duration adjustment (prorating annual rate) is removed as per feedback.
-        # The `base_rate_per_transit` is already designed for a single transit.
-        adjusted_effective_rate = base_rate_per_transit * commodity_risk_factor * route_risk_factor
-
-        # Calculate the insurance cost based on the adjusted rate and cargo value
-        calculated_cost = initial_cargo_value_usd * adjusted_effective_rate
-
-        # 4. Incorporate Minimum Premiums
-        insurance_cost = max(calculated_cost, MINIMUM_INSURANCE_PREMIUM_USD)
-
-        return insurance_cost
-
+    
     def create_breakdown_chart(data, opex_col_idx, capex_col_idx, carbon_tax_col_idx, insurance_col_idx, title, x_label, overlay_text=None, is_emission_chart=False):
-        labels = [row[0] for row in data]
-        # Initialize lists for all component values
-        opex_values = []
-        capex_values = []
-        carbon_tax_values = []
-        insurance_values = []
+        try:
+            if not data:
+                print("Chart creation skipped: No data provided.")
+                return ""
+            labels = [row[0] for row in data]
+            # Initialize lists for all component values
+            opex_values = []
+            capex_values = []
+            carbon_tax_values = []
+            insurance_values = []
 
-        for row in data:
-            try:
-                if is_emission_chart:
-                    opex_values.append(float(row[opex_col_idx]))
+            for row in data:
+                try:
+                    if is_emission_chart:
+                        opex_values.append(float(row[opex_col_idx]))
+                        capex_values.append(0.0)
+                        carbon_tax_values.append(0.0)
+                        insurance_values.append(0.0)
+                    else:
+                        opex_values.append(float(row[opex_col_idx]))
+                        capex_values.append(float(row[capex_col_idx]))
+                        carbon_tax_values.append(float(row[carbon_tax_col_idx]))
+                        insurance_values.append(float(row[insurance_col_idx]))
+                except (ValueError, TypeError, IndexError) as e:
+                    print(f"DEBUG: Error processing row for chart '{title}': {row}. Error: {e}")
+                    opex_values.append(0.0)
                     capex_values.append(0.0)
                     carbon_tax_values.append(0.0)
                     insurance_values.append(0.0)
-                else:
-                    opex_values.append(float(row[opex_col_idx]))
-                    capex_values.append(float(row[capex_col_idx]))
-                    carbon_tax_values.append(float(row[carbon_tax_col_idx]))
-                    insurance_values.append(float(row[insurance_col_idx]))
-            except (ValueError, TypeError, IndexError) as e:
-                opex_values.append(0.0)
-                capex_values.append(0.0)
-                carbon_tax_values.append(0.0)
-                insurance_values.append(0.0)
-        plt.style.use('seaborn-v0_8-whitegrid')
-        
-        # Estimate text height to adjust figure size BEFORE creating the subplot
-        extra_bottom_margin = 0.0 # Default no extra margin
-        if overlay_text:
-            num_lines = len(overlay_text.split('\n'))
-            # A good rule of thumb for text height: 0.03-0.04 per line in figure coordinates
-            extra_bottom_margin = 0.035 * num_lines + 0.05 # Add some padding
+                    print(f"Warning: Could not convert value to a number for chart '{title}'. Defaulting to 0.")
 
-        # Adjust figure height based on labels count and potential overlay text
-        fig_height_base = len(labels) * 0.5 # Base height for bars
-        total_figure_height_inches = fig_height_base + (extra_bottom_margin * 10) # Convert normalized margin to inches for fig size
-        # Ensure a minimum height if there are very few bars
-        if total_figure_height_inches < 4:
-            total_figure_height_inches = 4
-        
-        fig, ax = plt.subplots(figsize=(10, total_figure_height_inches))
-
-        # Adjust subplot parameters to create space for the text at the bottom
-        # This sets the margin within the figure for the main plot
-        fig.subplots_adjust(bottom=extra_bottom_margin + 0.05) # Add a bit more margin to existing plot margin
-
-        y_pos = np.arange(len(labels))
-
-        if not is_emission_chart:
-            ax.barh(y_pos, insurance_values, align='center', color='#800080', edgecolor='black', label='Insurance')
-            ax.barh(y_pos, opex_values, left=insurance_values, align='center', color='#8BC34A', edgecolor='black', label='OPEX')
-            ax.barh(y_pos, capex_values, left=np.array(insurance_values) + np.array(opex_values), align='center', color='#4CAF50', edgecolor='black', label='CAPEX')
-            ax.barh(y_pos, carbon_tax_values, left=np.array(insurance_values) + np.array(opex_values) + np.array(capex_values), align='center', color='#FFC107', edgecolor='black', label='Carbon Tax')
-        else:
-            ax.barh(y_pos, opex_values, align='center', color='#4CAF50', edgecolor='black', label='Emissions')
+            plt.style.use('seaborn-v0_8-whitegrid')
             
-        ax.set_yticks(y_pos)
-        ax.set_yticklabels(labels, fontsize=12)
-        ax.invert_yaxis()
-        ax.set_xlabel(x_label, fontsize=14, weight='bold')
-        ax.set_title(title, fontsize=16, weight='bold', pad=20)
+            # Estimate text height to adjust figure size BEFORE creating the subplot
+            extra_bottom_margin = 0.0 # Default no extra margin
+            if overlay_text:
+                num_lines = len(overlay_text.split('\n'))
+                # A good rule of thumb for text height: 0.03-0.04 per line in figure coordinates
+                extra_bottom_margin = 0.035 * num_lines + 0.05 # Add some padding
 
-        for i in range(len(labels)):
-            total_value = 0
+            # Adjust figure height based on labels count and potential overlay text
+            fig_height_base = len(labels) * 0.5 # Base height for bars
+            total_figure_height_inches = fig_height_base + (extra_bottom_margin * 10) # Convert normalized margin to inches for fig size
+            # Ensure a minimum height if there are very few bars
+            if total_figure_height_inches < 4:
+                total_figure_height_inches = 4
+            
+            fig, ax = plt.subplots(figsize=(10, total_figure_height_inches))
+
+            # Adjust subplot parameters to create space for the text at the bottom
+            # This sets the margin within the figure for the main plot
+            fig.subplots_adjust(bottom=extra_bottom_margin + 0.05) # Add a bit more margin to existing plot margin
+
+            y_pos = np.arange(len(labels))
+
             if is_emission_chart:
-                total_value = opex_values[i]
+                ax.barh(y_pos, opex_values, align='center', color='#4CAF50', edgecolor='black', label='Emissions')
             else:
-                total_value = opex_values[i] + capex_values[i] + carbon_tax_values[i] + insurance_values[i]
-            ax.text(total_value, i, f' {total_value:,.2f}', color='black', va='center', fontweight='bold')
+                ax.barh(y_pos, insurance_values, align='center', color='#800080', edgecolor='black', label='Insurance')
+                ax.barh(y_pos, opex_values, left=insurance_values, align='center', color='#8BC34A', edgecolor='black', label='OPEX')
+                ax.barh(y_pos, capex_values, left=np.array(insurance_values) + np.array(opex_values), align='center', color='#4CAF50', edgecolor='black', label='CAPEX')
+                ax.barh(y_pos, carbon_tax_values, left=np.array(insurance_values) + np.array(opex_values) + np.array(capex_values), align='center', color='#FFC107', edgecolor='black', label='Carbon Tax')
 
-        ax.legend(loc='lower right', fontsize=10)
+            ax.set_yticks(y_pos)
+            ax.set_yticklabels(labels, fontsize=12)
+            ax.invert_yaxis()
+            ax.set_xlabel(x_label, fontsize=14, weight='bold')
+            ax.set_title(title, fontsize=16, weight='bold', pad=20)
 
-        if overlay_text:
-            # Place text using fig.text, relative to the figure's bottom margin
-            # x=0.05 (5% from left), y=0.01 (1% from bottom, within the extended margin)
-            fig.text(0.05, 0.01, overlay_text, # Coordinates are (x, y) relative to the figure
-                        ha='left', va='bottom', size=10,
-                        bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.6))
-        
-        # Use tight_layout, but apply it to the subplot area that fig.subplots_adjust defined.
-        # No need for the `rect` parameter with fig.subplots_adjust handling margins.
-        plt.tight_layout() # Just call it without rect
+            for i in range(len(labels)):
+                total_value = 0
+                if is_emission_chart:
+                    total_value = opex_values[i]
+                else:
+                    total_value = opex_values[i] + capex_values[i] + carbon_tax_values[i] + insurance_values[i]
+                ax.text(total_value, i, f' {total_value:,.2f}', color='black', va='center', fontweight='bold')
 
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png', dpi=100, bbox_inches='tight')
-        buf.seek(0)
-        img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-        plt.close(fig)
+            ax.legend(loc='lower right', fontsize=10)
 
-        return img_base64    
+            if overlay_text:
+                # Place text using fig.text, relative to the figure's bottom margin
+                # x=0.05 (5% from left), y=0.01 (1% from bottom, within the extended margin)
+                fig.text(0.05, 0.01, overlay_text, # Coordinates are (x, y) relative to the figure
+                         ha='left', va='bottom', size=10,
+                         bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.6))
+            
+            # Use tight_layout, but apply it to the subplot area that fig.subplots_adjust defined.
+            # No need for the `rect` parameter with fig.subplots_adjust handling margins.
+            plt.tight_layout() # Just call it without rect
+
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png', dpi=100, bbox_inches='tight')
+            buf.seek(0)
+            img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+            plt.close(fig)
+
+            return img_base64    
+    
+        except Exception as e:
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            print(f"CRITICAL ERROR generating chart '{title}': {e}")
+            import traceback
+            traceback.print_exc()
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            return ""
     # =================================================================
     # <<<                   FUEL PROCESS FUNCTIONS                  >>>
     # =================================================================
@@ -491,6 +430,11 @@ def run_lca_model(inputs):
         opex_money = 0
         capex_money = 0
         carbon_tax_money = 0 # New variable for carbon tax
+
+        # Insurance Cost (this is the only relevant cost for this step in the breakdown)
+        cargo_value = A * hydrogen_production_cost_arg
+        insurance_cost = cargo_value * (insurance_percentage_of_cargo_value_arg / 100)
+        opex_money += insurance_cost # Add to OPEX, which will be filtered as "Insurance" in chart
 
         # Carbon Tax (if any, though production emissions might be covered elsewhere or be zero for green H2)
         # Assuming G_emission is 0 for this step, carbon_tax will also be 0, but keeping the structure
@@ -1636,6 +1580,11 @@ def run_lca_model(inputs):
         emissions = 0
         loss = 0
 
+        # Insurance Cost (Only relevant cost for this "production" step shown in breakdown)
+        cargo_value = A * price_start_arg
+        insurance_cost = cargo_value * (insurance_percentage_of_cargo_value_arg / 100)
+        opex_money += insurance_cost # Add to OPEX, will be treated as Insurance in chart
+
         # Carbon Tax (assuming no direct emissions from this step, but if there were, it would apply)
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_country_name_arg, 0) * (emissions / 1000)
         carbon_tax_money += carbon_tax
@@ -1982,12 +1931,6 @@ def run_lca_model(inputs):
     def openai_get_food_price(food_name, location_name):
         from openai import OpenAI
         client = OpenAI(api_key=api_key_openAI)
-        FOOD_PRICE_DEFAULTS = {
-            "Strawberry": {"USA": 3.0, "Spain": 2.5, "Default": 2.0},
-            "Hass Avocado": {"Mexico": 2.0, "USA": 2.5, "Default": 2.0},
-            "Banana": {"Costa Rica": 1.0, "USA": 1.5, "Default": 1.2}
-        }
-        default_price = FOOD_PRICE_DEFAULTS.get(food_name, {}).get("Default", 1.0)  # Fallback to 1.0 if not found
 
         prompt_messages = [
             {
@@ -2001,6 +1944,7 @@ def run_lca_model(inputs):
         ]
 
         try:
+            print(f"Requesting AI price analysis for: {food_name} in {location_name}")
             response = client.chat.completions.create(
                 model="gpt-4o",
                 response_format={"type": "json_object"},
@@ -2013,11 +1957,11 @@ def run_lca_model(inputs):
             if isinstance(price, (int, float)):
                 return price
             else:
-                return default_price  # Return default if API returns null/invalid
+                return None
 
         except Exception as e:
-            print(f"Error fetching food price for {food_name} in {location_name}: {e}")
-            return FOOD_PRICE_DEFAULTS.get(food_name, {}).get(location_name, default_price)  # Use location_name    
+            print(f"AI price lookup failed: {e}")
+            return None
 
     def openai_get_nearest_farm_region(food_name, location_name):
         from openai import OpenAI
@@ -2035,6 +1979,7 @@ def run_lca_model(inputs):
         ]
 
         try:
+            print(f"Requesting AI analysis for nearest farm region for: {food_name} near {location_name}")
             response = client.chat.completions.create(
                 model="gpt-4o",
                 response_format={"type": "json_object"},
@@ -2049,6 +1994,7 @@ def run_lca_model(inputs):
                 return None
 
         except Exception as e:
+            print(f"AI farm region lookup failed: {e}")
             return None
 
     def detect_canal_transit(route_object):
@@ -2060,27 +2006,31 @@ def run_lca_model(inputs):
         PANAMA_CANAL_BBOX = (-80.5, 8.5, -78.5, 9.5)
         SUEZ_CANAL_BBOX = (32.0, 29.5, 33.0, 31.5)
 
-        route_coords = route_object.geometry['coordinates']
+        try:
+            route_coords = route_object.geometry['coordinates']
 
-        for lon, lat in route_coords:
-            if (PANAMA_CANAL_BBOX[0] <= lon <= PANAMA_CANAL_BBOX[2] and
-                PANAMA_CANAL_BBOX[1] <= lat <= PANAMA_CANAL_BBOX[3]):
-                transits["panama"] = True
-                break
+            for lon, lat in route_coords:
+                if (PANAMA_CANAL_BBOX[0] <= lon <= PANAMA_CANAL_BBOX[2] and
+                    PANAMA_CANAL_BBOX[1] <= lat <= PANAMA_CANAL_BBOX[3]):
+                    transits["panama"] = True
+                    break
 
-            if (SUEZ_CANAL_BBOX[0] <= lon <= SUEZ_CANAL_BBOX[2] and
-                SUEZ_CANAL_BBOX[1] <= lat <= SUEZ_CANAL_BBOX[3]):
+                if (SUEZ_CANAL_BBOX[0] <= lon <= SUEZ_CANAL_BBOX[2] and
+                    SUEZ_CANAL_BBOX[1] <= lat <= SUEZ_CANAL_BBOX[3]):
+                    transits["suez"] = True
+                    break
+
+            if transits["panama"] or transits["suez"]:
+                return transits
+
+            route_info_string = json.dumps(route_object.properties).lower()
+            if "suez" in route_info_string:
                 transits["suez"] = True
-                break
+            if "panama" in route_info_string:
+                transits["panama"] = True
 
-        if transits["panama"] or transits["suez"]:
-            return transits
-
-        route_info_string = json.dumps(route_object.properties).lower()
-        if "suez" in route_info_string:
-            transits["suez"] = True
-        if "panama" in route_info_string:
-            transits["panama"] = True
+        except Exception as e:
+            print(f"Could not parse route properties for canal detection: {e}")
 
         return transits
 
@@ -2145,7 +2095,6 @@ def run_lca_model(inputs):
         "Cold Storage": "Cold Storage", # Generic, as total_food_lca adds location
         "Marine Transport (Base Freight)": "Marine Transport (Base Freight)", # Explicitly added
         "Reefer & CA Services": "Reefer & CA Services", # Explicitly added
-        "Insurance": "Insurance", # Explicitly added
     }
 
     start = inputs['start']
@@ -2368,25 +2317,6 @@ def run_lca_model(inputs):
     local_sourcing_results = None 
     cost_overlay_text = ""       
     emission_overlay_text = ""   
-    total_insurance_money = 0.0
-    final_chem_kg_denominator = 0.0
-    SMR_EMISSIONS_KG_PER_KG_H2 = 9.3 # kg CO2e per kg H2 produced via SMR
-    final_commodity_kg = 0.0
-    target_weight = 0.0
-    initial_weight = 0.0
-    initial_cargo_value_total = 0.0
-    commodity_type_for_insurance = ""
-    selected_fuel_name = ""
-
-    if commodity_type == 'fuel':
-        # Assuming target_weight is the desired delivered quantity, use this for initial cargo value.
-        # This might need refinement if initial production is more than target delivered.
-        initial_cargo_value_total = target_weight * hydrogen_production_cost # Assuming hydrogen_production_cost is $/kg
-        commodity_type_for_insurance = selected_fuel_name # e.g., 'Liquid Hydrogen'
-    elif commodity_type == 'food':
-        initial_cargo_value_total = initial_weight * price_start if price_start is not None else 0.0 # initial_weight is total kg
-        commodity_type_for_insurance = current_food_params['name'] # e.g., 'Strawberry'
-
     if commodity_type == 'fuel':
         fuel_type = inputs['fuel_type']
         fuel_names = ['Liquid Hydrogen', 'Ammonia', 'Methanol']
@@ -2475,16 +2405,6 @@ def run_lca_model(inputs):
 
         target_weight = total_ship_volume * liquid_chem_density[fuel_type] * 0.98
 
-        initial_cargo_value_total = target_weight * hydrogen_production_cost 
-        commodity_type_for_insurance = selected_fuel_name
-
-        total_insurance_money = calculate_total_insurance_cost(
-            initial_cargo_value_total,
-            commodity_type_for_insurance,
-            searoute_coor,
-            port_to_port_duration
-        )
-
         con = {'type': 'ineq', 'fun': constraint}
 
         process_funcs_for_optimization = [
@@ -2559,129 +2479,91 @@ def run_lca_model(inputs):
             raise Exception(f"Optimization failed: {result.message}")
         final_results_raw, data_raw = total_chem_base(chem_weight, user_define[1], user_define[2],
                                                     user_define[3], user_define[4], user_define[5], CARBON_TAX_PER_TON_CO2_DICT) # Corrected this line
-        final_chem_kg_denominator = final_results_raw[3] 
-        if user_define[1] != 0: # If it's not LH2 (i.e., Ammonia or Methanol being converted to H2)
-            amount_before_conversion = final_results_raw[3] # This is the final quantity from total_chem_base
-            args_for_conversion = (mass_conversion_to_H2, eff_energy_chem_to_H2, energy_chem_to_H2, CO2e_end, end_electricity_price, end_country_name, CARBON_TAX_PER_TON_CO2_DICT)
-            
-            # The chem_convert_to_H2 function's return signature includes carbon_tax_money as the 3rd element.
-            opex_conv, capex_conv, carbon_tax_conv, energy_conv, emission_conv, amount_after_conversion, bog_conv = \
+        if user_define[1] != 0:
+            amount_before_conversion = final_results_raw[3]
+            args_for_conversion = (mass_conversion_to_H2, eff_energy_chem_to_H2, energy_chem_to_H2, CO2e_end, end_electricity_price, end_country_name, CARBON_TAX_PER_TON_CO2_DICT) 
+            opex_conv, capex_conv, energy_conv, emission_conv, amount_after_conversion, bog_conv = \
                 chem_convert_to_H2(amount_before_conversion, user_define[1], user_define[2], user_define[3],
                                 user_define[4], user_define[5], args_for_conversion)
 
-            # Insert the conversion step into data_raw *before* the final TOTAL row
-            # Ensure the row has 8 elements as per standard: [label, opex, capex, carbon_tax, energy, emissions, weight, loss]
-            data_raw.insert(-1, ["chem_convert_to_H2", opex_conv, capex_conv, carbon_tax_conv, energy_conv, emission_conv, amount_after_conversion, bog_conv])
+            data_raw.insert(-1, ["chem_convert_to_H2", opex_conv, capex_conv, energy_conv, emission_conv, amount_after_conversion, bog_conv])
 
-            # Update final_results_raw (which comes from total_chem_base) to include conversion costs/emissions
-            final_results_raw[0] += (opex_conv + capex_conv + carbon_tax_conv) # Sum all three cost types
+            final_results_raw[0] += (opex_conv + capex_conv) # Update total money
             final_results_raw[1] += energy_conv
             final_results_raw[2] += emission_conv
-            final_results_raw[3] = amount_after_conversion # Update final quantity
+            final_results_raw[3] = amount_after_conversion
 
-            # After conversion, recalculate the TOTAL row
-            # The last row of data_raw is the old "TOTAL" generated by total_chem_base. Remove it first.
-            if data_raw and data_raw[-1][0] == "TOTAL":
-                data_raw.pop()
-            
-            # Now, recalculate totals from the updated data_raw (including conversion)
-            total_opex_money = sum(row[1] for row in data_raw)
-            total_capex_money = sum(row[2] for row in data_raw)
-            total_carbon_tax_money = sum(row[3] for row in data_raw)
-            total_energy = sum(row[4] for row in data_raw)
-            total_emissions = sum(row[5] for row in data_raw)
-            final_chem_kg_denominator = final_results_raw[3] # Use updated final quantity
-            
-            if data_raw and data_raw[-1][0] == "TOTAL":
-                data_raw[-1] = ["TOTAL", total_opex_money, total_capex_money, total_carbon_tax_money, total_energy, total_emissions, final_chem_kg_denominator, sum(row[7] for row in data_raw if row[0] != "TOTAL")]
-            else:
-                data_raw.append(["TOTAL", total_opex_money, total_capex_money, total_carbon_tax_money, total_energy, total_emissions, final_chem_kg_denominator, sum(row[7] for row in data_raw)])
+            data_raw[-1] = ["TOTAL", sum(row[1] for row in data_raw[:-1]), sum(row[2] for row in data_raw[:-1]), final_results_raw[1], final_results_raw[2], final_results_raw[3], 0]
 
-        else: # If no conversion, then totals are directly from total_chem_base
-            total_opex_money = sum(row[1] for row in data_raw if row[0] != "TOTAL")
-            total_capex_money = sum(row[2] for row in data_raw if row[0] != "TOTAL")
-            total_carbon_tax_money = sum(row[3] for row in data_raw if row[0] != "TOTAL")
-            total_energy = sum(row[4] for row in data_raw if row[0] != "TOTAL")
-            total_emissions = sum(row[5] for row in data_raw if row[0] != "TOTAL")
-            final_chem_kg_denominator = final_results_raw[3] 
 
-        insurance_row_for_data_raw = [
-            "Insurance",
-            total_insurance_money, # OPEX portion of insurance
-            0.0, # CAPEX
-            0.0, # Carbon Tax
-            0.0, 0.0, # Energy, Emissions
-            final_chem_kg_denominator, # Associate with total quantity
-            0.0 # Loss
-        ]
-
-        # 2. Find the index of the existing "TOTAL" row in data_raw
-        total_row_index = -1
-        for i, row in enumerate(data_raw):
-            if row[0] == "TOTAL":
-                total_row_index = i
-                break
-
-        # 3. Insert the insurance row before the "TOTAL" row
-        if total_row_index != -1:
-            data_raw.insert(total_row_index, insurance_row_for_data_raw)
-        else:
-            # Fallback: if 'TOTAL' row is missing, just append (less likely to be needed)
-            data_raw.append(insurance_row_for_data_raw)
-
-        total_opex_money = sum(row[1] for row in data_raw if row[0] != "TOTAL" and row[0] != "Insurance") # Sum actual OPEX from processes
-        total_capex_money = sum(row[2] for row in data_raw if row[0] != "TOTAL")
-        total_carbon_tax_money = sum(row[3] for row in data_raw if row[0] != "TOTAL")
-        total_energy = sum(row[4] for row in data_raw if row[0] != "TOTAL")
-        total_emissions = sum(row[5] for row in data_raw if row[0] != "TOTAL")
-
-        # Now, recalculate total_money by explicitly adding total_insurance_money
-        total_money = total_opex_money + total_capex_money + total_carbon_tax_money + total_insurance_money
-
-        # 5. Update the existing "TOTAL" row with the newly calculated sums
-        if data_raw and data_raw[-1][0] == "TOTAL":
-            data_raw[-1] = ["TOTAL", total_opex_money, total_capex_money, total_carbon_tax_money, total_energy, total_emissions, final_chem_kg_denominator, sum(row[7] for row in data_raw if row[0] != "TOTAL")]
-
-        final_energy_output_mj = final_chem_kg_denominator * HHV_chem[fuel_type] # Corrected variable name
-        final_energy_output_gj = final_energy_output_mj / 1000
-
+        final_chem_kg_denominator = final_results_raw[3]
+        final_energy_gj_denominator = (final_results_raw[3] * HHV_chem[fuel_type]) / 1000 if final_chem_kg_denominator > 0 else 0
 
         data_with_all_columns = []
+        # Create a variable to hold the extracted insurance row data.
+        # Initialize it to None, it will be populated if the production row is found.
+        extracted_insurance_row_for_chart = None 
+        initial_chem_kg_for_insurance_calc = data_raw[0][6] if data_raw and len(data_raw[0]) > 6 else 0.0
+        absolute_insurance_cost_fuel = initial_chem_kg_for_insurance_calc * hydrogen_production_cost * (INSURANCE_PERCENTAGE_OF_CARGO_VALUE / 100)
+        insurance_per_kg_for_chart_fuel = absolute_insurance_cost_fuel / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0.0
+        extracted_insurance_row_for_chart = [
+            "Insurance", # row[0] Process Step
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, # row[1] to row[7] (total values, not used by chart for stacking)
+            0.0, # row[8] Opex/kg
+            0.0, # row[9] Capex/kg
+            0.0, # row[10] Carbon Tax/kg
+            insurance_per_kg_for_chart_fuel, # row[11] Insurance/kg (THE VALUE)
+            insurance_per_kg_for_chart_fuel, # row[12] Cost/kg (sum of per-kg components for THIS row only)
+            0.0, # row[13] Cost/GJ
+            0.0, # row[14] CO2eq/kg
+            0.0  # row[15] eCO2/GJ
+        ]        
         for row in data_raw:
+            if len(row) < 8: # Assuming 8 columns from total_chem_base now
+                print(f"Warning: Row has insufficient data points: {row}. Skipping 'per unit' calculations for this row.")
+                data_with_all_columns.append(list(row) + [0]*(16 - len(row)))
+                continue
+
+            # Original total values from data_raw
             process_label_raw = row[0]
             current_opex = float(row[1])
             current_capex = float(row[2])
             current_carbon_tax = float(row[3])
             current_energy = float(row[4])
             current_emission = float(row[5])
-            current_chem_kg_at_step = float(row[6])
+            current_chem_kg_at_step = float(row[6]) # This is the `A` value for the step
             current_bog_loss = float(row[7])
 
-            opex_per_kg = 0.0
-            insurance_per_kg = 0.0
-
-            if process_label_raw == "Insurance":
-                # For the 'Insurance' row, its original 'current_opex' value (which is total_insurance_money)
-                # should be assigned directly to insurance_per_kg.
-                insurance_per_kg = current_opex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0.0
-                # Opex_per_kg for the 'Insurance' row itself should be 0, as it's not a regular OPEX.
-                opex_per_kg = 0.0
-            else:
-                # For all other rows, calculate opex_per_kg as usual.
-                opex_per_kg = current_opex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0.0
-                insurance_per_kg = 0.0 # Ensure it's 0 for non-insurance rows.
+            # Calculate individual cost components PER KG
+            # Initialize per_kg values, assuming final_chem_kg_denominator is defined upstream
+            opex_per_kg = current_opex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             capex_per_kg = current_capex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             carbon_tax_per_kg = current_carbon_tax / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
-
-            cost_per_kg_total = opex_per_kg + capex_per_kg + carbon_tax_per_kg + insurance_per_kg
+            insurance_per_kg = 0.0 # Initialize for all rows
+            # This step has the insurance cost embedded in its OPEX.
+            # We want to extract it, create a separate row, and then remove it from this row's OPEX.
+            if process_label_raw == "site_A_chem_production":
+                # Subtract the extracted insurance from the OPEX of the production step
+                opex_per_kg = max(0, opex_per_kg - insurance_per_kg_for_chart_fuel)
+                # This specific row's insurance component is now effectively 0 for its own display,
+                # as it's been moved to the dedicated "Insurance" row.
+                insurance_per_kg = 0.0 
+            # Calculate total cost per kg for this specific row (adjusted for insurance)
+            # The `insurance_per_kg` variable for non-production rows will be 0.0 as initialized.
+            # For the 'site_A_chem_production' row, it will also be 0.0 after this adjustment.
+            cost_per_kg_total = opex_per_kg + capex_per_kg + carbon_tax_per_kg + insurance_per_kg 
+            
+            # Recalculate current_total_cost_row based on the original totals, including all parts
             current_total_cost_row = current_opex + current_capex + current_carbon_tax
+            
             cost_per_gj = current_total_cost_row / final_energy_output_gj if final_energy_output_gj > 0 else 0
             emission_per_kg = current_emission / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
             emission_per_gj = current_emission / final_energy_output_gj if final_energy_output_gj > 0 else 0
             new_row_with_additions = [
-                process_label_raw, current_opex, current_capex, current_carbon_tax, current_energy, current_emission,
-                current_chem_kg_at_step, current_bog_loss, opex_per_kg, capex_per_kg, carbon_tax_per_kg, insurance_per_kg,
-                cost_per_kg_total, cost_per_gj, emission_per_kg, emission_per_gj
+                process_label_raw,  # Process Step (original label)
+                current_opex, current_capex, current_carbon_tax, current_energy, current_emission, current_chem_kg_at_step, current_bog_loss, # Original total values
+                opex_per_kg, capex_per_kg, carbon_tax_per_kg, insurance_per_kg, # Per-kg values
+                cost_per_kg_total, cost_per_gj, emission_per_kg, emission_per_gj # Derived per-unit values
             ]
             data_with_all_columns.append(new_row_with_additions)
 
@@ -2690,14 +2572,8 @@ def run_lca_model(inputs):
             relabel_key = row[0]
             new_label = label_map.get(relabel_key, relabel_key)
             relabeled_data.append([new_label] + row[1:])
-        data_for_cost_chart_display = [
-            row for row in relabeled_data if row[0] not in ["TOTAL", "Initial Production (Placeholder)"]
-        ]
-        # Add the Insurance row explicitly if it's not already included
-        insurance_row = next((row for row in relabeled_data if row[0] == "Insurance"), None)
-        if insurance_row and insurance_row not in data_for_cost_chart_display:
-            data_for_cost_chart_display.append(insurance_row)
 
+        # Format numeric values for display in tables (detailed_data_formatted)
         detailed_data_formatted = []
         for row in relabeled_data:
             formatted_row = [row[0]] # Keep the label as is
@@ -2708,7 +2584,13 @@ def run_lca_model(inputs):
                     formatted_row.append(item)
             detailed_data_formatted.append(formatted_row)            
             
+        filtered_relabeled_data_except_production_and_total = [
+            row for row in relabeled_data if row[0] not in ["Initial Production (Placeholder)", "TOTAL"]
+        ]                       
+        data = data_with_all_columns
         total_results = final_results_raw
+
+
         final_weight = total_results[3]
         chem_cost = total_results[0] / final_weight if final_weight > 0 else 0
         chem_energy = total_results[1] / final_weight if final_weight > 0 else 0
@@ -2719,8 +2601,18 @@ def run_lca_model(inputs):
         fuel_names = ['Liquid Hydrogen', 'Ammonia', 'Methanol']
         selected_fuel_name = fuel_names[fuel_type]
 
+        data_for_cost_chart_display = []
+        if extracted_insurance_row_for_chart:
+            data_for_cost_chart_display.append(extracted_insurance_row_for_chart)
+
+        for row in relabeled_data:
+            if row[0] not in ["Initial Production (Placeholder)", "TOTAL"]:
+                data_for_cost_chart_display.append(row)
+
         emission_chart_exclusions = ["TOTAL", "Initial Production (Placeholder)", "Insurance"]
         data_for_emission_chart = [row for row in relabeled_data if row[0] not in emission_chart_exclusions]
+
+        data_for_display_common = data_for_cost_chart_display 
         cost_overlay_text = ""
         if hydrogen_production_cost > 0:
             ratio_cost = chem_cost / hydrogen_production_cost
@@ -2750,7 +2642,7 @@ def run_lca_model(inputs):
         insurance_per_kg_for_chart_idx = new_detailed_headers.index("Insurance/kg ($/kg)")
         eco2_per_kg_for_chart_idx = new_detailed_headers.index("CO2eq/kg (kg/kg)")
         cost_chart_base64 = create_breakdown_chart(
-            data_for_cost_chart_display,
+            data_for_display_common,
             opex_per_kg_for_chart_idx,
             capex_per_kg_for_chart_idx,
             carbon_tax_per_kg_for_chart_idx,
@@ -2773,15 +2665,15 @@ def run_lca_model(inputs):
             is_emission_chart=True
         )
         summary1_data = [
-            ["Cost ($/kg chemical)", f"{total_money / final_chem_kg_denominator:.2f}" if final_chem_kg_denominator > 0 else "N/A"],
-            ["Consumed Energy (MJ/kg chemical)", f"{total_energy / final_chem_kg_denominator:.2f}" if final_chem_kg_denominator > 0 else "N/A"],
-            ["Emission (kg CO2eq/kg chemical)", f"{total_emissions / final_chem_kg_denominator:.2f}" if final_chem_kg_denominator > 0 else "N/A"]
+            ["Cost ($/kg chemical)", f"{chem_cost:.2f}"],
+            ["Consumed Energy (MJ/kg chemical)", f"{chem_energy:.2f}"],
+            ["Emission (kg CO2eq/kg chemical)", f"{chem_CO2e:.2f}"]
         ]
 
         summary2_data = [
-            ["Cost ($/GJ)", f"{total_money / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
-            ["Energy consumed (MJ_in/GJ_out)", f"{total_energy / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
-            ["Emission (kg CO2eq/GJ)", f"{total_emissions / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"]
+            ["Cost ($/GJ)", f"{total_results[0] / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
+            ["Energy consumed (MJ_in/GJ_out)", f"{total_results[1] / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
+            ["Emission (kg CO2eq/GJ)", f"{total_results[2] / final_energy_output_gj:.2f}" if final_energy_gj_denominator > 0 else "N/A"]
         ]
 
         assumed_prices_data = [
@@ -2823,80 +2715,27 @@ def run_lca_model(inputs):
         food_type = inputs.get('food_type')
         shipment_size_containers = inputs.get('shipment_size_containers', 10)
         current_food_params = food_params[food_type]
-        food_name_for_lookup = current_food_params["name"]   
-                
-        price_start = None  # Initial value
-        price_end = None
-
+        food_name_for_lookup = current_food_params["name"]        
         start_country = get_country_from_coords(coor_start_lat, coor_start_lng) or start
         end_country = get_country_from_coords(coor_end_lat, coor_end_lng) or end
-
-        try:
-            print(f"Calling openai_get_food_price with {food_name_for_lookup}, {start_country}")
-            price_start = openai_get_food_price(food_name_for_lookup, start_country)
-            print(f"price_start assigned: {price_start}")
-        except Exception as e:
-            print(f"Failed to fetch price_start for {food_name_for_lookup} in {start_country}: {e}")
-            price_start = 1.0  
-
-        try:
-            price_end = openai_get_food_price(food_name_for_lookup, end_country)
-        except Exception as e:
-            print(f"Failed to fetch price_end for {food_name_for_lookup} in {end_country}: {e}")
-            price_end = 1.0  
-
+        price_start = openai_get_food_price(food_name_for_lookup, start_country)
+        price_end = openai_get_food_price(food_name_for_lookup, end_country)
         price_start_text = f"${price_start:.2f}/kg" if price_start is not None else "Not available"
         price_end_text = f"${price_end:.2f}/kg" if price_end is not None else "Not available"
+        
+        final_commodity_kg = 0
+        total_opex_money = 0
+        total_capex_money = 0
+        total_energy = 0
+        total_emissions = 0
+        total_carbon_tax_money = 0 # Ensure this is initialized
+
+        total_ship_container_capacity = math.floor(total_ship_volume / 76)
 
         initial_weight = shipment_size_containers * current_food_params['general_params']['cargo_per_truck_kg']
-        initial_cargo_value_total = initial_weight * price_start if price_start is not None else 0.0        
-        commodity_type_for_insurance = current_food_params['name']
-        total_insurance_money = calculate_total_insurance_cost(
-            initial_cargo_value_total,
-            commodity_type_for_insurance,
-            searoute_coor,
-            port_to_port_duration
-        )        
         data_raw = total_food_lca(initial_weight, current_food_params, CARBON_TAX_PER_TON_CO2_DICT, HHV_diesel, diesel_density, CO2e_diesel)
         
-        total_opex_money_pre_insurance = sum(row[1] for row in data_raw if row[0] != "TOTAL")
-        total_capex_money_pre_insurance = sum(row[2] for row in data_raw if row[0] != "TOTAL")
-        total_carbon_tax_money_pre_insurance = sum(row[3] for row in data_raw if row[0] != "TOTAL")
-        total_energy_pre_insurance = sum(row[4] for row in data_raw if row[0] != "TOTAL")
-        total_emissions_pre_insurance = sum(row[5] for row in data_raw if row[0] != "TOTAL")
-        final_commodity_kg_from_lca = data_raw[-1][6] if data_raw and len(data_raw[-1]) > 6 else 0.0
-        total_spoilage_loss_from_lca = sum(row[7] for row in data_raw[:-1]) # Sum all spoilage from data_raw, excluding the existing TOTAL row
-
-
-        # Add the TOTAL row to data_raw (it will be the last element)
-        data_raw[-1] = ["TOTAL", total_opex_money_pre_insurance, total_capex_money_pre_insurance, total_carbon_tax_money_pre_insurance,
-                        total_energy_pre_insurance, total_emissions_pre_insurance, final_commodity_kg_from_lca, total_spoilage_loss_from_lca]
-
-
-        # NOW, calculate the final `total_money`, `total_opex_money`, etc. including the distinct `total_insurance_money`
-        total_opex_money = total_opex_money_pre_insurance + total_insurance_money # Add insurance to OPEX for sum
-        total_capex_money = total_capex_money_pre_insurance
-        total_carbon_tax_money = total_carbon_tax_money_pre_insurance
-        total_energy = total_energy_pre_insurance
-        total_emissions = total_emissions_pre_insurance
-
-        total_money = total_opex_money + total_capex_money + total_carbon_tax_money # Sum of all three including insurance in OPEX
-
-        # Now define final_commodity_kg for use in calculations, ensuring it's from the actual delivered quantity
-        final_commodity_kg = final_commodity_kg_from_lca
-
-        # Insert Insurance row into data_raw (before the TOTAL row)
-        insurance_row_for_data_raw = [
-            "Insurance",
-            total_insurance_money, # OPEX portion of insurance
-            0.0, # CAPEX
-            0.0, # Carbon Tax
-            0.0, 0.0, # Energy, Emissions
-            final_commodity_kg, # Associate with total quantity
-            0.0 # Loss
-        ]
-        data_raw.insert(len(data_raw) - 1, insurance_row_for_data_raw) # Insert before the last row ("TOTAL")
-        
+        # Calculate BASE costs (Propulsion) for the ENTIRE SHIP
         propulsion_fuel_kwh = avg_ship_power_kw * port_to_port_duration
         propulsion_fuel_kg = (propulsion_fuel_kwh * selected_marine_fuel_params['sfoc_g_per_kwh']) / 1000.0
         propulsion_cost = (propulsion_fuel_kg / 1000.0) * selected_marine_fuel_params['price_usd_per_ton']
@@ -2938,25 +2777,46 @@ def run_lca_model(inputs):
             reefer_row = ["Reefer & CA Services", reefer_service_total_cost, reefer_service_total_capex, reefer_service_total_carbon_tax, reefer_service_total_energy, reefer_service_total_emissions, commodity_weight_at_marine_transport, 0]
             data_raw.insert(marine_transport_index + 1, reefer_row)
 
-        # After inserting the insurance row into data_raw
-        total_opex_money = sum(row[1] for row in data_raw if row[0] != "TOTAL" and row[0] != "Insurance")
+        total_opex_money = sum(row[1] for row in data_raw if row[0] != "TOTAL")
         total_capex_money = sum(row[2] for row in data_raw if row[0] != "TOTAL")
-        total_carbon_tax_money = sum(row[3] for row in data_raw if row[0] != "TOTAL")
-        total_energy = sum(row[4] for row in data_raw if row[0] != "TOTAL")
-        total_emissions = sum(row[5] for row in data_raw if row[0] != "TOTAL")
-
-        # Recalculate total_money
-        total_money = total_opex_money + total_capex_money + total_carbon_tax_money + total_insurance_money  # Add insurance separately
-
-        # Update the TOTAL row
-        if data_raw and data_raw[-1][0] == "TOTAL":
-            data_raw[-1] = ["TOTAL", total_opex_money, total_capex_money, total_carbon_tax_money, total_energy, total_emissions, final_commodity_kg, sum(row[7] for row in data_raw if row[0] != "TOTAL")]
-        else:
-            data_raw.append(["TOTAL", total_opex_money, total_capex_money, total_carbon_tax_money, total_energy, total_emissions, final_commodity_kg, sum(row[7] for row in data_raw[:-1])])
+        total_carbon_tax_money = sum(row[3] for row in data_raw if row[0] != "TOTAL") # Sum this from data_raw
+        total_energy = sum(row[4] for row in data_raw if row[0] != "TOTAL") # Sum this from data_raw
+        total_emissions = sum(row[5] for row in data_raw if row[0] != "TOTAL") # Sum this from data_raw
 
         # The last row of data_raw is "TOTAL", so final_weight should be from there.
         final_weight = data_raw[-1][6] if data_raw and len(data_raw[-1]) > 6 else 0.0 # From data_raw's last row (TOTAL), its commodity quantity
         final_commodity_kg = final_weight # This is your delivered quantity
+
+        total_money = total_opex_money + total_capex_money + total_carbon_tax_money # Sum all three cost types
+
+        # Retrieve the initial quantity (A) for calculating insurance cost for food
+        # The 'Harvesting & Preparation' row is the first in data_raw from total_food_lca.
+        # Its original 'A' (initial_weight) is at index 6 in the 8-element row from total_food_lca
+        initial_food_kg_for_insurance_calc = data_raw[0][6] if data_raw and len(data_raw[0]) > 6 else 0.0
+
+        # Calculate the absolute insurance cost from the initial harvesting step's inputs
+        absolute_insurance_cost_food = initial_food_kg_for_insurance_calc * price_start * (INSURANCE_PERCENTAGE_OF_CARGO_VALUE / 100) if price_start is not None else 0.0
+
+        # Calculate the insurance cost PER KG delivered (using the final delivered mass)
+        insurance_per_kg_for_chart_food = absolute_insurance_cost_food / final_commodity_kg if final_commodity_kg > 0 else 0.0
+
+        # Create the extracted insurance row here, it should have the same structure as data_with_all_columns rows
+        # The chart functions expect specific indices for Opex, Capex, Carbon Tax, Insurance.
+        # The original columns are 8 (Process Step, Opex, Capex, Carbon Tax, Energy, Emissions, Weight, Loss).
+        # The new ones add Opex/kg, Capex/kg, Carbon Tax/kg, Insurance/kg, Cost/kg, Cost/GJ, CO2eq/kg, eCO2/GJ.
+        # So total 16 columns.
+        extracted_insurance_row_for_chart_food = [
+            "Insurance", # Index 0
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, # Indices 1-7 (Totals, leave as 0 for this row if only showing per-unit)
+            0.0, # Index 8: Opex/kg (Insurance is not Opex for charting purposes here)
+            0.0, # Index 9: Capex/kg
+            0.0, # Index 10: Carbon Tax/kg
+            insurance_per_kg_for_chart_food, # Index 11: Insurance/kg (THE VALUE)
+            insurance_per_kg_for_chart_food, # Index 12: Cost/kg (sum of per-kg components for THIS row only, which is just insurance here)
+            0.0, # Index 13: Cost/GJ
+            0.0, # Index 14: CO2eq/kg
+            0.0  # Index 15: eCO2/GJ
+        ]
 
         local_sourcing_results = None
         green_premium_data = None
@@ -3037,33 +2897,52 @@ def run_lca_model(inputs):
         final_energy_output_gj = final_energy_output_mj / 1000
 
         data_with_all_columns = []
+        # No need to initialize extracted_insurance_row_for_chart_food here again, it's done above.
+
         for row in data_raw:
+            # Based on your total_food_lca function, results_list has 8 elements per row:
+            # [label, opex_m, capex_m, carbon_tax_m, energy, emissions, current_weight, loss]
+            if len(row) < 8: # Check for 8 columns now
+                print(f"Warning: Food row has insufficient data points: {row}. Skipping 'per unit' calculations for this row.")
+                data_with_all_columns.append(list(row) + [0]*(16 - len(row)))
+                continue
+
             process_label_raw = row[0]
             current_opex = float(row[1])
             current_capex = float(row[2])
             current_carbon_tax = float(row[3])
             current_energy_total = float(row[4])
             current_emission_total = float(row[5])
-            current_commodity_kg_at_step = float(row[6])
+            current_commodity_kg_at_step = float(row[6]) # This is the `A` value for the step
             current_spoilage_loss = float(row[7])
 
             opex_per_kg = current_opex / final_commodity_kg if final_commodity_kg > 0 else 0
             capex_per_kg = current_capex / final_commodity_kg if final_commodity_kg > 0 else 0
             carbon_tax_per_kg = current_carbon_tax / final_commodity_kg if final_commodity_kg > 0 else 0
-            insurance_per_kg = current_opex / final_commodity_kg if final_commodity_kg > 0 and process_label_raw == "Insurance" else 0.0
+            insurance_per_kg = 0.0 # Initialize for all rows
 
-            cost_per_kg_total = opex_per_kg + capex_per_kg + carbon_tax_per_kg + insurance_per_kg
-            current_total_cost_row = current_opex + current_capex + current_carbon_tax
+            if process_label_raw == "Harvesting & Preparation":
+                # Subtract the extracted insurance from the OPEX of the harvesting step
+                opex_per_kg = max(0, opex_per_kg - insurance_per_kg_for_chart_food)
+                insurance_per_kg = 0.0 # This specific row's insurance component is now effectively 0 for its own display
+            # Calculate total cost per kg for this specific row (adjusted for insurance)
+            cost_per_kg_total = opex_per_kg + capex_per_kg + carbon_tax_per_kg + insurance_per_kg 
+            
+            current_total_cost_row = current_opex + current_capex + current_carbon_tax # This is good
+            
             cost_per_gj = current_total_cost_row / final_energy_output_gj if final_energy_output_gj > 0 else 0
             emission_per_kg = current_emission_total / final_commodity_kg if final_commodity_kg > 0 else 0
             emission_per_gj = current_emission_total / final_energy_output_gj if final_energy_output_gj > 0 else 0
 
+            # Append ALL values. Ensure order matches new_detailed_headers
             new_row_with_additions = [
-                process_label_raw, current_opex, current_capex, current_carbon_tax, current_energy_total, current_emission_total,
-                current_commodity_kg_at_step, current_spoilage_loss, opex_per_kg, capex_per_kg, carbon_tax_per_kg, insurance_per_kg,
-                cost_per_kg_total, cost_per_gj, emission_per_kg, emission_per_gj
+                process_label_raw, # Index 0: Process Step
+                current_opex, current_capex, current_carbon_tax, current_energy_total, current_emission_total, current_commodity_kg_at_step, current_spoilage_loss, # Indices 1-7: Original total values
+                opex_per_kg, capex_per_kg, carbon_tax_per_kg, insurance_per_kg, # Indices 8-11: Per-kg values
+                cost_per_kg_total, cost_per_gj, emission_per_kg, emission_per_gj # Indices 12-15: Derived per-unit values
             ]
             data_with_all_columns.append(new_row_with_additions)
+
 
         relabeled_data = []
         for row in data_with_all_columns:
@@ -3071,12 +2950,18 @@ def run_lca_model(inputs):
             new_label = label_map.get(relabel_key, relabel_key)
             relabeled_data.append([new_label] + row[1:])
 
-        data_for_cost_chart_display = [
-            row for row in relabeled_data if row[0] not in ["TOTAL", "Harvesting & Preparation"]
-        ]
-        insurance_row = next((row for row in relabeled_data if row[0] == "Insurance"), None)
-        if insurance_row and insurance_row not in data_for_cost_chart_display:
-            data_for_cost_chart_display.append(insurance_row)
+        # --- IMPORTANT: Define these chart data lists *before* creating the charts ---
+        data_for_cost_chart_display = []
+        # Add the extracted "Insurance" row as the first entry IF IT HAS A VALUE
+        if extracted_insurance_row_for_chart_food[11] > 0: # Check if insurance_per_kg_for_chart_food > 0
+            data_for_cost_chart_display.append(extracted_insurance_row_for_chart_food)
+
+        # Iterate through the relabeled_data (which has the full 16 columns now)
+        for row in relabeled_data:
+            # Exclude the original "Harvesting & Preparation" and "TOTAL" from this main chart list
+            # The 'insurance_per_kg' value for these rows is already correctly 0.0 from the loop above.
+            if row[0] not in ["Harvesting & Gearing Up", "TOTAL", "Insurance"]: # Use the relabeled "Harvesting & Gearing Up"
+                data_for_cost_chart_display.append(row)
         
         emission_chart_exclusions_food = ["TOTAL", "Harvesting & Preparation", "Insurance"] # Still refers to original labels here
         data_for_emission_chart = [row for row in relabeled_data if row[0] not in emission_chart_exclusions_food]
