@@ -2882,6 +2882,14 @@ def run_lca_model(inputs):
             relabel_key = row[0]
             new_label = label_map.get(relabel_key, relabel_key)
             relabeled_data.append([new_label] + row[1:])
+        for row in relabeled_data:
+            formatted_row = [row[0]] # Keep the label as is
+            for item in row[1:]: # Format numeric values
+                if isinstance(item, (int, float)):
+                    formatted_row.append(f"{item:,.2f}")
+                else:
+                    formatted_row.append(item)
+            detailed_data_formatted.append(formatted_row)        
         
         # Prepare data for charts: exclude 'TOTAL' and 'Initial Production (Placeholder)'
         data_for_cost_chart_display = [
