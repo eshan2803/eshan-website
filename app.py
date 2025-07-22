@@ -102,6 +102,20 @@ ROUTE_RISK_ZONES = [
     {"name": "South China Sea", "bbox": {"lon_min": 105.0, "lat_min": 0.0, "lon_max": 120.0, "lat_max": 20.0}, "risk_multiplier": 1.3},
     {"name": "Hurricane Alley (Atlantic)", "bbox": {"lon_min": -95.0, "lat_min": 10.0, "lon_max": -40.0, "lat_max": 40.0}, "risk_multiplier": 1.15},
 ]
+BOG_EQUIPMENT_CAPEX = {
+    'reliquefaction_unit': {
+        'truck': {'cost_usd': 50000, 'life_years': 10, 'annualization_factor': 0.15},
+        'ship': {'cost_usd_per_m3_volume': 100, 'life_years': 20, 'annualization_factor': 0.09} # Scaled by ship volume or cargo capacity
+    },
+    'aux_fuel_integration': {
+        'truck': {'cost_usd': 10000, 'life_years': 10, 'annualization_factor': 0.15},
+        'ship': {'cost_usd': 500000, 'life_years': 20, 'annualization_factor': 0.09}
+    },
+    'burner_flare': {
+        'truck': {'cost_usd': 5000, 'life_years': 5, 'annualization_factor': 0.25},
+        'ship': {'cost_usd': 100000, 'life_years': 15, 'annualization_factor': 0.12}
+    }
+}
 api_cache = {}
 # ==============================================================================
 # MAIN CALCULATION FUNCTION
@@ -769,6 +783,12 @@ def run_lca_model(inputs):
                 reliq_money = (reliq_ener_consumed / (HHV_diesel_arg * diesel_engine_eff_arg * EIM_truck_eff_arg / 100)) / diesel_density_arg * diesel_price_arg
                 opex_money += reliq_money
 
+                bog_reliquefier_cost = BOG_EQUIPMENT_CAPEX['reliquefaction_unit']['truck']['cost_usd']
+                bog_reliquefier_annualization = BOG_EQUIPMENT_CAPEX['reliquefaction_unit']['truck']['annualization_factor']
+                # Amortize over expected annual trips or total kg handled by this truck type
+                capex_per_kg_bog_reliquefaction = (bog_reliquefier_cost * bog_reliquefier_annualization) / (330 * chem_in_truck_weight_arg[B_fuel_type])
+                capex_money += capex_per_kg_bog_reliquefaction * A # A is the total kg being transported
+
                 A_after_loss += usable_BOG
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_truck_percentage_arg * 0.01)
                 G_emission_energy = (total_energy * CO2e_diesel_arg) / (HHV_diesel_arg * diesel_density_arg)
@@ -784,6 +804,11 @@ def run_lca_model(inputs):
                 total_energy = trans_energy_required + (refrig_ener_consumed - energy_saved_from_refrig)
                 opex_money = diesel_money + (refrig_money - money_saved_from_refrig)
 
+                bog_aux_integration_cost = BOG_EQUIPMENT_CAPEX['aux_fuel_integration']['truck']['cost_usd']
+                bog_aux_integration_annualization = BOG_EQUIPMENT_CAPEX['aux_fuel_integration']['truck']['annualization_factor']
+                capex_per_kg_bog_aux = (bog_aux_integration_cost * bog_aux_integration_annualization) / (330 * chem_in_truck_weight_arg[B_fuel_type])
+                capex_money += capex_per_kg_bog_aux * A
+
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_truck_percentage_arg * 0.01)
                 G_emission_energy = (total_energy * CO2e_diesel_arg) / (HHV_diesel_arg * diesel_density_arg)
                 G_emission = G_emission_energy + net_BOG_loss * GWP_chem_arg[B_fuel_type]
@@ -791,6 +816,10 @@ def run_lca_model(inputs):
             elif D_truck_apply == 3:
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_truck_percentage_arg * 0.01)
                 G_emission = G_emission_energy + net_BOG_loss * GWP_chem_arg[B_fuel_type]
+                bog_burner_flare_cost = BOG_EQUIPMENT_CAPEX['burner_flare']['truck']['cost_usd']
+                bog_burner_flare_annualization = BOG_EQUIPMENT_CAPEX['burner_flare']['truck']['annualization_factor']
+                capex_per_kg_bog_burner_flare = (bog_burner_flare_cost * bog_burner_flare_annualization) / (330 * chem_in_truck_weight_arg[B_fuel_type])
+                capex_money += capex_per_kg_bog_burner_flare * A
 
         # Driver salary cost
         trip_days = max(1, math.ceil(duration_arg / 1440))
@@ -1012,11 +1041,41 @@ def run_lca_model(inputs):
                 A_after_loss += usable_BOG
                 reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
                 reliq_work_mj = reliq_ener_required * usable_BOG
+                # CAPEX for onboard re-liquefaction unit
+                # Scale by total ship volume for an approximate cost
+                reliquefier_cost_per_m3 = BOG_EQUIPMENT_CAPEX['reliquefaction_unit']['ship']['cost_usd_per_m3_volume']
+                reliquefier_annualization = BOG_EQUIPMENT_CAPEX['reliquefaction_unit']['ship']['annualization_factor']
+                reliquefier_life_years = BOG_EQUIPMENT_CAPEX['reliquefaction_unit']['ship']['life_years']
+
+                # Total CAPEX for the unit for the entire ship
+                total_reliquefier_capex = reliquefier_cost_per_m3 * selected_ship_params_arg['volume_m3']
+                
+                # Annualized cost, then prorate for this single voyage
+                # Assuming 330 operational days per year for annualization
+                annualized_reliquefier_capex = total_reliquefier_capex * reliquefier_annualization
+                capex_per_voyage_reliquefier = annualized_reliquefier_capex / annual_working_days * voyage_duration_days
+                
+                capex_money += capex_per_voyage_reliquefier # Add to total CAPEX
+                
             elif F_maritime_apply == 2:
                 energy_saved_from_bog_mj = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
+                # CAPEX for auxiliary fuel integration/engine modification
+                aux_integration_cost = BOG_EQUIPMENT_CAPEX['aux_fuel_integration']['ship']['cost_usd']
+                aux_integration_annualization = BOG_EQUIPMENT_CAPEX['aux_fuel_integration']['ship']['annualization_factor']
+                
+                annualized_aux_capex = aux_integration_cost * aux_integration_annualization
+                capex_per_voyage_aux = annualized_aux_capex / annual_working_days * voyage_duration_days
+                
+                capex_money += capex_per_voyage_aux # Add to total CAPEX
+                
             elif F_maritime_apply == 3:
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_maritime_percentage_arg * 0.01)
-
+                burner_cost = BOG_EQUIPMENT_CAPEX['burner_flare']['ship']['cost_usd']
+                burner_annualization = BOG_EQUIPMENT_CAPEX['burner_flare']['ship']['annualization_factor']
+                annualized_burner_capex = burner_cost * burner_annualization
+                capex_per_voyage_burner = annualized_burner_capex / annual_working_days * voyage_duration_days
+                capex_money += capex_per_voyage_burner
+            
         fuel_hhv_mj_per_kg = selected_fuel_params_arg['hhv_mj_per_kg']
         sfoc_g_per_kwh = selected_fuel_params_arg['sfoc_g_per_kwh']
 
