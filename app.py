@@ -1074,128 +1074,130 @@ def run_lca_model(inputs):
         return opex_money, capex_money, carbon_tax_money, ener_consumed, G_emission, A_after_loss, BOG_loss, 0 # Added 0 for insurance
 
     def port_to_port(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
-        (start_local_temperature_arg, end_local_temperature_arg, OHTC_ship_arg,
-        calculated_storage_area_arg, ship_number_of_tanks_arg, COP_refrig_arg, EIM_refrig_eff_arg,
-        port_to_port_duration_arg, selected_fuel_params_arg,
-        dBOR_dT_arg, BOR_ship_trans_arg, GWP_chem_list_arg,
-        BOG_recirculation_maritime_percentage_arg, LH2_plant_capacity_arg, EIM_liquefication_arg,
-        fuel_cell_eff_arg, EIM_fuel_cell_arg, LHV_chem_arg,
-        avg_ship_power_kw_arg, aux_engine_efficiency_arg, GWP_N2O_arg,
-        maintenance_cost_per_km_ship_arg, port_to_port_dis_arg, calculate_voyage_overheads_helper_arg,
-        selected_ship_params_arg, canal_transits_arg, port_regions_arg, end_country_name_arg, carbon_tax_per_ton_co2_dict_arg,
-        eu_member_countries_arg) = process_args_tuple # Added eu_member_countries_arg
+            (start_local_temperature_arg, end_local_temperature_arg, OHTC_ship_arg,
+            calculated_storage_area_arg, ship_number_of_tanks_arg, COP_refrig_arg, EIM_refrig_eff_arg,
+            port_to_port_duration_arg, selected_fuel_params_arg,
+            dBOR_dT_arg, BOR_ship_trans_arg, GWP_chem_list_arg,
+            BOG_recirculation_maritime_percentage_arg, LH2_plant_capacity_arg, EIM_liquefication_arg,
+            fuel_cell_eff_arg, EIM_fuel_cell_arg, LHV_chem_arg,
+            avg_ship_power_kw_arg, aux_engine_efficiency_arg, GWP_N2O_arg,
+            maintenance_cost_per_km_ship_arg, port_to_port_dis_arg, calculate_voyage_overheads_helper_arg,
+            selected_ship_params_arg, canal_transits_arg, port_regions_arg, end_country_name_arg, carbon_tax_per_ton_co2_dict_arg,
+            eu_member_countries_arg) = process_args_tuple
 
-        opex_money = 0
-        capex_money = 0
-        carbon_tax_money = 0 
-        voyage_duration_days = port_to_port_duration_arg / 24.0 
-        propulsion_work_kwh = avg_ship_power_kw_arg * port_to_port_duration_arg
+            opex_money = 0
+            capex_money = 0
+            carbon_tax_money = 0
 
-        T_avg = (start_local_temperature_arg + end_local_temperature_arg) / 2
-        refrig_work_mj = 0
-        if B_fuel_type == 0:
-            heat_required_watts = OHTC_ship_arg[B_fuel_type] * calculated_storage_area_arg * (T_avg + 273 - 20) * ship_number_of_tanks_arg
-            refrig_work_mj = (heat_required_watts / (COP_refrig_arg[B_fuel_type] * (EIM_refrig_eff_arg / 100))) / 1000000 * 3600 * port_to_port_duration_arg
+            voyage_duration_days = port_to_port_duration_arg / 24.0
 
-        local_BOR_transportation = dBOR_dT_arg[B_fuel_type] * (T_avg - 25) + BOR_ship_trans_arg[B_fuel_type]
-        current_BOG_loss = local_BOR_transportation * (1 / 24) * port_to_port_duration_arg * A
+            propulsion_work_kwh = avg_ship_power_kw_arg * port_to_port_duration_arg
 
-        net_BOG_loss = current_BOG_loss
-        A_after_loss = A - current_BOG_loss
-        reliq_work_mj = 0
-        energy_saved_from_bog_mj = 0
+            T_avg = (start_local_temperature_arg + end_local_temperature_arg) / 2
+            refrig_work_mj = 0
+            if B_fuel_type == 0:
+                heat_required_watts = OHTC_ship_arg[B_fuel_type] * calculated_storage_area_arg * (T_avg + 273 - 20) * ship_number_of_tanks_arg
+                refrig_work_mj = (heat_required_watts / (COP_refrig_arg[B_fuel_type] * (EIM_refrig_eff_arg / 100))) / 1000000 * 3600 * port_to_port_duration_arg
 
-        if C_recirculation_BOG == 2:
-            usable_BOG = current_BOG_loss * (BOG_recirculation_maritime_percentage_arg / 100.0)
-            net_BOG_loss -= usable_BOG
-            if F_maritime_apply == 1:
-                A_after_loss += usable_BOG
-                reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
-                reliq_work_mj = reliq_ener_required * usable_BOG
-                # CAPEX for onboard re-liquefaction unit
-                # Scale by total ship volume for an approximate cost
-                reliquefier_cost_per_m3 = BOG_EQUIPMENT_CAPEX['reliquefaction_unit']['ship']['cost_usd_per_m3_volume']
-                reliquefier_annualization = BOG_EQUIPMENT_CAPEX['reliquefaction_unit']['ship']['annualization_factor']
-                reliquefier_life_years = BOG_EQUIPMENT_CAPEX['reliquefaction_unit']['ship']['life_years']
+            local_BOR_transportation = dBOR_dT_arg[B_fuel_type] * (T_avg - 25) + BOR_ship_trans_arg[B_fuel_type]
+            current_BOG_loss = local_BOR_transportation * (1 / 24) * port_to_port_duration_arg * A
 
-                # Total CAPEX for the unit for the entire ship
-                total_reliquefier_capex = reliquefier_cost_per_m3 * selected_ship_params_arg['volume_m3']
+            net_BOG_loss = current_BOG_loss
+            A_after_loss = A - current_BOG_loss
+            reliq_work_mj = 0
+            energy_saved_from_bog_mj = 0
+
+            if C_recirculation_BOG == 2:
+                usable_BOG = current_BOG_loss * (BOG_recirculation_maritime_percentage_arg / 100.0)
+                net_BOG_loss -= usable_BOG
+                if F_maritime_apply == 1:
+                    A_after_loss += usable_BOG
+                    reliq_ener_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
+                    reliq_work_mj = reliq_ener_required * usable_BOG
+                    # CAPEX for onboard re-liquefaction unit
+                    reliquefier_cost_per_m3 = BOG_EQUIPMENT_CAPEX['reliquefaction_unit']['ship']['cost_usd_per_m3_volume']
+                    reliquefier_annualization = BOG_EQUIPMENT_CAPEX['reliquefaction_unit']['ship']['annualization_factor']
+
+                    # Total CAPEX for the unit for the entire ship
+                    total_reliquefier_capex = reliquefier_cost_per_m3 * selected_ship_params_arg['volume_m3']
+                    
+                    # Annualized cost, then prorate for this single voyage
+                    annualized_reliquefier_capex = total_reliquefier_capex * reliquefier_annualization
+                    capex_per_voyage_reliquefier = annualized_reliquefier_capex / annual_working_days * voyage_duration_days
+                    
+                    capex_money += capex_per_voyage_reliquefier
+                    
+                elif F_maritime_apply == 2:
+                    energy_saved_from_bog_mj = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
+                    # CAPEX for auxiliary fuel integration/engine modification
+                    aux_integration_cost_per_m3 = BOG_EQUIPMENT_CAPEX['aux_fuel_integration']['ship']['cost_usd_per_m3_volume']
+                    aux_integration_annualization = BOG_EQUIPMENT_CAPEX['aux_fuel_integration']['ship']['annualization_factor']
+                    
+                    total_aux_integration_capex = aux_integration_cost_per_m3 * selected_ship_params_arg['volume_m3']
+                    annualized_aux_capex = total_aux_integration_capex * aux_integration_annualization
+                    capex_per_voyage_aux = annualized_aux_capex / annual_working_days * voyage_duration_days
+                    
+                    capex_money += capex_per_voyage_aux
+                    
+                elif F_maritime_apply == 3:
+                    net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_maritime_percentage_arg * 0.01)
+                    # Corrected: Use 'cost_usd_per_m3_volume'
+                    burner_cost_per_m3 = BOG_EQUIPMENT_CAPEX['burner_flare']['ship']['cost_usd_per_m3_volume']
+                    burner_annualization = BOG_EQUIPMENT_CAPEX['burner_flare']['ship']['annualization_factor']
+                    
+                    total_burner_capex = burner_cost_per_m3 * selected_ship_params_arg['volume_m3']
+                    annualized_burner_capex = total_burner_capex * burner_annualization
+                    capex_per_voyage_burner = annualized_burner_capex / annual_working_days * voyage_duration_days
+                    capex_money += capex_per_voyage_burner
                 
-                # Annualized cost, then prorate for this single voyage
-                # Assuming 330 operational days per year for annualization
-                annualized_reliquefier_capex = total_reliquefier_capex * reliquefier_annualization
-                capex_per_voyage_reliquefier = annualized_reliquefier_capex / annual_working_days * voyage_duration_days
-                
-                capex_money += capex_per_voyage_reliquefier # Add to total CAPEX
-                
-            elif F_maritime_apply == 2:
-                energy_saved_from_bog_mj = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
-                # CAPEX for auxiliary fuel integration/engine modification
-                aux_integration_cost = BOG_EQUIPMENT_CAPEX['aux_fuel_integration']['ship']['cost_usd']
-                aux_integration_annualization = BOG_EQUIPMENT_CAPEX['aux_fuel_integration']['ship']['annualization_factor']
-                
-                annualized_aux_capex = aux_integration_cost * aux_integration_annualization
-                capex_per_voyage_aux = annualized_aux_capex / annual_working_days * voyage_duration_days
-                
-                capex_money += capex_per_voyage_aux # Add to total CAPEX
-                
-            elif F_maritime_apply == 3:
-                net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_maritime_percentage_arg * 0.01)
-                burner_cost = BOG_EQUIPMENT_CAPEX['burner_flare']['ship']['cost_usd']
-                burner_annualization = BOG_EQUIPMENT_CAPEX['burner_flare']['ship']['annualization_factor']
-                annualized_burner_capex = burner_cost * burner_annualization
-                capex_per_voyage_burner = annualized_burner_capex / annual_working_days * voyage_duration_days
-                capex_money += capex_per_voyage_burner
-            
-        fuel_hhv_mj_per_kg = selected_fuel_params_arg['hhv_mj_per_kg']
-        sfoc_g_per_kwh = selected_fuel_params_arg['sfoc_g_per_kwh']
+            fuel_hhv_mj_per_kg = selected_fuel_params_arg['hhv_mj_per_kg']
+            sfoc_g_per_kwh = selected_fuel_params_arg['sfoc_g_per_kwh']
 
-        total_engine_work_mj = (propulsion_work_kwh * 3.6) + refrig_work_mj + reliq_work_mj - energy_saved_from_bog_mj
-        if total_engine_work_mj < 0: total_engine_work_mj = 0
+            total_engine_work_mj = (propulsion_work_kwh * 3.6) + refrig_work_mj + reliq_work_mj - energy_saved_from_bog_mj
+            if total_engine_work_mj < 0: total_engine_work_mj = 0
 
-        total_engine_work_kwh = total_engine_work_mj / 3.6
+            total_engine_work_kwh = total_engine_work_mj / 3.6
 
-        total_fuel_consumed_kg = (total_engine_work_kwh * sfoc_g_per_kwh) / 1000.0
+            total_fuel_consumed_kg = (total_engine_work_kwh * sfoc_g_per_kwh) / 1000.0
 
-        opex_money += (total_fuel_consumed_kg / 1000) * selected_fuel_params_arg['price_usd_per_ton']
+            opex_money += (total_fuel_consumed_kg / 1000) * selected_fuel_params_arg['price_usd_per_ton']
 
-        # Maintenance and Repair Cost
-        maintenance_cost = maintenance_cost_per_km_ship_arg * port_to_port_dis_arg
-        opex_money += maintenance_cost
+            # Maintenance and Repair Cost
+            maintenance_cost = maintenance_cost_per_km_ship_arg * port_to_port_dis_arg
+            opex_money += maintenance_cost
 
-        # Voyage CAPEX (from calculate_voyage_overheads)
-        voyage_duration_days = port_to_port_duration_arg / 24.0
-        voyage_capex_total = calculate_voyage_overheads_helper_arg(voyage_duration_days, selected_ship_params_arg, canal_transits_arg, port_regions_arg)
-        capex_money += voyage_capex_total
+            # Voyage CAPEX (from calculate_voyage_overheads)
+            voyage_capex_total = calculate_voyage_overheads_helper_arg(voyage_duration_days, selected_ship_params_arg, canal_transits_arg, port_regions_arg)
+            capex_money += voyage_capex_total
 
-        co2_factor = selected_fuel_params_arg['co2_emissions_factor_kg_per_kg_fuel']
-        methane_factor = selected_fuel_params_arg['methane_slip_gwp100']
-        fuel_emissions_co2e = (total_fuel_consumed_kg * co2_factor) + (total_fuel_consumed_kg * methane_factor)
+            co2_factor = selected_fuel_params_arg['co2_emissions_factor_kg_per_kg_fuel']
+            methane_factor = selected_fuel_params_arg['methane_slip_gwp100']
+            fuel_emissions_co2e = (total_fuel_consumed_kg * co2_factor) + (total_fuel_consumed_kg * methane_factor)
 
-        n2o_emissions_co2e = 0
-        if 'n2o_emission_factor_g_per_kwh' in selected_fuel_params_arg:
-            n2o_factor_g_kwh = selected_fuel_params_arg['n2o_emission_factor_g_per_kwh']
-            n2o_emissions_kg = (total_engine_work_kwh * n2o_factor_g_kwh) / 1000
-            n2o_emissions_co2e = n2o_emissions_kg * GWP_N2O_arg
+            n2o_emissions_co2e = 0
+            if 'n2o_emission_factor_g_per_kwh' in selected_fuel_params_arg:
+                n2o_factor_g_kwh = selected_fuel_params_arg['n2o_emission_factor_g_per_kwh']
+                n2o_emissions_kg = (total_engine_work_kwh * n2o_factor_g_kwh) / 1000
+                n2o_emissions_co2e = n2o_emissions_kg * GWP_N2O_arg
 
-        bog_emissions_co2e = net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
+            bog_emissions_co2e = net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
 
-        total_G_emission = fuel_emissions_co2e + bog_emissions_co2e + n2o_emissions_co2e
+            total_G_emission = fuel_emissions_co2e + bog_emissions_co2e + n2o_emissions_co2e
 
-        # Carbon Tax (General)
-        carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0) * (total_G_emission / 1000)
-        carbon_tax_money += carbon_tax
+            # Carbon Tax (General)
+            carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0) * (total_G_emission / 1000)
+            carbon_tax_money += carbon_tax
 
-        # EU ETS Carbon Tax (if applicable)
-        eu_ets_tax = 0
-        if end_country_name_arg in eu_member_countries_arg:
-            # As of 2025, 50% of emissions for inbound voyages are covered by EU ETS
-            eu_ets_emissions_tons = (total_G_emission / 1000) * 0.50
-            eu_ets_tax = eu_ets_emissions_tons * carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0)
-            carbon_tax_money += eu_ets_tax # Add to carbon_tax_money
+            # EU ETS Carbon Tax (if applicable)
+            eu_ets_tax = 0
+            if end_country_name_arg in eu_member_countries_arg:
+                # As of 2025, 50% of emissions for inbound voyages are covered by EU ETS
+                eu_ets_emissions_tons = (total_G_emission / 1000) * 0.50
+                eu_ets_tax = eu_ets_emissions_tons * carbon_tax_per_ton_co2_dict_arg.get(end_country_name_arg, 0)
+                carbon_tax_money += eu_ets_tax
 
-        total_energy_consumed_mj = total_fuel_consumed_kg * fuel_hhv_mj_per_kg
-        return opex_money, capex_money, carbon_tax_money, total_energy_consumed_mj, total_G_emission, A_after_loss, net_BOG_loss, 0 # Added 0 for insurance
+            total_energy_consumed_mj = total_fuel_consumed_kg * fuel_hhv_mj_per_kg
+            return opex_money, capex_money, carbon_tax_money, total_energy_consumed_mj, total_G_emission, A_after_loss, net_BOG_loss, 0
 
     def chem_convert_to_H2(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_args_tuple):
         (mass_conversion_to_H2_arg, eff_energy_chem_to_H2_arg, energy_chem_to_H2_arg, 
