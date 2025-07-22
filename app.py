@@ -2593,10 +2593,7 @@ def run_lca_model(inputs):
     start_local_temperature = local_temperature(coor_start_lat, coor_start_lng)
     end_local_temperature = local_temperature(coor_end_lat, coor_end_lng)
     port_to_port_duration = float(port_to_port_dis) / (16 * 1.852)
-    boiling_point_chem = [20, 239.66, 337.7];
-    COP_liq_dyn = calculate_dynamic_cop(start_local_temperature, boiling_point_chem[fuel_type])
-    COP_cooldown_dyn = COP_liq_dyn 
-
+    
     CO2e_start = carbon_intensity(coor_start_lat, coor_start_lng)
     CO2e_end = carbon_intensity(coor_end_lat, coor_end_lng)
 
@@ -2809,6 +2806,10 @@ def run_lca_model(inputs):
         else:
             ship_tank_radius = np.cbrt(volume_per_tank/(4/3*np.pi))
             storage_area = 4*np.pi*ship_tank_radius**2
+        boiling_point_chem = [20, 239.66, 337.7]; start_temp_kelvin = start_local_temperature + 273.15
+        COP_liq_dyn = calculate_dynamic_cop(start_temp_kelvin, boiling_point_chem[fuel_type])
+        COP_cooldown_dyn = COP_liq_dyn 
+        
         HHV_chem = [142, 22.5, 22.7]; LHV_chem = [120, 18.6, 19.9]; boiling_point_chem = [20, 239.66, 337.7];
         latent_H_chem = [449.6/1000, 1.37, 1.1]; specific_heat_chem = [14.3/1000, 4.7/1000, 2.5/1000];
         liquid_chem_density = [71, 682, 805];
