@@ -509,6 +509,31 @@ def run_lca_model(inputs):
 
         return insurance_cost
 
+    def calculate_dynamic_cop(hot_temp, cold_temp, exergy_efficiency=0.4):
+            """
+            Calculates the dynamic Coefficient of Performance (COP) based on temperature.
+            Source: Equations 2 & 3 from the provided study[cite: 157, 158].
+            
+            Args:
+                hot_temp_c (float): Temperature of the hot source (ambient) in Celsius.
+                cold_temp_c (float): Temperature of the cold source (boiling point) in Celsius.
+                exergy_efficiency (float): The exergy efficiency of the system (default is 0.4).
+                
+            Returns:
+                float: The calculated actual COP.
+            """
+            # Avoid division by zero or illogical results if hot temp is not > cold temp
+            if hot_temp <= cold_temp:
+                return 0
+
+            # Calculate theoretical COP [cite: 158]
+            cop_theoretical = cold_temp / (hot_temp - cold_temp)
+            
+            # Calculate actual COP using the given exergy efficiency [cite: 157]
+            cop_actual = cop_theoretical * exergy_efficiency
+            
+            return cop_actual
+
     def create_breakdown_chart(data, opex_col_idx, capex_col_idx, carbon_tax_col_idx, insurance_col_idx, title, x_label, overlay_text=None, is_emission_chart=False):
         try:
             if not data:
@@ -666,7 +691,7 @@ def run_lca_model(inputs):
     def site_A_chem_liquification(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_specific_args_tuple):
         (LH2_plant_capacity_arg, EIM_liquefication_arg, specific_heat_chem_arg, 
         start_local_temperature_arg, boiling_point_chem_arg, latent_H_chem_arg, 
-        COP_liq_arg, start_electricity_price_tuple_arg, CO2e_start_arg, 
+        COP_liq_dyn, start_electricity_price_tuple_arg, CO2e_start_arg, 
         GWP_chem_list_arg, calculate_liquefaction_capex_helper_arg, start_country_name_arg, carbon_tax_per_ton_co2_dict_arg) = process_specific_args_tuple
 
         opex_money = 0
@@ -677,7 +702,7 @@ def run_lca_model(inputs):
             liquify_energy_required = liquification_data_fitting(LH2_plant_capacity_arg) / (EIM_liquefication_arg / 100)
         elif B_fuel_type == 1:  # Ammonia
             liquify_heat_required = specific_heat_chem_arg[B_fuel_type] * (start_local_temperature_arg + 273 - boiling_point_chem_arg[B_fuel_type]) + latent_H_chem_arg[B_fuel_type]
-            liquify_energy_required = liquify_heat_required / COP_liq_arg[B_fuel_type]
+            liquify_energy_required = liquify_heat_required / COP_liq_dyn
         else:  # Methanol
             liquify_energy_required = 0
 
@@ -1001,7 +1026,7 @@ def run_lca_model(inputs):
         CO2e_start_arg, GWP_chem_list_arg, calculated_storage_area_arg, ship_tank_metal_thickness,
         ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density,
         ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat,
-        COP_cooldown_arg, COP_refrig_arg, ship_number_of_tanks_arg, pipe_metal_specific_heat_arg,
+        COP_cooldown_dyn, COP_refrig_arg, ship_number_of_tanks_arg, pipe_metal_specific_heat_arg,
         calculate_loading_unloading_capex_helper_arg, start_country_name_arg, carbon_tax_per_ton_co2_dict_arg) = process_args_tuple
 
         opex_money = 0
@@ -1035,7 +1060,7 @@ def run_lca_model(inputs):
             delta_T = (start_local_temperature_arg + 273.15) - boiling_point_chem_arg[B_fuel_type]
             Q_cooling = (H_tank_metal + H_tank_insulation) * delta_T
 
-            cooldown_cop = COP_cooldown_arg[B_fuel_type]
+            cooldown_cop = COP_cooldown_dyn[B_fuel_type]
             if cooldown_cop > 0:
                 ener_consumed_cooldown = Q_cooling / cooldown_cop
 
@@ -1052,7 +1077,7 @@ def run_lca_model(inputs):
 
             Q_cooling_pipes = mass_metal_pipes * pipe_metal_specific_heat_arg * delta_T_pipes
 
-            cooldown_cop_pipes = COP_cooldown_arg[B_fuel_type]
+            cooldown_cop_pipes = COP_cooldown_dyn[B_fuel_type]
             if cooldown_cop_pipes > 0:
                 ener_consumed_cooldown_pipes = Q_cooling_pipes / cooldown_cop_pipes
 
@@ -1502,7 +1527,7 @@ def run_lca_model(inputs):
                 process_args_for_current_func = (
                     LH2_plant_capacity_opt, EIM_liquefication_opt, specific_heat_chem,
                     start_local_temperature_opt, boiling_point_chem, latent_H_chem,
-                    COP_liq, start_electricity_price_opt, CO2e_start_opt, GWP_chem,
+                    COP_liq_dyn, start_electricity_price_opt, CO2e_start_opt, GWP_chem,
                     calculate_liquefaction_capex_helper_opt, start_country_name_opt, carbon_tax_per_ton_co2_dict_opt
                 )
 
@@ -1575,7 +1600,7 @@ def run_lca_model(inputs):
                     CO2e_start_opt, GWP_chem, storage_area, ship_tank_metal_thickness,
                     ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density,
                     ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat,
-                    COP_cooldown, COP_refrig, ship_number_of_tanks, pipe_metal_specific_heat,
+                    COP_cooldown_dyn, COP_refrig, ship_number_of_tanks, pipe_metal_specific_heat,
                     calculate_loading_unloading_capex_helper_opt, start_country_name_opt, carbon_tax_per_ton_co2_dict_opt
                 )
             
@@ -1780,10 +1805,10 @@ def run_lca_model(inputs):
             if func_to_call.__name__ == "site_A_chem_production":
                 process_args_for_this_call_tc = (
                     GWP_chem, hydrogen_production_cost, start_country_name, carbon_tax_per_ton_co2_dict_tc,
-                    selected_fuel_name_tc, searoute_coor_tc, port_to_port_duration_tc # Passed through total_chem_base
+                    selected_fuel_name_tc, searoute_coor_tc, port_to_port_duration_tc 
                 )
             elif func_to_call.__name__ == "site_A_chem_liquification":
-                process_args_for_this_call_tc = (LH2_plant_capacity, EIM_liquefication, specific_heat_chem, start_local_temperature, boiling_point_chem, latent_H_chem, COP_liq, start_electricity_price, CO2e_start, GWP_chem, calculate_liquefaction_capex, start_country_name, carbon_tax_per_ton_co2_dict_tc)
+                process_args_for_this_call_tc = (LH2_plant_capacity, EIM_liquefication, specific_heat_chem, start_local_temperature, boiling_point_chem, latent_H_chem, COP_liq_dyn, start_electricity_price, CO2e_start, GWP_chem, calculate_liquefaction_capex, start_country_name, carbon_tax_per_ton_co2_dict_tc)
             elif func_to_call.__name__ == "fuel_pump_transfer":
                 country_for_transfer = ""
                 if transfer_context == 'siteA_to_truck':
@@ -1850,7 +1875,16 @@ def run_lca_model(inputs):
                         fuel_cell_eff, EIM_fuel_cell, LHV_chem, calculate_storage_capex, country_for_storage, carbon_tax_per_ton_co2_dict_tc
                     )
             elif func_to_call.__name__ == "chem_loading_to_ship":
-                process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_ship_port_A, dBOR_dT, start_local_temperature, BOR_loading, liquid_chem_density, head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick, boiling_point_chem, EIM_refrig_eff, start_electricity_price, CO2e_start, GWP_chem, storage_area, ship_tank_metal_thickness, ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density, ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat, COP_cooldown, COP_refrig, ship_number_of_tanks, pipe_metal_specific_heat, calculate_loading_unloading_capex, start_country_name, carbon_tax_per_ton_co2_dict_tc)
+                process_args_for_this_call_tc = (V_flowrate, number_of_cryo_pump_load_ship_port_A, 
+                                                 dBOR_dT, start_local_temperature, BOR_loading, liquid_chem_density, 
+                                                 head_pump, pump_power_factor, EIM_cryo_pump, ss_therm_cond, pipe_length, 
+                                                 pipe_inner_D, pipe_thick, boiling_point_chem, EIM_refrig_eff, 
+                                                 start_electricity_price, CO2e_start, GWP_chem, storage_area, 
+                                                 ship_tank_metal_thickness, ship_tank_insulation_thickness, 
+                                                 ship_tank_metal_density, ship_tank_insulation_density, 
+                                                 ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat, 
+                                                 COP_cooldown_dyn, COP_refrig, ship_number_of_tanks, pipe_metal_specific_heat, 
+                                                 calculate_loading_unloading_capex, start_country_name, carbon_tax_per_ton_co2_dict_tc)
             elif func_to_call.__name__ == "port_to_port":
                 process_args_for_this_call_tc = (
                     start_local_temperature, end_local_temperature, OHTC_ship,
@@ -2559,6 +2593,9 @@ def run_lca_model(inputs):
     start_local_temperature = local_temperature(coor_start_lat, coor_start_lng)
     end_local_temperature = local_temperature(coor_end_lat, coor_end_lng)
     port_to_port_duration = float(port_to_port_dis) / (16 * 1.852)
+    boiling_point_chem = [20, 239.66, 337.7];
+    COP_liq_dyn = calculate_dynamic_cop(start_local_temperature, boiling_point_chem[fuel_type])
+    COP_cooldown_dyn = COP_liq_dyn 
 
     CO2e_start = carbon_intensity(coor_start_lat, coor_start_lng)
     CO2e_end = carbon_intensity(coor_end_lat, coor_end_lng)
