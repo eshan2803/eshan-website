@@ -1,89 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Transport Model Documentation | Eshan Singh</title>
-  <link rel="icon" type="image/png" href="assets/fevicon.png">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
-  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-  <style>
-    /* Add specific styles for documentation page if needed */
-    .documentation-content h3 {
-      font-size: 1.5rem;
-      margin-top: 2rem;
-      margin-bottom: 1rem;
-      border-bottom: 2px solid #2e7d32;
-      padding-bottom: 0.5rem;
-    }
-    .documentation-content h4 {
-      font-size: 1.2rem;
-      margin-top: 1.5rem;
-      margin-bottom: 0.75rem;
-      color: #1b5e20;
-    }
-    .documentation-content p, .documentation-content li {
-      line-height: 1.6;
-      text-align: justify;
-    }
-    .documentation-content ul, .documentation-content ol {
-      list-style-type: disc;
-      padding-left: 20px;
-    }
-    .documentation-content ol li {
-      margin-bottom: 0.75rem; /* Space between references */
-    }
-    .documentation-content strong {
-       color: #333;
-    }
-    .documentation-content a {
-        color: #0288d1;
-        text-decoration: none;
-    }
-    .documentation-content a:hover {
-        text-decoration: underline;
-    }
-    .parameter-table th, .parameter-table td {
-        padding: 8px 12px;
-        border: 1px solid #ddd;
-        text-align: left;
-    }
-    .parameter-table th {
-        background-color: #2e7d32;
-        color: white;
-    }
-    .parameter-table tbody tr:nth-child(even) {
-        background-color: #f2f2f2;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transport Model Documentation | Dr. Eshan Singh</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+    
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="stylesheet" href="custom.css" />
+    <style>
+        html { scroll-behavior: smooth; }
+        body {
+            background-color: #fcfcfc;
+            font-family: 'Inter', sans-serif;
+            cursor: none;
+        }
+        .font-lora { font-family: 'Lora', serif; }
+        
+        /* Magnetic Cursor */
+        .cursor {
+            position: fixed; width: 30px; height: 30px; border: 2px solid #333;
+            border-radius: 50%; left: 0; top: 0; pointer-events: none;
+            transform: translate(-50%, -50%); transition: width 0.2s, height 0.2s, border-width 0.2s, background-color 0.2s;
+            z-index: 99999;
+        }
+        .cursor.hovered {
+            width: 50px; height: 50px; border-width: 3px;
+            background-color: rgba(0, 166, 126, 0.1); border-color: #00A67E;
+        }
+        
+        /* Glass Card Effect */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        
+        /* Documentation specific styles */
+        .documentation-content h3 {
+            font-size: 1.5rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #00A67E;
+            padding-bottom: 0.5rem;
+            color: #1f2937;
+        }
+        .documentation-content h4 {
+            font-size: 1.2rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: #00A67E;
+            font-weight: 600;
+        }
+        .documentation-content h5 {
+            font-size: 1.1rem;
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+            color: #374151;
+            font-weight: 600;
+        }
+        .documentation-content p, .documentation-content li {
+            line-height: 1.7;
+            text-align: justify;
+            color: #4b5563;
+        }
+        .documentation-content ul, .documentation-content ol {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .documentation-content ol li {
+            margin-bottom: 0.75rem;
+        }
+        .documentation-content strong {
+            color: #1f2937;
+        }
+        .documentation-content a {
+            color: #00A67E;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .documentation-content a:hover {
+            text-decoration: underline;
+        }
+        .documentation-content code {
+            background-color: rgba(0, 166, 126, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.875rem;
+            color: #00A67E;
+        }
+        .parameter-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(4px);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        .parameter-table th, .parameter-table td {
+            padding: 0.75rem 1rem;
+            border: 1px solid rgba(0, 166, 126, 0.2);
+            text-align: left;
+        }
+        .parameter-table th {
+            background-color: #00A67E;
+            color: white;
+            font-weight: 600;
+        }
+        .parameter-table tbody tr:nth-child(even) {
+            background-color: rgba(0, 166, 126, 0.05);
+        }
+    </style>
 </head>
-<body class="fade-in">
-  <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem;">
-    <div>
-      <h1 style="font-size: 3rem; font-weight: 600; margin: 0;">Dr. Eshan Singh</h1>
-    </div>
-    <div class="header-animation">
-      <lottie-player
-        src="assets/wind-turbine.json"
-        background="transparent"
-        speed="1"
-        style="width: 150px; height: 150px;"
-        loop autoplay>
-      </lottie-player>
-    </div>
-  </header>
+<body class="min-h-screen">
+    <!-- Magnetic Cursor -->
+    <div class="cursor hidden md:block"></div>
+    
+    <!-- Three.js Canvas Container -->
+    <div id="bg-canvas" class="fixed top-0 left-0" style="z-index: -10;"></div>
+    
+    <header class="p-8">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="home.html" class="font-lora text-2xl font-semibold">Dr. Eshan Singh</a>
+            <nav class="flex items-center space-x-2">
+                <a href="energy.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
+                <a href="transport-model-new.html" class="rainbow-glow">
+                    <span class="button-content">Transport Model</span>
+                </a>
+                <a href="musings.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Musings</a>
+            </nav>
+        </div>
+    </header>
 
-  <nav>
-    <a href="index.html">Home</a>
-    <a href="energy.html">Energy Decarbonization</a>
-    <a href="personal.html">Personal Musings</a>
-    <a href="contact.html">Contact</a>
-  </nav>
-
-  <main class="container" style="background: rgba(255,255,255,0.92); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 2rem 3rem; margin-top: 2rem;">
-    <section class="documentation-content" data-aos="fade-up">
-      <h2 style="text-align: center; font-size: 2.5rem; margin-bottom: 2rem;">Commodity Transport Model: Documentation</h2>
+    <main class="container mx-auto px-8 pb-16">
+        <div class="glass-card rounded-2xl p-8 shadow-xl">
+            <section class="documentation-content">
+                <h2 class="text-center text-4xl font-bold text-gray-800 mb-8 font-lora">Commodity Transport Model: Documentation</h2>
 
       <h3>1. Introduction</h3>
       <p>
@@ -497,26 +559,97 @@
         <li><a href="https://developers.google.com/maps/documentation/geocoding/overview" target="_blank">Google Maps Platform. (Ongoing). <em>Geocoding API</em>.</a></li>
         <li><a href="https://platform.openai.com/" target="_blank">OpenAI. (Ongoing). <em>Generative AI Models (e.g., GPT-4o)</em>.</a> (Used for dynamic price/location lookups where structured APIs are unavailable)</li>
       </ol>
-      </section>
-  </main>
+            </section>
+        </div>
+    </main>
 
-  <footer>
-    <p>&copy; 2025 Eshan & Associates LLC. All rights reserved.</p>
-    <div class="social-links">
-      <a href="https://www.linkedin.com/in/eshan-singh-188b1554/" target="_blank">
-        <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn">
-      </a>
-      <a href="mailto:hello@eshansingh.xyz">
-        <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/732/732200.png" alt="Email">
-      </a>
-      <a href="https://scholar.google.com/citations?user=VhYa_v4AAAAJ&hl=en" target="_blank">
-        <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" alt="Google Scholar">
-      </a>
-    </div>
-  </footer>
+    <footer class="w-full text-center py-5 border-t border-gray-200/80">
+        <div class="flex items-center justify-center space-x-4">
+             <p class="text-sm text-gray-500">&copy; 2025 Eshan & Associates LLC. All rights reserved.</p>
+             <a href="https://www.linkedin.com/in/eshan-singh-188b1554/" target="_blank" rel="noopener noreferrer" class="cursor-pointer">
+                <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn" class="h-5 w-5 hover:opacity-75 transition-opacity">
+            </a>
+        </div>
+    </footer>
 
-  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
-  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-  <script>AOS.init();</script>
+    <script>
+        // Magnetic Cursor
+        const cursor = document.querySelector('.cursor');
+        const interactiveElements = document.querySelectorAll('a, button, input, select, textarea, [data-hover]');
+        
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+        });
+        
+        interactiveElements.forEach(el => {
+            el.addEventListener('mouseenter', () => cursor.classList.add('hovered'));
+            el.addEventListener('mouseleave', () => cursor.classList.remove('hovered'));
+        });
+        
+        // Three.js Background Animation
+        let scene, camera, renderer, particles;
+        
+        function initThreeJS() {
+            const container = document.getElementById('bg-canvas');
+            
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0);
+            container.appendChild(renderer.domElement);
+            
+            // Create particles
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            
+            for (let i = 0; i < 1000; i++) {
+                vertices.push(
+                    (Math.random() - 0.5) * 2000,
+                    (Math.random() - 0.5) * 2000,
+                    (Math.random() - 0.5) * 2000
+                );
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            
+            const material = new THREE.PointsMaterial({
+                color: 0x00A67E,
+                size: 2,
+                transparent: true,
+                opacity: 0.6
+            });
+            
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+            
+            camera.position.z = 1000;
+            
+            animate();
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            particles.rotation.x += 0.0005;
+            particles.rotation.y += 0.001;
+            
+            renderer.render(scene, camera);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        window.addEventListener('resize', onWindowResize);
+        
+        // Initialize when page loads
+        window.addEventListener('load', initThreeJS);
+    </script>
+    <script src="custom.js"></script>
 </body>
 </html>

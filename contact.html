@@ -7,6 +7,7 @@
   <link rel="icon" type="image/png" href="assets/fevicon.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="custom.css" />
 </head>
 <body>
 <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem;">
@@ -97,16 +98,7 @@
     }
   });
 </script>
-<script>
-  window.addEventListener("scroll", function () {
-    const nav = document.querySelector("nav");
-    if (window.scrollY > 20) {
-      nav.classList.add("scrolled");
-    } else {
-      nav.classList.remove("scrolled");
-    }
-  });
-</script>
+<script src="custom.js"></script>
 
 </body>
 </html>
