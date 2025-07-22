@@ -370,47 +370,111 @@ function displayMap(mapData, foodType) {
 }
 
 // Table Creation Helper
-function createTableHtml(headers, data) {
-    let html = '<thead><tr>';
-    headers.forEach(header => {
-        html += `<th>${header}</th>`;
-    });
-    html += '</tr></thead><tbody>';
+function createTableHtml(headers, dataArray, isDetailed = false) {
+      // Start with the table header
+      let html = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead>';
 
-    data.forEach(row => {
-        html += '<tr>';
-        row.forEach(cell => {
-            html += `<td>${cell}</td>`;
+      // Start the table body
+      html += '<tbody>';
+
+      // Loop through each ROW in the data array
+      dataArray.forEach(row => {
+        html += '<tr>'; // Start a new table row for each data row
+
+        // Loop through each CELL in the current row
+        row.forEach((cell, index) => {
+          let cellContent = cell;
+
+          // Apply special number formatting only for the detailed table
+          if (isDetailed) {
+            if (index === 0) { // First column (Process Step) is always text
+              cellContent = cell;
+            } else if (index >= 7) { // "Per unit" columns (Opex/kg, Capex/kg, Cost/kg, etc.) get 4 decimal places
+              cellContent = isNaN(Number(cell)) ? cell : Number(cell).toFixed(4);
+            } else { // Raw data columns (Opex, Capex, Energy, CO2eq, Chem, BOG/Spoilage) get scientific notation (indices 1-6)
+              cellContent = isNaN(Number(cell)) ? cell : Number(cell).toExponential(2);
+            }
+          }
+          // Add the individual table cell
+          html += `<td>${cellContent}</td>`;
         });
-        html += '</tr>';
-    });
 
-    html += '</tbody>';
-    return html;
-}
+        html += '</tr>'; // End the table row
+      });
+
+      html += '</tbody>'; // End the table body
+      return '<table>' + html + '</table>'; // Wrap everything in a <table> tag
+    }
 
 // Table Display Function
 function displayTables(tableData, commodity) {
-    // Summary Table 1
+    // --- 1. DETAILED TABLE LOGIC ---
+    // Get the detailed table elements
+    const detailedTableTitle = document.getElementById('detailedTableTitle');
+    const detailedTableContainer = document.getElementById('detailedTableContainer');
+
+    // Hide the detailed table and its title (it is not used in transport-model-new.html, but keeping the logic here)
+    if (detailedTableTitle) detailedTableTitle.classList.add('hidden');
+    if (detailedTableContainer) detailedTableContainer.classList.add('hidden');
+
+    // The data is still processed and ready for CSV download, just not displayed.
+    let detailedHeaders = tableData.detailed_headers || [];
+    let detailedData = tableData.detailed_data || [];
+
+    // This filtering logic is still important for the CSV data,
+    // even if the table isn't displayed on the UI.
+    if (commodity === 'food') {
+        // If the commodity is food, filter out the GJ columns
+        // These indices need to be carefully checked against your backend's new_detailed_headers
+        // Assuming your backend sends the full headers and data,
+        // these indices are based on `new_detailed_headers` in app_food.py
+        const costPerGJIndex = detailedHeaders.indexOf('Cost/GJ ($/GJ)');
+        const eco2PerGJIndex = detailedHeaders.indexOf('eCO2/GJ (kg/GJ)');
+
+        const columnsToRemove = [];
+        if (costPerGJIndex !== -1) columnsToRemove.push(costPerGJIndex);
+        if (eco2PerGJIndex !== -1) columnsToRemove.push(eco2PerGJIndex);
+
+        // Sort in descending order so that removing elements doesn't affect subsequent indices
+        columnsToRemove.sort((a, b) => b - a);
+
+        detailedHeaders = detailedHeaders.filter((_, index) => !columnsToRemove.includes(index));
+        detailedData = detailedData.map(row => {
+            let newRow = [...row]; // Create a copy to avoid modifying original
+            columnsToRemove.forEach(index => {
+                if (index < newRow.length) {
+                    newRow.splice(index, 1);
+                }
+            });
+            return newRow;
+        });
+    }
+    // No longer rendering the detailed table HTML here
+
+    // --- 2. SUMMARY TABLE 1 LOGIC (No changes here) ---
     const summary1Headers = tableData.summary1_headers || [];
     const summary1Data = tableData.summary1_data || [];
     document.getElementById('summaryTableContainer').innerHTML = createTableHtml(summary1Headers, summary1Data);
 
-    // Summary Table 2 (Per GJ) - only for fuel
+
+    // --- 3. SUMMARY TABLE 2 (PER GJ) LOGIC ---
     const summary2Container = document.getElementById('summaryTableContainer2');
-    const summary2Title = summary2Container.previousElementSibling;
+    // In transport-model-new.html, the H4 for "Per GJ Results" is the previous sibling
+    const summary2Title = summary2Container.previousElementSibling; 
 
     if (commodity === 'fuel' && tableData.summary2_data && tableData.summary2_data.length > 0) {
+        // ONLY show this table if the commodity is 'fuel'
         summary2Container.innerHTML = createTableHtml(tableData.summary2_headers, tableData.summary2_data);
         summary2Container.classList.remove('hidden');
-        summary2Title.classList.remove('hidden');
+        if (summary2Title) summary2Title.classList.remove('hidden'); // Ensure the title is also shown
     } else {
+        // Hide this table for 'food' or if there's no data
         summary2Container.innerHTML = '';
         summary2Container.classList.add('hidden');
-        summary2Title.classList.add('hidden');
+        if (summary2Title) summary2Title.classList.add('hidden'); // Ensure the title is also hidden
     }
 
-    // Assumption Table
+    // --- 4. ASSUMPTION TABLE LOGIC (No changes here) ---
     const assumptionHeaders = tableData.assumed_prices_headers || [];
     const assumptionData = tableData.assumed_prices_data || [];
     const assumptionContainer = document.getElementById('assumptionTableContainer');
