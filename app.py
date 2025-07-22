@@ -105,15 +105,18 @@ ROUTE_RISK_ZONES = [
 BOG_EQUIPMENT_CAPEX = {
     'reliquefaction_unit': {
         'truck': {'cost_usd': 50000, 'life_years': 10, 'annualization_factor': 0.15},
-        'ship': {'cost_usd_per_m3_volume': 100, 'life_years': 20, 'annualization_factor': 0.09} # Scaled by ship volume or cargo capacity
+        'ship': {'cost_usd_per_m3_volume': 100, 'life_years': 20, 'annualization_factor': 0.09},
+        'storage': {'cost_usd_per_kg_capacity': 5.0, 'life_years': 20, 'annualization_factor': 0.09}
     },
     'aux_fuel_integration': {
         'truck': {'cost_usd': 10000, 'life_years': 10, 'annualization_factor': 0.15},
-        'ship': {'cost_usd': 500000, 'life_years': 20, 'annualization_factor': 0.09}
+        'ship': {'cost_usd_per_m3_volume': 50, 'life_years': 20, 'annualization_factor': 0.09},
+        'storage': {'cost_usd_per_kg_capacity': 1.5, 'life_years': 20, 'annualization_factor': 0.09}
     },
     'burner_flare': {
         'truck': {'cost_usd': 5000, 'life_years': 5, 'annualization_factor': 0.25},
-        'ship': {'cost_usd': 100000, 'life_years': 15, 'annualization_factor': 0.12}
+        'ship': {'cost_usd_per_m3_volume': 20, 'life_years': 15, 'annualization_factor': 0.12},
+        'storage': {'cost_usd_per_kg_capacity': 0.5, 'life_years': 15, 'annualization_factor': 0.12}
     }
 }
 api_cache = {}
@@ -911,7 +914,33 @@ def run_lca_model(inputs):
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_storage_percentage_arg * 0.01)
 
                 G_emission = total_energy_consumed * 0.2778 * CO2e_arg * 0.001 + net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
+                # CAPEX for storage reliquefaction unit
+                reliquefier_cost_per_kg_capacity = BOG_EQUIPMENT_CAPEX['reliquefaction_unit']['storage']['cost_usd_per_kg_capacity']
+                reliquefier_annualization = BOG_EQUIPMENT_CAPEX['reliquefaction_unit']['storage']['annualization_factor']
+                
+                # Annualized cost of the unit, then prorated by actual annual throughput
+                # Assuming `A` is the mass in storage for *this specific period*.
+                # To annualize, we need total annual throughput. A simpler way is to
+                # calculate annual cost based on A (as a 'capacity') and prorate per storage day.
+                # Or, use the overall facility capacity from `calculate_storage_capex_helper_arg`
+                # Let's use the provided 'A' as current mass and prorate over average annual throughput via storage days.
+                if storage_time_arg > 0 and annual_working_days > 0:
+                    cycles_per_year = annual_working_days / storage_time_arg
+                    annual_throughput_kg_for_capex = A * cycles_per_year
+                else:
+                    annual_throughput_kg_for_capex = A * 330 # Fallback if storage_time_arg is 0
 
+                total_reliquefier_capex_for_current_A = reliquefier_cost_per_kg_capacity * A
+                annualized_reliquefier_capex = total_reliquefier_capex_for_current_A * reliquefier_annualization
+                
+                # Calculate CAPEX for this specific period/batch
+                # This part can be tricky. If the cost is truly per kg of *capacity*,
+                # and `A` is the amount *processed* in this step, then a better way
+                # might be to use total annual capacity of the storage site.
+                # For simplicity here, we'll prorate the annualized cost based on the current `A`
+                # assuming this `A` represents a throughput that needs its share of the annual CAPEX.
+                capex_per_kg_reliquefier_for_this_A = annualized_reliquefier_capex / annual_throughput_kg_for_capex if annual_throughput_kg_for_capex > 0 else 0
+                capex_money += capex_per_kg_reliquefier_for_this_A * A
             elif E_storage_apply == 2:
                 usable_BOG = current_BOG_loss * BOG_recirculation_storage_percentage_arg * 0.01
                 usable_ener = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
@@ -927,11 +956,37 @@ def run_lca_model(inputs):
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_storage_percentage_arg * 0.01)
 
                 G_emission = total_energy_consumed * 0.2778 * CO2e_arg * 0.001 + net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
+                # CAPEX for storage auxiliary fuel integration
+                aux_integration_cost_per_kg_capacity = BOG_EQUIPMENT_CAPEX['aux_fuel_integration']['storage']['cost_usd_per_kg_capacity']
+                aux_integration_annualization = BOG_EQUIPMENT_CAPEX['aux_fuel_integration']['storage']['annualization_factor']
 
+                if storage_time_arg > 0 and annual_working_days > 0:
+                    cycles_per_year = annual_working_days / storage_time_arg
+                    annual_throughput_kg_for_capex = A * cycles_per_year
+                else:
+                    annual_throughput_kg_for_capex = A * 330
+
+                total_aux_integration_capex_for_current_A = aux_integration_cost_per_kg_capacity * A
+                annualized_aux_capex = total_aux_integration_capex_for_current_A * aux_integration_annualization
+                capex_per_kg_aux_for_this_A = annualized_aux_capex / annual_throughput_kg_for_capex if annual_throughput_kg_for_capex > 0 else 0
+                capex_money += capex_per_kg_aux_for_this_A * A
             elif E_storage_apply == 3:
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_storage_percentage_arg * 0.01)
                 G_emission = total_energy_consumed * 0.2778 * CO2e_arg * 0.001 + net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
+                # CAPEX for storage burner/flare
+                burner_cost_per_kg_capacity = BOG_EQUIPMENT_CAPEX['burner_flare']['storage']['cost_usd_per_kg_capacity']
+                burner_annualization = BOG_EQUIPMENT_CAPEX['burner_flare']['storage']['annualization_factor']
 
+                if storage_time_arg > 0 and annual_working_days > 0:
+                    cycles_per_year = annual_working_days / storage_time_arg
+                    annual_throughput_kg_for_capex = A * cycles_per_year
+                else:
+                    annual_throughput_kg_for_capex = A * 330
+
+                total_burner_capex_for_current_A = burner_cost_per_kg_capacity * A
+                annualized_burner_capex = total_burner_capex_for_current_A * burner_annualization
+                capex_per_kg_burner_for_this_A = annualized_burner_capex / annual_throughput_kg_for_capex if annual_throughput_kg_for_capex > 0 else 0
+                capex_money += capex_per_kg_burner_for_this_A * A
         # Carbon Tax
         carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(country_of_storage_arg, 0) * (G_emission / 1000)
         carbon_tax_money += carbon_tax
