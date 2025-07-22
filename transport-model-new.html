@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Commodity Transport Model | Dr. Eshan Singh</title>
 
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
 
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="custom.css" />
 
@@ -138,8 +141,10 @@
 </head>
 <body class="antialiased">
 
+    <!-- Magnetic Cursor -->
     <div class="cursor hidden md:block"></div>
 
+    <!-- Three.js Canvas Container -->
     <div id="bg-canvas" class="fixed top-0 left-0" style="z-index: -10;"></div>
 
     <header class="p-8">
@@ -155,6 +160,7 @@
         </div>
     </header>
 
+    <!-- Hero Section -->
     <main class="fold">
         <div class="container mx-auto grid md:grid-cols-2 gap-12 items-center">
             <div class="text-left">
@@ -183,11 +189,13 @@
         <div class="scroll-down-arrow"><span class="arrow"></span></div>
     </main>
 
+    <!-- Form Section -->
     <section class="fold relative overflow-hidden will-change-transform">
         <div class="mesh-gradient-1"></div>
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="glass-card">
                 <form id="lcaForm" class="space-y-6">
+                    <!-- Commodity Type Selection -->
                     <div>
                         <label for="commodity-type" class="form-label">Select Commodity Category:</label>
                         <select id="commodity-type" name="commodity-type" class="form-select">
@@ -196,6 +204,7 @@
                         </select>
                     </div>
 
+                    <!-- Location Inputs -->
                     <div class="grid md:grid-cols-2 gap-6">
                         <div>
                             <label for="startLocation" class="form-label">Start Location</label>
@@ -207,6 +216,7 @@
                         </div>
                     </div>
 
+                    <!-- Fuel Options (shown by default) -->
                     <div id="fuel-options">
                         <div>
                             <label for="fuel_type" class="form-label">Select Fuel:</label>
@@ -231,6 +241,7 @@
                             </div>
                         </div>
 
+                        <!-- BOG Recirculation Details (hidden by default) -->
                         <div id="bogRecirculationDetails" class="hidden mt-6 glass-card">
                             <h3 class="text-lg font-semibold mb-4">BOG Recirculation Details:</h3>
                             <div class="grid md:grid-cols-3 gap-6">
@@ -265,6 +276,7 @@
                         </div>
                     </div>
 
+                    <!-- Food Options (hidden by default) -->
                     <div id="food-options" class="hidden">
                         <div>
                             <label for="food_type" class="form-label">Select Food Item:</label>
@@ -280,6 +292,7 @@
                         </div>
                     </div>
 
+                    <!-- Marine Fuel Choice -->
                     <div>
                         <label for="marineFuelChoice" class="form-label">Marine Propulsion Fuel</label>
                         <select id="marineFuelChoice" class="form-select">
@@ -290,11 +303,13 @@
                         </select>
                     </div>
 
+                    <!-- Capacity Input -->
                     <div id="capacity-input-group">
                         <label id="capacity-label" for="lh2PlantCapacity" class="form-label">LH2 Plant Capacity (TPD):</label>
                         <input type="number" id="lh2PlantCapacity" value="24" class="form-input">
                     </div>
 
+                    <!-- Storage Times -->
                     <div class="grid md:grid-cols-3 gap-6">
                         <div>
                             <label for="storageTimeA" class="form-label">Storage Time at Port Closest to Starting Point (days)</label>
@@ -310,6 +325,7 @@
                         </div>
                     </div>
 
+                    <!-- Ship Details -->
                     <div id="ship-details-wrapper">
                         <div>
                             <label for="shipArchetypeSelect" class="form-label">Select Ship Archetype</label>
@@ -323,6 +339,7 @@
                             </select>
                         </div>
 
+                        <!-- Custom Ship Details (hidden by default) -->
                         <div id="customShipDetails" class="hidden mt-6 glass-card">
                             <h3 class="text-lg font-semibold mb-4">Custom Ship Details:</h3>
                             <div class="space-y-4">
@@ -351,54 +368,56 @@
                         </div>
                     </div>
 
+                    <!-- Calculate Button -->
                     <div class="text-center pt-6">
                         <button type="submit" class="form-button">Calculate</button>
                     </div>
                 </form>
 
+                <!-- Status Messages -->
                 <div id="statusMessages" class="mt-6 hidden"></div>
             </div>
         </div>
     </section>
 
+    <!-- Results Section -->
     <div id="outputs" class="hidden">
         <section class="fold relative overflow-hidden">
             <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="glass-card">
                     <h3 class="text-2xl font-lora font-semibold mb-6">Results</h3>
                     
+                    <!-- Map -->
                     <div class="mb-8">
                         <h4 class="text-lg font-semibold mb-4">Transport Route</h4>
                         <div id="map"></div>
                     </div>
 
+                    <!-- Summary Tables -->
                     <div class="grid md:grid-cols-2 gap-8 mb-8">
                         <div>
-                            <h4 class="text-lg font-semibold mb-4">Results Summary</h4>
-                            <h5 class="text-md font-medium mb-2">Per kg Results</h5>
+                            <h4 class="text-lg font-semibold mb-4">Summary Results</h4>
                             <div id="summaryTableContainer" class="results-table"></div>
                         </div>
                         <div>
-                            <h4 class="text-lg font-semibold mb-4">&nbsp;</h4> <h5 class="text-md font-medium mb-2">Per GJ Results</h5>
+                            <h4 class="text-lg font-semibold mb-4">Per GJ Results</h4>
                             <div id="summaryTableContainer2" class="results-table"></div>
                         </div>
                     </div>
 
+                    <!-- Comparison Section -->
                     <div id="comparisonSection" class="hidden mb-8">
                         <h4 class="text-lg font-semibold mb-4">Local vs International Comparison</h4>
                         <div id="comparisonTableContainer" class="results-table"></div>
                     </div>
 
+                    <!-- Green Premium Section -->
                     <div id="greenPremiumSection" class="hidden mb-8">
                         <h4 class="text-lg font-semibold mb-4">Green Premium Analysis</h4>
                         <div id="greenPremiumTableContainer" class="results-table"></div>
                     </div>
 
-                    <div class="mb-8">
-                        <h4 class="text-lg font-semibold mb-4">Assumed Prices</h4>
-                        <div id="assumptionTableContainer" class="results-table"></div>
-                    </div>
-
+                    <!-- Charts -->
                     <div class="grid md:grid-cols-2 gap-8 mb-8">
                         <div>
                             <h4 class="text-lg font-semibold mb-4">Cost Breakdown</h4>
@@ -409,7 +428,14 @@
                             <img id="emissionChartImg" class="w-full rounded-lg" alt="Emission Chart">
                         </div>
                     </div>
-                    
+
+                    <!-- Assumptions Table -->
+                    <div class="mb-8">
+                        <h4 class="text-lg font-semibold mb-4">Assumed Prices</h4>
+                        <div id="assumptionTableContainer" class="results-table"></div>
+                    </div>
+
+                    <!-- Action Buttons -->
                     <div class="flex justify-center space-x-4">
                         <button id="downloadCsvButton" class="bg-green-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-green-700 transition-colors">Download CSV</button>
                         <button id="shareLinkedInButton" class="bg-blue-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors">Share on LinkedIn</button>
@@ -419,6 +445,7 @@
         </section>
     </div>
 
+    <!-- Modal -->
     <div id="messageModal" class="modal">
         <div class="modal-content">
             <span id="modalCloseButton" class="float-right text-2xl cursor-pointer">&times;</span>
@@ -426,6 +453,7 @@
         </div>
     </div>
 
+    <!-- Footer -->
     <footer class="w-full text-center py-5 border-t border-gray-200/80">
         <div class="flex items-center justify-center space-x-4">
              <p class="text-sm text-gray-500">&copy; 2025 Eshan & Associates LLC. All rights reserved.</p>
@@ -435,6 +463,7 @@
         </div>
     </footer>
 
+    <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
@@ -557,6 +586,7 @@
         });
     </script>
     
+    <!-- Transport Model Functionality -->
     <script src="transport-model.js"></script>
     <script src="custom.js"></script>
 
