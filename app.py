@@ -788,6 +788,10 @@ def run_lca_model(inputs):
                 G_emission_energy = (total_energy * CO2e_diesel_arg) / (HHV_diesel_arg * diesel_density_arg)
                 G_emission = G_emission_energy + net_BOG_loss * GWP_chem_arg[B_fuel_type]
 
+            elif D_truck_apply == 3:
+                net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_truck_percentage_arg * 0.01)
+                G_emission = G_emission_energy + net_BOG_loss * GWP_chem_arg[B_fuel_type]
+
         # Driver salary cost
         trip_days = max(1, math.ceil(duration_arg / 1440))
         driver_cost_per_truck = (driver_daily_salary_arg / annual_working_days_arg) * trip_days
@@ -877,6 +881,10 @@ def run_lca_model(inputs):
 
                 net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_storage_percentage_arg * 0.01)
 
+                G_emission = total_energy_consumed * 0.2778 * CO2e_arg * 0.001 + net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
+
+            elif E_storage_apply == 3:
+                net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_storage_percentage_arg * 0.01)
                 G_emission = total_energy_consumed * 0.2778 * CO2e_arg * 0.001 + net_BOG_loss * GWP_chem_list_arg[B_fuel_type]
 
         # Carbon Tax
@@ -1006,6 +1014,8 @@ def run_lca_model(inputs):
                 reliq_work_mj = reliq_ener_required * usable_BOG
             elif F_maritime_apply == 2:
                 energy_saved_from_bog_mj = usable_BOG * fuel_cell_eff_arg * (EIM_fuel_cell_arg / 100) * LHV_chem_arg[B_fuel_type]
+            elif F_maritime_apply == 3:
+                net_BOG_loss = current_BOG_loss * (1 - BOG_recirculation_maritime_percentage_arg * 0.01)
 
         fuel_hhv_mj_per_kg = selected_fuel_params_arg['hhv_mj_per_kg']
         sfoc_g_per_kwh = selected_fuel_params_arg['sfoc_g_per_kwh']
