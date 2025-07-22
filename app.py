@@ -592,8 +592,8 @@ def run_lca_model(inputs):
             if overlay_text:
                 # Place text using fig.text, relative to the figure's bottom margin
                 # x=0.05 (5% from left), y=0.01 (1% from bottom, within the extended margin)
-                fig.text(0.05, 0.01, overlay_text, # Coordinates are (x, y) relative to the figure
-                         ha='left', va='bottom', size=10,
+                fig.text(0.18, 0.25, overlay_text, # Coordinates are (x, y) relative to the figure
+                         ha='left', va='bottom', size=12,
                          bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.6))
             
             # Use tight_layout, but apply it to the subplot area that fig.subplots_adjust defined.
