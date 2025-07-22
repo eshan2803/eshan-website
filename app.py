@@ -20,7 +20,7 @@ import base64
 
 # --- Initialize Flask App ---
 app = Flask(__name__)
-CORS(app, resources={r"/calculate": {"origins": "https://eshansingh.xyz"}})
+CORS(app, resources={r"/calculate": {"origins": ["https://eshansingh.xyz", "http://localhost:8000", "http://127.0.0.1:8000"]}})
 
 # --- API KEYS ---
 api_key_google = os.environ.get("API_KEY_GOOGLE", "ESHAN_API_KEY_GOOGLE")
