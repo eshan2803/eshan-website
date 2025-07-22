@@ -399,47 +399,47 @@ def run_lca_model(inputs):
                 api_cache[cache_key] = cached_value
                 return cached_value
 
-        def openai_get_marine_fuel_price(fuel_name, port_coords_tuple, port_name_str):
-            cache_key = f"marine_fuel_price_{fuel_name}_{port_coords_tuple[0]}_{port_coords_tuple[1]}"
-            if cache_key in api_cache:
-                return api_cache[cache_key]
+    def openai_get_marine_fuel_price(fuel_name, port_coords_tuple, port_name_str):
+        cache_key = f"marine_fuel_price_{fuel_name}_{port_coords_tuple[0]}_{port_coords_tuple[1]}"
+        if cache_key in api_cache:
+            return api_cache[cache_key]
 
-            from openai import OpenAI
-            client = OpenAI(api_key=api_key_openAI)
-            default_prices = {'VLSFO': 650.0, 'LNG': 550.0, 'Methanol': 700.0, 'Ammonia': 800.0}
-            default_price_usd_per_mt = default_prices.get(fuel_name, 650.0)
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key_openAI)
+        default_prices = {'VLSFO': 650.0, 'LNG': 550.0, 'Methanol': 700.0, 'Ammonia': 800.0}
+        default_price_usd_per_mt = default_prices.get(fuel_name, 650.0)
 
+        try:
+            prompt = f"""
+            You are an expert in marine fuel markets. Provide the latest bunker fuel price in USD per metric ton (USD/mt) for {fuel_name} at the port of {port_name_str} (coordinates: {port_coords_tuple[0]}, {port_coords_tuple[1]}). Return only the price in USD/mt as a float, without additional text or explanation. If you cannot provide a specific numerical price, return the string "N/A".
+            """
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "You are a precise data retrieval assistant for marine fuel prices. Return only a float or 'N/A'."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=50,
+                temperature=0.3
+            )
+
+            price_str = response.choices[0].message.content.strip()
+            
+            # Attempt to convert to float, handle "N/A" or other non-numeric responses
             try:
-                prompt = f"""
-                You are an expert in marine fuel markets. Provide the latest bunker fuel price in USD per metric ton (USD/mt) for {fuel_name} at the port of {port_name_str} (coordinates: {port_coords_tuple[0]}, {port_coords_tuple[1]}). Return only the price in USD/mt as a float, without additional text or explanation. If you cannot provide a specific numerical price, return the string "N/A".
-                """
-                response = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[
-                        {"role": "system", "content": "You are a precise data retrieval assistant for marine fuel prices. Return only a float or 'N/A'."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    max_tokens=50,
-                    temperature=0.3
-                )
+                price = float(price_str)
+            except ValueError:
+                print(f"DEBUG: OpenAI returned non-numeric value for marine fuel price: '{price_str}'. Using default.")
+                price = default_price_usd_per_mt
 
-                price_str = response.choices[0].message.content.strip()
-                
-                # Attempt to convert to float, handle "N/A" or other non-numeric responses
-                try:
-                    price = float(price_str)
-                except ValueError:
-                    print(f"DEBUG: OpenAI returned non-numeric value for marine fuel price: '{price_str}'. Using default.")
-                    price = default_price_usd_per_mt
-
-                cached_value = (port_name_str, price)
-                api_cache[cache_key] = cached_value
-                return cached_value
-            except Exception as e:
-                print(f"OpenAI Marine Fuel Price API error for {fuel_name} at {port_name_str}: {e}")
-                cached_value = (port_name_str, default_price_usd_per_mt)
-                api_cache[cache_key] = cached_value
-                return cached_value
+            cached_value = (port_name_str, price)
+            api_cache[cache_key] = cached_value
+            return cached_value
+        except Exception as e:
+            print(f"OpenAI Marine Fuel Price API error for {fuel_name} at {port_name_str}: {e}")
+            cached_value = (port_name_str, default_price_usd_per_mt)
+            api_cache[cache_key] = cached_value
+            return cached_value
 
     def calculate_ship_power_kw(ship_volume_m3):
         power_scaling_data = [(20000, 7000), (90000, 15000), (174000, 19900), (210000, 25000), (266000, 43540)]
@@ -1032,7 +1032,7 @@ def run_lca_model(inputs):
 
         opex_money = 0
         capex_money = 0
-        carbon_tax_money = 0 # New variable
+        carbon_tax_money = 0 
         voyage_duration_days = port_to_port_duration_arg / 24.0 
         propulsion_work_kwh = avg_ship_power_kw_arg * port_to_port_duration_arg
 
