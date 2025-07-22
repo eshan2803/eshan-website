@@ -1060,7 +1060,7 @@ def run_lca_model(inputs):
             delta_T = (start_local_temperature_arg + 273.15) - boiling_point_chem_arg[B_fuel_type]
             Q_cooling = (H_tank_metal + H_tank_insulation) * delta_T
 
-            cooldown_cop = COP_cooldown_dyn[B_fuel_type]
+            cooldown_cop = COP_cooldown_dyn
             if cooldown_cop > 0:
                 ener_consumed_cooldown = Q_cooling / cooldown_cop
 
@@ -1077,7 +1077,7 @@ def run_lca_model(inputs):
 
             Q_cooling_pipes = mass_metal_pipes * pipe_metal_specific_heat_arg * delta_T_pipes
 
-            cooldown_cop_pipes = COP_cooldown_dyn[B_fuel_type]
+            cooldown_cop_pipes = COP_cooldown_dyn
             if cooldown_cop_pipes > 0:
                 ener_consumed_cooldown_pipes = Q_cooling_pipes / cooldown_cop_pipes
 
@@ -1473,7 +1473,7 @@ def run_lca_model(inputs):
 
         (LH2_plant_capacity_opt, EIM_liquefication_opt, specific_heat_chem,
         start_local_temperature_opt, boiling_point_chem, latent_H_chem,
-        COP_liq, start_electricity_price_opt, CO2e_start_opt, GWP_chem,
+        COP_liq_dyn, start_electricity_price_opt, CO2e_start_opt, GWP_chem,
         V_flowrate, number_of_cryo_pump_load_truck_site_A_opt,
         number_of_cryo_pump_load_storage_port_A_opt, number_of_cryo_pump_load_ship_port_A_opt,
         dBOR_dT, BOR_loading, BOR_unloading, head_pump_opt, pump_power_factor_opt,
@@ -2892,7 +2892,7 @@ def run_lca_model(inputs):
         all_shared_params_tuple = (
             LH2_plant_capacity, EIM_liquefication, specific_heat_chem,
             start_local_temperature, boiling_point_chem, latent_H_chem,
-            COP_liq, start_electricity_price, CO2e_start, GWP_chem,
+            COP_liq_dyn, start_electricity_price, CO2e_start, GWP_chem,
             V_flowrate,
             number_of_cryo_pump_load_truck_site_A,
             number_of_cryo_pump_load_storage_port_A,
@@ -2903,7 +2903,7 @@ def run_lca_model(inputs):
             head_pump, pump_power_factor, EIM_cryo_pump,
             ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick,
             COP_refrig,
-            EIM_refrig_eff, pipe_metal_specific_heat, COP_cooldown,
+            EIM_refrig_eff, pipe_metal_specific_heat, COP_cooldown_dyn,
             road_delivery_ener,
             HHV_chem,
             chem_in_truck_weight,
