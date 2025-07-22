@@ -371,3 +371,34 @@ body.fade-in {
     background: transparent;
     border: none;
 }
+/* In custom.css or inside the <style> tag of transport-model-new.html */
+
+/* Basic table styling */
+.results-table table {
+    width: 100%;
+    border-collapse: collapse; /* Removes double borders */
+    margin-top: 1rem; /* Add some space above the table */
+    background-color: rgba(255, 255, 255, 0.6); /* Glass effect from your new template */
+    backdrop-filter: blur(4px);
+    border-radius: 0.5rem;
+    overflow: hidden; /* Ensures rounded corners clip content */
+}
+
+.results-table th,
+.results-table td {
+    padding: 0.75rem; /* Standard padding */
+    text-align: left; /* Align text to the left */
+    border-bottom: 1px solid rgba(229, 231, 235, 0.5); /* Light border for rows */
+    font-size: 0.875rem;
+}
+
+.results-table th {
+    background-color: rgba(249, 250, 251, 0.8); /* Slightly darker background for headers */
+    font-weight: 500;
+    color: #374151;
+}
+
+/* Optional: remove bottom border for last row */
+.results-table tbody tr:last-child td {
+    border-bottom: none;
+}
