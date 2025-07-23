@@ -36,6 +36,35 @@
             width: 50px; height: 50px; border-width: 3px;
             background-color: rgba(0, 166, 126, 0.1); border-color: #00A67E;
         }
+        /* Rainbow Border Animation */
+        @keyframes rainbow-border {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+        
+        .rainbow-glow {
+            position: relative;
+            background: linear-gradient(90deg, #ff0080, #ff8000, #ffff00, #80ff00, #00ff80, #0080ff, #8000ff, #ff0080);
+            background-size: 200% 200%;
+            animation: rainbow-border 2s linear infinite;
+            padding: 2px;
+            border-radius: 9999px;
+        }
+        
+        .rainbow-glow .button-content {
+            background: #f3f4f6;
+            border-radius: 9999px;
+            padding: 0.5rem 1rem;
+            display: block;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        
+        .rainbow-glow:hover .button-content {
+            background: #e5e7eb;
+        }
         
         /* Glass Card Effect */
         .glass-card {
@@ -43,7 +72,7 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.18);
         }
-        
+      
         /* Documentation specific styles */
         .documentation-content h3 {
             font-size: 1.5rem;
@@ -131,7 +160,7 @@
     
     <header class="p-8">
         <div class="container mx-auto flex justify-between items-center">
-            <a href="home.html" class="font-lora text-2xl font-semibold">Dr. Eshan Singh</a>
+            <a href="index.html" class="font-lora text-2xl font-semibold">Dr. Eshan Singh</a>
             <nav class="flex items-center space-x-2">
                 <a href="energy.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
                 <a href="transport-model-new.html" class="rainbow-glow">
@@ -250,7 +279,7 @@
                   <li>A base per-transit insurance percentage and a minimum premium.</li>
               </ul>
           </li>
-              <h5>2.3.6. Dynamic Coefficient of Performance (COP)</h3>
+              <h5>2.3.5. Dynamic Coefficient of Performance (COP)</h3>
               <p>The model now calculates the COP for refrigeration and liquefaction processes dynamically, making it more sensitive to real-world conditions. This replaces the previous use of hard-coded constants.</p>
               <p>The calculation is based on the standard thermodynamic formula for a refrigeration cycle's efficiency, using an assumed exergy efficiency of 40% (a common standard in comparative engineering studies):</p>
               <p><code>COP_actual = 0.4 * (T_cold / (T_hot - T_cold))</code></p>
