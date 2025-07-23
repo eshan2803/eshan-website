@@ -250,7 +250,18 @@
                   <li>A base per-transit insurance percentage and a minimum premium.</li>
               </ul>
           </li>
-      </ul>
+          <div class="highlight">
+              <h3>Dynamic Coefficient of Performance (COP)</h3>
+              <p>The model now calculates the COP for refrigeration and liquefaction processes dynamically, making it more sensitive to real-world conditions. This replaces the previous use of hard-coded constants.</p>
+              <p>The calculation is based on the standard thermodynamic formula for a refrigeration cycle's efficiency, using an assumed exergy efficiency of 40% (a common standard in comparative engineering studies):</p>
+              <p><code>COP_actual = 0.4 * (T_cold / (T_hot - T_cold))</code></p>
+              <ul>
+                  <li><code>T_hot</code>: The ambient temperature at the process location (in Kelvin).</li>
+                  <li><code>T_cold</code>: The boiling point of the substance being liquefied (in Kelvin).</li>
+              </ul>
+              <p>This allows the model to correctly simulate that more energy is required for liquefaction in warmer climates.</p>
+          </div>
+        </ul>
 
       <h5>2.3.5. BOG Recirculation Module (Fuel Pathway)</h5>
       <p>The model includes an advanced module to assess the impact of BOG management strategies during fuel transport and storage. Users can choose to vent the BOG (resulting in emissions and mass loss) or to recirculate it. If recirculation is selected, two options are modeled:</p>
@@ -368,10 +379,8 @@
           <li><strong>Fuel Cell Efficiency (for BOG use):</strong> 65%</li>
           <li><strong>Pump Power Factor:</strong> 78%</li>
           <li><strong>Multistage H₂ Compressor Efficiency:</strong> 85%</li>
-          <li><strong>Coefficient of Performance (COP) - Liquefaction:</strong> Hydrogen: 0.131; Ammonia: 1.714; Methanol: 2.0</li>
-          <li><strong>Coefficient of Performance (COP) - Refrigeration/Reliquifaction:</strong> Hydrogen: 0.036; Ammonia: 1.636; Methanol: 2.0</li>
-          <li><strong>Coefficient of Performance (COP) - Vessel Cooldown:</strong> Hydrogen: 0.131; Ammonia: 1.714; Methanol: 2.0</li>
-          <li><strong>Energy Integration Module (EIM) Efficiencies:</strong> All set to 100% (assumed ideal integration or baseline for comparison)</li>
+          <li><strong>Coefficient of Performance (COP) - Reliquifaction:</strong> Hydrogen: 0.036; Ammonia: 1.636; Methanol: 2.0</li>
+          <li><strong>Efficiency Improvement Metric (EIM):</strong> All set to 100% (A factor to account for future improvement in efficiencies of various processes)</li>
       </ul>
 
       <h4 id="overhead-assumptions">3.3. Voyage Overhead Cost Parameters</h4>
@@ -379,8 +388,52 @@
         To provide a comprehensive transport cost, the model incorporates major non-fuel overhead costs for marine vessels. The total voyage overhead is comprised of four key components: Daily Operating Costs (OPEX), Daily Capital Costs (CAPEX), Port Fees, and Canal Transit Fees. These are defined per ship archetype and then applied to the specific voyage.
       </p>
       <ul>
+          <h3>BOG Treatment Equipment</h3>
+          <p>For cryogenic fuel pathways, the model includes the capital cost of equipment required to manage Boil-Off Gas. This includes systems to burn the excess gas or re-liquefy it for reuse.</p>
+          <table border="1" style="width:100%; border-collapse: collapse; margin-top: 15px;">
+              <thead style="background-color: #f2f2f2;">
+                  <tr>
+                      <th style="padding: 8px; text-align: left;">Equipment Type</th>
+                      <th style="padding: 8px; text-align: left;">Base CAPEX (USD)</th>
+                      <th style="padding: 8px; text-align: left;">O&M Rate (% of CAPEX)</th>
+                      <th style="padding: 8px; text-align: left;">Lifetime (Years)</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  <tr>
+                      <td style="padding: 8px;">Burner</td>
+                      <td style="padding: 8px;">$500,000</td>
+                      <td style="padding: 8px;">3%</td>
+                      <td style="padding: 8px;">20</td>
+                  </tr>
+                  <tr>
+                      <td style="padding: 8px;">GCU Burner (Gas Combustion Unit)</td>
+                      <td style="padding: 8px;">$750,000</td>
+                      <td style="padding: 8px;">3%</td>
+                      <td style="padding: 8px;">20</td>
+                  </tr>
+                  <tr>
+                      <td style="padding: 8px;">Auxiliary Power Engine (using BOG as fuel)</td>
+                      <td style="padding: 8px;">$1,500,000</td>
+                      <td style="padding: 8px;">5%</td>
+                      <td style="padding: 8px;">25</td>
+                  </tr>
+                  <tr>
+                      <td style="padding: 8px;">Re-liquefaction System</td>
+                      <td style="padding: 8px;">$5,000,000</td>
+                      <td style="padding: 8px;">4%</td>
+                      <td style="padding: 8px;">20</td>
+                  </tr>
+              </tbody>
+          </table>        
           <li>In the Fuel Pathway, the full calculated overhead cost for the entire ship's operation during the voyage is added to the total supply chain cost.</li>
-          <li>In the Food Pathway, the total overhead cost for the ship is calculated and then **prorated** based on the user's specific shipment size (number of containers) relative to the ship's total container capacity. This reflects the reality of sharing vessel costs in containerized freight.</li>
+          <li>In the Food Pathway, the total overhead cost for the ship is calculated and then prorated based on the user's specific shipment size (number of containers) relative to the ship's total container capacity. This reflects the reality of sharing vessel costs in containerized freight.</li>
+          <li><strong>Insurance:</strong> Calculated based on the value of the cargo and a risk score determined by route factors (e.g., piracy risk, weather).</li>
+          <li><strong>Import Tariffs & Duties:</strong> A significant real-world cost, calculated as a percentage of the cargo's CIF value (Cost, Insurance, and Freight). The model uses a dictionary of average "Most-Favored-Nation" tariff rates for various destination countries to approximate this cost.</li>
+          <li><strong>Financing Costs:</strong> Represents the cost of the working capital tied up in the cargo during transit. It is calculated as an annual interest rate applied to the initial cargo value for the total duration of the journey.</li>
+          <li><strong>Brokerage & Agent Fees:</strong> A flat fee added to each shipment to represent the cost of customs brokers, freight forwarders, and port agents who facilitate the logistics.</li>
+          <li><strong>Contingency Costs:</strong> A buffer to account for unforeseen issues like port strikes, emergency repairs, or customs delays. It is calculated as a fixed percentage (e.g., 10%) of the total operational costs.</li>
+
       </ul>
       <div style="overflow-x: auto;">
         <table class="parameter-table">
