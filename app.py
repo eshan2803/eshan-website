@@ -2572,6 +2572,8 @@ def run_lca_model(inputs):
         loss = 0  # No direct loss (spoilage) calculated at this micro-level
 
         return opex_money, capex_money, carbon_tax_money, energy_mj, emissions, current_weight, loss, 0 # Added 0 for insurance
+
+    new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Carbon Tax ($)", "Energy (MJ)", "CO2eq (kg)", "Chem (kg)", "BOG (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Carbon Tax/kg ($/kg)", "Insurance/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "CO2eq/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
     
     # =================================================================
     # <<< MAIN CONDITIONAL BRANCH STARTS HERE >>>
@@ -3165,7 +3167,6 @@ def run_lca_model(inputs):
                 f"• Transport emission is {ratio_emission:.1f} times the SMR emission."
             )
 
-        new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Carbon Tax ($)", "Energy (MJ)", "CO2eq (kg)", "Chem (kg)", "BOG (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Carbon Tax/kg ($/kg)", "Insurance/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "CO2eq/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
         opex_per_kg_for_chart_idx = new_detailed_headers.index("Opex/kg ($/kg)")
         capex_per_kg_for_chart_idx = new_detailed_headers.index("Capex/kg ($/kg)")
         carbon_tax_per_kg_for_chart_idx = new_detailed_headers.index("Carbon Tax/kg ($/kg)")
@@ -3452,7 +3453,6 @@ def run_lca_model(inputs):
                     formatted_row.append(item)
             detailed_data_formatted.append(formatted_row)
 
-        new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Carbon Tax ($)", "Energy (MJ)", "eCO2 (kg)", "Commodity (kg)", "Spoilage (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Carbon Tax/kg ($/kg)", "Insurance/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "eCO2/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
         opex_per_kg_for_chart_idx = new_detailed_headers.index("Opex/kg ($/kg)")
         capex_per_kg_for_chart_idx = new_detailed_headers.index("Capex/kg ($/kg)")
         carbon_tax_per_kg_for_chart_idx = new_detailed_headers.index("Carbon Tax/kg ($/kg)")
