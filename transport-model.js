@@ -489,182 +489,25 @@ function showModal(message) {
     document.getElementById('messageModal').style.display = "block";
 }
 
-// transport-model.js
-
-document.addEventListener('DOMContentLoaded', () => {
-    // CHANGE: Declare a variable in an accessible scope to store the CSV data
-    let csvData = [];
-
-    // --- Toggle Visibility for Form Options ---
-
-    // Commodity Type (Fuel vs. Food)
-    const commodityType = document.getElementById('commodity-type');
-    const fuelOptions = document.getElementById('fuel-options');
-    const foodOptions = document.getElementById('food-options');
-    const capacityLabel = document.getElementById('capacity-label');
-    const capacityInput = document.getElementById('lh2PlantCapacity');
-    const shipDetailsWrapper = document.getElementById('ship-details-wrapper');
-
-    commodityType.addEventListener('change', () => {
-        if (commodityType.value === 'fuel') {
-            fuelOptions.classList.remove('hidden');
-            foodOptions.classList.add('hidden');
-            shipDetailsWrapper.classList.remove('hidden');
-            capacityInput.value = "24";
-            capacityLabel.textContent = "LH2 Plant Capacity (TPD):";
-        } else {
-            fuelOptions.classList.add('hidden');
-            foodOptions.classList.remove('hidden');
-            shipDetailsWrapper.classList.add('hidden');
-            capacityInput.value = "50";
-            capacityLabel.textContent = "Facility Capacity (Tons/Day):";
-        }
+// Initialize everything when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Attach event listeners
+    commoditySelector.addEventListener('change', updateFormVisibility);
+    document.querySelectorAll('input[name="bogTreatment"]').forEach(radio => {
+        radio.addEventListener('change', updateFormVisibility);
     });
+    shipArchetypeSelect.addEventListener('change', updateFormVisibility);
+    
+    // Set the initial state of the form when the page loads
+    updateFormVisibility();
 
-    // Boil-off Gas (BOG) Recirculation Details
-    const bogRecirculationRadio = document.querySelector('input[name="bogTreatment"][value="2"]');
-    const bogExpelRadio = document.querySelector('input[name="bogTreatment"][value="1"]');
-    const bogRecirculationDetails = document.getElementById('bogRecirculationDetails');
-
-    bogRecirculationRadio.addEventListener('change', () => {
-        if (bogRecirculationRadio.checked) {
-            bogRecirculationDetails.classList.remove('hidden');
-        }
-    });
-    bogExpelRadio.addEventListener('change', () => {
-        if (bogExpelRadio.checked) {
-            bogRecirculationDetails.classList.add('hidden');
-        }
-    });
-
-    // Custom Ship Details
-    const shipArchetypeSelect = document.getElementById('shipArchetypeSelect');
-    const customShipDetails = document.getElementById('customShipDetails');
-
-    shipArchetypeSelect.addEventListener('change', () => {
-        if (shipArchetypeSelect.value === 'custom') {
-            customShipDetails.classList.remove('hidden');
-        } else {
-            customShipDetails.classList.add('hidden');
-        }
-    });
-
-    // --- Main Form Submission ---
-    const lcaForm = document.getElementById('lcaForm');
-    lcaForm.addEventListener('submit', function(event) {
-        event.preventDefault();
-        const button = this.querySelector('button[type="submit"]');
-        const statusDiv = document.getElementById('statusMessages');
-
-        button.disabled = true;
-        statusDiv.innerHTML = 'Initializing... Preparing to send request.';
-        statusDiv.classList.remove('hidden');
-        document.getElementById('outputs').classList.add('hidden');
-
-        const inputs = {
-            start: document.getElementById('startLocation').value,
-            end: document.getElementById('endLocation').value,
-            commodity_type: document.getElementById('commodity-type').value,
-            fuel_type: parseInt(document.getElementById('fuel_type').value, 10),
-            food_type: document.getElementById('food_type').value,
-            recirculation_BOG: document.querySelector('input[name="bogTreatment"]:checked').value,
-            BOG_recirculation_truck: parseFloat(document.getElementById('bogRecirculationTruck').value),
-            BOG_recirculation_truck_apply: document.getElementById('bogRecirculationTruckApply').value,
-            BOG_recirculation_storage: parseFloat(document.getElementById('bogRecirculationStorage').value),
-            BOG_recirculation_storage_apply: document.getElementById('bogRecirculationStorageApply').value,
-            BOG_recirculation_mati_trans: parseFloat(document.getElementById('bogRecirculationMaritime').value),
-            BOG_recirculation_mati_trans_apply: document.getElementById('bogRecirculationMaritimeApply').value,
-            marine_fuel_choice: document.getElementById('marineFuelChoice').value,
-            LH2_plant_capacity: parseFloat(document.getElementById('lh2PlantCapacity').value),
-            storage_time_A: parseFloat(document.getElementById('storageTimeA').value),
-            storage_time_B: parseFloat(document.getElementById('storageTimeB').value),
-            storage_time_C: parseFloat(document.getElementById('storageTimeC').value),
-            shipment_size_containers: parseInt(document.getElementById('shipmentSizeContainers').value),
-            ship_archetype: document.getElementById('shipArchetypeSelect').value,
-            total_ship_volume: parseFloat(document.getElementById('totalShipVolume').value),
-            ship_number_of_tanks: parseInt(document.getElementById('shipNumberOfTanks').value, 10),
-            ship_tank_shape: parseInt(document.getElementById('shipTankShape').value, 10),
-        };
-
-        statusDiv.innerHTML = 'Request sent. Waiting for server to process...';
-
-        fetch('https://lca-food-fuel-2e4559590eca.herokuapp.com/calculate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(inputs)
-            })
-            .then(response => {
-                statusDiv.innerHTML = 'Response received. Processing data...';
-                if (!response.ok) {
-                    throw new Error(`Server responded with status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.status !== "success") {
-                    throw new Error(data.message || "The server returned an error.");
-                }
-
-                // CHANGE: Store the CSV data from the response into our variable.
-                csvData = data.csv_data;
-
-                // --- Populate results on the page ---
-                document.getElementById('costChartImg').src = `data:image/png;base64,${data.charts.cost_chart_base64}`;
-                document.getElementById('emissionChartImg').src = `data:image/png;base64,${data.charts.emission_chart_base64}`;
-
-                // Populate summary tables, detailed tables, map, etc.
-                // ... (your existing or future UI update logic would go here) ...
-
-                statusDiv.classList.add('hidden');
-                document.getElementById('outputs').classList.remove('hidden');
-                window.scrollTo({
-                    top: document.getElementById('outputs').offsetTop,
-                    behavior: 'smooth'
-                });
-
-            })
-            .catch(error => {
-                statusDiv.innerHTML = `An error occurred: ${error.message}`;
-                console.error("Error during calculation:", error);
-            })
-            .finally(() => {
-                button.disabled = false;
-            });
-    });
-
-    // CHANGE: Implement the CSV download functionality.
-    const downloadButton = document.getElementById('downloadCsvButton');
-    downloadButton.addEventListener('click', function() {
-        if (!csvData || csvData.length === 0) {
-            alert("No data available to download. Please run a calculation first.");
-            return;
-        }
-
-        // Convert the array of arrays into a CSV string
-        // This handles cells with commas by enclosing them in double quotes
-        const csvContent = csvData.map(rowArray => {
-            return rowArray.map(cell => {
-                let cellStr = String(cell).replace(/"/g, '""'); // Escape double quotes
-                if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
-                    cellStr = `"${cellStr}"`; // Enclose in double quotes
-                }
-                return cellStr;
-            }).join(',');
-        }).join('\n');
-
-        // Create a Blob and trigger the download
-        const blob = new Blob([csvContent], {
-            type: 'text/csv;charset=utf-8;'
-        });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", "lca_results.csv");
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    });
+    // Attach event listeners for buttons
+    document.getElementById('downloadCsvButton').addEventListener('click', downloadCSV);
+    document.getElementById('shareLinkedInButton').addEventListener('click', shareOnLinkedIn);
+    document.getElementById('lcaForm').addEventListener('submit', handleCalculation);
+    
+    // Modal close button
+    document.getElementById('modalCloseButton').onclick = () => { 
+        document.getElementById('messageModal').style.display = "none"; 
+    };
 });
