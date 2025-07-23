@@ -1922,8 +1922,16 @@ def run_lca_model(inputs):
             opex_money, capex_money, carbon_tax_money_current, Y_energy, Z_emission, R_current_chem, S_bog_loss, insurance_money_current = \
                 func_to_call(R_current_chem, B_fuel_type_tc, C_recirculation_BOG_tc, D_truck_apply_tc,
                             E_storage_apply_tc, F_maritime_apply_tc, process_args_for_this_call_tc)
-            process_label_for_table = label_map.get(func_to_call.__name__, func_to_call.__name__)
-            data_results_list.append([process_label_for_table, opex_money, capex_money, carbon_tax_money_current, Y_energy, Z_emission, R_current_chem, S_bog_loss])
+
+            unique_key = func_to_call.__name__
+            if leg_type:
+                unique_key = f"{func_to_call.__name__}_{leg_type}"
+            elif transfer_context:
+                unique_key = f"{func_to_call.__name__}_{transfer_context}"
+            elif storage_location_type:
+                unique_key = f"{func_to_call.__name__}_{storage_location_type}"
+            descriptive_label = label_map.get(unique_key, unique_key)
+            data_results_list.append([descriptive_label, opex_money, capex_money, carbon_tax_money_current, Y_energy, Z_emission, R_current_chem, S_bog_loss])
              
             if func_to_call.__name__ == "site_A_chem_production":
                 # Add a separate entry for insurance only
@@ -3111,12 +3119,7 @@ def run_lca_model(inputs):
             ]
             data_with_all_columns.append(new_row_with_additions)
 
-        relabeled_data = []
         for row in data_with_all_columns:
-            relabel_key = row[0]
-            new_label = label_map.get(relabel_key, relabel_key)
-            relabeled_data.append([new_label] + row[1:])
-        for row in relabeled_data:
             formatted_row = [row[0]] # Keep the label as is
             for item in row[1:]: # Format numeric values
                 if isinstance(item, (int, float)):
@@ -3128,16 +3131,19 @@ def run_lca_model(inputs):
         aggregated_data_for_chart = []
         aggregated_overheads_row = ["Overheads & Fees", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         overhead_per_kg_col_idx = new_detailed_headers.index("Insurance/kg ($/kg)")
-        for row in relabeled_data:
+        for row in data_with_all_columns:
             label = row[0]
             if label in overhead_labels:
                 aggregated_overheads_row[overhead_per_kg_col_idx] += float(row[overhead_per_kg_col_idx])
             elif label not in ["TOTAL", "Initial Production (Placeholder)", "Harvesting & Preparation"]:
                 aggregated_data_for_chart.append(row)
         aggregated_data_for_chart.append(aggregated_overheads_row)
-
-        emission_chart_exclusions = ["TOTAL", "Initial Production (Placeholder)", "Insurance"]
-        data_for_emission_chart = [row for row in relabeled_data if row[0] not in emission_chart_exclusions]
+        emission_chart_exclusions = [
+            "TOTAL", "Initial Production (Placeholder)", "Insurance",
+            "Import Tariffs & Duties", "Financing Costs",
+            "Brokerage & Agent Fees", "Contingency (10%)"
+        ]
+        data_for_emission_chart = [row for row in data_with_all_columns if row[0] not in emission_chart_exclusions]
 
         chem_cost = total_money / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
         chem_energy = total_energy / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
@@ -3419,29 +3425,31 @@ def run_lca_model(inputs):
             ]
             data_with_all_columns.append(new_row_with_additions)
 
-
-        relabeled_data = []
         for row in data_with_all_columns:
             relabel_key = row[0]
             new_label = label_map.get(relabel_key, relabel_key)
-            relabeled_data.append([new_label] + row[1:])
+            data_with_all_columns.append([new_label] + row[1:])
      
         aggregated_data_for_chart = []
         aggregated_overheads_row = ["Overheads & Fees", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         overhead_per_kg_col_idx = new_detailed_headers.index("Insurance/kg ($/kg)")
-        for row in relabeled_data:
+        for row in data_with_all_columns:
             label = row[0]
             if label in overhead_labels:
                 aggregated_overheads_row[overhead_per_kg_col_idx] += float(row[overhead_per_kg_col_idx])
             elif label not in ["TOTAL", "Initial Production (Placeholder)", "Harvesting & Preparation"]:
                 aggregated_data_for_chart.append(row)
         aggregated_data_for_chart.append(aggregated_overheads_row)
-        
-        emission_chart_exclusions_food = ["TOTAL", "Harvesting & Preparation", "Insurance"] 
-        data_for_emission_chart = [row for row in relabeled_data if row[0] not in emission_chart_exclusions_food]
+
+        emission_chart_exclusions_food = [
+            "TOTAL", "Harvesting & Preparation", "Insurance",
+            "Import Tariffs & Duties", "Financing Costs",
+            "Brokerage & Agent Fees", "Contingency (10%)"
+        ]        
+        data_for_emission_chart = [row for row in data_with_all_columns if row[0] not in emission_chart_exclusions_food]
 
         detailed_data_formatted = []
-        for row in relabeled_data: 
+        for row in data_with_all_columns: 
             formatted_row = [row[0]] 
             for item in row[1:]: 
                 if isinstance(item, (int, float)):
