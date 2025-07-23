@@ -780,9 +780,9 @@ def run_lca_model(inputs):
         opex_money += ener_consumed * electricity_price_tuple_arg[2]
         
         # CAPEX
-        capex_per_kg = calculate_loading_unloading_capex_helper_arg(B_fuel_type)
+        capex_per_kg, om_cost_per_kg = calculate_loading_unloading_capex_helper_arg(B_fuel_type)
         capex_money += capex_per_kg * A
-
+        opex_money += om_cost_per_kg * A
         G_emission = ener_consumed * 0.2778 * CO2e_arg * 0.001 + BOG_loss * GWP_chem_list_arg[B_fuel_type]
 
         # Carbon Tax
