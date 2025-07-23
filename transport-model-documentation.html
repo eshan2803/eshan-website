@@ -279,16 +279,16 @@
                   <li>A base per-transit insurance percentage and a minimum premium.</li>
               </ul>
           </li>
-              <h5>2.3.5. Dynamic Coefficient of Performance (COP)</h3>
-              <p>The model now calculates the COP for refrigeration and liquefaction processes dynamically, making it more sensitive to real-world conditions. This replaces the previous use of hard-coded constants.</p>
-              <p>The calculation is based on the standard thermodynamic formula for a refrigeration cycle's efficiency, using an assumed exergy efficiency of 40% (a common standard in comparative engineering studies):</p>
-              <p><code>COP_actual = 0.4 * (T_cold / (T_hot - T_cold))</code></p>
-              <ul>
-                  <li><code>T_hot</code>: The ambient temperature at the process location (in Kelvin).</li>
-                  <li><code>T_cold</code>: The boiling point of the substance being liquefied (in Kelvin).</li>
-              </ul>
-              <p>This allows the model to correctly simulate that more energy is required for liquefaction in warmer climates.</p>
         </ul>
+      <h5>2.3.5. Dynamic Coefficient of Performance (COP)</h3>
+      <p>The model now calculates the COP for refrigeration and liquefaction processes dynamically, making it more sensitive to real-world conditions. This replaces the previous use of hard-coded constants.</p>
+      <p>The calculation is based on the standard thermodynamic formula for a refrigeration cycle's efficiency, using an assumed exergy efficiency of 40% (a common standard in comparative engineering studies):</p>
+      <p><code>COP_actual = 0.4 * (T_cold / (T_hot - T_cold))</code></p>
+      <ul>
+          <li><code>T_hot</code>: The ambient temperature at the process location (in Kelvin).</li>
+          <li><code>T_cold</code>: The boiling point of the substance being liquefied (in Kelvin).</li>
+      </ul>
+      <p>This allows the model to correctly simulate that more energy is required for liquefaction in warmer climates.</p>
 
       <h5>2.3.6. BOG Recirculation Module (Fuel Pathway)</h5>
       <p>The model includes an advanced module to assess the impact of BOG management strategies during fuel transport and storage. Users can choose to vent the BOG (resulting in emissions and mass loss) or to recirculate it. If recirculation is selected, two options are modeled:</p>
