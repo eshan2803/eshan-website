@@ -2574,6 +2574,7 @@ def run_lca_model(inputs):
         return opex_money, capex_money, carbon_tax_money, energy_mj, emissions, current_weight, loss, 0 # Added 0 for insurance
 
     new_detailed_headers = ["Process Step", "Opex ($)", "Capex ($)", "Carbon Tax ($)", "Energy (MJ)", "CO2eq (kg)", "Chem (kg)", "BOG (kg)", "Opex/kg ($/kg)", "Capex/kg ($/kg)", "Carbon Tax/kg ($/kg)", "Insurance/kg ($/kg)", "Cost/kg ($/kg)", "Cost/GJ ($/GJ)", "CO2eq/kg (kg/kg)", "eCO2/GJ (kg/GJ)"]
+    overhead_labels = ["Insurance", "Import Tariffs & Duties", "Financing Costs", "Brokerage & Agent Fees", "Contingency (10%)"]
     
     # =================================================================
     # <<< MAIN CONDITIONAL BRANCH STARTS HERE >>>
@@ -3087,8 +3088,7 @@ def run_lca_model(inputs):
             opex_per_kg = 0.0
             insurance_per_kg = 0.0
             
-            # This logic correctly separates the "Insurance" entry from regular OPEX
-            if process_label_raw == "Insurance":
+            if process_label_raw in overhead_labels:
                 insurance_per_kg = current_opex / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0.0
                 opex_per_kg = 0.0 # Insurance is not counted as regular OPEX in the stacked bar for this row
             else:
@@ -3125,7 +3125,6 @@ def run_lca_model(inputs):
                     formatted_row.append(item)
             detailed_data_formatted.append(formatted_row)        
         
-        overhead_labels = ["Insurance", "Import Tariffs & Duties", "Financing Costs", "Brokerage & Agent Fees", "Contingency (10%)"]
         aggregated_data_for_chart = []
         aggregated_overheads_row = ["Overheads & Fees", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         overhead_per_kg_col_idx = new_detailed_headers.index("Insurance/kg ($/kg)")
@@ -3215,6 +3214,7 @@ def run_lca_model(inputs):
             [f"Marine Fuel ({marine_fuel_choice}) Price at {start_port_name}*", f"{dynamic_price:.2f} $/ton"],
             [f"Green H2 Production Price at {start}*", f"{hydrogen_production_cost:.2f} $/kg"],
         ]
+        print(f"DEBUG: Found {len(detailed_data_formatted)} formatted rows for the CSV.")
         csv_data = [new_detailed_headers] + detailed_data_formatted
         response = {
             "status": "success",
@@ -3394,7 +3394,7 @@ def run_lca_model(inputs):
             opex_per_kg = 0.0
             insurance_per_kg = 0.0 
 
-            if process_label_raw == "Insurance": # This is the row from the distinct insurance calculation
+            if process_label_raw in overhead_labels: # This is the row from the distinct insurance calculation
                 insurance_per_kg = current_opex / final_commodity_kg if final_commodity_kg > 0 else 0.0
                 opex_per_kg = 0.0 # For the 'Insurance' row itself, OPEX component is zero
             else:
@@ -3426,9 +3426,7 @@ def run_lca_model(inputs):
             relabel_key = row[0]
             new_label = label_map.get(relabel_key, relabel_key)
             relabeled_data.append([new_label] + row[1:])
-
-        overhead_labels = ["Insurance", "Import Tariffs & Duties", "Financing Costs", "Brokerage & Agent Fees", "Contingency (10%)"]
-        
+     
         aggregated_data_for_chart = []
         aggregated_overheads_row = ["Overheads & Fees", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         overhead_per_kg_col_idx = new_detailed_headers.index("Insurance/kg ($/kg)")
@@ -3452,7 +3450,7 @@ def run_lca_model(inputs):
                 else:
                     formatted_row.append(item)
             detailed_data_formatted.append(formatted_row)
-
+        csv_data = [new_detailed_headers] + detailed_data_formatted
         opex_per_kg_for_chart_idx = new_detailed_headers.index("Opex/kg ($/kg)")
         capex_per_kg_for_chart_idx = new_detailed_headers.index("Capex/kg ($/kg)")
         carbon_tax_per_kg_for_chart_idx = new_detailed_headers.index("Carbon Tax/kg ($/kg)")
