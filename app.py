@@ -639,7 +639,7 @@ def run_lca_model(inputs):
             if overlay_text:
                 # Place text using fig.text, relative to the figure's bottom margin
                 # x=0.05 (5% from left), y=0.01 (1% from bottom, within the extended margin)
-                fig.text(0.18, 0.25, overlay_text, # Coordinates are (x, y) relative to the figure
+                fig.text(0.3, 0.25, overlay_text, # Coordinates are (x, y) relative to the figure
                          ha='left', va='bottom', size=12,
                          bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.6))
             
@@ -3214,7 +3214,6 @@ def run_lca_model(inputs):
             [f"Marine Fuel ({marine_fuel_choice}) Price at {start_port_name}*", f"{dynamic_price:.2f} $/ton"],
             [f"Green H2 Production Price at {start}*", f"{hydrogen_production_cost:.2f} $/kg"],
         ]
-        print(f"DEBUG: Found {len(detailed_data_formatted)} formatted rows for the CSV.")
         csv_data = [new_detailed_headers] + detailed_data_formatted
         response = {
             "status": "success",
