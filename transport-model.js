@@ -207,7 +207,7 @@ async function handleCalculation(e) {
             const clonedArrow = originalArrow.cloneNode(true);
             clonedArrow.id = 'cloned-arrow-for-results';
             clonedArrow.style.cursor = 'pointer';
-            clonedArrow.style.margin = '2rem auto'; // Add vertical margin for better spacing
+            clonedArrow.style.margin = '5rem auto'; // Add vertical margin for better spacing
 
             clonedArrow.addEventListener('click', () => {
                 outputsDiv.scrollIntoView({ behavior: 'smooth' });
