@@ -212,7 +212,7 @@ async function handleCalculation(e) {
             // 1. Create an invisible spacer div
             const spacer = document.createElement('div');
             spacer.id = 'cloned-arrow-spacer';
-            spacer.style.height = '5rem'; // <-- ADJUST THIS VALUE FOR MORE/LESS SPACE
+            spacer.style.height = '8rem'; // <-- ADJUST THIS VALUE FOR MORE/LESS SPACE
 
             // 2. Clone the arrow
             const clonedArrow = originalArrow.cloneNode(true);
