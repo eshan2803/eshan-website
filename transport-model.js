@@ -130,6 +130,13 @@ async function handleCalculation(e) {
         document.getElementById('messageModal').style.display = "none"; 
     };
 
+    // --- Arrow Cleanup: Remove any arrow from a previous calculation ---
+    const existingClonedArrow = document.getElementById('cloned-arrow-for-results');
+    if (existingClonedArrow) {
+        existingClonedArrow.remove();
+    }
+    // -------------------------------------------------------------------
+
     // Reset UI for new calculation
     clearStatus();
     logStatus("Collecting user inputs...");
@@ -153,7 +160,6 @@ async function handleCalculation(e) {
     };
 
     if (commodity === 'fuel') {
-        // Add fuel-specific keys
         Object.assign(userInputs, {
             fuel_type: parseInt(document.getElementById('fuel_type').value),
             marine_fuel_choice: document.getElementById('marineFuelChoice').value,
@@ -166,7 +172,6 @@ async function handleCalculation(e) {
             BOG_recirculation_mati_trans_apply: document.getElementById('bogRecirculationMaritimeApply').value,
         });
     } else if (commodity === 'food') {
-        // Add food-specific keys
         Object.assign(userInputs, {
             food_type: document.getElementById('food_type').value,
             marine_fuel_choice: document.getElementById('marineFuelChoice').value,
@@ -193,6 +198,21 @@ async function handleCalculation(e) {
         const results = await response.json();
         if (results.status === 'error') throw new Error(results.message);
         logStatus("Calculation complete. Rendering results...");
+
+        // --- Arrow Creation: Clone the original arrow and show it ---
+        const originalArrow = document.querySelector('.scroll-down-arrow');
+        if (originalArrow) {
+            const clonedArrow = originalArrow.cloneNode(true);
+            clonedArrow.id = 'cloned-arrow-for-results';
+            clonedArrow.style.cursor = 'pointer';
+
+            clonedArrow.addEventListener('click', () => {
+                outputsDiv.scrollIntoView({ behavior: 'smooth' });
+            });
+            
+            statusMessagesDiv.insertAdjacentElement('afterend', clonedArrow);
+        }
+        // ----------------------------------------------------------
 
         const routeBounds = displayMap(results.map_data, results.food_type);
         displayTables(results.table_data, commodity);
@@ -249,7 +269,6 @@ async function handleCalculation(e) {
         calculateButton.textContent = 'Calculate';
     }
 }
-
 // Map Display Function
 function displayMap(mapData, foodType) {
     console.log("displayMap called with data:", mapData);
