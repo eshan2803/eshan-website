@@ -38,9 +38,9 @@ SAFETY_CERTIFICATION_COST_PER_KG = {
     2: {'base_cost_usd': 5000, 'per_kg_rate': 0.002, 'threshold_kg': 10000}   # Methanol
 }
 FOOD_INSPECTION_COST_PER_SHIPMENT = {
-    "strawberry": {'base_cost_usd': 800, 'per_container_usd': 300},
-    "hass_avocado": {'base_cost_usd': 1000, 'per_container_usd': 400},
-    "banana": {'base_cost_usd': 500, 'per_container_usd': 200}
+    "strawberry": {'base_cost_usd': 1000, 'per_container_usd': 300},
+    "hass_avocado": {'base_cost_usd': 1500, 'per_container_usd': 400},
+    "banana": {'base_cost_usd': 750, 'per_container_usd': 200}
 }
 VOYAGE_OVERHEADS_DATA = {
     'small':    {'daily_operating_cost_usd': 8500, 'daily_capital_cost_usd': 10000, 'port_fee_usd': 30000, 'suez_toll_per_gt_usd': 9.00, 'panama_toll_per_gt_usd': 9.00, 'daily_maintenance_cost_usd': 1400},
@@ -3133,7 +3133,7 @@ def run_lca_model(inputs):
         emission_chart_exclusions = [
             "TOTAL", "Initial Production (Placeholder)", "Insurance",
             "Import Tariffs & Duties", "Financing Costs",
-            "Brokerage & Agent Fees", "Contingency (10%)"
+            "Brokerage & Agent Fees", "Contingency (10%)", "Safety Certifications",
         ]
         data_for_emission_chart = [row for row in data_with_all_columns if row[0] not in emission_chart_exclusions]
 
