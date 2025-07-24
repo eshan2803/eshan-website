@@ -193,7 +193,7 @@ async function handleCalculation(e) {
         const results = await response.json();
         if (results.status === 'error') throw new Error(results.message);
         logStatus("Calculation complete. Rendering results...");
-
+        resultsArrow.classList.remove('hidden'); 
         const routeBounds = displayMap(results.map_data, results.food_type);
         displayTables(results.table_data, commodity);
         completeResultsForCsv = results.csv_data;
