@@ -199,18 +199,22 @@ async function handleCalculation(e) {
         if (results.status === 'error') throw new Error(results.message);
         logStatus("Calculation complete. Rendering results...");
 
-        // --- Arrow Creation: Clone the original arrow and show it ---
+        // --- Arrow Creation & PLACEMENT LOGIC (MODIFIED) ---
         const originalArrow = document.querySelector('.scroll-down-arrow');
-        if (originalArrow) {
+        const formCard = statusMessagesDiv.closest('.glass-card'); // Find the parent 'card' element
+
+        if (originalArrow && formCard) { // Check that we found both elements
             const clonedArrow = originalArrow.cloneNode(true);
             clonedArrow.id = 'cloned-arrow-for-results';
             clonedArrow.style.cursor = 'pointer';
+            clonedArrow.style.margin = '2rem auto'; // Add vertical margin for better spacing
 
             clonedArrow.addEventListener('click', () => {
                 outputsDiv.scrollIntoView({ behavior: 'smooth' });
             });
             
-            statusMessagesDiv.insertAdjacentElement('afterend', clonedArrow);
+            // Place the arrow AFTER the entire form card, not inside it
+            formCard.insertAdjacentElement('afterend', clonedArrow);
         }
         // ----------------------------------------------------------
 
@@ -269,6 +273,7 @@ async function handleCalculation(e) {
         calculateButton.textContent = 'Calculate';
     }
 }
+
 // Map Display Function
 function displayMap(mapData, foodType) {
     console.log("displayMap called with data:", mapData);
