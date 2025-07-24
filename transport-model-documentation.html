@@ -270,8 +270,10 @@
           </li>
           <li><strong>Diesel Costs:</strong> Diesel fuel prices for inland transport are determined based on the country of operation from a regularly updated internal database, taken from www.globalpetrolprices.com.</li>
           <li><strong>Labor Costs:</strong> Driver salaries for truck transport are included, differentiated by country based on www.salaryexpert.com/salary/browse/countries/truck-driver.</li>
-          <li><strong>Maintenance & Repair Costs:</strong> Applied per km for both truck (0.1 $/km) and daily maintenance cost based on ship size for marine transport.</li>
+          <li><strong>Maintenance & Repair Costs:</strong> For trucks, a per-kilometer rate (0.10 $/km) is applied. For ships, maintenance is incorporated into the daily overhead costs, with rates varying by vessel size (e.g., $1,400 to $5,500 per day) to better reflect real-world operational expenses.</li>
           <li><strong>Voyage Overhead Costs:</strong> Comprehensive costs for port fees, canal transit fees (Suez, Panama, dynamically detected and applied based on ship gross tonnage), and daily operating/capital costs for the vessel are included. For food, these are prorated based on the user's shipment size relative to the ship's total container capacity.</li>
+          <li><strong>Safety Certification Costs (Fuels):</strong> To account for HAZMAT compliance, a two-part cost is applied to fuel shipments. This includes a significant base fee per shipment (e.g., $15,000 for LH₂) and a smaller per-kg rate for volumes above a certain threshold, reflecting both fixed administrative costs and economies of scale.</li>
+          <li><strong>Food Inspection Costs:</strong> For food commodities, a scalable cost is calculated to cover inspection services. This consists of a base administrative fee per shipment plus a per-container fee, ensuring costs are proportional to the shipment size.</li>
           <li><strong>Nuanced Insurance Costs:</strong> Insurance premiums are dynamically calculated based on:
               <ul>
                   <li>The total value of the cargo.</li>
@@ -503,14 +505,16 @@
               <th>Annualization Factor</th>
             </tr>
           </thead>
-          <tbody>
-            <tr><td>LH₂ Liquefaction Plant</td><td>138.6 - 762.7</td><td>27 - 800 Tons/Day</td><td>0.62 - 0.66</td><td>0.09</td></tr>
-            <tr><td>NH₃ Liquefaction Plant</td><td>36.7</td><td>100 Tons/Day</td><td>0.70</td><td>0.09</td></tr>
-            <tr><td>Cryogenic/Chemical Storage (LH₂/NH₃)</td><td>15 - 35</td><td>335 - 6,650 Tons Storage Capacity</td><td>0.70</td><td>0.09</td></tr>
-            <tr><td>Loading/Unloading Infrastructure (LH₂)</td><td>500</td><td>1,000,000 Tons/Year Throughput</td><td>N/A (fixed per kg)</td><td>0.08</td></tr>
-            <tr><td>Loading/Unloading Infrastructure (NH₃)</td><td>200</td><td>5,000,000 Tons/Year Throughput</td><td>N/A (fixed per kg)</td><td>0.08</td></tr>
-            <tr><td>Loading/Unloading Infrastructure (Methanol)</td><td>80</td><td>10,000,000 Tons/Year Throughput</td><td>N/A (fixed per kg)</td><td>0.08</td></tr>
-          </tbody>
+            <tbody>
+              <tr><td>LH₂ Liquefaction Plant (Small-Scale)</td><td>138.6</td><td>27 Tons/Day</td><td>0.66</td><td>0.09</td></tr>
+              <tr><td>LH₂ Liquefaction Plant (Large-Scale)</td><td>762.7</td><td>800 Tons/Day</td><td>0.62</td><td>0.09</td></tr>
+              <tr><td>NH₃ Liquefaction Plant</td><td>36.7</td><td>100 Tons/Day</td><td>0.70</td><td>0.09</td></tr>
+              <tr><td>Cryogenic Storage (LH₂)</td><td>35</td><td>335 Tons Storage Capacity</td><td>0.70</td><td>0.09</td></tr>
+              <tr><td>Chemical Storage (NH₃)</td><td>15</td><td>6,650 Tons Storage Capacity</td><td>0.70</td><td>0.09</td></tr>
+              <tr><td>Loading/Unloading Infrastructure (LH₂)</td><td>500</td><td>1,000,000 Tons/Year Throughput</td><td>N/A (fixed per kg)</td><td>0.08</td></tr>
+              <tr><td>Loading/Unloading Infrastructure (NH₃)</td><td>200</td><td>5,000,000 Tons/Year Throughput</td><td>N/A (fixed per kg)</td><td>0.08</td></tr>
+              <tr><td>Loading/Unloading Infrastructure (Methanol)</td><td>80</td><td>10,000,000 Tons/Year Throughput</td><td>N/A (fixed per kg)</td><td>0.08</td></tr>
+            </tbody>
       </table>
 
       <h5>Food Infrastructure CAPEX Models</h5>
