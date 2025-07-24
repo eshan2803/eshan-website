@@ -107,6 +107,7 @@ function shareOnLinkedIn() {
 }
 
 // Form Submission Handler
+// Form Submission Handler
 async function handleCalculation(e) {
     e.preventDefault();
 
@@ -130,12 +131,16 @@ async function handleCalculation(e) {
         document.getElementById('messageModal').style.display = "none"; 
     };
 
-    // --- Arrow Cleanup: Remove any arrow from a previous calculation ---
+    // --- Cleanup: Remove old arrow AND the spacer ---
     const existingClonedArrow = document.getElementById('cloned-arrow-for-results');
     if (existingClonedArrow) {
         existingClonedArrow.remove();
     }
-    // -------------------------------------------------------------------
+    const existingSpacer = document.getElementById('cloned-arrow-spacer');
+    if (existingSpacer) {
+        existingSpacer.remove();
+    }
+    // --------------------------------------------------
 
     // Reset UI for new calculation
     clearStatus();
@@ -199,24 +204,31 @@ async function handleCalculation(e) {
         if (results.status === 'error') throw new Error(results.message);
         logStatus("Calculation complete. Rendering results...");
 
-        // --- Arrow Creation & PLACEMENT LOGIC (MODIFIED) ---
+        // --- Arrow & Spacer Creation (MODIFIED) ---
         const originalArrow = document.querySelector('.scroll-down-arrow');
-        const formCard = statusMessagesDiv.closest('.glass-card'); // Find the parent 'card' element
+        const formCard = statusMessagesDiv.closest('.glass-card');
 
-        if (originalArrow && formCard) { // Check that we found both elements
+        if (originalArrow && formCard) {
+            // 1. Create an invisible spacer div
+            const spacer = document.createElement('div');
+            spacer.id = 'cloned-arrow-spacer';
+            spacer.style.height = '5rem'; // <-- ADJUST THIS VALUE FOR MORE/LESS SPACE
+
+            // 2. Clone the arrow
             const clonedArrow = originalArrow.cloneNode(true);
             clonedArrow.id = 'cloned-arrow-for-results';
             clonedArrow.style.cursor = 'pointer';
-            clonedArrow.style.margin = '5rem auto'; // Add vertical margin for better spacing
+            clonedArrow.style.margin = 'auto';
 
             clonedArrow.addEventListener('click', () => {
                 outputsDiv.scrollIntoView({ behavior: 'smooth' });
             });
             
-            // Place the arrow AFTER the entire form card, not inside it
+            // 3. Place the spacer and then the arrow after the form card
             formCard.insertAdjacentElement('afterend', clonedArrow);
+            formCard.insertAdjacentElement('afterend', spacer);
         }
-        // ----------------------------------------------------------
+        // -------------------------------------------
 
         const routeBounds = displayMap(results.map_data, results.food_type);
         displayTables(results.table_data, commodity);
@@ -273,7 +285,6 @@ async function handleCalculation(e) {
         calculateButton.textContent = 'Calculate';
     }
 }
-
 // Map Display Function
 function displayMap(mapData, foodType) {
     console.log("displayMap called with data:", mapData);
