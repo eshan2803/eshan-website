@@ -29,6 +29,8 @@
         .mesh-gradient-container {
             position: relative;
             z-index: 1;
+            /* Fix: Prevent the gradient from affecting page layout */
+            overflow: hidden;
         }
         .mesh-gradient-1 {
             background-image: radial-gradient(at 40% 20%, hsla(28,100%,74%,1) 0px, transparent 50%),
@@ -41,8 +43,11 @@
             filter: blur(25px) saturate(1.2); 
             opacity: 0.15;
             position: absolute; 
-            top: -10%; left: -10%; 
-            right: -10%; bottom: -10%; 
+            /* Fix: Confine gradient to the container bounds */
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
             z-index: -1;
             animation: pulse-bg 15s infinite alternate;
         }
