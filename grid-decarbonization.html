@@ -476,47 +476,61 @@
                 newGeneration.geothermal[i] += inputs.capacity.geothermal * 0.9; // Geothermal is baseload
             }
             
-            let storageLevels = {
-                battery4hr: 0, battery8hr: 0, longduration: 0
-            };
-            const storageCapacities = {
-                battery4hr: inputs.capacity.battery4hr, battery8hr: inputs.capacity.battery8hr, longduration: inputs.capacity.longduration
-            };
-            const storageDischargeRates = {
-                battery4hr: storageCapacities.battery4hr / 4, battery8hr: storageCapacities.battery8hr / 8, longduration: storageCapacities.longduration / 24
-            }
-            const storageEfficiency = 0.85;
+            // --- Two-Pass Dispatch Logic for Storage ---
+            
+            // This function runs the core dispatch logic for a given initial storage state
+            const runDispatch = (initialStorageLevels) => {
+                let storageLevels = JSON.parse(JSON.stringify(initialStorageLevels));
+                let hourlyDischarge = Array(24).fill(0);
+                let hourlyNaturalGas = Array(24).fill(0);
 
-            // Dispatch logic
-            for (let i = 0; i < 24; i++) {
-                const cleanGen = newGeneration.hydro[i] + newGeneration.nuclear[i] + newGeneration.solar[i] + newGeneration.wind[i] + newGeneration.geothermal[i];
-                let netLoad = modifiedDemand[i] - cleanGen;
+                const storageCapacities = {
+                    battery4hr: inputs.capacity.battery4hr, battery8hr: inputs.capacity.battery8hr, longduration: inputs.capacity.longduration
+                };
+                const storageDischargeRates = {
+                    battery4hr: storageCapacities.battery4hr / 4, battery8hr: storageCapacities.battery8hr / 8, longduration: storageCapacities.longduration / 24
+                };
+                const storageEfficiency = 0.85;
 
-                // Charge if excess generation
-                if (netLoad < 0) {
-                    let excessGen = -netLoad;
-                    for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
-                        const chargeAmount = Math.min(excessGen, storageCapacities[type] - storageLevels[type], storageDischargeRates[type]);
-                        storageLevels[type] += chargeAmount * storageEfficiency;
-                        excessGen -= chargeAmount;
+                for (let i = 0; i < 24; i++) {
+                    const cleanGen = newGeneration.hydro[i] + newGeneration.nuclear[i] + newGeneration.solar[i] + newGeneration.wind[i] + newGeneration.geothermal[i];
+                    let netLoad = modifiedDemand[i] - cleanGen;
+
+                    if (netLoad < 0) { // Charge
+                        let excessGen = -netLoad;
+                        for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
+                            const chargeAmount = Math.min(excessGen, storageCapacities[type] - storageLevels[type], storageDischargeRates[type]);
+                            storageLevels[type] += chargeAmount * storageEfficiency;
+                            excessGen -= chargeAmount;
+                        }
+                    } else if (netLoad > 0) { // Discharge
+                        for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
+                            const dischargeAmount = Math.min(netLoad, storageLevels[type], storageDischargeRates[type]);
+                            hourlyDischarge[i] += dischargeAmount;
+                            storageLevels[type] -= dischargeAmount;
+                            netLoad -= dischargeAmount;
+                        }
                     }
-                } 
-                // Discharge if deficit
-                else if (netLoad > 0) {
-                     for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
-                        const dischargeAmount = Math.min(netLoad, storageLevels[type], storageDischargeRates[type]);
-                        newGeneration.storage[i] += dischargeAmount;
-                        storageLevels[type] -= dischargeAmount;
-                        netLoad -= dischargeAmount;
+                    
+                    const finalNetLoad = modifiedDemand[i] - (cleanGen + hourlyDischarge[i]);
+                    if (finalNetLoad > 0) {
+                        hourlyNaturalGas[i] = finalNetLoad;
                     }
                 }
-                
-                // Use dispatchable gas to meet remaining demand
-                const finalNetLoad = modifiedDemand[i] - (cleanGen + newGeneration.storage[i]);
-                if (finalNetLoad > 0) {
-                    newGeneration.naturalGas[i] = finalNetLoad;
-                }
-            }
+                return { finalLevels: storageLevels, discharge: hourlyDischarge, gas: hourlyNaturalGas };
+            };
+
+            // 1. First Pass: Run with empty batteries to find end-of-day charge
+            const emptyInitialState = { battery4hr: 0, battery8hr: 0, longduration: 0 };
+            const firstPassResult = runDispatch(emptyInitialState);
+            
+            // 2. Second Pass: Run with end-of-day charge as the initial state
+            const secondPassResult = runDispatch(firstPassResult.finalLevels);
+
+            // Use the results from the second, more accurate pass
+            newGeneration.storage = secondPassResult.discharge;
+            newGeneration.naturalGas = secondPassResult.gas;
+
 
             const newEmissions = calculateEmissions(newGeneration, inputs.capacity.dac);
             const newCost = calculateTotalAnnualCost(newGeneration, inputs.capacity, inputs.incentives);
