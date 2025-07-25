@@ -29,7 +29,6 @@
         .mesh-gradient-container {
             position: relative;
             z-index: 1;
-            /* Fix: Prevent the gradient from affecting page layout */
             overflow: hidden;
         }
         .mesh-gradient-1 {
@@ -43,11 +42,7 @@
             filter: blur(25px) saturate(1.2); 
             opacity: 0.15;
             position: absolute; 
-            /* Fix: Confine gradient to the container bounds */
-            top: 0; 
-            left: 0; 
-            right: 0; 
-            bottom: 0; 
+            top: 0; left: 0; right: 0; bottom: 0; 
             z-index: -1;
             animation: pulse-bg 15s infinite alternate;
         }
@@ -106,7 +101,6 @@
 
         <div class="container mx-auto p-4 md:p-8 pt-0">
 
-            <!-- Page Header -->
             <section class="text-center mb-12">
                 <h1 class="font-lora text-5xl md:text-6xl font-medium leading-tight text-gray-900">Grid Decarbonization Simulator</h1>
                 <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
@@ -116,7 +110,6 @@
 
             <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                <!-- Charts Section -->
                 <div class="lg:col-span-2 glass-card">
                     <div class="mb-8">
                         <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly Electricity Generation (GWh)</h2>
@@ -128,18 +121,16 @@
                     </div>
                 </div>
 
-                <!-- Controls Section -->
                 <div class="glass-card">
                     <div class="mb-8 text-center">
                         <h3 class="text-xl font-lora font-semibold text-gray-800">Impact on Customer Bills</h3>
                         <p id="bill-impact" class="text-5xl font-bold text-blue-600 mt-2">0%</p>
                     </div>
 
-                    <div class="space-y-8">
+                    <div class="space-y-6">
                         <div>
                             <h2 class="text-2xl font-lora font-semibold mb-4 border-b border-gray-300 pb-4 text-gray-800">Policy Levers</h2>
-                            <div class="space-y-8 pt-4">
-                                <!-- Levers for new capacity -->
+                            <div class="space-y-6 pt-4">
                                 <div>
                                     <label for="solar-slider" class="block text-md font-medium text-gray-700">New Solar Capacity</label>
                                     <div class="flex items-center space-x-4 mt-2">
@@ -155,10 +146,10 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="storage-slider" class="block text-md font-medium text-gray-700">Energy Storage</label>
+                                    <label for="geothermal-slider" class="block text-md font-medium text-gray-700">New Geothermal Capacity</label>
                                     <div class="flex items-center space-x-4 mt-2">
-                                        <input type="range" id="storage-slider" min="0" max="500" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="storage-value">0 GWh</span>
+                                        <input type="range" id="geothermal-slider" min="0" max="50" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="geothermal-value">0 GW</span>
                                     </div>
                                 </div>
                                 <div>
@@ -168,51 +159,85 @@
                                         <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="nuclear-value">0 GW</span>
                                     </div>
                                 </div>
+                                <div class="border-t border-gray-300 pt-6">
+                                    <label for="battery4hr-slider" class="block text-md font-medium text-gray-700">4-hr Battery Storage</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="battery4hr-slider" min="0" max="200" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="battery4hr-value">0 GWh</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="battery8hr-slider" class="block text-md font-medium text-gray-700">8-hr Battery Storage</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="battery8hr-slider" min="0" max="200" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="battery8hr-value">0 GWh</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="longduration-slider" class="block text-md font-medium text-gray-700">24-hr Long Duration Storage</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="longduration-slider" min="0" max="500" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="longduration-value">0 GWh</span>
+                                    </div>
+                                </div>
+                                 <div class="border-t border-gray-300 pt-6">
+                                    <label for="demandflex-slider" class="block text-md font-medium text-gray-700">Demand Flexibility</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="demandflex-slider" min="0" max="25" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="demandflex-value">0 %</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
                         <div>
                             <h2 class="text-2xl font-lora font-semibold mb-4 border-b border-t border-gray-300 pt-6 pb-4 text-gray-800">Government Incentives</h2>
-                            <div class="space-y-8 pt-4">
-                                <!-- Levers for incentives -->
+                            <div class="space-y-6 pt-4">
+                                <!-- Incentive levers -->
                                 <div>
-                                    <label for="solar-incentive-slider" class="block text-md font-medium text-gray-700">Solar Incentive (PTC)</label>
+                                    <label for="solar-incentive-slider" class="block text-sm font-medium text-gray-700">Solar (PTC)</label>
                                     <div class="flex items-center space-x-4 mt-2">
                                         <input type="range" id="solar-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md" id="solar-incentive-value">$0/MWh</span>
+                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="solar-incentive-value">$0/MWh</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="wind-incentive-slider" class="block text-md font-medium text-gray-700">Wind Incentive (PTC)</label>
+                                    <label for="wind-incentive-slider" class="block text-sm font-medium text-gray-700">Wind (PTC)</label>
                                     <div class="flex items-center space-x-4 mt-2">
                                         <input type="range" id="wind-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md" id="wind-incentive-value">$0/MWh</span>
+                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="wind-incentive-value">$0/MWh</span>
                                     </div>
                                 </div>
                                  <div>
-                                    <label for="nuclear-incentive-slider" class="block text-md font-medium text-gray-700">Nuclear Incentive (PTC)</label>
+                                    <label for="geothermal-incentive-slider" class="block text-sm font-medium text-gray-700">Geothermal (PTC)</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="geothermal-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="geothermal-incentive-value">$0/MWh</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="nuclear-incentive-slider" class="block text-sm font-medium text-gray-700">Nuclear (PTC)</label>
                                     <div class="flex items-center space-x-4 mt-2">
                                         <input type="range" id="nuclear-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md" id="nuclear-incentive-value">$0/MWh</span>
+                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="nuclear-incentive-value">$0/MWh</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="storage-incentive-slider" class="block text-md font-medium text-gray-700">Storage Incentive (ITC)</label>
+                                    <label for="storage-incentive-slider" class="block text-sm font-medium text-gray-700">Storage (ITC)</label>
                                     <div class="flex items-center space-x-4 mt-2">
                                         <input type="range" id="storage-incentive-slider" min="0" max="100" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md" id="storage-incentive-value">$0/kWh</span>
+                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="storage-incentive-value">$0/kWh</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="dac-incentive-slider" class="block text-md font-medium text-gray-700">Direct Air Capture (45Q)</label>
+                                    <label for="dac-incentive-slider" class="block text-sm font-medium text-gray-700">Direct Air Capture (45Q)</label>
                                     <div class="flex items-center space-x-4 mt-2">
                                         <input type="range" id="dac-incentive-slider" min="0" max="200" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md" id="dac-incentive-value">$0/ton</span>
+                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="dac-incentive-value">$0/ton</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                         <!-- DAC Lever -->
                         <div class="border-t border-gray-300 pt-6">
                             <label for="dac-slider" class="block text-md font-medium text-gray-700">Direct Air Capture Deployment</label>
                             <div class="flex items-center space-x-4 mt-2">
@@ -237,15 +262,20 @@
             hydro: [3, 3, 3, 3, 3, 3, 3, 4, 4, 5, 5, 6, 7, 8, 9, 10, 10, 10, 8, 6, 4, 3, 3, 3],
             nuclear: [5, 5, 5, 5, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 4, 4, 3, 3, 5, 5],
             solar: [0, 0, 0, 0, 0, 1, 3, 5, 8, 12, 14, 15, 16, 17, 17, 17, 7, 0, 0, 0, 0, 0, 0, 0],
-            wind: [0, 0, 0, 0, 0, 0, 0, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 2, 2, 2, 2, 2]
+            wind: [0, 0, 0, 0, 0, 0, 0, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 2, 2, 2, 2, 2],
+            geothermal: Array(24).fill(0)
         };
         const SOLAR_CF_PROFILE = [0,0,0,0,0,0.05,0.15,0.3,0.5,0.7,0.8,0.85,0.9,0.85,0.8,0.7,0.3,0.05,0,0,0,0,0,0];
         const WIND_CF_PROFILE = [0.4,0.42,0.45,0.46,0.45,0.4,0.35,0.3,0.25,0.2,0.2,0.2,0.25,0.3,0.35,0.4,0.5,0.6,0.65,0.6,0.55,0.5,0.45,0.4];
 
-        const EMISSION_FACTORS = { naturalGas: 395, imports: 200, hydro: 0, nuclear: 0, solar: 0, wind: 0 };
+        const EMISSION_FACTORS = { naturalGas: 395, imports: 200, hydro: 0, nuclear: 0, solar: 0, wind: 0, geothermal: 0 };
         const COST_DATA = {
-            capex: { solar: 1000, wind: 1700, nuclear: 6000, storage: 350 }, // $/kW or $/kWh
-            vom: { naturalGas: 40, imports: 30, hydro: 5, nuclear: 10, solar: 2, wind: 2, dac: 100 }, // $/MWh or $/ton for DAC
+            capex: { 
+                solar: 1000, wind: 1700, nuclear: 6000, geothermal: 3000,
+                battery4hr: 350, battery8hr: 300, longduration: 150, // $/kWh
+                demandflex: 200 // $/kW shifted
+            },
+            vom: { naturalGas: 40, imports: 30, hydro: 5, nuclear: 10, solar: 2, wind: 2, geothermal: 8, dac: 100 }, // $/MWh or $/ton for DAC
             lifetime: 25 
         };
 
@@ -253,11 +283,16 @@
         const sliders = {
             solar: document.getElementById('solar-slider'),
             wind: document.getElementById('wind-slider'),
-            storage: document.getElementById('storage-slider'),
+            geothermal: document.getElementById('geothermal-slider'),
             nuclear: document.getElementById('nuclear-slider'),
+            battery4hr: document.getElementById('battery4hr-slider'),
+            battery8hr: document.getElementById('battery8hr-slider'),
+            longduration: document.getElementById('longduration-slider'),
+            demandflex: document.getElementById('demandflex-slider'),
             dac: document.getElementById('dac-slider'),
             solarIncentive: document.getElementById('solar-incentive-slider'),
             windIncentive: document.getElementById('wind-incentive-slider'),
+            geothermalIncentive: document.getElementById('geothermal-incentive-slider'),
             nuclearIncentive: document.getElementById('nuclear-incentive-slider'),
             storageIncentive: document.getElementById('storage-incentive-slider'),
             dacIncentive: document.getElementById('dac-incentive-slider'),
@@ -265,11 +300,16 @@
         const sliderValues = {
             solar: document.getElementById('solar-value'),
             wind: document.getElementById('wind-value'),
-            storage: document.getElementById('storage-value'),
+            geothermal: document.getElementById('geothermal-value'),
             nuclear: document.getElementById('nuclear-value'),
+            battery4hr: document.getElementById('battery4hr-value'),
+            battery8hr: document.getElementById('battery8hr-value'),
+            longduration: document.getElementById('longduration-value'),
+            demandflex: document.getElementById('demandflex-value'),
             dac: document.getElementById('dac-value'),
             solarIncentive: document.getElementById('solar-incentive-value'),
             windIncentive: document.getElementById('wind-incentive-value'),
+            geothermalIncentive: document.getElementById('geothermal-incentive-value'),
             nuclearIncentive: document.getElementById('nuclear-incentive-value'),
             storageIncentive: document.getElementById('storage-incentive-value'),
             dacIncentive: document.getElementById('dac-incentive-value'),
@@ -283,10 +323,10 @@
             naturalGas: 'rgba(107, 114, 128, 0.8)', imports: 'rgba(156, 163, 175, 0.8)',
             hydro: 'rgba(59, 130, 246, 0.8)', nuclear: 'rgba(239, 68, 68, 0.8)',
             solar: 'rgba(251, 191, 36, 0.8)', wind: 'rgba(16, 185, 129, 0.8)',
+            geothermal: 'rgba(120, 40, 40, 0.8)', // Brown for geothermal
             storage: 'rgba(168, 85, 247, 0.8)', demand: 'rgba(17, 24, 39, 1)'
         };
         
-        // Define chart configurations
         const generationChartConfig = {
             type: 'bar',
             data: {
@@ -295,6 +335,7 @@
                     { label: 'Natural Gas', data: [], backgroundColor: COLORS.naturalGas },
                     { label: 'Imports', data: [], backgroundColor: COLORS.imports },
                     { label: 'Hydro', data: [], backgroundColor: COLORS.hydro },
+                    { label: 'Geothermal', data: [], backgroundColor: COLORS.geothermal },
                     { label: 'Nuclear', data: [], backgroundColor: COLORS.nuclear },
                     { label: 'Solar', data: [], backgroundColor: COLORS.solar },
                     { label: 'Wind', data: [], backgroundColor: COLORS.wind },
@@ -331,25 +372,19 @@
             }
         };
 
-        // Initialize charts
         const generationChart = new Chart(generationCtx, generationChartConfig);
         const co2Chart = new Chart(co2Ctx, co2ChartConfig);
-
 
         // --- CORE SIMULATION LOGIC ---
         function calculateTotalAnnualCost(generation, capacity, incentives) {
             let totalCost = 0;
-            
-            // 1. Calculate Variable Costs & Production-Based Incentives
             let variableCost = 0;
             let productionIncentives = 0;
             for (let i = 0; i < 24; i++) {
                 for (const source in generation) {
-                    if (COST_DATA.vom[source] && source !== 'dac') { // DAC cost is handled separately
+                    if (COST_DATA.vom[source] && source !== 'dac') {
                         const mwh = generation[source][i] * 1000;
                         variableCost += mwh * COST_DATA.vom[source];
-                        
-                        // Apply production tax credit (PTC) incentives
                         if (incentives[source]) {
                            productionIncentives += mwh * incentives[source];
                         }
@@ -358,25 +393,32 @@
             }
             totalCost += (variableCost - productionIncentives) * 365;
 
-            // 2. Calculate Annualized Capital Costs & Capacity-Based Incentives
             let annualCapex = 0;
-            const crf = 0.08; // Capital Recovery Factor
+            const crf = 0.08;
             
             for (const source in capacity) {
                 if (COST_DATA.capex[source]) {
-                    const totalCapex = capacity[source] * 1000000 * COST_DATA.capex[source];
+                    let totalCapex;
+                    if (['battery4hr', 'battery8hr', 'longduration'].includes(source)) {
+                        totalCapex = capacity[source] * 1000000 * COST_DATA.capex[source]; // GWh -> kWh
+                    } else if (source === 'demandflex') {
+                         const peakDemand = Math.max(...BASE_DEMAND_GWH);
+                         const shiftedKw = (peakDemand * (capacity.demandflex / 100)) * 1000000;
+                         totalCapex = shiftedKw * COST_DATA.capex.demandflex;
+                    }
+                    else {
+                        totalCapex = capacity[source] * 1000000 * COST_DATA.capex[source]; // GW -> kW
+                    }
+                    
                     let capexIncentive = 0;
-                    // Apply investment tax credit (ITC) for storage
-                    if (source === 'storage' && incentives.storage) {
-                        // capacity.storage is in GWh, incentive is in $/kWh. 1 GWh = 1,000,000 kWh
-                        capexIncentive = capacity.storage * 1000000 * incentives.storage;
+                    if (['battery4hr', 'battery8hr', 'longduration'].includes(source) && incentives.storage) {
+                        capexIncentive = capacity[source] * 1000000 * incentives.storage;
                     }
                     annualCapex += (totalCapex - capexIncentive) * crf;
                 }
             }
             totalCost += annualCapex;
 
-            // 3. Calculate Net Cost of DAC
             if (capacity.dac > 0) {
                 const tonsRemovedAnually = capacity.dac * 24 * 365;
                 const dacOperatingCost = tonsRemovedAnually * COST_DATA.vom.dac;
@@ -392,27 +434,38 @@
         function runSimulation() {
             const inputs = {
                 capacity: {
-                    solar: parseFloat(sliders.solar.value),
-                    wind: parseFloat(sliders.wind.value),
-                    storage: parseFloat(sliders.storage.value),
-                    nuclear: parseFloat(sliders.nuclear.value),
-                    dac: parseFloat(sliders.dac.value),
+                    solar: parseFloat(sliders.solar.value), wind: parseFloat(sliders.wind.value),
+                    geothermal: parseFloat(sliders.geothermal.value), nuclear: parseFloat(sliders.nuclear.value),
+                    battery4hr: parseFloat(sliders.battery4hr.value), battery8hr: parseFloat(sliders.battery8hr.value),
+                    longduration: parseFloat(sliders.longduration.value), dac: parseFloat(sliders.dac.value),
+                    demandflex: parseFloat(sliders.demandflex.value),
                 },
                 incentives: {
-                    solar: parseFloat(sliders.solarIncentive.value),
-                    wind: parseFloat(sliders.windIncentive.value),
-                    nuclear: parseFloat(sliders.nuclearIncentive.value),
-                    storage: parseFloat(sliders.storageIncentive.value),
-                    dac: parseFloat(sliders.dacIncentive.value),
+                    solar: parseFloat(sliders.solarIncentive.value), wind: parseFloat(sliders.windIncentive.value),
+                    geothermal: parseFloat(sliders.geothermalIncentive.value), nuclear: parseFloat(sliders.nuclearIncentive.value),
+                    storage: parseFloat(sliders.storageIncentive.value), dac: parseFloat(sliders.dacIncentive.value),
                 }
             };
+
+            // --- Demand Flexibility ---
+            let modifiedDemand = [...BASE_DEMAND_GWH];
+            if (inputs.capacity.demandflex > 0) {
+                const peak = Math.max(...modifiedDemand);
+                const trough = Math.min(...modifiedDemand);
+                const peakIndex = modifiedDemand.indexOf(peak);
+                const troughIndex = modifiedDemand.indexOf(trough);
+                const amountToShift = peak * (inputs.capacity.demandflex / 100);
+                modifiedDemand[peakIndex] -= amountToShift;
+                modifiedDemand[troughIndex] += amountToShift;
+            }
 
             let newGeneration = {
                 naturalGas: Array(24).fill(0), imports: Array(24).fill(0), 
                 hydro: [...BASELINE_GENERATION.hydro], 
                 nuclear: JSON.parse(JSON.stringify(BASELINE_GENERATION.nuclear)), 
                 solar: JSON.parse(JSON.stringify(BASELINE_GENERATION.solar)), 
-                wind: JSON.parse(JSON.stringify(BASELINE_GENERATION.wind)), 
+                wind: JSON.parse(JSON.stringify(BASELINE_GENERATION.wind)),
+                geothermal: JSON.parse(JSON.stringify(BASELINE_GENERATION.geothermal)),
                 storage: Array(24).fill(0)
             };
 
@@ -420,26 +473,46 @@
                 newGeneration.solar[i] += inputs.capacity.solar * SOLAR_CF_PROFILE[i];
                 newGeneration.wind[i] += inputs.capacity.wind * WIND_CF_PROFILE[i];
                 newGeneration.nuclear[i] += inputs.capacity.nuclear * 0.9;
+                newGeneration.geothermal[i] += inputs.capacity.geothermal * 0.9; // Geothermal is baseload
             }
             
-            let storageLevel = 0;
-            const storageCapacity = inputs.capacity.storage;
+            let storageLevels = {
+                battery4hr: 0, battery8hr: 0, longduration: 0
+            };
+            const storageCapacities = {
+                battery4hr: inputs.capacity.battery4hr, battery8hr: inputs.capacity.battery8hr, longduration: inputs.capacity.longduration
+            };
+            const storageDischargeRates = {
+                battery4hr: storageCapacities.battery4hr / 4, battery8hr: storageCapacities.battery8hr / 8, longduration: storageCapacities.longduration / 24
+            }
             const storageEfficiency = 0.85;
 
+            // Dispatch logic
             for (let i = 0; i < 24; i++) {
-                const cleanGen = newGeneration.hydro[i] + newGeneration.nuclear[i] + newGeneration.solar[i] + newGeneration.wind[i];
-                const netLoad = BASE_DEMAND_GWH[i] - cleanGen;
+                const cleanGen = newGeneration.hydro[i] + newGeneration.nuclear[i] + newGeneration.solar[i] + newGeneration.wind[i] + newGeneration.geothermal[i];
+                let netLoad = modifiedDemand[i] - cleanGen;
 
+                // Charge if excess generation
                 if (netLoad < 0) {
-                    const chargeAmount = Math.min(Math.abs(netLoad), storageCapacity - storageLevel);
-                    storageLevel += chargeAmount * storageEfficiency;
-                } else {
-                    const dischargeAmount = Math.min(netLoad, storageLevel, storageCapacity / 4);
-                    newGeneration.storage[i] = dischargeAmount;
-                    storageLevel -= dischargeAmount;
+                    let excessGen = -netLoad;
+                    for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
+                        const chargeAmount = Math.min(excessGen, storageCapacities[type] - storageLevels[type], storageDischargeRates[type]);
+                        storageLevels[type] += chargeAmount * storageEfficiency;
+                        excessGen -= chargeAmount;
+                    }
+                } 
+                // Discharge if deficit
+                else if (netLoad > 0) {
+                     for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
+                        const dischargeAmount = Math.min(netLoad, storageLevels[type], storageDischargeRates[type]);
+                        newGeneration.storage[i] += dischargeAmount;
+                        storageLevels[type] -= dischargeAmount;
+                        netLoad -= dischargeAmount;
+                    }
                 }
                 
-                const finalNetLoad = BASE_DEMAND_GWH[i] - (cleanGen + newGeneration.storage[i]);
+                // Use dispatchable gas to meet remaining demand
+                const finalNetLoad = modifiedDemand[i] - (cleanGen + newGeneration.storage[i]);
                 if (finalNetLoad > 0) {
                     newGeneration.naturalGas[i] = finalNetLoad;
                 }
@@ -449,7 +522,7 @@
             const newCost = calculateTotalAnnualCost(newGeneration, inputs.capacity, inputs.incentives);
             const costPercentageChange = ((newCost - baselineGridCost) / baselineGridCost) * 100;
 
-            updateCharts(newGeneration, newEmissions);
+            updateCharts(newGeneration, newEmissions, modifiedDemand);
             billImpactEl.textContent = `${costPercentageChange.toFixed(0)}%`;
             if(costPercentageChange > 0) {
                 billImpactEl.className = 'text-5xl font-bold text-red-600 mt-2';
@@ -470,14 +543,16 @@
             return co2;
         }
 
-        function updateCharts(generation, emissions) {
+        function updateCharts(generation, emissions, demand) {
             generationChart.data.datasets[0].data = generation.naturalGas;
             generationChart.data.datasets[1].data = generation.imports;
             generationChart.data.datasets[2].data = generation.hydro;
-            generationChart.data.datasets[3].data = generation.nuclear;
-            generationChart.data.datasets[4].data = generation.solar;
-            generationChart.data.datasets[5].data = generation.wind;
-            generationChart.data.datasets[6].data = generation.storage;
+            generationChart.data.datasets[3].data = generation.geothermal;
+            generationChart.data.datasets[4].data = generation.nuclear;
+            generationChart.data.datasets[5].data = generation.solar;
+            generationChart.data.datasets[6].data = generation.wind;
+            generationChart.data.datasets[7].data = generation.storage;
+            generationChart.data.datasets[8].data = demand;
             generationChart.update('none');
 
             co2Chart.data.datasets[0].data = emissions;
@@ -486,10 +561,12 @@
 
         // --- EVENT LISTENERS ---
         const sliderConfig = {
-            solar: { unit: 'GW' }, wind: { unit: 'GW' }, storage: { unit: 'GWh' }, nuclear: { unit: 'GW' }, dac: { unit: 't/hr' },
+            solar: { unit: 'GW' }, wind: { unit: 'GW' }, geothermal: { unit: 'GW' }, nuclear: { unit: 'GW' },
+            battery4hr: { unit: 'GWh' }, battery8hr: { unit: 'GWh' }, longduration: { unit: 'GWh' },
+            demandflex: { unit: '%' }, dac: { unit: 't/hr' },
             solarIncentive: { unit: '$/MWh', prefix: '$' }, windIncentive: { unit: '$/MWh', prefix: '$' },
-            nuclearIncentive: { unit: '$/MWh', prefix: '$' }, storageIncentive: { unit: '$/kWh', prefix: '$' },
-            dacIncentive: { unit: '$/ton', prefix: '$' }
+            geothermalIncentive: { unit: '$/MWh', prefix: '$' }, nuclearIncentive: { unit: '$/MWh', prefix: '$' },
+            storageIncentive: { unit: '$/kWh', prefix: '$' }, dacIncentive: { unit: '$/ton', prefix: '$' }
         };
 
         Object.keys(sliders).forEach(key => {
