@@ -256,9 +256,11 @@
         const HOURS = Array.from({ length: 24 }, (_, i) => `${i}:00`);
         
         const BASE_DEMAND_GWH = [25, 24, 23, 23, 23, 24, 26, 29, 33, 37, 40, 42, 43, 44, 45, 46, 48, 50, 48, 45, 40, 35, 30, 27];
+        
+        // Corrected BASELINE_GENERATION to be consistent with simulation logic
         const BASELINE_GENERATION = {
-            naturalGas: [15, 14, 13, 13, 14, 15, 16, 15, 13, 12, 12, 12, 11, 10, 9, 8, 10, 15, 20, 25, 28, 25, 20, 17],
-            imports: [2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 5, 6, 6, 5, 4, 3, 2, 2, 2, 2],
+            naturalGas: [17, 16, 15, 15, 16, 16, 15, 12, 11, 10, 11, 11, 10, 9, 9, 9, 21, 30, 31, 33, 31, 27, 20, 17],
+            imports: Array(24).fill(0), // Removed imports from baseline for consistency
             hydro: [3, 3, 3, 3, 3, 3, 3, 4, 4, 5, 5, 6, 7, 8, 9, 10, 10, 10, 8, 6, 4, 3, 3, 3],
             nuclear: [5, 5, 5, 5, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 4, 4, 3, 3, 5, 5],
             solar: [0, 0, 0, 0, 0, 1, 3, 5, 8, 12, 14, 15, 16, 17, 17, 17, 7, 0, 0, 0, 0, 0, 0, 0],
@@ -268,14 +270,14 @@
         const SOLAR_CF_PROFILE = [0,0,0,0,0,0.05,0.15,0.3,0.5,0.7,0.8,0.85,0.9,0.85,0.8,0.7,0.3,0.05,0,0,0,0,0,0];
         const WIND_CF_PROFILE = [0.4,0.42,0.45,0.46,0.45,0.4,0.35,0.3,0.25,0.2,0.2,0.2,0.25,0.3,0.35,0.4,0.5,0.6,0.65,0.6,0.55,0.5,0.45,0.4];
 
-        const EMISSION_FACTORS = { naturalGas: 395, imports: 200, hydro: 0, nuclear: 0, solar: 0, wind: 0, geothermal: 0 };
+        const EMISSION_FACTORS = { naturalGas: 395, imports: 0, hydro: 0, nuclear: 0, solar: 0, wind: 0, geothermal: 0 };
         const COST_DATA = {
             capex: { 
                 solar: 1000, wind: 1700, nuclear: 6000, geothermal: 3000,
                 battery4hr: 350, battery8hr: 300, longduration: 150, // $/kWh
                 demandflex: 200 // $/kW shifted
             },
-            vom: { naturalGas: 40, imports: 30, hydro: 5, nuclear: 10, solar: 2, wind: 2, geothermal: 8, dac: 100 }, // $/MWh or $/ton for DAC
+            vom: { naturalGas: 40, imports: 0, hydro: 5, nuclear: 10, solar: 2, wind: 2, geothermal: 8, dac: 100 }, // $/MWh or $/ton for DAC
             lifetime: 25 
         };
 
@@ -320,10 +322,10 @@
         const generationCtx = document.getElementById('generationMixChart').getContext('2d');
         const co2Ctx = document.getElementById('co2EmissionsChart').getContext('2d');
         const COLORS = {
-            naturalGas: 'rgba(107, 114, 128, 0.8)', imports: 'rgba(156, 163, 175, 0.8)',
+            naturalGas: 'rgba(107, 114, 128, 0.8)',
             hydro: 'rgba(59, 130, 246, 0.8)', nuclear: 'rgba(239, 68, 68, 0.8)',
             solar: 'rgba(251, 191, 36, 0.8)', wind: 'rgba(16, 185, 129, 0.8)',
-            geothermal: 'rgba(120, 40, 40, 0.8)', // Brown for geothermal
+            geothermal: 'rgba(120, 40, 40, 0.8)',
             storage: 'rgba(168, 85, 247, 0.8)', demand: 'rgba(17, 24, 39, 1)'
         };
         
@@ -333,7 +335,6 @@
                 labels: HOURS,
                 datasets: [
                     { label: 'Natural Gas', data: [], backgroundColor: COLORS.naturalGas },
-                    { label: 'Imports', data: [], backgroundColor: COLORS.imports },
                     { label: 'Hydro', data: [], backgroundColor: COLORS.hydro },
                     { label: 'Geothermal', data: [], backgroundColor: COLORS.geothermal },
                     { label: 'Nuclear', data: [], backgroundColor: COLORS.nuclear },
@@ -460,7 +461,7 @@
             }
 
             let newGeneration = {
-                naturalGas: Array(24).fill(0), imports: Array(24).fill(0), 
+                naturalGas: Array(24).fill(0),
                 hydro: [...BASELINE_GENERATION.hydro], 
                 nuclear: JSON.parse(JSON.stringify(BASELINE_GENERATION.nuclear)), 
                 solar: JSON.parse(JSON.stringify(BASELINE_GENERATION.solar)), 
@@ -540,8 +541,10 @@
             billImpactEl.textContent = `${costPercentageChange.toFixed(0)}%`;
             if(costPercentageChange > 0) {
                 billImpactEl.className = 'text-5xl font-bold text-red-600 mt-2';
-            } else {
+            } else if (costPercentageChange < 0) {
                 billImpactEl.className = 'text-5xl font-bold text-green-600 mt-2';
+            } else {
+                 billImpactEl.className = 'text-5xl font-bold text-blue-600 mt-2';
             }
         }
         
@@ -550,7 +553,6 @@
             for (let i = 0; i < 24; i++) {
                 let hourlyEmission = 0;
                 hourlyEmission += (generation.naturalGas[i] || 0) * EMISSION_FACTORS.naturalGas;
-                hourlyEmission += (generation.imports[i] || 0) * EMISSION_FACTORS.imports;
                 hourlyEmission -= dacRate;
                 co2.push(Math.max(0, hourlyEmission));
             }
@@ -559,14 +561,13 @@
 
         function updateCharts(generation, emissions, demand) {
             generationChart.data.datasets[0].data = generation.naturalGas;
-            generationChart.data.datasets[1].data = generation.imports;
-            generationChart.data.datasets[2].data = generation.hydro;
-            generationChart.data.datasets[3].data = generation.geothermal;
-            generationChart.data.datasets[4].data = generation.nuclear;
-            generationChart.data.datasets[5].data = generation.solar;
-            generationChart.data.datasets[6].data = generation.wind;
-            generationChart.data.datasets[7].data = generation.storage;
-            generationChart.data.datasets[8].data = demand;
+            generationChart.data.datasets[1].data = generation.hydro;
+            generationChart.data.datasets[2].data = generation.geothermal;
+            generationChart.data.datasets[3].data = generation.nuclear;
+            generationChart.data.datasets[4].data = generation.solar;
+            generationChart.data.datasets[5].data = generation.wind;
+            generationChart.data.datasets[6].data = generation.storage;
+            generationChart.data.datasets[7].data = demand;
             generationChart.update('none');
 
             co2Chart.data.datasets[0].data = emissions;
