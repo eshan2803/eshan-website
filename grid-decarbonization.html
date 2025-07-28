@@ -177,6 +177,12 @@
                     </div>
 
                     <div class="space-y-6">
+                         <div class="mb-6">
+                            <label for="country-select" class="block text-md font-medium text-gray-700 mb-2">Select Default Grid Mix</label>
+                            <select id="country-select" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
+                                <!-- Options will be populated by JS -->
+                            </select>
+                        </div>
                         <div class="grid grid-cols-2 gap-2">
                              <button id="undo-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors disabled:opacity-50" disabled>Undo</button>
                              <button id="make-default-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Make Default</button>
@@ -184,7 +190,7 @@
                              <button id="reset-to-zero-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Reset to Zero</button>
                         </div>
                         <div>
-                            <h2 class="text-2xl font-lora font-semibold mb-4 border-b border-gray-300 pb-4 text-gray-800">Policy Levers</h2>
+                            <h2 class="text-2xl font-lora font-semibold mb-4 border-b border-t pt-4 border-gray-300 pb-4 text-gray-800">Policy Levers</h2>
                             <div class="space-y-6 pt-4">
                                 <!-- Levers -->
                                 <div>
@@ -417,7 +423,7 @@
 
         const BASE_DEMAND_GWH = [25, 24, 23, 23, 23, 24, 26, 29, 33, 37, 40, 42, 43, 44, 45, 46, 48, 50, 48, 45, 40, 35, 30, 27];
         
-        const BASELINE_GENERATION = {
+        let BASELINE_GENERATION = {
             naturalGas: [17, 16, 15, 15, 16, 16, 15, 12, 11, 10, 11, 11, 10, 9, 9, 9, 21, 30, 31, 33, 31, 27, 20, 17],
             hydro: [3, 3, 3, 3, 3, 3, 3, 4, 4, 5, 5, 6, 7, 8, 9, 10, 10, 10, 8, 6, 4, 3, 3, 3],
             nuclear: [5, 5, 5, 5, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 4, 4, 3, 3, 5, 5],
@@ -425,6 +431,8 @@
             wind: [0, 0, 0, 0, 0, 0, 0, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 2, 2, 2, 2, 2],
             geothermal: Array(24).fill(0)
         };
+        const ORIGINAL_BASELINE_GENERATION = JSON.parse(JSON.stringify(BASELINE_GENERATION));
+
         const SOLAR_CF_PROFILE = [0,0,0,0,0,0.05,0.15,0.3,0.5,0.7,0.8,0.85,0.9,0.85,0.8,0.7,0.3,0.05,0,0,0,0,0,0];
         const WIND_CF_PROFILE = [0.4,0.42,0.45,0.46,0.45,0.4,0.35,0.3,0.25,0.2,0.2,0.2,0.25,0.3,0.35,0.4,0.5,0.6,0.65,0.6,0.55,0.5,0.45,0.4];
 
@@ -493,6 +501,7 @@
         const memoLoading = document.getElementById('memo-loading');
         const copyMemoButton = document.getElementById('copy-memo-button');
         const gridMixSlidersContainer = document.getElementById('grid-mix-sliders');
+        const countrySelect = document.getElementById('country-select');
 
         // --- STATE MANAGEMENT ---
         let stateHistory = [];
@@ -1130,9 +1139,79 @@
             });
         });
         
-        // --- INITIALIZATION ---
+        // --- INITIALIZATION & DYNAMIC CONTENT ---
+
+        function populateCountryDropdown() {
+            const option = document.createElement('option');
+            option.value = "default";
+            option.textContent = "Default US Mix";
+            countrySelect.appendChild(option);
+
+            for(const country in countryGridMixData) {
+                const option = document.createElement('option');
+                option.value = country;
+                option.textContent = country;
+                countrySelect.appendChild(option);
+            }
+        }
+
+        function updateBaselineForCountry(countryName) {
+            if (countryName === 'default') {
+                BASELINE_GENERATION = JSON.parse(JSON.stringify(ORIGINAL_BASELINE_GENERATION));
+            } else {
+                const countryData = countryGridMixData[countryName];
+                if (!countryData) return;
+
+                const newBaseline = {};
+                let totalDailyGeneration = 0;
+
+                for(const tech in COST_DATA.capacity_factor) {
+                    const techCapacityGW = (countryData.totalCapacityMW / 1000) * ((countryData.mix[tech] || 0) / 100);
+                    newBaseline[tech] = Array(24).fill(0);
+
+                    if (tech === 'solar') {
+                        for (let i = 0; i < 24; i++) newBaseline.solar[i] = techCapacityGW * SOLAR_CF_PROFILE[i];
+                    } else if (tech === 'wind') {
+                        for (let i = 0; i < 24; i++) newBaseline.wind[i] = techCapacityGW * WIND_CF_PROFILE[i];
+                    } else {
+                         for (let i = 0; i < 24; i++) newBaseline[tech][i] = techCapacityGW * COST_DATA.capacity_factor[tech];
+                    }
+                    totalDailyGeneration += newBaseline[tech].reduce((a, b) => a + b, 0);
+                }
+                
+                const totalDailyDemand = BASE_DEMAND_GWH.reduce((a, b) => a + b, 0);
+                const scalingFactor = totalDailyDemand / totalDailyGeneration;
+
+                for(const tech in newBaseline) {
+                    for(let i = 0; i < 24; i++) {
+                        newBaseline[tech][i] *= scalingFactor;
+                    }
+                }
+                BASELINE_GENERATION = newBaseline;
+            }
+
+            // Reset levers and recalculate baseline cost/emissions
+            Object.keys(sliders).forEach(key => sliders[key].value = 0);
+            updateSliderDisplays();
+            
+            const newBaselineResult = getSimulationResult({
+                capacity: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
+                incentives: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, storage: 0, dac: 0, carbonTax: 0 }
+            });
+            customBaselineSystemCost = newBaselineResult.systemCost;
+            customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
+            
+            runSimulation();
+            saveState();
+        }
+
+        countrySelect.addEventListener('change', (e) => {
+            updateBaselineForCountry(e.target.value);
+        });
+
         function initialize() {
             createGridMixSliders();
+            populateCountryDropdown();
             // Set the initial default state to all zeros
             for (const key in sliders) {
                 defaultSliderState[key] = "0";
