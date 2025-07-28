@@ -349,6 +349,72 @@
         // --- MODEL PARAMETERS & DATA ---
         const HOURS = Array.from({ length: 24 }, (_, i) => `${i}:00`);
         
+        // Data on grid composition for various countries.
+        // Source: IEA, IRENA, and other national energy agencies (approx. 2022-2024 data).
+        // Note: 'Other Renewables' like biomass have been aggregated into the 'solar' category as a simplification.
+        const countryGridMixData = {
+            "China": {
+                totalCapacityMW: 2586460,
+                mix: { coal: 43.0, naturalGas: 7.8, hydro: 16.1, wind: 15.8, solar: 15.1, nuclear: 2.2, geothermal: 0.1 }
+            },
+            "United States": {
+                totalCapacityMW: 1212700,
+                mix: { coal: 16.0, naturalGas: 49.1, hydro: 8.0, wind: 11.6, solar: 7.0, nuclear: 8.0, geothermal: 0.3 }
+            },
+            "India": {
+                totalCapacityMW: 436200,
+                mix: { coal: 55.0, naturalGas: 6.0, hydro: 10.7, wind: 10.0, solar: 16.6, nuclear: 1.7, geothermal: 0.0 }
+            },
+            "Japan": {
+                totalCapacityMW: 292500,
+                mix: { coal: 20.0, naturalGas: 35.1, hydro: 17.0, wind: 1.7, solar: 15.0, nuclear: 11.0, geothermal: 0.2 }
+            },
+            "Russia": {
+                totalCapacityMW: 246500,
+                mix: { coal: 15.0, naturalGas: 52.0, hydro: 20.0, wind: 0.8, solar: 0.7, nuclear: 11.5, geothermal: 0.0 }
+            },
+            "Brazil": {
+                totalCapacityMW: 178000,
+                mix: { coal: 2.0, naturalGas: 19.0, hydro: 60.0, wind: 10.0, solar: 8.0, nuclear: 1.0, geothermal: 0.0 }
+            },
+            "Germany": {
+                totalCapacityMW: 200000,
+                mix: { coal: 15.0, naturalGas: 40.0, hydro: 4.0, wind: 25.0, solar: 10.0, nuclear: 6.0, geothermal: 0.0 }
+            },
+            "Canada": {
+                totalCapacityMW: 150000,
+                mix: { coal: 5.0, naturalGas: 13.0, hydro: 58.0, wind: 8.0, solar: 2.0, nuclear: 14.0, geothermal: 0.0 }
+            },
+            "South Korea": {
+                totalCapacityMW: 120000,
+                mix: { coal: 35.0, naturalGas: 20.0, hydro: 5.0, wind: 1.5, solar: 11.5, nuclear: 27.0, geothermal: 0.0 }
+            },
+            "France": {
+                totalCapacityMW: 110000,
+                mix: { coal: 1.0, naturalGas: 11.0, hydro: 10.0, wind: 8.0, solar: 5.0, nuclear: 65.0, geothermal: 0.0 }
+            },
+            "United Kingdom": {
+                totalCapacityMW: 75900,
+                mix: { coal: 2.0, naturalGas: 40.0, hydro: 2.0, wind: 28.0, solar: 18.0, nuclear: 9.0, geothermal: 0.0 } // Bioenergy/other added to solar
+            },
+            "Australia": {
+                totalCapacityMW: 63400,
+                mix: { coal: 47.0, naturalGas: 18.0, hydro: 14.0, wind: 9.0, solar: 12.0, nuclear: 0.0, geothermal: 0.0 }
+            },
+            "Spain": {
+                totalCapacityMW: 117000,
+                mix: { coal: 3.0, naturalGas: 23.0, hydro: 17.0, wind: 27.0, solar: 20.0, nuclear: 7.0, geothermal: 0.0 } // Combined solar thermal and PV
+            },
+            "Italy": {
+                totalCapacityMW: 120000,
+                mix: { coal: 5.0, naturalGas: 48.0, hydro: 18.0, wind: 10.0, solar: 18.0, nuclear: 0.0, geothermal: 1.0 } // Bioenergy added to solar
+            },
+            "Indonesia": {
+                totalCapacityMW: 72000,
+                mix: { coal: 50.0, naturalGas: 28.0, hydro: 9.0, wind: 0.2, solar: 1.8, nuclear: 0.0, geothermal: 3.0 } // Other renewables added to solar
+            }
+        };
+
         const BASE_DEMAND_GWH = [25, 24, 23, 23, 23, 24, 26, 29, 33, 37, 40, 42, 43, 44, 45, 46, 48, 50, 48, 45, 40, 35, 30, 27];
         
         const BASELINE_GENERATION = {
