@@ -123,12 +123,22 @@
                 </div>
 
                 <div class="glass-card">
-                    <div class="mb-8 text-center">
-                        <h3 class="text-xl font-lora font-semibold text-gray-800">Impact on Customer Bills</h3>
-                        <p id="bill-impact" class="text-5xl font-bold text-blue-600 mt-2">0%</p>
+                    <div class="mb-8 grid grid-cols-2 gap-4 text-center">
+                        <div>
+                            <h3 class="text-xl font-lora font-semibold text-gray-800">Impact on Bills</h3>
+                            <p id="bill-impact" class="text-5xl font-bold text-blue-600 mt-2">0%</p>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-lora font-semibold text-gray-800">Green Premium</h3>
+                            <p id="green-premium" class="text-5xl font-bold text-blue-600 mt-2">$---</p>
+                             <span class="text-sm text-gray-600">/ ton CO2 avoided</span>
+                        </div>
                     </div>
 
                     <div class="space-y-6">
+                        <div class="flex justify-end">
+                             <button id="reset-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Reset Levers</button>
+                        </div>
                         <div>
                             <h2 class="text-2xl font-lora font-semibold mb-4 border-b border-gray-300 pb-4 text-gray-800">Policy Levers</h2>
                             <div class="space-y-6 pt-4">
@@ -322,6 +332,8 @@
             dacIncentive: document.getElementById('dac-incentive-value'),
         };
         const billImpactEl = document.getElementById('bill-impact');
+        const greenPremiumEl = document.getElementById('green-premium');
+        const resetButton = document.getElementById('reset-button');
 
         // --- CHARTING SETUP ---
         const generationCtx = document.getElementById('generationMixChart').getContext('2d');
@@ -381,10 +393,6 @@
         const co2Chart = new Chart(co2Ctx, co2ChartConfig);
 
         // --- COST CALCULATION (REVISED) ---
-        /**
-         * Calculates the total annual system cost based on generation, new capacity, and incentives.
-         * This is a more robust method than a mixed LCOE approach.
-         */
         function calculateTotalAnnualSystemCost(generation, capacity, incentives) {
             let totalAnnualCost = 0;
             const d = COST_DATA.discount_rate;
@@ -395,23 +403,24 @@
                 const n = techData.lifetime[tech];
                 const crf = (d * Math.pow(1 + d, n)) / (Math.pow(1 + d, n) - 1);
                 
-                // Find total capacity (baseline + new)
-                const baselineCapacityGW = BASELINE_GENERATION[tech] ? Math.max(...BASELINE_GENERATION[tech]) / (techData.capacity_factor[tech] || 1) : 0;
+                const baselineCapacityGW = BASELINE_GENERATION[tech] ? (BASELINE_GENERATION[tech].reduce((a, b) => a + b, 0) * 1000) / (techData.capacity_factor[tech] * 8760) / 1000000 : 0;
                 const newCapacityGW = capacity[tech] || 0;
                 const totalCapacityKW = (baselineCapacityGW + newCapacityGW) * 1000000;
 
-                const annualized_capex = techData.capex[tech] * totalCapacityKW * crf;
-                const annual_fom = techData.fixed_om[tech] * totalCapacityKW;
-                
-                const annual_generation_mwh = generation[tech].reduce((a, b) => a + b, 0) * 1000 * 365;
-                const annual_vom = techData.variable_om[tech] * annual_generation_mwh;
+                if (totalCapacityKW > 0) {
+                    const annualized_capex = techData.capex[tech] * totalCapacityKW * crf;
+                    const annual_fom = techData.fixed_om[tech] * totalCapacityKW;
+                    
+                    const annual_generation_mwh = generation[tech].reduce((a, b) => a + b, 0) * 1000 * 365;
+                    const annual_vom = techData.variable_om[tech] * annual_generation_mwh;
 
-                let annual_ptc = 0;
-                if (incentives[tech]) {
-                    annual_ptc = incentives[tech] * annual_generation_mwh;
+                    let annual_ptc = 0;
+                    if (incentives[tech]) {
+                        annual_ptc = incentives[tech] * annual_generation_mwh;
+                    }
+
+                    totalAnnualCost += annualized_capex + annual_fom + annual_vom - annual_ptc;
                 }
-
-                totalAnnualCost += annualized_capex + annual_fom + annual_vom - annual_ptc;
             }
 
             // 2. Costs for STORAGE assets
@@ -445,8 +454,10 @@
             return totalAnnualCost;
         }
 
-
         const baselineSystemCost = calculateTotalAnnualSystemCost(BASELINE_GENERATION, {}, {});
+        const baselineEmissions = calculateEmissions(BASELINE_GENERATION, 0);
+        const baselineTotalAnnualCO2 = baselineEmissions.reduce((a, b) => a + b, 0) * 365;
+
 
         function runSimulation() {
             const inputs = {
@@ -550,8 +561,24 @@
             
             const costPercentageChange = ((newCostPerMWh - baselineCostPerMWh) / baselineCostPerMWh) * 100;
 
+            // Green Premium Calculation
+            const newTotalAnnualCO2 = newEmissions.reduce((a, b) => a + b, 0) * 365;
+            const co2Avoided = baselineTotalAnnualCO2 - newTotalAnnualCO2;
+            const costDifference = newSystemCost - baselineSystemCost;
+
+            let greenPremium = 0;
+            if (co2Avoided > 0) {
+                greenPremium = costDifference / co2Avoided;
+            }
+
             updateCharts(newGeneration, newEmissions, modifiedDemand);
             billImpactEl.textContent = `${costPercentageChange.toFixed(0)}%`;
+            if (co2Avoided > 0) {
+                greenPremiumEl.textContent = `$${greenPremium.toFixed(0)}`;
+            } else {
+                greenPremiumEl.textContent = '$---';
+            }
+
             if(costPercentageChange > 0) {
                 billImpactEl.className = 'text-5xl font-bold text-red-600 mt-2';
             } else if (costPercentageChange < 0) {
@@ -598,13 +625,27 @@
             storageIncentive: { unit: '$/kWh', prefix: '$' }, dacIncentive: { unit: '$/ton', prefix: '$' }
         };
 
-        Object.keys(sliders).forEach(key => {
-            sliders[key].addEventListener('input', () => {
+        function updateSliderDisplays() {
+            Object.keys(sliders).forEach(key => {
                 const config = sliderConfig[key];
                 const prefix = config.prefix || '';
-                sliderValues[key].textContent = `${prefix}${sliders[key].value} ${config.unit}`;
+                sliderValues[key].textContent = `${sliders[key].value} ${config.unit}`;
+            });
+        }
+
+        Object.keys(sliders).forEach(key => {
+            sliders[key].addEventListener('input', () => {
+                updateSliderDisplays();
                 runSimulation();
             });
+        });
+
+        resetButton.addEventListener('click', () => {
+            Object.keys(sliders).forEach(key => {
+                sliders[key].value = 0;
+            });
+            updateSliderDisplays();
+            runSimulation();
         });
         
         // --- INITIALIZATION ---
