@@ -380,94 +380,73 @@
         const generationChart = new Chart(generationCtx, generationChartConfig);
         const co2Chart = new Chart(co2Ctx, co2ChartConfig);
 
-        // --- LCOE CALCULATION ---
-        function calculateLCOE(tech, incentives) {
-            if (!COST_DATA.capacity_factor[tech]) return 0; // Return 0 for non-generating assets like storage
-
-            const techData = {
-                capex: COST_DATA.capex[tech], fom: COST_DATA.fixed_om[tech],
-                vom: COST_DATA.variable_om[tech], cf: COST_DATA.capacity_factor[tech],
-                lifetime: COST_DATA.lifetime[tech], discount_rate: COST_DATA.discount_rate
-            };
-
-            let capex = techData.capex;
-            
-            const d = techData.discount_rate;
-            const n = techData.lifetime;
-            const crf = (d * Math.pow(1 + d, n)) / (Math.pow(1 + d, n) - 1);
-
-            const annualized_capex = capex * crf;
-            const annual_generation_per_kw = 1 * techData.cf * 8760;
-
-            if (annual_generation_per_kw === 0) return Infinity;
-
-            const lcoe_per_kwh = ((annualized_capex + techData.fom) / annual_generation_per_kw) + (techData.vom / 1000);
-            let lcoe_per_mwh = lcoe_per_kwh * 1000;
-
-            if (incentives[tech]) {
-                lcoe_per_mwh -= incentives[tech];
-            }
-
-            return lcoe_per_mwh;
-        }
-
-        // --- CORE SIMULATION ---
-        function calculateAverageGridLCOE(generation, capacity, incentives) {
-            let totalAnnualGeneration = 0;
-            let totalGenerationCost = 0;
-            
-            const lcoes = {};
-            for (const tech in COST_DATA.capex) { // Calculate for all techs with cost data
-                 if(COST_DATA.capacity_factor[tech]){
-                    lcoes[tech] = calculateLCOE(tech, incentives);
-                 }
-            }
-
-            const generationTotals = {};
-            for (const source in generation) {
-                if (source !== 'storage') {
-                    generationTotals[source] = generation[source].reduce((a, b) => a + b, 0);
-                    totalAnnualGeneration += generationTotals[source];
-                }
-            }
-
-            if (totalAnnualGeneration === 0) return 0;
-
-            for (const source in generationTotals) {
-                if (generationTotals[source] > 0 && lcoes[source]) {
-                    totalGenerationCost += generationTotals[source] * lcoes[source];
-                }
-            }
-
-            // Calculate and add annualized storage cost
-            let totalAnnualStorageCost = 0;
+        // --- COST CALCULATION (REVISED) ---
+        /**
+         * Calculates the total annual system cost based on generation, new capacity, and incentives.
+         * This is a more robust method than a mixed LCOE approach.
+         */
+        function calculateTotalAnnualSystemCost(generation, capacity, incentives) {
+            let totalAnnualCost = 0;
             const d = COST_DATA.discount_rate;
 
+            // 1. Costs for GENERATING assets
+            for (const tech in COST_DATA.capacity_factor) {
+                const techData = COST_DATA;
+                const n = techData.lifetime[tech];
+                const crf = (d * Math.pow(1 + d, n)) / (Math.pow(1 + d, n) - 1);
+                
+                // Find total capacity (baseline + new)
+                const baselineCapacityGW = BASELINE_GENERATION[tech] ? Math.max(...BASELINE_GENERATION[tech]) / (techData.capacity_factor[tech] || 1) : 0;
+                const newCapacityGW = capacity[tech] || 0;
+                const totalCapacityKW = (baselineCapacityGW + newCapacityGW) * 1000000;
+
+                const annualized_capex = techData.capex[tech] * totalCapacityKW * crf;
+                const annual_fom = techData.fixed_om[tech] * totalCapacityKW;
+                
+                const annual_generation_mwh = generation[tech].reduce((a, b) => a + b, 0) * 1000 * 365;
+                const annual_vom = techData.variable_om[tech] * annual_generation_mwh;
+
+                let annual_ptc = 0;
+                if (incentives[tech]) {
+                    annual_ptc = incentives[tech] * annual_generation_mwh;
+                }
+
+                totalAnnualCost += annualized_capex + annual_fom + annual_vom - annual_ptc;
+            }
+
+            // 2. Costs for STORAGE assets
             for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
                 if (capacity[type] > 0) {
                     const n = COST_DATA.lifetime[type];
                     const crf = (d * Math.pow(1 + d, n)) / (Math.pow(1 + d, n) - 1);
                     
-                    let capex = COST_DATA.capex[type] - incentives.storage; // Apply ITC
-                    let power_capacity_kw = (capacity[type] * 1000000) / parseInt(type.match(/\d+/)[0]); // GWh to kW
+                    let capex_per_kwh = COST_DATA.capex[type] - incentives.storage; // Apply ITC
+                    const total_kwh = capacity[type] * 1000000;
+                    const total_kw = total_kwh / parseInt(type.match(/\d+/)[0]);
+
+                    const annualized_capex = capex_per_kwh * total_kwh * crf;
+                    const annual_fom = COST_DATA.fixed_om[type] * total_kw;
                     
-                    const annualized_capex = capex * (capacity[type] * 1000000) * crf; // Apply to total kWh
-                    const annual_fom = COST_DATA.fixed_om[type] * power_capacity_kw;
+                    const annual_discharge_mwh = generation.storage.reduce((a, b) => a + b, 0) * 1000 * 365;
+                    const annual_vom = COST_DATA.variable_om[type] * annual_discharge_mwh;
                     
-                    totalAnnualStorageCost += (annualized_capex + annual_fom);
+                    totalAnnualCost += annualized_capex + annual_fom + annual_vom;
                 }
             }
             
-            const totalDeliveredEnergy = Object.values(generation).flat().reduce((a, b) => a + b, 0);
-            if (totalDeliveredEnergy === 0) return 0;
+            // 3. Cost for DAC
+            if (capacity.dac > 0) {
+                 const tonsRemovedAnually = capacity.dac * 24 * 365;
+                 const dacOperatingCost = tonsRemovedAnually * COST_DATA.variable_om.dac;
+                 const dacIncentiveValue = tonsRemovedAnually * incentives.dac;
+                 totalAnnualCost += (dacOperatingCost - dacIncentiveValue);
+            }
 
-            const totalSystemCost = totalGenerationCost + totalAnnualStorageCost;
-            
-            return totalSystemCost / totalDeliveredEnergy;
+            return totalAnnualCost;
         }
 
 
-        const baselineLCOE = calculateAverageGridLCOE(BASELINE_GENERATION, {}, {});
+        const baselineSystemCost = calculateTotalAnnualSystemCost(BASELINE_GENERATION, {}, {});
 
         function runSimulation() {
             const inputs = {
@@ -561,8 +540,15 @@
             newGeneration.naturalGas = secondPassResult.gas;
 
             const newEmissions = calculateEmissions(newGeneration, inputs.capacity.dac);
-            const newLCOE = calculateAverageGridLCOE(newGeneration, inputs.capacity, inputs.incentives);
-            const costPercentageChange = ((newLCOE - baselineLCOE) / baselineLCOE) * 100;
+            
+            const newSystemCost = calculateTotalAnnualSystemCost(newGeneration, inputs.capacity, inputs.incentives);
+            const totalAnnualDemandMWh = modifiedDemand.reduce((a,b) => a+b, 0) * 1000 * 365;
+            const newCostPerMWh = newSystemCost / totalAnnualDemandMWh;
+
+            const baselineTotalAnnualDemandMWh = BASE_DEMAND_GWH.reduce((a,b) => a+b, 0) * 1000 * 365;
+            const baselineCostPerMWh = baselineSystemCost / baselineTotalAnnualDemandMWh;
+            
+            const costPercentageChange = ((newCostPerMWh - baselineCostPerMWh) / baselineCostPerMWh) * 100;
 
             updateCharts(newGeneration, newEmissions, modifiedDemand);
             billImpactEl.textContent = `${costPercentageChange.toFixed(0)}%`;
