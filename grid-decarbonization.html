@@ -158,9 +158,11 @@
                     </div>
 
                     <div class="space-y-6">
-                        <div class="flex justify-end space-x-2">
+                        <div class="grid grid-cols-2 gap-2">
                              <button id="undo-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors disabled:opacity-50" disabled>Undo</button>
-                             <button id="reset-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Reset Levers</button>
+                             <button id="make-default-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Make Default</button>
+                             <button id="reset-to-default-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Reset to Default</button>
+                             <button id="reset-to-zero-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Reset to Zero</button>
                         </div>
                         <div>
                             <h2 class="text-2xl font-lora font-semibold mb-4 border-b border-gray-300 pb-4 text-gray-800">Policy Levers</h2>
@@ -394,7 +396,9 @@
         };
         const billImpactEl = document.getElementById('bill-impact');
         const greenPremiumEl = document.getElementById('green-premium');
-        const resetButton = document.getElementById('reset-button');
+        const resetToZeroButton = document.getElementById('reset-to-zero-button');
+        const makeDefaultButton = document.getElementById('make-default-button');
+        const resetToDefaultButton = document.getElementById('reset-to-default-button');
         const undoButton = document.getElementById('undo-button');
         const generateMemoButton = document.getElementById('generate-memo-button');
         const memoModal = document.getElementById('memo-modal');
@@ -405,6 +409,10 @@
 
         // --- STATE MANAGEMENT ---
         let stateHistory = [];
+        let defaultSliderState = {};
+        let customBaselineSystemCost = 0;
+        let customBaselineTotalAnnualCO2 = 0;
+
 
         // --- CHARTING SETUP ---
         const generationCtx = document.getElementById('generationMixChart').getContext('2d');
@@ -500,7 +508,8 @@
                     
                     let capex_per_kwh = COST_DATA.capex[type] - incentives.storage; // Apply ITC
                     const total_kwh = capacity[type] * 1000000;
-                    const total_kw = total_kwh / parseInt(type.match(/\d+/)[0]);
+                    const duration = parseInt(type.match(/\d+/)[0]) || 1; // get duration from type name
+                    const total_kw = total_kwh / duration;
 
                     const annualized_capex = capex_per_kwh * total_kwh * crf;
                     const annual_fom = COST_DATA.fixed_om[type] * total_kw;
@@ -525,28 +534,7 @@
             return totalAnnualCost;
         }
 
-        const baselineSystemCost = calculateTotalAnnualSystemCost(BASELINE_GENERATION, {}, {carbonTax: 0});
-        const baselineEmissions = calculateEmissions(BASELINE_GENERATION, 0);
-        const baselineTotalAnnualCO2 = baselineEmissions.reduce((a, b) => a + b, 0) * 365;
-
-
-        function runSimulation() {
-            const inputs = {
-                capacity: {
-                    solar: parseFloat(sliders.solar.value), wind: parseFloat(sliders.wind.value),
-                    geothermal: parseFloat(sliders.geothermal.value), nuclear: parseFloat(sliders.nuclear.value),
-                    battery4hr: parseFloat(sliders.battery4hr.value), battery8hr: parseFloat(sliders.battery8hr.value),
-                    longduration: parseFloat(sliders.longduration.value), dac: parseFloat(sliders.dac.value),
-                    demandflex: parseFloat(sliders.demandflex.value),
-                },
-                incentives: {
-                    solar: parseFloat(sliders.solarIncentive.value), wind: parseFloat(sliders.windIncentive.value),
-                    geothermal: parseFloat(sliders.geothermalIncentive.value), nuclear: parseFloat(sliders.nuclearIncentive.value),
-                    storage: parseFloat(sliders.storageIncentive.value), dac: parseFloat(sliders.dacIncentive.value),
-                    carbonTax: parseFloat(sliders.carbonTax.value),
-                }
-            };
-
+        function getSimulationResult(inputs) {
             let modifiedDemand = [...BASE_DEMAND_GWH];
             if (inputs.capacity.demandflex > 0) {
                 const peak = Math.max(...modifiedDemand);
@@ -621,28 +609,56 @@
 
             newGeneration.storage = secondPassResult.discharge;
             newGeneration.naturalGas = secondPassResult.gas;
-
-            const newEmissions = calculateEmissions(newGeneration, inputs.capacity.dac);
             
+            const newEmissions = calculateEmissions(newGeneration, inputs.capacity.dac);
             const newSystemCost = calculateTotalAnnualSystemCost(newGeneration, inputs.capacity, inputs.incentives);
-            const totalAnnualDemandMWh = modifiedDemand.reduce((a,b) => a+b, 0) * 1000 * 365;
-            const newCostPerMWh = newSystemCost / totalAnnualDemandMWh;
+            
+            return {
+                generation: newGeneration,
+                emissions: newEmissions,
+                systemCost: newSystemCost,
+                demand: modifiedDemand
+            };
+        }
+
+
+        function runSimulation() {
+            const inputs = {
+                capacity: {
+                    solar: parseFloat(sliders.solar.value), wind: parseFloat(sliders.wind.value),
+                    geothermal: parseFloat(sliders.geothermal.value), nuclear: parseFloat(sliders.nuclear.value),
+                    battery4hr: parseFloat(sliders.battery4hr.value), battery8hr: parseFloat(sliders.battery8hr.value),
+                    longduration: parseFloat(sliders.longduration.value), dac: parseFloat(sliders.dac.value),
+                    demandflex: parseFloat(sliders.demandflex.value),
+                },
+                incentives: {
+                    solar: parseFloat(sliders.solarIncentive.value), wind: parseFloat(sliders.windIncentive.value),
+                    geothermal: parseFloat(sliders.geothermalIncentive.value), nuclear: parseFloat(sliders.nuclearIncentive.value),
+                    storage: parseFloat(sliders.storageIncentive.value), dac: parseFloat(sliders.dacIncentive.value),
+                    carbonTax: parseFloat(sliders.carbonTax.value),
+                }
+            };
+
+            const result = getSimulationResult(inputs);
+            
+            const totalAnnualDemandMWh = result.demand.reduce((a,b) => a+b, 0) * 1000 * 365;
+            const newCostPerMWh = result.systemCost / totalAnnualDemandMWh;
 
             const baselineTotalAnnualDemandMWh = BASE_DEMAND_GWH.reduce((a,b) => a+b, 0) * 1000 * 365;
-            const baselineCostPerMWh = baselineSystemCost / baselineTotalAnnualDemandMWh;
+            const baselineCostPerMWh = customBaselineSystemCost / baselineTotalAnnualDemandMWh;
             
             const costPercentageChange = ((newCostPerMWh - baselineCostPerMWh) / baselineCostPerMWh) * 100;
 
-            const newTotalAnnualCO2 = newEmissions.reduce((a, b) => a + b, 0) * 365;
-            const co2Avoided = baselineTotalAnnualCO2 - newTotalAnnualCO2;
-            const costDifference = newSystemCost - baselineSystemCost;
+            const newTotalAnnualCO2 = result.emissions.reduce((a, b) => a + b, 0) * 365;
+            const co2Avoided = customBaselineTotalAnnualCO2 - newTotalAnnualCO2;
+            const costDifference = result.systemCost - customBaselineSystemCost;
 
             let greenPremium = 0;
             if (co2Avoided > 0) {
                 greenPremium = costDifference / co2Avoided;
             }
 
-            updateCharts(newGeneration, newEmissions, modifiedDemand);
+            updateCharts(result.generation, result.emissions, result.demand);
             billImpactEl.textContent = `${costPercentageChange.toFixed(0)}%`;
             if (co2Avoided > 0) {
                 greenPremiumEl.textContent = `$${greenPremium.toFixed(0)}`;
@@ -724,15 +740,51 @@
             });
         });
 
-        resetButton.addEventListener('click', () => {
+        resetToZeroButton.addEventListener('click', () => {
             Object.keys(sliders).forEach(key => {
                 sliders[key].value = 0;
             });
-            stateHistory = [];
             updateSliderDisplays();
             runSimulation();
             saveState();
         });
+        
+        makeDefaultButton.addEventListener('click', () => {
+             const currentInputs = {
+                capacity: {},
+                incentives: {}
+            };
+            for (const key in sliders) {
+                const group = key.includes('Incentive') || key.includes('Tax') ? 'incentives' : 'capacity';
+                // Special handling for demandflex as it's not a generation capacity
+                if (key === 'demandflex' || key === 'dac' || key === 'battery4hr' || key === 'battery8hr' || key === 'longduration') {
+                    currentInputs.capacity[key] = parseFloat(sliders[key].value);
+                } else if (group === 'capacity') {
+                     currentInputs.capacity[key] = parseFloat(sliders[key].value);
+                } else {
+                    currentInputs.incentives[key] = parseFloat(sliders[key].value);
+                }
+                 defaultSliderState[key] = sliders[key].value;
+            }
+
+            const defaultResult = getSimulationResult(currentInputs);
+            customBaselineSystemCost = defaultResult.systemCost;
+            customBaselineTotalAnnualCO2 = defaultResult.emissions.reduce((a, b) => a + b, 0) * 365;
+            
+            runSimulation(); // Rerun to set bill impact to 0%
+            saveState();
+            alert('Current lever positions have been set as the new default baseline.');
+        });
+
+        resetToDefaultButton.addEventListener('click', () => {
+            for (const key in defaultSliderState) {
+                sliders[key].value = defaultSliderState[key];
+            }
+            updateSliderDisplays();
+            runSimulation();
+            saveState();
+        });
+
 
         undoButton.addEventListener('click', () => {
             if (stateHistory.length > 1) {
@@ -756,11 +808,28 @@
 
 
             // 1. Gather data
+            const currentSimResult = getSimulationResult({
+                capacity: {
+                    solar: parseFloat(sliders.solar.value), wind: parseFloat(sliders.wind.value),
+                    geothermal: parseFloat(sliders.geothermal.value), nuclear: parseFloat(sliders.nuclear.value),
+                    battery4hr: parseFloat(sliders.battery4hr.value), battery8hr: parseFloat(sliders.battery8hr.value),
+                    longduration: parseFloat(sliders.longduration.value), dac: parseFloat(sliders.dac.value),
+                    demandflex: parseFloat(sliders.demandflex.value),
+                },
+                incentives: {
+                    solar: parseFloat(sliders.solarIncentive.value), wind: parseFloat(sliders.windIncentive.value),
+                    geothermal: parseFloat(sliders.geothermalIncentive.value), nuclear: parseFloat(sliders.nuclearIncentive.value),
+                    storage: parseFloat(sliders.storageIncentive.value), dac: parseFloat(sliders.dacIncentive.value),
+                    carbonTax: parseFloat(sliders.carbonTax.value),
+                }
+            });
+            const newTotalAnnualCO2 = currentSimResult.emissions.reduce((a, b) => a + b, 0) * 365;
+
             const scenarioData = {
                 results: {
                     billImpact: billImpactEl.textContent,
                     greenPremium: greenPremiumEl.textContent,
-                    co2Avoided: (baselineTotalAnnualCO2 - (calculateEmissions(runDispatch(runDispatch({ battery4hr: 0, battery8hr: 0, longduration: 0 }).finalLevels).gas.reduce((a,b)=>a+b,0) > 0 ? runDispatch(runDispatch({ battery4hr: 0, battery8hr: 0, longduration: 0 }).finalLevels).gas : Array(24).fill(0), parseFloat(sliders.dac.value)).reduce((a,b)=>a+b,0) * 365)).toLocaleString(undefined, {maximumFractionDigits:0})
+                    co2Avoided: (customBaselineTotalAnnualCO2 - newTotalAnnualCO2).toLocaleString(undefined, {maximumFractionDigits:0})
                 },
                 capacity: {},
                 incentives: {}
@@ -781,7 +850,7 @@
                 **Key Outcomes:**
                 - Impact on Customer Bills: ${scenarioData.results.billImpact}
                 - Green Premium (Cost of Abatement): ${scenarioData.results.greenPremium} per ton of CO2 avoided
-                - Total Annual CO2 Avoided: ${scenarioData.results.co2Avoided} tons
+                - Total Annual CO2 Avoided (relative to baseline): ${scenarioData.results.co2Avoided} tons
 
                 **Policy Levers & Investments (New Capacity):**
                 ${Object.entries(scenarioData.capacity).map(([key, value]) => `- ${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}: ${value}`).join('\n')}
@@ -823,7 +892,18 @@
                     result.candidates[0].content.parts.length > 0) {
                     const text = result.candidates[0].content.parts[0].text;
                     memoLoading.classList.add('hidden');
-                    memoContent.innerHTML = text.replace(/\n/g, '<br>'); // Simple markdown conversion
+                    // A simple markdown to HTML converter
+                    let html = text
+                        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                        .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+                        .replace(/\*(.*)\*/gim, '<em>$1</em>')
+                        .replace(/^- (.*$)/gim, '<ul><li>$1</li></ul>')
+                        .replace(/<\/ul>\s*<ul>/g, '')
+                        .replace(/\n/g, '<br>');
+
+                    memoContent.innerHTML = html;
                 } else {
                     throw new Error("Invalid response structure from API.");
                 }
@@ -847,12 +927,43 @@
                 }, 2000);
             }).catch(err => {
                 console.error('Failed to copy text: ', err);
+                // Fallback for older browsers
+                 const textArea = document.createElement("textarea");
+                 textArea.value = textToCopy;
+                 document.body.appendChild(textArea);
+                 textArea.focus();
+                 textArea.select();
+                 try {
+                     document.execCommand('copy');
+                     copyMemoButton.textContent = 'Copied!';
+                     setTimeout(() => { copyMemoButton.textContent = 'Copy to Clipboard';}, 2000);
+                 } catch (err) {
+                     console.error('Fallback to copy failed', err);
+                 }
+                 document.body.removeChild(textArea);
             });
         });
         
         // --- INITIALIZATION ---
-        runSimulation();
-        saveState();
+        function initialize() {
+            // Set the initial default state to all zeros
+            for (const key in sliders) {
+                defaultSliderState[key] = "0";
+            }
+            // Calculate the initial baseline cost and emissions for the zero-lever scenario
+            const initialResult = getSimulationResult({
+                capacity: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
+                incentives: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, storage: 0, dac: 0, carbonTax: 0 }
+            });
+            customBaselineSystemCost = initialResult.systemCost;
+            customBaselineTotalAnnualCO2 = initialResult.emissions.reduce((a, b) => a + b, 0) * 365;
+
+            updateSliderDisplays();
+            runSimulation();
+            saveState();
+        }
+
+        initialize();
 
     </script>
 </body>
