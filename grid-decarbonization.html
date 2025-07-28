@@ -6,6 +6,7 @@
     <title>Grid Decarbonization Simulator | Dr. Eshan Singh</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;700&display=swap" rel="stylesheet">
@@ -326,6 +327,7 @@
 
 
     <script>
+    document.addEventListener('DOMContentLoaded', function() {
         // --- MODEL PARAMETERS & DATA ---
         const HOURS = Array.from({ length: 24 }, (_, i) => `${i}:00`);
         
@@ -417,6 +419,10 @@
         // --- CHARTING SETUP ---
         const generationCtx = document.getElementById('generationMixChart').getContext('2d');
         const co2Ctx = document.getElementById('co2EmissionsChart').getContext('2d');
+        
+        // Register plugins BEFORE creating charts
+        Chart.register(window.ChartjsPluginAnnotation);
+
         const COLORS = {
             naturalGas: 'rgba(107, 114, 128, 0.8)', hydro: 'rgba(59, 130, 246, 0.8)', 
             nuclear: 'rgba(239, 68, 68, 0.8)', solar: 'rgba(251, 191, 36, 0.8)', 
@@ -464,12 +470,39 @@
                      x: { title: { display: true, text: 'Hour of Day' } },
                     y: { beginAtZero: true, title: { display: true, text: 'CO2 (Metric Tons)' } }
                 },
-                plugins: { legend: { display: false } }
+                plugins: { 
+                    legend: { display: false },
+                    annotation: {
+                        annotations: {
+                            totalCO2: {
+                                type: 'label',
+                                content: 'Total Daily CO2: 0 tons',
+                                position: {
+                                  x: 'end',
+                                  y: 'end'
+                                },
+                                xAdjust: -10,
+                                yAdjust: -10,
+                                backgroundColor: 'rgba(249, 250, 251, 0.85)',
+                                borderColor: 'rgba(209, 213, 219, 1)',
+                                borderWidth: 1,
+                                borderRadius: 6,
+                                color: '#1f2937',
+                                font: {
+                                    weight: 'bold',
+                                    size: 12
+                                },
+                                padding: 8,
+                            }
+                        }
+                    }
+                }
             }
         };
 
         const generationChart = new Chart(generationCtx, generationChartConfig);
         const co2Chart = new Chart(co2Ctx, co2ChartConfig);
+
 
         // --- COST CALCULATION ---
         function calculateTotalAnnualSystemCost(generation, capacity, incentives) {
@@ -640,6 +673,7 @@
             };
 
             const result = getSimulationResult(inputs);
+            const totalDailyCO2 = result.emissions.reduce((a, b) => a + b, 0);
             
             const totalAnnualDemandMWh = result.demand.reduce((a,b) => a+b, 0) * 1000 * 365;
             const newCostPerMWh = result.systemCost / totalAnnualDemandMWh;
@@ -658,7 +692,7 @@
                 greenPremium = costDifference / co2Avoided;
             }
 
-            updateCharts(result.generation, result.emissions, result.demand);
+            updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2);
             billImpactEl.textContent = `${costPercentageChange.toFixed(0)}%`;
             if (co2Avoided > 0) {
                 greenPremiumEl.textContent = `$${greenPremium.toFixed(0)}`;
@@ -686,7 +720,7 @@
             return co2;
         }
 
-        function updateCharts(generation, emissions, demand) {
+        function updateCharts(generation, emissions, demand, totalCO2) {
             const chartData = generationChart.data.datasets;
             chartData[0].data = generation.naturalGas;
             chartData[1].data = generation.hydro;
@@ -699,6 +733,7 @@
             generationChart.update('none');
 
             co2Chart.data.datasets[0].data = emissions;
+            co2Chart.options.plugins.annotation.annotations.totalCO2.content = `Total Daily CO2: ${Math.round(totalCO2).toLocaleString()} tons`;
             co2Chart.update('none');
         }
 
@@ -964,7 +999,7 @@
         }
 
         initialize();
-
+    });
     </script>
 </body>
 </html>
