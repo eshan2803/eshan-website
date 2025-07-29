@@ -406,37 +406,37 @@
         nuclear: [5, 5, 5, 5, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 4, 4, 3, 3, 5, 5],
         solar: [0, 0, 0, 0, 0, 1, 3, 5, 8, 12, 14, 15, 16, 17, 17, 17, 7, 0, 0, 0, 0, 0, 0, 0],
         wind: [0, 0, 0, 0, 0, 0, 0, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 2, 2, 2, 2, 2],
-        geothermal: Array(24).fill(0)
+        geothermal: Array(24).fill(0),
+        coal: Array(24).fill(0)
     };
     let BASELINE_GENERATION = JSON.parse(JSON.stringify(ORIGINAL_BASELINE_GENERATION));
     const SOLAR_CF_PROFILE = [0,0,0,0,0,0.05,0.15,0.3,0.5,0.7,0.8,0.85,0.9,0.85,0.8,0.7,0.3,0.05,0,0,0,0,0,0];
     const WIND_CF_PROFILE = [0.4,0.42,0.45,0.46,0.45,0.4,0.35,0.3,0.25,0.2,0.2,0.2,0.25,0.3,0.35,0.4,0.5,0.6,0.65,0.6,0.55,0.5,0.45,0.4];
-    const EMISSION_FACTORS = { naturalGas: 395, hydro: 0, nuclear: 0, solar: 0, wind: 0, geothermal: 0 };
+    const EMISSION_FACTORS = { naturalGas: 395, hydro: 0, nuclear: 0, solar: 0, wind: 0, geothermal: 0, coal: 850 };
     const COST_DATA = {
         capex: { 
             solar: 1000, wind: 1400, nuclear: 8000, geothermal: 4500,
-            naturalGas: 1100, hydro: 3000,
+            naturalGas: 1100, hydro: 3000, coal: 3500,
             battery4hr: 300, battery8hr: 350, longduration: 500, 
         },
         fixed_om: {
             solar: 18, wind: 35, nuclear: 140, geothermal: 120,
-            naturalGas: 20, hydro: 20,
+            naturalGas: 20, hydro: 20, coal: 40,
             battery4hr: 15, battery8hr: 15, longduration: 15
         },
         variable_om: { 
             solar: 2, wind: 1, nuclear: 10, geothermal: 0,
-            naturalGas: 40, hydro: 5,
+            naturalGas: 40, hydro: 5, coal: 30,
             battery4hr: 2, battery8hr: 2, longduration: 2,
             dac: 400
         },
         lifetime: {
             solar: 30, wind: 30, nuclear: 60, geothermal: 30,
-            naturalGas: 30, hydro: 80,
-            battery4hr: 15, battery8hr: 15, longduration: 25
+            naturalGas: 30, hydro: 80, coal: 40
         },
         capacity_factor: {
             solar: 0.25, wind: 0.35, nuclear: 0.9, geothermal: 0.9,
-            naturalGas: 0.55, hydro: 0.45
+            naturalGas: 0.55, hydro: 0.45, coal: 0.60
         },
         discount_rate: 0.07
     };
@@ -492,7 +492,7 @@
             nuclear: 'rgba(239, 68, 68, 0.8)', solar: 'rgba(251, 191, 36, 0.8)', 
             wind: 'rgba(16, 185, 129, 0.8)', geothermal: 'rgba(120, 40, 40, 0.8)',
             storage: 'rgba(168, 85, 247, 0.8)', demand: 'rgba(17, 24, 39, 1)',
-            curtailment: 'rgba(253, 186, 116, 0.8)'
+            curtailment: 'rgba(253, 186, 116, 0.8)', coal: 'rgba(0, 0, 0, 0.8)'
         };
         
         const generationChartConfig = {
@@ -500,6 +500,7 @@
             data: {
                 labels: HOURS,
                 datasets: [
+                    { label: 'Coal', data: [], backgroundColor: COLORS.coal },
                     { label: 'Natural Gas', data: [], backgroundColor: COLORS.naturalGas },
                     { label: 'Hydro', data: [], backgroundColor: COLORS.hydro },
                     { label: 'Geothermal', data: [], backgroundColor: COLORS.geothermal },
@@ -648,6 +649,7 @@
             }
 
             let newGeneration = {
+                coal: Array(24).fill(0),
                 naturalGas: Array(24).fill(0),
                 hydro: [...BASELINE_GENERATION.hydro], 
                 nuclear: JSON.parse(JSON.stringify(BASELINE_GENERATION.nuclear)), 
@@ -669,6 +671,7 @@
                 let storageLevels = JSON.parse(JSON.stringify(initialStorageLevels));
                 let hourlyDischarge = Array(24).fill(0);
                 let hourlyNaturalGas = Array(24).fill(0);
+                let hourlyCoal = Array(24).fill(0);
                 let hourlyCurtailment = Array(24).fill(0);
 
                 const storageCapacities = {
@@ -701,10 +704,17 @@
                     }
                     
                     if (netLoad > 0) {
+                        const maxCoal = (BASELINE_GENERATION.coal.reduce((a, b) => a + b, 0) * 1000) / (COST_DATA.capacity_factor.coal * 8760) / 1000000 * COST_DATA.capacity_factor.coal;
+                        const coalToDispatch = Math.min(netLoad, maxCoal);
+                        hourlyCoal[i] = coalToDispatch;
+                        netLoad -= coalToDispatch;
+                    }
+
+                    if (netLoad > 0) {
                         hourlyNaturalGas[i] = netLoad;
                     }
                 }
-                return { finalLevels: storageLevels, discharge: hourlyDischarge, gas: hourlyNaturalGas, curtailment: hourlyCurtailment };
+                return { finalLevels: storageLevels, discharge: hourlyDischarge, gas: hourlyNaturalGas, coal: hourlyCoal, curtailment: hourlyCurtailment };
             };
 
             const emptyInitialState = { battery4hr: 0, battery8hr: 0, longduration: 0 };
@@ -713,6 +723,7 @@
 
             newGeneration.storage = secondPassResult.discharge;
             newGeneration.naturalGas = secondPassResult.gas;
+            newGeneration.coal = secondPassResult.coal;
             newGeneration.curtailment = secondPassResult.curtailment;
             
             const newEmissions = calculateEmissions(newGeneration, inputs.capacity.dac);
@@ -799,6 +810,7 @@
             for (let i = 0; i < 24; i++) {
                 let hourlyEmission = 0;
                 hourlyEmission += (generation.naturalGas[i] || 0) * EMISSION_FACTORS.naturalGas;
+                hourlyEmission += (generation.coal[i] || 0) * EMISSION_FACTORS.coal;
                 hourlyEmission -= dacRate;
                 co2.push(Math.max(0, hourlyEmission));
             }
@@ -807,15 +819,16 @@
 
         function updateCharts(generation, emissions, demand, totalCO2) {
             const chartData = generationChart.data.datasets;
-            chartData[0].data = generation.naturalGas;
-            chartData[1].data = generation.hydro;
-            chartData[2].data = generation.geothermal;
-            chartData[3].data = generation.nuclear;
-            chartData[4].data = generation.solar;
-            chartData[5].data = generation.wind;
-            chartData[6].data = generation.storage;
-            chartData[7].data = generation.curtailment;
-            chartData[8].data = demand;
+            chartData[0].data = generation.coal;
+            chartData[1].data = generation.naturalGas;
+            chartData[2].data = generation.hydro;
+            chartData[3].data = generation.geothermal;
+            chartData[4].data = generation.nuclear;
+            chartData[5].data = generation.solar;
+            chartData[6].data = generation.wind;
+            chartData[7].data = generation.storage;
+            chartData[8].data = generation.curtailment;
+            chartData[9].data = demand;
             generationChart.update('none');
 
             co2Chart.data.datasets[0].data = emissions;
@@ -855,7 +868,7 @@
         }
 
         function createGridMixSliders() {
-            const techOrder = ['naturalGas', 'solar', 'hydro', 'wind', 'nuclear', 'geothermal'];
+            const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'nuclear', 'geothermal'];
             techOrder.forEach(tech => {
                 const name = tech.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
                 const color = COLORS[tech] || '#ccc';
