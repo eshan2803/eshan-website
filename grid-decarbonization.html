@@ -1106,7 +1106,7 @@
                 }
 
                 // Visitor counter logic
-                const counterRef = doc(db, `artifacts/${appId}/public/data/page_stats/counter`);
+                const counterRef = doc(db, `artifacts/${appId}/public/data/counters/visitor_counter`);
                 try {
                     const newCount = await runTransaction(db, async (transaction) => {
                         const counterDoc = await transaction.get(counterRef);
