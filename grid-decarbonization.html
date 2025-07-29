@@ -27,6 +27,35 @@
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
             padding: 1.5rem;
         }
+        /* Rainbow Border Animation */
+        @keyframes rainbow-border {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+        
+        .rainbow-glow {
+            position: relative;
+            background: linear-gradient(90deg, #ff0080, #ff8000, #ffff00, #80ff00, #00ff80, #0080ff, #8000ff, #ff0080);
+            background-size: 200% 200%;
+            animation: rainbow-border 2s linear infinite;
+            padding: 2px;
+            border-radius: 9999px;
+        }
+        
+        .rainbow-glow .button-content {
+            background: #f3f4f6;
+            border-radius: 9999px;
+            padding: 0.5rem 1rem;
+            display: block;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        
+        .rainbow-glow:hover .button-content {
+            background: #e5e7eb;
+        }        
         .mesh-gradient-container {
             position: relative;
             z-index: 1;
@@ -433,25 +462,25 @@
 
         const SOLAR_CF_PROFILE = [0,0,0,0,0,0.05,0.15,0.3,0.5,0.7,0.8,0.85,0.9,0.85,0.8,0.7,0.3,0.05,0,0,0,0,0,0];
         const WIND_CF_PROFILE = [0.4,0.42,0.45,0.46,0.45,0.4,0.35,0.3,0.25,0.2,0.2,0.2,0.25,0.3,0.35,0.4,0.5,0.6,0.65,0.6,0.55,0.5,0.45,0.4];
-
+        
         const EMISSION_FACTORS = { naturalGas: 395, hydro: 0, nuclear: 0, solar: 0, wind: 0, geothermal: 0 };
         
         const COST_DATA = {
             capex: { 
-                solar: 1600, wind: 1900, nuclear: 8000, geothermal: 4500,
+                solar: 1000, wind: 1400, nuclear: 8000, geothermal: 4500,
                 naturalGas: 1100, hydro: 3000,
-                battery4hr: 380, battery8hr: 320, longduration: 180, 
+                battery4hr: 300, battery8hr: 350, longduration: 500, 
             },
             fixed_om: {
-                solar: 18, wind: 45, nuclear: 140, geothermal: 120,
-                naturalGas: 15, hydro: 20,
-                battery4hr: 25, battery8hr: 22, longduration: 15
+                solar: 18, wind: 35, nuclear: 140, geothermal: 120,
+                naturalGas: 20, hydro: 20,
+                battery4hr: 15, battery8hr: 15, longduration: 15
             },
             variable_om: { 
                 solar: 2, wind: 1, nuclear: 10, geothermal: 0,
                 naturalGas: 40, hydro: 5,
-                battery4hr: 4, battery8hr: 4, longduration: 5,
-                dac: 100
+                battery4hr: 2, battery8hr: 2, longduration: 2,
+                dac: 400 // Note: Adjusted to $/ton CO2; ensure model handles this unit
             },
             lifetime: {
                 solar: 30, wind: 30, nuclear: 60, geothermal: 30,
@@ -459,7 +488,7 @@
                 battery4hr: 15, battery8hr: 15, longduration: 25
             },
             capacity_factor: {
-                solar: 0.25, wind: 0.40, nuclear: 0.9, geothermal: 0.9,
+                solar: 0.25, wind: 0.35, nuclear: 0.9, geothermal: 0.9,
                 naturalGas: 0.55, hydro: 0.45
             },
             discount_rate: 0.07
@@ -1012,6 +1041,10 @@
                 runSimulation();
                 undoButton.disabled = stateHistory.length <= 1;
             }
+        });
+
+        solveButton.addEventListener('click', () => {
+            solveForZeroCO2();
         });
         
         // --- INITIALIZATION & DYNAMIC CONTENT ---
