@@ -380,10 +380,68 @@
     </div>
     
     <script type="module">
+       // STEP 1: All imports must be at the top level, outside any function.
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, runTransaction, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // This is your unique configuration for your web app
+        const firebaseConfig = {
+          apiKey: "AIzaSyCdEeu0VugTfZD-R-62pFvBdb313TeM4xs",
+          authDomain: "grid-decarbonization.firebaseapp.com",
+          projectId: "grid-decarbonization",
+          storageBucket: "grid-decarbonization.firebasestorage.app",
+          messagingSenderId: "902419724670",
+          appId: "1:902419724670:web:b636a75ea44325946a9b2f",
+          measurementId: "G-3Q9HE19CGN"
+        };
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
+        // STEP 2: Define the 'appId' variable so it can be used below
+        const appId = firebaseConfig.appId;
+
+        // The 'initialize' function now only contains logic, not imports or configs.
+        async function initialize() {
+            setLogLevel('debug');
+
+            try {
+                if (typeof __initial_auth_token !== 'undefined') {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Firebase authentication failed:", error);
+            }
+
+            // Visitor counter logic now has access to the 'appId' variable
+            const counterRef = doc(db, `artifacts/${appId}/public/data/counters/visitor_counter`);
+            const visitorCountEl = document.getElementById('visitor-count'); // Make sure this is defined
+
+            try {
+                const newCount = await runTransaction(db, async (transaction) => {
+                    const counterDoc = await transaction.get(counterRef);
+                    if (!counterDoc.exists()) {
+                        transaction.set(counterRef, { count: 1 });
+                        return 1;
+                    }
+                    const newCount = counterDoc.data().count + 1;
+                    transaction.update(counterRef, { count: newCount });
+                    return newCount;
+                });
+                if (visitorCountEl) {
+                    visitorCountEl.textContent = newCount.toLocaleString();
+                }
+            } catch (e) {
+                console.error("Transaction failed: ", e);
+                if (visitorCountEl) {
+                    visitorCountEl.textContent = "N/A";
+                }
+            }
         // --- MODEL PARAMETERS & DATA (GLOBAL SCOPE) ---
         const HOURS = Array.from({ length: 24 }, (_, i) => `${i}:00`);
         const countryGridMixData = {
@@ -1087,62 +1145,6 @@
                 updateBaselineForCountry(e.target.value);
             });
             
-            async function initialize() {
-                // Firebase setup
-                // Import the functions you need from the SDKs you need
-                import { initializeApp } from "firebase/app";
-                import { getAnalytics } from "firebase/analytics";
-                // TODO: Add SDKs for Firebase products that you want to use
-                // https://firebase.google.com/docs/web/setup#available-libraries
-                
-                // Your web app's Firebase configuration
-                // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-                const firebaseConfig = {
-                  apiKey: "AIzaSyCdEeu0VugTfZD-R-62pFvBdb313TeM4xs",
-                  authDomain: "grid-decarbonization.firebaseapp.com",
-                  projectId: "grid-decarbonization",
-                  storageBucket: "grid-decarbonization.firebasestorage.app",
-                  messagingSenderId: "902419724670",
-                  appId: "1:902419724670:web:b636a75ea44325946a9b2f",
-                  measurementId: "G-3Q9HE19CGN"
-                };
-                
-                // Initialize Firebase
-                const app = initializeApp(firebaseConfig);
-                const analytics = getAnalytics(app);
-                const db = getFirestore(app);
-                const auth = getAuth(app);
-                setLogLevel('debug');
-
-                try {
-                    if (typeof __initial_auth_token !== 'undefined') {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                } catch (error) {
-                    console.error("Firebase authentication failed:", error);
-                }
-
-                // Visitor counter logic
-                const counterRef = doc(db, `artifacts/${appId}/public/data/counters/visitor_counter`);
-                try {
-                    const newCount = await runTransaction(db, async (transaction) => {
-                        const counterDoc = await transaction.get(counterRef);
-                        if (!counterDoc.exists()) {
-                            transaction.set(counterRef, { count: 1 });
-                            return 1;
-                        }
-                        const newCount = counterDoc.data().count + 1;
-                        transaction.update(counterRef, { count: newCount });
-                        return newCount;
-                    });
-                    visitorCountEl.textContent = newCount.toLocaleString();
-                } catch (e) {
-                    console.error("Transaction failed: ", e);
-                    visitorCountEl.textContent = "N/A";
-                }
-
                 createGridMixSliders();
                 populateCountryDropdown();
                 // Set the initial default state to all zeros
@@ -1164,6 +1166,7 @@
 
             initialize();
         });
+        document.addEventListener('DOMContentLoaded', initialize);
     </script>
 </body>
 </html>
