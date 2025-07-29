@@ -704,8 +704,9 @@
                     }
                     
                     if (netLoad > 0) {
-                        const maxCoal = (BASELINE_GENERATION.coal.reduce((a, b) => a + b, 0) * 1000) / (COST_DATA.capacity_factor.coal * 8760) / 1000000 * COST_DATA.capacity_factor.coal;
-                        const coalToDispatch = Math.min(netLoad, maxCoal);
+                        const avgHourlyCoalGen = BASELINE_GENERATION.coal.reduce((a, b) => a + b, 0) / 24;
+                        const coalCapacity = avgHourlyCoalGen / COST_DATA.capacity_factor.coal;
+                        const coalToDispatch = Math.min(netLoad, coalCapacity);
                         hourlyCoal[i] = coalToDispatch;
                         netLoad -= coalToDispatch;
                     }
