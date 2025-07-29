@@ -380,68 +380,10 @@
     </div>
     
     <script type="module">
-       // STEP 1: All imports must be at the top level, outside any function.
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, runTransaction, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // This is your unique configuration for your web app
-        const firebaseConfig = {
-          apiKey: "AIzaSyCdEeu0VugTfZD-R-62pFvBdb313TeM4xs",
-          authDomain: "grid-decarbonization.firebaseapp.com",
-          projectId: "grid-decarbonization",
-          storageBucket: "grid-decarbonization.firebasestorage.app",
-          messagingSenderId: "902419724670",
-          appId: "1:902419724670:web:b636a75ea44325946a9b2f",
-          measurementId: "G-3Q9HE19CGN"
-        };
-        
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        
-        // STEP 2: Define the 'appId' variable so it can be used below
-        const appId = firebaseConfig.appId;
-
-        // The 'initialize' function now only contains logic, not imports or configs.
-        async function initialize() {
-            setLogLevel('debug');
-
-            try {
-                if (typeof __initial_auth_token !== 'undefined') {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                console.error("Firebase authentication failed:", error);
-            }
-
-            // Visitor counter logic now has access to the 'appId' variable
-            const counterRef = doc(db, `artifacts/${appId}/public/data/counters/visitor_counter`);
-            const visitorCountEl = document.getElementById('visitor-count'); // Make sure this is defined
-
-            try {
-                const newCount = await runTransaction(db, async (transaction) => {
-                    const counterDoc = await transaction.get(counterRef);
-                    if (!counterDoc.exists()) {
-                        transaction.set(counterRef, { count: 1 });
-                        return 1;
-                    }
-                    const newCount = counterDoc.data().count + 1;
-                    transaction.update(counterRef, { count: newCount });
-                    return newCount;
-                });
-                if (visitorCountEl) {
-                    visitorCountEl.textContent = newCount.toLocaleString();
-                }
-            } catch (e) {
-                console.error("Transaction failed: ", e);
-                if (visitorCountEl) {
-                    visitorCountEl.textContent = "N/A";
-                }
-            }
         // --- MODEL PARAMETERS & DATA (GLOBAL SCOPE) ---
         const HOURS = Array.from({ length: 24 }, (_, i) => `${i}:00`);
         const countryGridMixData = {
@@ -474,7 +416,7 @@
         let BASELINE_GENERATION = JSON.parse(JSON.stringify(ORIGINAL_BASELINE_GENERATION));
         const SOLAR_CF_PROFILE = [0,0,0,0,0,0.05,0.15,0.3,0.5,0.7,0.8,0.85,0.9,0.85,0.8,0.7,0.3,0.05,0,0,0,0,0,0];
         const WIND_CF_PROFILE = [0.4,0.42,0.45,0.46,0.45,0.4,0.35,0.3,0.25,0.2,0.2,0.2,0.25,0.3,0.35,0.4,0.5,0.6,0.65,0.6,0.55,0.5,0.45,0.4];
-        const EMISSION_FACTORS = { naturalGas: 395, hydro: 0, nuclear: 0, solar: 0, wind: 0, geothermal: 0, coal: 850 };
+        const EMISSION_FACTORS = { naturalGas: 395, hydro: 0, nuclear: 0, solar: 0, wind: 0, geothermal: 0, coal: 950 };
         const COST_DATA = {
             capex: { 
                 solar: 1000, wind: 1400, nuclear: 8000, geothermal: 4500,
@@ -494,12 +436,11 @@
             },
             lifetime: {
                 solar: 30, wind: 30, nuclear: 60, geothermal: 30,
-                naturalGas: 30, hydro: 80,
-                battery4hr: 15, battery8hr: 15, longduration: 25, coal: 40
+                naturalGas: 30, hydro: 80, coal: 40
             },
             capacity_factor: {
                 solar: 0.25, wind: 0.35, nuclear: 0.9, geothermal: 0.9,
-                naturalGas: 0.55, hydro: 0.45, coal: 0.6
+                naturalGas: 0.55, hydro: 0.45, coal: 0.75
             },
             discount_rate: 0.07
         };
@@ -1145,6 +1086,44 @@
                 updateBaselineForCountry(e.target.value);
             });
             
+            async function initialize() {
+                // Firebase setup
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "...", authDomain: "...", projectId: "..." };
+                const app = initializeApp(firebaseConfig);
+                const db = getFirestore(app);
+                const auth = getAuth(app);
+                setLogLevel('debug');
+
+                try {
+                    if (typeof __initial_auth_token !== 'undefined') {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Firebase authentication failed:", error);
+                }
+
+                // Visitor counter logic
+                const counterRef = doc(db, `artifacts/${appId}/public/data/counters/visitor_counter`);
+                try {
+                    const newCount = await runTransaction(db, async (transaction) => {
+                        const counterDoc = await transaction.get(counterRef);
+                        if (!counterDoc.exists()) {
+                            transaction.set(counterRef, { count: 1 });
+                            return 1;
+                        }
+                        const newCount = counterDoc.data().count + 1;
+                        transaction.update(counterRef, { count: newCount });
+                        return newCount;
+                    });
+                    visitorCountEl.textContent = newCount.toLocaleString();
+                } catch (e) {
+                    console.error("Transaction failed: ", e);
+                    visitorCountEl.textContent = "N/A";
+                }
+
                 createGridMixSliders();
                 populateCountryDropdown();
                 // Set the initial default state to all zeros
@@ -1166,7 +1145,6 @@
 
             initialize();
         });
-        document.addEventListener('DOMContentLoaded', initialize);
     </script>
 </body>
 </html>
