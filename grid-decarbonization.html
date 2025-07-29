@@ -380,11 +380,29 @@
     </div>
     
     <script type="module">
-        // --- CORRECTED FIREBASE IMPORTS ---
-        // All imports must be at the top level of the module.
+        // --- FIREBASE IMPORTS ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, runTransaction, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- HARDCODED FIREBASE CONFIGURATION ---
+        // This object contains your project's unique keys.
+        // It directly connects your webpage to your Firebase project.
+        const firebaseConfig = {
+          apiKey: "AIzaSyCdEeu0VugTfZD-R-62pFvBdb313TeM4xs",
+          authDomain: "grid-decarbonization.firebaseapp.com",
+          projectId: "grid-decarbonization",
+          storageBucket: "grid-decarbonization.appspot.com",
+          messagingSenderId: "902419724670",
+          appId: "1:902419724670:web:b636a75ea44325946a9b2f",
+          measurementId: "G-3Q9HE19CGN"
+        };
+        
+        // --- INITIALIZE FIREBASE & DEFINE KEY VARIABLES ---
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const appId = firebaseConfig.appId; // Use the appId from your config for the database path
 
         // --- MODEL PARAMETERS & DATA (GLOBAL SCOPE) ---
         const HOURS = Array.from({ length: 24 }, (_, i) => `${i}:00`);
@@ -449,14 +467,6 @@
         };
 
         document.addEventListener('DOMContentLoaded', async function() {
-            // --- FIREBASE SETUP (CORRECTED) ---
-            // This setup uses environment variables provided by the platform, so no manual keys are needed.
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "...", authDomain: "...", projectId: "..." };
-            
-            const app = initializeApp(firebaseConfig);
-            const db = getFirestore(app);
-            const auth = getAuth(app);
             setLogLevel('debug');
 
             // --- DOM ELEMENTS ---
@@ -1105,14 +1115,12 @@
             async function initialize() {
                 // Authenticate with Firebase
                 try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
+                    await signInAnonymously(auth);
                     console.log("Firebase authentication successful.");
                 } catch (error) {
                     console.error("Firebase authentication failed:", error);
+                    visitorCountEl.textContent = "Auth Failed";
+                    return; // Stop initialization if auth fails
                 }
 
                 // Visitor counter logic
@@ -1131,7 +1139,7 @@
                     visitorCountEl.textContent = newCount.toLocaleString();
                 } catch (e) {
                     console.error("Firestore transaction failed: ", e);
-                    visitorCountEl.textContent = "N/A";
+                    visitorCountEl.textContent = "DB Error";
                 }
 
                 // Setup the rest of the application
