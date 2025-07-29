@@ -102,6 +102,19 @@
             text-align: right;
             background-color: rgba(255, 255, 255, 0.8);
         }
+        /* Color-coded slider thumbs */
+        .thumb-solar::-webkit-slider-thumb { background-color: rgba(251, 191, 36, 1); }
+        .thumb-solar::-moz-range-thumb { background-color: rgba(251, 191, 36, 1); }
+        .thumb-wind::-webkit-slider-thumb { background-color: rgba(16, 185, 129, 1); }
+        .thumb-wind::-moz-range-thumb { background-color: rgba(16, 185, 129, 1); }
+        .thumb-geothermal::-webkit-slider-thumb { background-color: rgba(120, 40, 40, 1); }
+        .thumb-geothermal::-moz-range-thumb { background-color: rgba(120, 40, 40, 1); }
+        .thumb-nuclear::-webkit-slider-thumb { background-color: rgba(239, 68, 68, 1); }
+        .thumb-nuclear::-moz-range-thumb { background-color: rgba(239, 68, 68, 1); }
+        .thumb-storage::-webkit-slider-thumb { background-color: rgba(168, 85, 247, 1); }
+        .thumb-storage::-moz-range-thumb { background-color: rgba(168, 85, 247, 1); }
+        .thumb-neutral::-webkit-slider-thumb { background-color: rgba(107, 114, 128, 1); }
+        .thumb-neutral::-moz-range-thumb { background-color: rgba(107, 114, 128, 1); }
     </style>
 </head>
 <body class="antialiased">
@@ -182,7 +195,7 @@
                                 <div>
                                     <label for="solar-slider" class="block text-md font-medium text-gray-700">New Solar Capacity</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="solar-slider" min="0" max="200" value="0" class="w-full form-input">
+                                        <input type="range" id="solar-slider" min="0" max="200" value="0" class="w-full form-input thumb-solar">
                                         <input type="number" id="solar-input" min="0" max="200" value="0" class="value-input">
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="solar-unit">GW</span>
                                     </div>
@@ -190,7 +203,7 @@
                                 <div>
                                     <label for="wind-slider" class="block text-md font-medium text-gray-700">New Wind Capacity</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="wind-slider" min="0" max="200" value="0" class="w-full form-input">
+                                        <input type="range" id="wind-slider" min="0" max="200" value="0" class="w-full form-input thumb-wind">
                                         <input type="number" id="wind-input" min="0" max="200" value="0" class="value-input">
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="wind-unit">GW</span>
                                     </div>
@@ -198,7 +211,7 @@
                                 <div>
                                     <label for="geothermal-slider" class="block text-md font-medium text-gray-700">New Geothermal Capacity</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="geothermal-slider" min="0" max="50" value="0" class="w-full form-input">
+                                        <input type="range" id="geothermal-slider" min="0" max="50" value="0" class="w-full form-input thumb-geothermal">
                                         <input type="number" id="geothermal-input" min="0" max="50" value="0" class="value-input">
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="geothermal-unit">GW</span>
                                     </div>
@@ -206,7 +219,7 @@
                                 <div>
                                     <label for="nuclear-slider" class="block text-md font-medium text-gray-700">New Nuclear Capacity</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="nuclear-slider" min="0" max="50" value="0" class="w-full form-input">
+                                        <input type="range" id="nuclear-slider" min="0" max="50" value="0" class="w-full form-input thumb-nuclear">
                                         <input type="number" id="nuclear-input" min="0" max="50" value="0" class="value-input">
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="nuclear-unit">GW</span>
                                     </div>
@@ -214,7 +227,7 @@
                                 <div class="border-t border-gray-300 pt-6">
                                     <label for="battery4hr-slider" class="block text-md font-medium text-gray-700">4-hr Battery Storage</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="battery4hr-slider" min="0" max="200" value="0" class="w-full form-input">
+                                        <input type="range" id="battery4hr-slider" min="0" max="200" value="0" class="w-full form-input thumb-storage">
                                         <input type="number" id="battery4hr-input" min="0" max="200" value="0" class="value-input">
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="battery4hr-unit">GWh</span>
                                     </div>
@@ -222,7 +235,7 @@
                                 <div>
                                     <label for="battery8hr-slider" class="block text-md font-medium text-gray-700">8-hr Battery Storage</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="battery8hr-slider" min="0" max="200" value="0" class="w-full form-input">
+                                        <input type="range" id="battery8hr-slider" min="0" max="200" value="0" class="w-full form-input thumb-storage">
                                         <input type="number" id="battery8hr-input" min="0" max="200" value="0" class="value-input">
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="battery8hr-unit">GWh</span>
                                     </div>
@@ -230,7 +243,7 @@
                                 <div>
                                     <label for="longduration-slider" class="block text-md font-medium text-gray-700">24-hr Long Duration Storage</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="longduration-slider" min="0" max="500" value="0" class="w-full form-input">
+                                        <input type="range" id="longduration-slider" min="0" max="500" value="0" class="w-full form-input thumb-storage">
                                         <input type="number" id="longduration-input" min="0" max="500" value="0" class="value-input">
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="longduration-unit">GWh</span>
                                     </div>
@@ -238,7 +251,7 @@
                                  <div class="border-t border-gray-300 pt-6">
                                     <label for="demandflex-slider" class="block text-md font-medium text-gray-700">Demand Flexibility</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="demandflex-slider" min="0" max="25" value="0" class="w-full form-input">
+                                        <input type="range" id="demandflex-slider" min="0" max="25" value="0" class="w-full form-input thumb-neutral">
                                         <input type="number" id="demandflex-input" min="0" max="25" value="0" class="value-input">
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="demandflex-unit">%</span>
                                     </div>
@@ -253,7 +266,7 @@
                                 <div>
                                     <label for="carbon-tax-slider" class="block text-sm font-medium text-gray-700">Carbon Tax</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="carbon-tax-slider" min="0" max="200" value="0" class="w-full form-input">
+                                        <input type="range" id="carbon-tax-slider" min="0" max="200" value="0" class="w-full form-input thumb-neutral">
                                         <input type="number" id="carbon-tax-input" min="0" max="200" value="0" class="value-input">
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="carbon-tax-unit">$/ton</span>
                                     </div>
@@ -261,7 +274,7 @@
                                  <div>
                                     <label for="export-price-slider" class="block text-sm font-medium text-gray-700">Export Price</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="export-price-slider" min="0" max="100" value="20" class="w-full form-input">
+                                        <input type="range" id="export-price-slider" min="0" max="100" value="20" class="w-full form-input thumb-neutral">
                                         <input type="number" id="export-price-input" min="0" max="100" value="20" class="value-input">
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="export-price-unit">$/MWh</span>
                                     </div>
@@ -269,7 +282,7 @@
                                 <div class="border-t border-gray-300 pt-6">
                                     <label for="solar-incentive-slider" class="block text-sm font-medium text-gray-700">Solar (PTC)</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="solar-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
+                                        <input type="range" id="solar-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-solar">
                                         <input type="number" id="solar-incentive-input" min="0" max="50" value="0" class="value-input">
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="solar-incentive-unit">$/MWh</span>
                                     </div>
@@ -277,7 +290,7 @@
                                 <div>
                                     <label for="wind-incentive-slider" class="block text-sm font-medium text-gray-700">Wind (PTC)</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="wind-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
+                                        <input type="range" id="wind-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-wind">
                                         <input type="number" id="wind-incentive-input" min="0" max="50" value="0" class="value-input">
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="wind-incentive-unit">$/MWh</span>
                                     </div>
@@ -285,7 +298,7 @@
                                  <div>
                                     <label for="geothermal-incentive-slider" class="block text-sm font-medium text-gray-700">Geothermal (PTC)</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="geothermal-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
+                                        <input type="range" id="geothermal-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-geothermal">
                                         <input type="number" id="geothermal-incentive-input" min="0" max="50" value="0" class="value-input">
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="geothermal-incentive-unit">$/MWh</span>
                                     </div>
@@ -293,7 +306,7 @@
                                 <div>
                                     <label for="nuclear-incentive-slider" class="block text-sm font-medium text-gray-700">Nuclear (PTC)</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="nuclear-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
+                                        <input type="range" id="nuclear-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-nuclear">
                                         <input type="number" id="nuclear-incentive-input" min="0" max="50" value="0" class="value-input">
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="nuclear-incentive-unit">$/MWh</span>
                                     </div>
@@ -301,7 +314,7 @@
                                 <div>
                                     <label for="storage-incentive-slider" class="block text-sm font-medium text-gray-700">Storage (ITC)</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="storage-incentive-slider" min="0" max="100" value="0" class="w-full form-input">
+                                        <input type="range" id="storage-incentive-slider" min="0" max="100" value="0" class="w-full form-input thumb-storage">
                                         <input type="number" id="storage-incentive-input" min="0" max="100" value="0" class="value-input">
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="storage-incentive-unit">$/kWh</span>
                                     </div>
@@ -309,7 +322,7 @@
                                 <div>
                                     <label for="dac-incentive-slider" class="block text-sm font-medium text-gray-700">Direct Air Capture (45Q)</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="dac-incentive-slider" min="0" max="200" value="0" class="w-full form-input">
+                                        <input type="range" id="dac-incentive-slider" min="0" max="200" value="0" class="w-full form-input thumb-neutral">
                                         <input type="number" id="dac-incentive-input" min="0" max="200" value="0" class="value-input">
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="dac-incentive-unit">$/ton</span>
                                     </div>
@@ -319,7 +332,7 @@
                         <div class="border-t border-gray-300 pt-6">
                             <label for="dac-slider" class="block text-md font-medium text-gray-700">Direct Air Capture Deployment</label>
                             <div class="flex items-center space-x-2 mt-2">
-                                <input type="range" id="dac-slider" min="0" max="10000" value="0" class="w-full form-input">
+                                <input type="range" id="dac-slider" min="0" max="10000" value="0" class="w-full form-input thumb-neutral">
                                 <input type="number" id="dac-input" min="0" max="10000" value="0" class="value-input">
                                 <span class="font-semibold text-gray-900 w-12 text-left" id="dac-unit">t/hr</span>
                             </div>
@@ -551,7 +564,7 @@
                                   x: 'center',
                                   y: 'start'
                                 },
-                                yAdjust: 20,
+                                yAdjust: 10,
                                 backgroundColor: 'rgba(249, 250, 251, 0.85)',
                                 borderColor: 'rgba(209, 213, 219, 1)',
                                 borderWidth: 1,
