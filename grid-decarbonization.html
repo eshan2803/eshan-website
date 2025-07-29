@@ -1048,8 +1048,13 @@
 
             // Reset levers and recalculate baseline cost/emissions
             Object.keys(sliders).forEach(key => {
-                sliders[key].value = 0;
-                inputs[key].value = 0;
+                if (key === 'exportPrice') {
+                    sliders[key].value = 20;
+                    inputs[key].value = 20;
+                } else {
+                    sliders[key].value = 0;
+                    inputs[key].value = 0;
+                }
             });
             
             const newBaselineResult = getSimulationResult({
