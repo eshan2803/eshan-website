@@ -27,35 +27,6 @@
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
             padding: 1.5rem;
         }
-        /* Rainbow Border Animation */
-        @keyframes rainbow-border {
-            0% { background-position: 0% 50%; }
-            100% { background-position: 200% 50%; }
-        }
-        
-        .rainbow-glow {
-            position: relative;
-            background: linear-gradient(90deg, #ff0080, #ff8000, #ffff00, #80ff00, #00ff80, #0080ff, #8000ff, #ff0080);
-            background-size: 200% 200%;
-            animation: rainbow-border 2s linear infinite;
-            padding: 2px;
-            border-radius: 9999px;
-        }
-        
-        .rainbow-glow .button-content {
-            background: #f3f4f6;
-            border-radius: 9999px;
-            padding: 0.5rem 1rem;
-            display: block;
-            color: #374151;
-            font-size: 0.875rem;
-            font-weight: 500;
-            transition: background-color 0.3s;
-        }
-        
-        .rainbow-glow:hover .button-content {
-            background: #e5e7eb;
-        }        
         .mesh-gradient-container {
             position: relative;
             z-index: 1;
@@ -156,12 +127,8 @@
                 <a href="index.html" class="font-lora text-2xl font-semibold">Dr. Eshan Singh</a>
                 <nav class="flex items-center space-x-2">
                     <a href="energy.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
-                    <a href="transport-model-new.html" class="rainbow-glow">
-                        <span class="button-content">Transport Model</span>
-                    </a>
-                    <a href="grid-decarbonization.html" class="rainbow-glow">
-                        <span class="button-content">Grid Model</span>
-                    </a>
+                    <a href="transport-model-new.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Transport Model</a>
+                    <a href="grid-decarbonization.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-full shadow-sm">Grid Model</a>
                     <a href="musings.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Musings</a>
                 </nav>
             </div>
@@ -220,6 +187,11 @@
                              <button id="make-default-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Make Default</button>
                              <button id="reset-to-default-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Reset to Default</button>
                              <button id="reset-to-zero-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Reset to Zero</button>
+                        </div>
+                        <div class="border-t border-gray-300 pt-4">
+                             <button id="solve-button" class="w-full px-6 py-3 text-lg font-semibold text-white bg-green-600 rounded-full hover:bg-green-700 transition-colors">
+                                ✨ Solve for Zero CO2
+                            </button>
                         </div>
                         <div>
                             <h2 class="text-2xl font-lora font-semibold mb-4 border-b border-t pt-4 border-gray-300 pb-4 text-gray-800">Policy Levers</h2>
@@ -523,6 +495,7 @@
         const makeDefaultButton = document.getElementById('make-default-button');
         const resetToDefaultButton = document.getElementById('reset-to-default-button');
         const undoButton = document.getElementById('undo-button');
+        const solveButton = document.getElementById('solve-button');
         const gridMixSlidersContainer = document.getElementById('grid-mix-sliders');
         const countrySelect = document.getElementById('country-select');
 
