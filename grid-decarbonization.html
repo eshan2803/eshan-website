@@ -380,6 +380,8 @@
     </div>
     
     <script type="module">
+        // --- CORRECTED FIREBASE IMPORTS ---
+        // All imports must be at the top level of the module.
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, runTransaction, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -416,7 +418,7 @@
         let BASELINE_GENERATION = JSON.parse(JSON.stringify(ORIGINAL_BASELINE_GENERATION));
         const SOLAR_CF_PROFILE = [0,0,0,0,0,0.05,0.15,0.3,0.5,0.7,0.8,0.85,0.9,0.85,0.8,0.7,0.3,0.05,0,0,0,0,0,0];
         const WIND_CF_PROFILE = [0.4,0.42,0.45,0.46,0.45,0.4,0.35,0.3,0.25,0.2,0.2,0.2,0.25,0.3,0.35,0.4,0.5,0.6,0.65,0.6,0.55,0.5,0.45,0.4];
-        const EMISSION_FACTORS = { naturalGas: 395, hydro: 0, nuclear: 0, solar: 0, wind: 0, geothermal: 0, coal: 950 };
+        const EMISSION_FACTORS = { naturalGas: 395, hydro: 0, nuclear: 0, solar: 0, wind: 0, geothermal: 0, coal: 850 };
         const COST_DATA = {
             capex: { 
                 solar: 1000, wind: 1400, nuclear: 8000, geothermal: 4500,
@@ -436,16 +438,27 @@
             },
             lifetime: {
                 solar: 30, wind: 30, nuclear: 60, geothermal: 30,
-                naturalGas: 30, hydro: 80, coal: 40
+                naturalGas: 30, hydro: 80, coal: 40,
+                battery4hr: 15, battery8hr: 15, longduration: 25, dac: 25
             },
             capacity_factor: {
                 solar: 0.25, wind: 0.35, nuclear: 0.9, geothermal: 0.9,
-                naturalGas: 0.55, hydro: 0.45, coal: 0.75
+                naturalGas: 0.55, hydro: 0.45, coal: 0.6
             },
             discount_rate: 0.07
         };
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
+            // --- FIREBASE SETUP (CORRECTED) ---
+            // This setup uses environment variables provided by the platform, so no manual keys are needed.
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "...", authDomain: "...", projectId: "..." };
+            
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+            const auth = getAuth(app);
+            setLogLevel('debug');
+
             // --- DOM ELEMENTS ---
             const sliders = {
                 solar: document.getElementById('solar-slider'), wind: document.getElementById('wind-slider'),
@@ -581,6 +594,7 @@
 
                 for (const tech in COST_DATA.capacity_factor) {
                     const techData = COST_DATA;
+                    if (!techData.lifetime[tech]) continue; // Skip if no lifetime data
                     const n = techData.lifetime[tech];
                     const crf = (d * Math.pow(1 + d, n)) / (Math.pow(1 + d, n) - 1);
                     
@@ -606,6 +620,7 @@
 
                 for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
                     if (capacity[type] > 0) {
+                        if (!COST_DATA.lifetime[type]) continue;
                         const n = COST_DATA.lifetime[type];
                         const crf = (d * Math.pow(1 + d, n)) / (Math.pow(1 + d, n) - 1);
                         
@@ -966,7 +981,6 @@
                 };
                 for (const key in sliders) {
                     const group = key.includes('Incentive') || key.includes('Tax') ? 'incentives' : 'capacity';
-                    // Special handling for demandflex as it's not a generation capacity
                     if (key === 'demandflex' || key === 'dac' || key === 'battery4hr' || key === 'battery8hr' || key === 'longduration') {
                         currentInputs.capacity[key] = parseFloat(sliders[key].value);
                     } else if (group === 'capacity') {
@@ -983,7 +997,8 @@
                 
                 runSimulation(); // Rerun to set bill impact to 0%
                 saveState();
-                alert('Current lever positions have been set as the new default baseline.');
+                // A simple browser alert is fine here, no need for a complex modal.
+                window.alert('Current lever positions have been set as the new default baseline.');
             });
 
             resetToDefaultButton.addEventListener('click', () => {
@@ -1086,21 +1101,16 @@
                 updateBaselineForCountry(e.target.value);
             });
             
+            // --- MAIN INITIALIZATION FUNCTION ---
             async function initialize() {
-                // Firebase setup
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "...", authDomain: "...", projectId: "..." };
-                const app = initializeApp(firebaseConfig);
-                const db = getFirestore(app);
-                const auth = getAuth(app);
-                setLogLevel('debug');
-
+                // Authenticate with Firebase
                 try {
-                    if (typeof __initial_auth_token !== 'undefined') {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         await signInWithCustomToken(auth, __initial_auth_token);
                     } else {
                         await signInAnonymously(auth);
                     }
+                    console.log("Firebase authentication successful.");
                 } catch (error) {
                     console.error("Firebase authentication failed:", error);
                 }
@@ -1120,16 +1130,19 @@
                     });
                     visitorCountEl.textContent = newCount.toLocaleString();
                 } catch (e) {
-                    console.error("Transaction failed: ", e);
+                    console.error("Firestore transaction failed: ", e);
                     visitorCountEl.textContent = "N/A";
                 }
 
+                // Setup the rest of the application
                 createGridMixSliders();
                 populateCountryDropdown();
+                
                 // Set the initial default state to all zeros
                 for (const key in sliders) {
                     defaultSliderState[key] = "0";
                 }
+                
                 // Calculate the initial baseline cost and emissions for the zero-lever scenario
                 const initialResult = getSimulationResult({
                     capacity: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
@@ -1143,7 +1156,8 @@
                 saveState();
             }
 
-            initialize();
+            // Start the application
+            await initialize();
         });
     </script>
 </body>
