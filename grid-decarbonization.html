@@ -632,7 +632,7 @@
                     
                     let capex_per_kwh = COST_DATA.capex[type] - incentives.storage; // Apply ITC
                     const total_kwh = capacity[type] * 1000000;
-                    const duration = parseInt(type.match(/\d+/)[0]) || 1; // get duration from type name
+                    const duration = type === 'longduration' ? 24 : parseInt(type.match(/\d+/)[0]);
                     const total_kw = total_kwh / duration;
 
                     const annualized_capex = capex_per_kwh * total_kwh * crf;
@@ -1234,3 +1234,4 @@
     </script>
 </body>
 </html>
+" and have made no changes to 
