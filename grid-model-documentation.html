@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Model Documentation | Dr. Eshan Singh</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+    
+    <style>
+        html { scroll-behavior: smooth; }
+        body {
+            background-color: #fcfcfc;
+            font-family: 'Inter', sans-serif;
+        }
+        .font-lora { font-family: 'Lora', serif; }
+        
+        /* Rainbow Border Animation */
+        @keyframes rainbow-border {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+        
+        .rainbow-glow {
+            position: relative;
+            background: linear-gradient(90deg, #ff0080, #ff8000, #ffff00, #80ff00, #00ff80, #0080ff, #8000ff, #ff0080);
+            background-size: 200% 200%;
+            animation: rainbow-border 2s linear infinite;
+            padding: 2px;
+            border-radius: 9999px;
+        }
+        
+        .rainbow-glow .button-content {
+            background: #f3f4f6;
+            border-radius: 9999px;
+            padding: 0.5rem 1rem;
+            display: block;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        
+        .rainbow-glow:hover .button-content {
+            background: #e5e7eb;
+        }
+        
+        /* Glass Card Effect */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+      
+        /* Documentation specific styles */
+        .documentation-content h3 {
+            font-size: 1.5rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 0.5rem;
+            color: #1f2937;
+        }
+        .documentation-content h4 {
+            font-size: 1.2rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        .documentation-content h5 {
+            font-size: 1.1rem;
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+            color: #374151;
+            font-weight: 600;
+        }
+        .documentation-content p, .documentation-content li {
+            line-height: 1.7;
+            text-align: justify;
+            color: #4b5563;
+        }
+        .documentation-content ul, .documentation-content ol {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            list-style-type: disc;
+        }
+        .documentation-content ol li {
+            margin-bottom: 0.75rem;
+        }
+        .documentation-content strong {
+            color: #1f2937;
+        }
+        .documentation-content a {
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .documentation-content a:hover {
+            text-decoration: underline;
+        }
+        .documentation-content code {
+            background-color: rgba(59, 130, 246, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.875rem;
+            color: #3b82f6;
+        }
+        .parameter-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(4px);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        .parameter-table th, .parameter-table td {
+            padding: 0.75rem 1rem;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            text-align: left;
+        }
+        .parameter-table th {
+            background-color: #3b82f6;
+            color: white;
+            font-weight: 600;
+        }
+        .parameter-table tbody tr:nth-child(even) {
+            background-color: rgba(59, 130, 246, 0.05);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    
+    <header class="p-8">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="index.html" class="font-lora text-2xl font-semibold">Dr. Eshan Singh</a>
+            <nav class="flex items-center space-x-2">
+                <a href="energy.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
+                <a href="transport-model-new.html" class="rainbow-glow">
+                    <span class="button-content">Transport Model</span>
+                </a>
+                <a href="grid-decarbonization.html" class="rainbow-glow">
+                     <span class="button-content">Grid Model</span>
+                </a>
+                <a href="musings.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Musings</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-8 pb-16">
+        <div class="glass-card rounded-2xl p-8 shadow-xl">
+            <section class="documentation-content">
+                <h2 class="text-center text-4xl font-bold text-gray-800 mb-8 font-lora">Grid Decarbonization Simulator: Documentation</h2>
+
+                <h3>1. Introduction</h3>
+                <p>
+                    The Grid Decarbonization Simulator is an educational tool designed to provide a simplified yet powerful look into the challenge of transitioning an electricity grid to 100% clean energy. It allows users to act as policymakers, adding new clean energy sources, energy storage, and other technologies to a baseline grid. The goal is to understand the complex trade-offs between cost, reliability, and emissions.
+                </p>
+                <p>
+                    The model simulates a 24-hour period of grid operation, showing how different technologies work together to meet a fluctuating electricity demand. Users can immediately see the impact of their decisions on hourly generation, CO2 emissions, and two key financial metrics: the change in electricity bills and the "Green Premium." This documentation explains the core logic behind the simulation, including how resources are dispatched, how costs are calculated, and what key assumptions are made.
+                </p>
+
+                <h3>2. Methodology: How the Simulation Works</h3>
+                <p>
+                    The simulator operates on an hourly time-step over a 24-hour day. The core of the model is a <strong>dispatch algorithm</strong>, which decides which power plants should run in each hour to meet the electricity demand at the lowest possible cost while respecting the limitations of each technology.
+                </p>
+
+                <h4>2.1. The Dispatch Logic: A Step-by-Step Guide</h4>
+                <p>
+                    Imagine you are a grid operator. Your primary job is to make sure there is always exactly enough electricity being generated to meet what everyone is using (the "demand"). The model follows a logical "merit order" to decide which power plants to turn on.
+                </p>
+                <ol>
+                    <li>
+                        <strong>Start with "Must-Take" Renewables:</strong> The model first calculates how much electricity is generated from solar and wind power in a given hour. These are considered "must-take" because their fuel (sun and wind) is free, but we can't control when they are available. Firm, clean sources like nuclear, geothermal, and hydro are also added at this stage.
+                    </li>
+                    <li>
+                        <strong>Calculate Net Load:</strong> The model then calculates the <strong>Net Load</strong> for the hour. This is the remaining electricity demand that still needs to be met after all the initial clean energy has been used.
+                        <br>
+                        <code>Net Load = Total Demand - (Solar + Wind + Nuclear + Hydro + Geothermal)</code>
+                    </li>
+                    <li>
+                        <strong>Handle Excess Generation (Charging Batteries):</strong> If the Net Load is negative, it means we have more clean energy than we need. This excess power isn't wasted; it's used to charge the batteries (4-hour, 8-hour, and long-duration storage). The model accounts for an <strong>85% round-trip efficiency</strong> by only storing 85% of the excess energy that goes into the batteries.
+                    </li>
+                    <li>
+                        <strong>Handle Energy Shortfall (Discharging Batteries):</strong> If the Net Load is positive, it means we have an energy shortfall. The model first calls upon the batteries to discharge and cover this gap. It will use the cheapest available stored energy first.
+                    </li>
+                    <li>
+                        <strong>Use Fossil Fuels as a Last Resort:</strong> If there is still a shortfall after the batteries have been fully discharged, the model turns on the fossil fuel power plants. It prioritizes them based on their operating cost and emissions, typically using coal first (if available in the grid mix) and then natural gas to meet any remaining demand.
+                    </li>
+                    <li>
+                        <strong>Curtailment:</strong> If there is excess renewable energy but all the batteries are full, that extra energy has nowhere to go and is "curtailed" (essentially thrown away). The model visualizes this as curtailed energy, which can be sold to neighboring grids if an "Export Price" is set.
+                    </li>
+                </ol>
+                <p>
+                    <strong>A Note on the Two-Pass System:</strong> Because the amount of energy in the batteries at the start of the day affects how much they can discharge at the end of the day, the model runs the 24-hour simulation twice. The first run figures out the battery levels at the end of the day, and the second run uses that information to start the day, creating a more realistic, continuous loop.
+                </p>
+
+                <h4>2.2. Cost Calculation Framework</h4>
+                <p>
+                    The model calculates the total annual cost of running the grid. This is not just the fuel cost; it's a comprehensive calculation similar to a Levelized Cost of Energy (LCOE) analysis, which includes upfront construction costs, ongoing maintenance, and fuel.
+                </p>
+                <ul>
+                    <li><strong>Capital Costs (CAPEX):</strong> This is the cost of building new power plants and storage facilities. Since a power plant lasts for many years (e.g., 30 for solar, 60 for nuclear), the model calculates an "annualized" cost, which is like a yearly mortgage payment for the plant. This is done using a Capital Recovery Factor (CRF).</li>
+                    <li><strong>Fixed O&M Costs:</strong> These are the costs to keep a plant ready, even if it's not generating electricity (e.g., staff salaries, rent). This is calculated per kilowatt of capacity.</li>
+                    <li><strong>Variable O&M Costs:</strong> These are the costs that depend on how much electricity is generated (e.g., fuel for natural gas plants, routine maintenance). This is calculated per megawatt-hour of generation.</li>
+                    <li><strong>Government Incentives:</strong> The model includes several policy levers that affect cost:
+                        <ul>
+                            <li><strong>Production Tax Credits (PTC):</strong> A subsidy ($/MWh) that reduces the operating cost of clean energy sources like solar and wind.</li>
+                            <li><strong>Investment Tax Credits (ITC):</strong> A subsidy ($/kWh) that reduces the upfront construction (CAPEX) cost of energy storage.</li>
+                            <li><strong>Carbon Tax:</strong> A fee ($/ton) applied to every ton of CO2 emitted by fossil fuel plants, making them more expensive to run.</li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <h4>2.3. Financial Metrics Explained</h4>
+                <ul>
+                    <li>
+                        <strong>Impact on Bills:</strong> This metric shows the percentage change in the average cost of electricity ($/MWh) compared to a baseline scenario. The baseline is either the initial grid mix or a new baseline set by the user with the "Make Default" button. A positive value means your new grid is more expensive, and bills would go up.
+                    </li>
+                    <li>
+                        <strong>Green Premium:</strong> This is the extra cost to avoid one ton of CO2 emissions. It's calculated by taking the total increase in the grid's annual cost and dividing it by the total tons of CO2 emissions that were avoided compared to the baseline. If the Green Premium is negative, it means you are actually saving money while also reducing emissions!
+                    </li>
+                </ul>
+
+                <h3>3. Model Parameters and Assumptions</h3>
+                <p>
+                    The simulator uses a set of default parameters for costs, lifetimes, and emissions based on public data from sources like the National Renewable Energy Laboratory (NREL) and the U.S. Energy Information Administration (EIA).
+                </p>
+
+                <h4>3.1. Technology Cost and Lifetime Assumptions</h4>
+                <table class="parameter-table">
+                    <thead>
+                        <tr>
+                            <th>Technology</th>
+                            <th>Capital Cost (CAPEX) [$/kW]</th>
+                            <th>Fixed O&M [$/kW-yr]</th>
+                            <th>Variable O&M [$/MWh]</th>
+                            <th>Lifetime [Years]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Solar</td><td>1,000</td><td>18</td><td>2</td><td>30</td></tr>
+                        <tr><td>Wind</td><td>1,400</td><td>35</td><td>1</td><td>30</td></tr>
+                        <tr><td>Nuclear</td><td>8,000</td><td>140</td><td>10</td><td>60</td></tr>
+                        <tr><td>Geothermal</td><td>4,500</td><td>120</td><td>0</td><td>30</td></tr>
+                        <tr><td>Natural Gas</td><td>1,100</td><td>20</td><td>40 (fuel)</td><td>30</td></tr>
+                        <tr><td>Coal</td><td>3,500</td><td>40</td><td>30 (fuel)</td><td>40</td></tr>
+                        <tr><td>4-hr Battery</td><td>300 ($/kWh)</td><td>15</td><td>2</td><td>15</td></tr>
+                        <tr><td>8-hr Battery</td><td>350 ($/kWh)</td><td>15</td><td>2</td><td>15</td></tr>
+                        <tr><td>Long Duration Storage</td><td>500 ($/kWh)</td><td>15</td><td>2</td><td>25</td></tr>
+                    </tbody>
+                </table>
+                <p><em>Note: Battery CAPEX is given in $/kWh of storage capacity, while all others are in $/kW of power capacity.</em></p>
+
+                <h4>3.2. Emissions and Capacity Factors</h4>
+                <table class="parameter-table">
+                    <thead>
+                        <tr>
+                            <th>Technology</th>
+                            <th>CO2 Emission Factor [tons/GWh]</th>
+                            <th>Capacity Factor (Average)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Coal</td><td>850</td><td>60%</td></tr>
+                        <tr><td>Natural Gas</td><td>395</td><td>55%</td></tr>
+                        <tr><td>Solar</td><td>0</td><td>25% (with hourly profile)</td></tr>
+                        <tr><td>Wind</td><td>0</td><td>35% (with hourly profile)</td></tr>
+                        <tr><td>Nuclear</td><td>0</td><td>90%</td></tr>
+                        <tr><td>Geothermal</td><td>0</td><td>90%</td></tr>
+                        <tr><td>Hydro</td><td>0</td><td>45%</td></tr>
+                    </tbody>
+                </table>
+                 <p>
+                    <strong>Capacity Factor</strong> is the ratio of the actual electricity produced by a plant over a period to the maximum possible electricity it could have produced. For example, a solar plant can only generate power when the sun is shining, so its capacity factor is much lower than a nuclear plant that can run 24/7. The model uses realistic hourly profiles for solar and wind.
+                </p>
+            </section>
+        </div>
+    </main>
+
+    <footer class="w-full text-center py-5 border-t border-gray-200/80">
+        <div class="flex items-center justify-center space-x-4">
+             <p class="text-sm text-gray-500">&copy; 2025 Eshan & Associates LLC. All rights reserved.</p>
+             <a href="https://www.linkedin.com/in/eshan-singh-188b1554/" target="_blank" rel="noopener noreferrer" class="cursor-pointer">
+                <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn" class="h-5 w-5 hover:opacity-75 transition-opacity">
+            </a>
+        </div>
+    </footer>
+
+</body>
+</html>
