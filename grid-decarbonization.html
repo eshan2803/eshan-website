@@ -1010,9 +1010,6 @@
                 }
             });
 
-            solveButton.addEventListener('click', () => {
-                solveForZeroCO2();
-            });
             
             // --- INITIALIZATION & DYNAMIC CONTENT ---
 
@@ -1091,61 +1088,44 @@
                 updateBaselineForCountry(e.target.value);
             });
             
-            function solveForZeroCO2() {
-                const capacityLevers = ['solar', 'wind', 'geothermal', 'nuclear', 'battery4hr', 'battery8hr', 'longduration'];
-                let currentCapacity = {};
-                capacityLevers.forEach(key => currentCapacity[key] = parseFloat(sliders[key].value));
+            async function initialize() {
+                // Firebase setup
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "...", authDomain: "...", projectId: "..." };
+                const app = initializeApp(firebaseConfig);
+                const db = getFirestore(app);
+                const auth = getAuth(app);
+                setLogLevel('debug');
 
-                const costEffectiveOrder = ['solar', 'wind', 'geothermal', 'nuclear'];
-                let iteration = 0;
-                const maxIterations = 100; // Safety break
-
-                while(iteration < maxIterations) {
-                    iteration++;
-                    const result = getSimulationResult({
-                        capacity: currentCapacity,
-                        incentives: { carbonTax: parseFloat(sliders.carbonTax.value), exportPrice: parseFloat(sliders.exportPrice.value) } // Use current incentives
-                    });
-
-                    const totalDailyCO2 = result.emissions.reduce((a, b) => a + b, 0);
-                    if (totalDailyCO2 <= 0) {
-                        break; // Success
-                    }
-
-                    const totalCurtailment = result.generation.curtailment.reduce((a,b) => a+b, 0);
-                    const totalDemand = result.demand.reduce((a,b) => a+b, 0);
-
-                    if (totalCurtailment > totalDemand * 0.1 && currentCapacity.battery4hr < 200) {
-                         currentCapacity.battery4hr = Math.min(200, currentCapacity.battery4hr + 10);
+                try {
+                    if (typeof __initial_auth_token !== 'undefined') {
+                        await signInWithCustomToken(auth, __initial_auth_token);
                     } else {
-                        let addedCapacity = false;
-                        for (const tech of costEffectiveOrder) {
-                            if (currentCapacity[tech] < parseFloat(sliders[tech].max)) {
-                                currentCapacity[tech] = Math.min(parseFloat(sliders[tech].max), currentCapacity[tech] + 5);
-                                addedCapacity = true;
-                                break;
-                            }
-                        }
-                        if (!addedCapacity) { // All generation is maxed out, add storage
-                            if (currentCapacity.battery4hr < 200) currentCapacity.battery4hr = Math.min(200, currentCapacity.battery4hr + 20);
-                            else if (currentCapacity.battery8hr < 200) currentCapacity.battery8hr = Math.min(200, currentCapacity.battery8hr + 20);
-                            else if (currentCapacity.longduration < 500) currentCapacity.longduration = Math.min(500, currentCapacity.longduration + 50);
-                            else break; // Can't add more
-                        }
+                        await signInAnonymously(auth);
                     }
+                } catch (error) {
+                    console.error("Firebase authentication failed:", error);
                 }
 
-                // Update UI with the solution
-                for(const key in currentCapacity) {
-                    sliders[key].value = currentCapacity[key];
-                    inputs[key].value = currentCapacity[key];
+                // Visitor counter logic
+                const counterRef = doc(db, `artifacts/${appId}/public/data/visitor_counter`);
+                try {
+                    const newCount = await runTransaction(db, async (transaction) => {
+                        const counterDoc = await transaction.get(counterRef);
+                        if (!counterDoc.exists()) {
+                            transaction.set(counterRef, { count: 1 });
+                            return 1;
+                        }
+                        const newCount = counterDoc.data().count + 1;
+                        transaction.update(counterRef, { count: newCount });
+                        return newCount;
+                    });
+                    visitorCountEl.textContent = newCount.toLocaleString();
+                } catch (e) {
+                    console.error("Transaction failed: ", e);
+                    visitorCountEl.textContent = "N/A";
                 }
-                runSimulation();
-                saveState();
-            }
 
-
-            function initialize() {
                 createGridMixSliders();
                 populateCountryDropdown();
                 // Set the initial default state to all zeros
