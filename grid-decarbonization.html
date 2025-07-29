@@ -82,28 +82,6 @@
             border: 2px solid white;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        /* Modal styles */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            width: 90%;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
         .mix-slider-track {
             background-color: #e5e7eb;
             border-radius: 9999px;
@@ -570,11 +548,10 @@
                                 type: 'label',
                                 content: 'Total Daily CO2: 0 tons',
                                 position: {
-                                  x: 'end',
-                                  y: 'end'
+                                  x: 'center',
+                                  y: 'start'
                                 },
-                                xAdjust: -10,
-                                yAdjust: -10,
+                                yAdjust: 20,
                                 backgroundColor: 'rgba(249, 250, 251, 0.85)',
                                 borderColor: 'rgba(209, 213, 219, 1)',
                                 borderWidth: 1,
@@ -582,7 +559,7 @@
                                 color: '#1f2937',
                                 font: {
                                     weight: 'bold',
-                                    size: 12
+                                    size: 20
                                 },
                                 padding: 8,
                             }
@@ -810,6 +787,14 @@
                 billImpactEl.className = 'text-5xl font-bold text-green-600 mt-2';
             } else {
                  billImpactEl.className = 'text-5xl font-bold text-blue-600 mt-2';
+            }
+
+            if (greenPremium < 0) {
+                greenPremiumEl.className = 'text-5xl font-bold text-green-600 mt-2';
+            } else if (greenPremium > 0 && co2Avoided > 0) {
+                greenPremiumEl.className = 'text-5xl font-bold text-red-600 mt-2';
+            } else {
+                greenPremiumEl.className = 'text-5xl font-bold text-blue-600 mt-2';
             }
         }
         
