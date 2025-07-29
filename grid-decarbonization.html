@@ -116,6 +116,14 @@
             border-radius: 9999px;
             transition: width 0.2s ease-in-out;
         }
+        .value-input {
+            width: 6rem; /* Adjust width as needed */
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            border: 1px solid #d1d5db;
+            text-align: right;
+            background-color: rgba(255, 255, 255, 0.8);
+        }
     </style>
 </head>
 <body class="antialiased">
@@ -195,58 +203,66 @@
                                 <!-- Levers -->
                                 <div>
                                     <label for="solar-slider" class="block text-md font-medium text-gray-700">New Solar Capacity</label>
-                                    <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="solar-slider" min="0" max="200" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="solar-value">0 GW</span>
+                                        <input type="number" id="solar-input" min="0" max="200" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="solar-unit">GW</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label for="wind-slider" class="block text-md font-medium text-gray-700">New Wind Capacity</label>
-                                    <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="wind-slider" min="0" max="200" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="wind-value">0 GW</span>
+                                        <input type="number" id="wind-input" min="0" max="200" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="wind-unit">GW</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label for="geothermal-slider" class="block text-md font-medium text-gray-700">New Geothermal Capacity</label>
-                                    <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="geothermal-slider" min="0" max="50" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="geothermal-value">0 GW</span>
+                                        <input type="number" id="geothermal-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="geothermal-unit">GW</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label for="nuclear-slider" class="block text-md font-medium text-gray-700">New Nuclear Capacity</label>
-                                    <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="nuclear-slider" min="0" max="50" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="nuclear-value">0 GW</span>
+                                        <input type="number" id="nuclear-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="nuclear-unit">GW</span>
                                     </div>
                                 </div>
                                 <div class="border-t border-gray-300 pt-6">
                                     <label for="battery4hr-slider" class="block text-md font-medium text-gray-700">4-hr Battery Storage</label>
-                                    <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="battery4hr-slider" min="0" max="200" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="battery4hr-value">0 GWh</span>
+                                        <input type="number" id="battery4hr-input" min="0" max="200" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="battery4hr-unit">GWh</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label for="battery8hr-slider" class="block text-md font-medium text-gray-700">8-hr Battery Storage</label>
-                                    <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="battery8hr-slider" min="0" max="200" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="battery8hr-value">0 GWh</span>
+                                        <input type="number" id="battery8hr-input" min="0" max="200" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="battery8hr-unit">GWh</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label for="longduration-slider" class="block text-md font-medium text-gray-700">24-hr Long Duration Storage</label>
-                                    <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="longduration-slider" min="0" max="500" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="longduration-value">0 GWh</span>
+                                        <input type="number" id="longduration-input" min="0" max="500" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="longduration-unit">GWh</span>
                                     </div>
                                 </div>
                                  <div class="border-t border-gray-300 pt-6">
                                     <label for="demandflex-slider" class="block text-md font-medium text-gray-700">Demand Flexibility</label>
-                                    <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="demandflex-slider" min="0" max="25" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="demandflex-value">0 %</span>
+                                        <input type="number" id="demandflex-input" min="0" max="25" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="demandflex-unit">%</span>
                                     </div>
                                 </div>
                             </div>
@@ -258,60 +274,68 @@
                                 <!-- Incentive levers -->
                                 <div>
                                     <label for="carbon-tax-slider" class="block text-sm font-medium text-gray-700">Carbon Tax</label>
-                                    <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="carbon-tax-slider" min="0" max="200" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="carbon-tax-value">$0/ton</span>
+                                        <input type="number" id="carbon-tax-input" min="0" max="200" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="carbon-tax-unit">$/ton</span>
                                     </div>
                                 </div>
                                 <div class="border-t border-gray-300 pt-6">
                                     <label for="solar-incentive-slider" class="block text-sm font-medium text-gray-700">Solar (PTC)</label>
-                                    <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="solar-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="solar-incentive-value">$0/MWh</span>
+                                        <input type="number" id="solar-incentive-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="solar-incentive-unit">$/MWh</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label for="wind-incentive-slider" class="block text-sm font-medium text-gray-700">Wind (PTC)</label>
-                                    <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="wind-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="wind-incentive-value">$0/MWh</span>
+                                        <input type="number" id="wind-incentive-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="wind-incentive-unit">$/MWh</span>
                                     </div>
                                 </div>
                                  <div>
                                     <label for="geothermal-incentive-slider" class="block text-sm font-medium text-gray-700">Geothermal (PTC)</label>
-                                    <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="geothermal-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="geothermal-incentive-value">$0/MWh</span>
+                                        <input type="number" id="geothermal-incentive-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="geothermal-incentive-unit">$/MWh</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label for="nuclear-incentive-slider" class="block text-sm font-medium text-gray-700">Nuclear (PTC)</label>
-                                    <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="nuclear-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="nuclear-incentive-value">$0/MWh</span>
+                                        <input type="number" id="nuclear-incentive-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="nuclear-incentive-unit">$/MWh</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label for="storage-incentive-slider" class="block text-sm font-medium text-gray-700">Storage (ITC)</label>
-                                    <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="storage-incentive-slider" min="0" max="100" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="storage-incentive-value">$0/kWh</span>
+                                        <input type="number" id="storage-incentive-input" min="0" max="100" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="storage-incentive-unit">$/kWh</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label for="dac-incentive-slider" class="block text-sm font-medium text-gray-700">Direct Air Capture (45Q)</label>
-                                    <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="dac-incentive-slider" min="0" max="200" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="dac-incentive-value">$0/ton</span>
+                                        <input type="number" id="dac-incentive-input" min="0" max="200" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="dac-incentive-unit">$/ton</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div class="border-t border-gray-300 pt-6">
                             <label for="dac-slider" class="block text-md font-medium text-gray-700">Direct Air Capture Deployment</label>
-                            <div class="flex items-center space-x-4 mt-2">
+                            <div class="flex items-center space-x-2 mt-2">
                                 <input type="range" id="dac-slider" min="0" max="10000" value="0" class="w-full form-input">
-                                <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md" id="dac-value">0 t/hr</span>
+                                <input type="number" id="dac-input" min="0" max="10000" value="0" class="value-input">
+                                <span class="font-semibold text-gray-900 w-12 text-left" id="dac-unit">t/hr</span>
                             </div>
                         </div>
                         <div class="border-t border-gray-300 pt-6 text-center">
@@ -478,16 +502,17 @@
             nuclearIncentive: document.getElementById('nuclear-incentive-slider'), storageIncentive: document.getElementById('storage-incentive-slider'),
             dacIncentive: document.getElementById('dac-incentive-slider'), carbonTax: document.getElementById('carbon-tax-slider'),
         };
-        const sliderValues = {
-            solar: document.getElementById('solar-value'), wind: document.getElementById('wind-value'),
-            geothermal: document.getElementById('geothermal-value'), nuclear: document.getElementById('nuclear-value'),
-            battery4hr: document.getElementById('battery4hr-value'), battery8hr: document.getElementById('battery8hr-value'),
-            longduration: document.getElementById('longduration-value'), demandflex: document.getElementById('demandflex-value'),
-            dac: document.getElementById('dac-value'), solarIncentive: document.getElementById('solar-incentive-value'),
-            windIncentive: document.getElementById('wind-incentive-value'), geothermalIncentive: document.getElementById('geothermal-incentive-value'),
-            nuclearIncentive: document.getElementById('nuclear-incentive-value'), storageIncentive: document.getElementById('storage-incentive-value'),
-            dacIncentive: document.getElementById('dac-incentive-value'), carbonTax: document.getElementById('carbon-tax-value'),
+        const inputs = {
+            solar: document.getElementById('solar-input'), wind: document.getElementById('wind-input'),
+            geothermal: document.getElementById('geothermal-input'), nuclear: document.getElementById('nuclear-input'),
+            battery4hr: document.getElementById('battery4hr-input'), battery8hr: document.getElementById('battery8hr-input'),
+            longduration: document.getElementById('longduration-input'), demandflex: document.getElementById('demandflex-input'),
+            dac: document.getElementById('dac-input'), solarIncentive: document.getElementById('solar-incentive-input'),
+            windIncentive: document.getElementById('wind-incentive-input'), geothermalIncentive: document.getElementById('geothermal-incentive-input'),
+            nuclearIncentive: document.getElementById('nuclear-incentive-input'), storageIncentive: document.getElementById('storage-incentive-input'),
+            dacIncentive: document.getElementById('dac-incentive-input'), carbonTax: document.getElementById('carbon-tax-input'),
         };
+
         const billImpactEl = document.getElementById('bill-impact');
         const greenPremiumEl = document.getElementById('green-premium');
         const resetToZeroButton = document.getElementById('reset-to-zero-button');
@@ -747,23 +772,26 @@
 
 
         function runSimulation() {
-            const inputs = {
+            const currentValues = {};
+            for (const key in sliders) {
+                currentValues[key] = parseFloat(sliders[key].value);
+            }
+
+            const result = getSimulationResult({
                 capacity: {
-                    solar: parseFloat(sliders.solar.value), wind: parseFloat(sliders.wind.value),
-                    geothermal: parseFloat(sliders.geothermal.value), nuclear: parseFloat(sliders.nuclear.value),
-                    battery4hr: parseFloat(sliders.battery4hr.value), battery8hr: parseFloat(sliders.battery8hr.value),
-                    longduration: parseFloat(sliders.longduration.value), dac: parseFloat(sliders.dac.value),
-                    demandflex: parseFloat(sliders.demandflex.value),
+                    solar: currentValues.solar, wind: currentValues.wind,
+                    geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
+                    battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
+                    longduration: currentValues.longduration, dac: currentValues.dac,
+                    demandflex: currentValues.demandflex,
                 },
                 incentives: {
-                    solar: parseFloat(sliders.solarIncentive.value), wind: parseFloat(sliders.windIncentive.value),
-                    geothermal: parseFloat(sliders.geothermalIncentive.value), nuclear: parseFloat(sliders.nuclearIncentive.value),
-                    storage: parseFloat(sliders.storageIncentive.value), dac: parseFloat(sliders.dacIncentive.value),
-                    carbonTax: parseFloat(sliders.carbonTax.value),
+                    solar: currentValues.solarIncentive, wind: currentValues.windIncentive,
+                    geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
+                    storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
+                    carbonTax: currentValues.carbonTax,
                 }
-            };
-
-            const result = getSimulationResult(inputs);
+            });
             const totalDailyCO2 = result.emissions.reduce((a, b) => a + b, 0);
             
             const totalAnnualDemandMWh = result.demand.reduce((a,b) => a+b, 0) * 1000 * 365;
@@ -898,16 +926,6 @@
 
 
         // --- EVENT LISTENERS ---
-        const sliderConfig = {
-            solar: { unit: 'GW' }, wind: { unit: 'GW' }, geothermal: { unit: 'GW' }, nuclear: { unit: 'GW' },
-            battery4hr: { unit: 'GWh' }, battery8hr: { unit: 'GWh' }, longduration: { unit: 'GWh' },
-            demandflex: { unit: '%' }, dac: { unit: 't/hr' },
-            solarIncentive: { unit: '$/MWh', prefix: '$' }, windIncentive: { unit: '$/MWh', prefix: '$' },
-            geothermalIncentive: { unit: '$/MWh', prefix: '$' }, nuclearIncentive: { unit: '$/MWh', prefix: '$' },
-            storageIncentive: { unit: '$/kWh', prefix: '$' }, dacIncentive: { unit: '$/ton', prefix: '$' },
-            carbonTax: { unit: '$/ton', prefix: '$' }
-        };
-
         function saveState() {
             const currentState = {};
             for (const key in sliders) {
@@ -917,29 +935,42 @@
             undoButton.disabled = stateHistory.length <= 1;
         }
         
-        function updateSliderDisplays() {
-            Object.keys(sliders).forEach(key => {
-                const config = sliderConfig[key];
-                const prefix = config.prefix || '';
-                sliderValues[key].textContent = `${prefix}${sliders[key].value} ${config.unit}`;
-            });
+        function syncInputs(sourceElement, targetElement) {
+            targetElement.value = sourceElement.value;
         }
 
-        Object.keys(sliders).forEach(key => {
-            sliders[key].addEventListener('input', () => {
-                updateSliderDisplays();
-                runSimulation();
-            });
-            sliders[key].addEventListener('change', () => { // Save state only on release
-                 saveState();
-            });
-        });
+        function setupInputSyncing() {
+            for (const key in sliders) {
+                const slider = sliders[key];
+                const input = inputs[key];
+
+                slider.addEventListener('input', () => {
+                    syncInputs(slider, input);
+                    runSimulation();
+                });
+                
+                input.addEventListener('input', () => {
+                    let value = parseFloat(input.value);
+                    const min = parseFloat(slider.min);
+                    const max = parseFloat(slider.max);
+                    if (isNaN(value)) value = min;
+                    if (value > max) value = max;
+                    if (value < min) value = min;
+                    input.value = value;
+                    syncInputs(input, slider);
+                    runSimulation();
+                });
+
+                slider.addEventListener('change', saveState);
+                input.addEventListener('change', saveState);
+            }
+        }
 
         resetToZeroButton.addEventListener('click', () => {
             Object.keys(sliders).forEach(key => {
                 sliders[key].value = 0;
+                inputs[key].value = 0;
             });
-            updateSliderDisplays();
             runSimulation();
             saveState();
         });
@@ -974,8 +1005,8 @@
         resetToDefaultButton.addEventListener('click', () => {
             for (const key in defaultSliderState) {
                 sliders[key].value = defaultSliderState[key];
+                inputs[key].value = defaultSliderState[key];
             }
-            updateSliderDisplays();
             runSimulation();
             saveState();
         });
@@ -987,8 +1018,8 @@
                 const prevState = stateHistory[stateHistory.length - 1];
                 for (const key in prevState) {
                     sliders[key].value = prevState[key];
+                    inputs[key].value = prevState[key];
                 }
-                updateSliderDisplays();
                 runSimulation();
                 undoButton.disabled = stateHistory.length <= 1;
             }
@@ -1191,8 +1222,10 @@
             }
 
             // Reset levers and recalculate baseline cost/emissions
-            Object.keys(sliders).forEach(key => sliders[key].value = 0);
-            updateSliderDisplays();
+            Object.keys(sliders).forEach(key => {
+                sliders[key].value = 0;
+                inputs[key].value = 0;
+            });
             
             const newBaselineResult = getSimulationResult({
                 capacity: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
@@ -1224,7 +1257,7 @@
             customBaselineSystemCost = initialResult.systemCost;
             customBaselineTotalAnnualCO2 = initialResult.emissions.reduce((a, b) => a + b, 0) * 365;
 
-            updateSliderDisplays();
+            setupInputSyncing();
             runSimulation();
             saveState();
         }
@@ -1234,4 +1267,3 @@
     </script>
 </body>
 </html>
-" and have made no changes to 
