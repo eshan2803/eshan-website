@@ -1089,9 +1089,27 @@
             
             async function initialize() {
                 // Firebase setup
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "...", authDomain: "...", projectId: "..." };
+                // Import the functions you need from the SDKs you need
+                import { initializeApp } from "firebase/app";
+                import { getAnalytics } from "firebase/analytics";
+                // TODO: Add SDKs for Firebase products that you want to use
+                // https://firebase.google.com/docs/web/setup#available-libraries
+                
+                // Your web app's Firebase configuration
+                // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+                const firebaseConfig = {
+                  apiKey: "AIzaSyCdEeu0VugTfZD-R-62pFvBdb313TeM4xs",
+                  authDomain: "grid-decarbonization.firebaseapp.com",
+                  projectId: "grid-decarbonization",
+                  storageBucket: "grid-decarbonization.firebasestorage.app",
+                  messagingSenderId: "902419724670",
+                  appId: "1:902419724670:web:b636a75ea44325946a9b2f",
+                  measurementId: "G-3Q9HE19CGN"
+                };
+                
+                // Initialize Firebase
                 const app = initializeApp(firebaseConfig);
+                const analytics = getAnalytics(app);
                 const db = getFirestore(app);
                 const auth = getAuth(app);
                 setLogLevel('debug');
