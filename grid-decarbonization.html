@@ -177,9 +177,9 @@
                 <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
                     Your challenge: use policy levers for clean energy and direct air capture to eliminate CO2 emissions from the electricity grid.
                 </p>
-                <a href="grid-model-documentation.html" class="inline-flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors text-sm font-medium">
+                 <a href="grid-model-documentation.html" class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors text-sm font-medium mt-4">
                     📖 View Documentation
-                </a>                
+                </a>
             </section>
 
             <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -389,8 +389,6 @@
         import { getFirestore, doc, runTransaction, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- HARDCODED FIREBASE CONFIGURATION ---
-        // This object contains your project's unique keys.
-        // It directly connects your webpage to your Firebase project.
         const firebaseConfig = {
           apiKey: "AIzaSyCdEeu0VugTfZD-R-62pFvBdb313TeM4xs",
           authDomain: "grid-decarbonization.firebaseapp.com",
@@ -405,7 +403,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
-        const appId = firebaseConfig.appId; // Use the appId from your config for the database path
+        const appId = firebaseConfig.appId;
 
         // --- MODEL PARAMETERS & DATA (GLOBAL SCOPE) ---
         const HOURS = Array.from({ length: 24 }, (_, i) => `${i}:00`);
@@ -440,22 +438,26 @@
         const SOLAR_CF_PROFILE = [0,0,0,0,0,0.05,0.15,0.3,0.5,0.7,0.8,0.85,0.9,0.85,0.8,0.7,0.3,0.05,0,0,0,0,0,0];
         const WIND_CF_PROFILE = [0.4,0.42,0.45,0.46,0.45,0.4,0.35,0.3,0.25,0.2,0.2,0.2,0.25,0.3,0.35,0.4,0.5,0.6,0.65,0.6,0.55,0.5,0.45,0.4];
         const EMISSION_FACTORS = { naturalGas: 395, hydro: 0, nuclear: 0, solar: 0, wind: 0, geothermal: 0, coal: 850 };
+        
+        // --- COST DATA UPDATE ---
         const COST_DATA = {
             capex: { 
                 solar: 1000, wind: 1400, nuclear: 8000, geothermal: 4500,
                 naturalGas: 1100, hydro: 3000, coal: 3500,
-                battery4hr: 300, battery8hr: 350, longduration: 500, 
+                battery4hr: 300, battery8hr: 350, longduration: 500,
+                dac: 1000 // $/ton of annual capacity
             },
             fixed_om: {
                 solar: 18, wind: 35, nuclear: 140, geothermal: 120,
                 naturalGas: 20, hydro: 20, coal: 40,
-                battery4hr: 15, battery8hr: 15, longduration: 15
+                battery4hr: 15, battery8hr: 15, longduration: 15,
+                dac: 20 // $/ton of annual capacity per year
             },
             variable_om: { 
                 solar: 2, wind: 1, nuclear: 10, geothermal: 0,
                 naturalGas: 40, hydro: 5, coal: 30,
                 battery4hr: 2, battery8hr: 2, longduration: 2,
-                dac: 400
+                dac: 400 // $/ton of CO2 captured
             },
             lifetime: {
                 solar: 30, wind: 30, nuclear: 60, geothermal: 30,
@@ -607,7 +609,7 @@
 
                 for (const tech in COST_DATA.capacity_factor) {
                     const techData = COST_DATA;
-                    if (!techData.lifetime[tech]) continue; // Skip if no lifetime data
+                    if (!techData.lifetime[tech]) continue;
                     const n = techData.lifetime[tech];
                     const crf = (d * Math.pow(1 + d, n)) / (Math.pow(1 + d, n) - 1);
                     
@@ -637,7 +639,7 @@
                         const n = COST_DATA.lifetime[type];
                         const crf = (d * Math.pow(1 + d, n)) / (Math.pow(1 + d, n) - 1);
                         
-                        let capex_per_kwh = COST_DATA.capex[type] - incentives.storage; // Apply ITC
+                        let capex_per_kwh = COST_DATA.capex[type] - incentives.storage;
                         const total_kwh = capacity[type] * 1000000;
                         const duration = type === 'longduration' ? 24 : parseInt(type.match(/\d+/)[0]);
                         const total_kw = total_kwh / duration;
@@ -652,11 +654,18 @@
                     }
                 }
                 
+                // --- DAC COST CALCULATION UPDATE ---
                 if (capacity.dac > 0) {
-                     const tonsRemovedAnually = capacity.dac * 24 * 365;
-                     const dacOperatingCost = tonsRemovedAnually * COST_DATA.variable_om.dac;
-                     const dacIncentiveValue = tonsRemovedAnually * incentives.dac;
-                     totalAnnualCost += (dacOperatingCost - dacIncentiveValue);
+                    const annualDacCapacityTons = capacity.dac * 24 * 365;
+                    const n = COST_DATA.lifetime.dac;
+                    const crf = (d * Math.pow(1 + d, n)) / (Math.pow(1 + d, n) - 1);
+
+                    const annualizedDacCapex = COST_DATA.capex.dac * annualDacCapacityTons * crf;
+                    const annualDacFom = COST_DATA.fixed_om.dac * annualDacCapacityTons;
+                    const dacVariableCost = annualDacCapacityTons * COST_DATA.variable_om.dac;
+                    const dacIncentiveValue = annualDacCapacityTons * incentives.dac;
+
+                    totalAnnualCost += (annualizedDacCapex + annualDacFom + dacVariableCost - dacIncentiveValue);
                 }
                 
                 const totalAnnualCO2 = calculateEmissions(generation, 0).reduce((a, b) => a + b, 0) * 365;
@@ -725,7 +734,7 @@
                                 storageLevels[type] += chargeAmount * storageEfficiency;
                                 excessGen -= chargeAmount;
                             }
-                            hourlyCurtailment[i] = excessGen; // Any remaining excess is curtailed
+                            hourlyCurtailment[i] = excessGen;
                         } else if (netLoad > 0) {
                             for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
                                 const dischargeAmount = Math.min(netLoad, storageLevels[type], storageDischargeRates[type]);
@@ -987,36 +996,25 @@
                 saveState();
             });
             
-            // --- BUG FIX STARTS HERE ---
             makeDefaultButton.addEventListener('click', () => {
-                // This logic explicitly builds the inputs object to ensure correct key mapping,
-                // mirroring the robust logic from the runSimulation() function. This prevents
-                // calculation errors by making sure incentives are applied correctly.
                 const currentValues = {};
                 for (const key in sliders) {
                     currentValues[key] = parseFloat(sliders[key].value);
-                    defaultSliderState[key] = sliders[key].value; // Also save the state for the 'reset to default' button
+                    defaultSliderState[key] = sliders[key].value;
                 }
 
                 const currentInputs = {
                     capacity: {
-                        solar: currentValues.solar,
-                        wind: currentValues.wind,
-                        geothermal: currentValues.geothermal,
-                        nuclear: currentValues.nuclear,
-                        battery4hr: currentValues.battery4hr,
-                        battery8hr: currentValues.battery8hr,
-                        longduration: currentValues.longduration,
-                        dac: currentValues.dac,
+                        solar: currentValues.solar, wind: currentValues.wind,
+                        geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
+                        battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
+                        longduration: currentValues.longduration, dac: currentValues.dac,
                         demandflex: currentValues.demandflex,
                     },
                     incentives: {
-                        solar: currentValues.solarIncentive,
-                        wind: currentValues.windIncentive,
-                        geothermal: currentValues.geothermalIncentive,
-                        nuclear: currentValues.nuclearIncentive,
-                        storage: currentValues.storageIncentive,
-                        dac: currentValues.dacIncentive,
+                        solar: currentValues.solarIncentive, wind: currentValues.windIncentive,
+                        geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
+                        storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
                         carbonTax: currentValues.carbonTax,
                         exportPrice: currentValues.exportPrice,
                     }
@@ -1026,11 +1024,10 @@
                 customBaselineSystemCost = defaultResult.systemCost;
                 customBaselineTotalAnnualCO2 = defaultResult.emissions.reduce((a, b) => a + b, 0) * 365;
                 
-                runSimulation(); // Rerun to set bill impact to 0%
+                runSimulation();
                 saveState();
                 window.alert('Current lever positions have been set as the new default baseline.');
             });
-            // --- BUG FIX ENDS HERE ---
 
             resetToDefaultButton.addEventListener('click', () => {
                 for (const key in defaultSliderState) {
@@ -1044,7 +1041,7 @@
 
             undoButton.addEventListener('click', () => {
                 if (stateHistory.length > 1) {
-                    stateHistory.pop(); // Remove current state
+                    stateHistory.pop();
                     const prevState = stateHistory[stateHistory.length - 1];
                     for (const key in prevState) {
                         sliders[key].value = prevState[key];
@@ -1106,7 +1103,6 @@
                     BASELINE_GENERATION = newBaseline;
                 }
 
-                // Reset levers and recalculate baseline cost/emissions
                 Object.keys(sliders).forEach(key => {
                     if (key === 'exportPrice') {
                         sliders[key].value = 20;
@@ -1134,17 +1130,15 @@
             
             // --- MAIN INITIALIZATION FUNCTION ---
             async function initialize() {
-                // Authenticate with Firebase
                 try {
                     await signInAnonymously(auth);
                     console.log("Firebase authentication successful.");
                 } catch (error) {
                     console.error("Firebase authentication failed:", error);
                     visitorCountEl.textContent = "Auth Failed";
-                    return; // Stop initialization if auth fails
+                    return;
                 }
 
-                // Visitor counter logic
                 const counterRef = doc(db, `artifacts/${appId}/public/data/counters/visitor_counter`);
                 try {
                     const newCount = await runTransaction(db, async (transaction) => {
@@ -1163,16 +1157,13 @@
                     visitorCountEl.textContent = "DB Error";
                 }
 
-                // Setup the rest of the application
                 createGridMixSliders();
                 populateCountryDropdown();
                 
-                // Set the initial default state to all zeros
                 for (const key in sliders) {
                     defaultSliderState[key] = "0";
                 }
                 
-                // Calculate the initial baseline cost and emissions for the zero-lever scenario
                 const initialResult = getSimulationResult({
                     capacity: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
                     incentives: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, storage: 0, dac: 0, carbonTax: 0, exportPrice: 20 }
@@ -1185,7 +1176,6 @@
                 saveState();
             }
 
-            // Start the application
             await initialize();
         });
     </script>
