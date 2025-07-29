@@ -280,6 +280,14 @@
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="carbon-tax-unit">$/ton</span>
                                     </div>
                                 </div>
+                                 <div>
+                                    <label for="export-price-slider" class="block text-sm font-medium text-gray-700">Export Price</label>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="export-price-slider" min="0" max="100" value="20" class="w-full form-input">
+                                        <input type="number" id="export-price-input" min="0" max="100" value="20" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="export-price-unit">$/MWh</span>
+                                    </div>
+                                </div>
                                 <div class="border-t border-gray-300 pt-6">
                                     <label for="solar-incentive-slider" class="block text-sm font-medium text-gray-700">Solar (PTC)</label>
                                     <div class="flex items-center space-x-2 mt-2">
@@ -338,42 +346,12 @@
                                 <span class="font-semibold text-gray-900 w-12 text-left" id="dac-unit">t/hr</span>
                             </div>
                         </div>
-                        <div class="border-t border-gray-300 pt-6 text-center">
-                            <button id="generate-memo-button" class="w-full px-6 py-3 text-lg font-semibold text-white bg-blue-600 rounded-full hover:bg-blue-700 transition-colors">
-                                ✨ Generate Policy Memo
-                            </button>
-                        </div>
                     </div>
                 </div>
             </main>
         </div>
     </div>
     
-    <!-- Gemini API Memo Modal -->
-    <div id="memo-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-lora font-semibold">Policy Memo Analysis</h2>
-                <button id="close-memo-button" class="text-2xl">&times;</button>
-            </div>
-            <div id="memo-content" class="prose max-w-none">
-                <!-- Loading spinner -->
-                <div id="memo-loading" class="text-center">
-                    <svg class="animate-spin h-8 w-8 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <p class="mt-2">Generating analysis...</p>
-                </div>
-                 <!-- Memo text will be inserted here -->
-            </div>
-            <div class="mt-6 text-right">
-                <button id="copy-memo-button" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-full hover:bg-blue-700 transition-colors">Copy to Clipboard</button>
-            </div>
-        </div>
-    </div>
-
-
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         // --- MODEL PARAMETERS & DATA ---
@@ -501,6 +479,7 @@
             windIncentive: document.getElementById('wind-incentive-slider'), geothermalIncentive: document.getElementById('geothermal-incentive-slider'),
             nuclearIncentive: document.getElementById('nuclear-incentive-slider'), storageIncentive: document.getElementById('storage-incentive-slider'),
             dacIncentive: document.getElementById('dac-incentive-slider'), carbonTax: document.getElementById('carbon-tax-slider'),
+            exportPrice: document.getElementById('export-price-slider'),
         };
         const inputs = {
             solar: document.getElementById('solar-input'), wind: document.getElementById('wind-input'),
@@ -511,6 +490,7 @@
             windIncentive: document.getElementById('wind-incentive-input'), geothermalIncentive: document.getElementById('geothermal-incentive-input'),
             nuclearIncentive: document.getElementById('nuclear-incentive-input'), storageIncentive: document.getElementById('storage-incentive-input'),
             dacIncentive: document.getElementById('dac-incentive-input'), carbonTax: document.getElementById('carbon-tax-input'),
+            exportPrice: document.getElementById('export-price-input'),
         };
 
         const billImpactEl = document.getElementById('bill-impact');
@@ -519,12 +499,6 @@
         const makeDefaultButton = document.getElementById('make-default-button');
         const resetToDefaultButton = document.getElementById('reset-to-default-button');
         const undoButton = document.getElementById('undo-button');
-        const generateMemoButton = document.getElementById('generate-memo-button');
-        const memoModal = document.getElementById('memo-modal');
-        const closeMemoButton = document.getElementById('close-memo-button');
-        const memoContent = document.getElementById('memo-content');
-        const memoLoading = document.getElementById('memo-loading');
-        const copyMemoButton = document.getElementById('copy-memo-button');
         const gridMixSlidersContainer = document.getElementById('grid-mix-sliders');
         const countrySelect = document.getElementById('country-select');
 
@@ -543,7 +517,8 @@
             naturalGas: 'rgba(107, 114, 128, 0.8)', hydro: 'rgba(59, 130, 246, 0.8)', 
             nuclear: 'rgba(239, 68, 68, 0.8)', solar: 'rgba(251, 191, 36, 0.8)', 
             wind: 'rgba(16, 185, 129, 0.8)', geothermal: 'rgba(120, 40, 40, 0.8)',
-            storage: 'rgba(168, 85, 247, 0.8)', demand: 'rgba(17, 24, 39, 1)'
+            storage: 'rgba(168, 85, 247, 0.8)', demand: 'rgba(17, 24, 39, 1)',
+            curtailment: 'rgba(253, 186, 116, 0.8)'
         };
         
         const generationChartConfig = {
@@ -558,6 +533,7 @@
                     { label: 'Solar', data: [], backgroundColor: COLORS.solar },
                     { label: 'Wind', data: [], backgroundColor: COLORS.wind },
                     { label: 'Storage', data: [], backgroundColor: COLORS.storage },
+                    { label: 'Curtailment', data: [], backgroundColor: COLORS.curtailment },
                     { label: 'Demand', data: BASE_DEMAND_GWH, type: 'line', borderColor: COLORS.demand, borderWidth: 3, pointRadius: 0, fill: false }
                 ]
             },
@@ -621,7 +597,7 @@
 
 
         // --- COST CALCULATION ---
-        function calculateTotalAnnualSystemCost(generation, capacity, incentives) {
+        function calculateTotalAnnualSystemCost(generation, capacity, incentives, curtailedEnergy) {
             let totalAnnualCost = 0;
             const d = COST_DATA.discount_rate;
 
@@ -680,6 +656,9 @@
             const totalAnnualCO2 = calculateEmissions(generation, 0).reduce((a, b) => a + b, 0) * 365;
             totalAnnualCost += totalAnnualCO2 * incentives.carbonTax;
 
+            const annualExportRevenue = curtailedEnergy.reduce((a, b) => a + b, 0) * 1000 * 365 * incentives.exportPrice;
+            totalAnnualCost -= annualExportRevenue;
+
             return totalAnnualCost;
         }
 
@@ -702,7 +681,8 @@
                 solar: JSON.parse(JSON.stringify(BASELINE_GENERATION.solar)), 
                 wind: JSON.parse(JSON.stringify(BASELINE_GENERATION.wind)),
                 geothermal: JSON.parse(JSON.stringify(BASELINE_GENERATION.geothermal)),
-                storage: Array(24).fill(0)
+                storage: Array(24).fill(0),
+                curtailment: Array(24).fill(0)
             };
 
             for (let i = 0; i < 24; i++) {
@@ -716,6 +696,7 @@
                 let storageLevels = JSON.parse(JSON.stringify(initialStorageLevels));
                 let hourlyDischarge = Array(24).fill(0);
                 let hourlyNaturalGas = Array(24).fill(0);
+                let hourlyCurtailment = Array(24).fill(0);
 
                 const storageCapacities = {
                     battery4hr: inputs.capacity.battery4hr, battery8hr: inputs.capacity.battery8hr, longduration: inputs.capacity.longduration
@@ -736,6 +717,7 @@
                             storageLevels[type] += chargeAmount * storageEfficiency;
                             excessGen -= chargeAmount;
                         }
+                        hourlyCurtailment[i] = excessGen; // Any remaining excess is curtailed
                     } else if (netLoad > 0) {
                         for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
                             const dischargeAmount = Math.min(netLoad, storageLevels[type], storageDischargeRates[type]);
@@ -749,7 +731,7 @@
                         hourlyNaturalGas[i] = netLoad;
                     }
                 }
-                return { finalLevels: storageLevels, discharge: hourlyDischarge, gas: hourlyNaturalGas };
+                return { finalLevels: storageLevels, discharge: hourlyDischarge, gas: hourlyNaturalGas, curtailment: hourlyCurtailment };
             };
 
             const emptyInitialState = { battery4hr: 0, battery8hr: 0, longduration: 0 };
@@ -758,9 +740,10 @@
 
             newGeneration.storage = secondPassResult.discharge;
             newGeneration.naturalGas = secondPassResult.gas;
+            newGeneration.curtailment = secondPassResult.curtailment;
             
             const newEmissions = calculateEmissions(newGeneration, inputs.capacity.dac);
-            const newSystemCost = calculateTotalAnnualSystemCost(newGeneration, inputs.capacity, inputs.incentives);
+            const newSystemCost = calculateTotalAnnualSystemCost(newGeneration, inputs.capacity, inputs.incentives, newGeneration.curtailment);
             
             return {
                 generation: newGeneration,
@@ -790,6 +773,7 @@
                     geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
                     storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
                     carbonTax: currentValues.carbonTax,
+                    exportPrice: currentValues.exportPrice,
                 }
             });
             const totalDailyCO2 = result.emissions.reduce((a, b) => a + b, 0);
@@ -849,7 +833,8 @@
             chartData[4].data = generation.solar;
             chartData[5].data = generation.wind;
             chartData[6].data = generation.storage;
-            chartData[7].data = demand;
+            chartData[7].data = generation.curtailment;
+            chartData[8].data = demand;
             generationChart.update('none');
 
             co2Chart.data.datasets[0].data = emissions;
@@ -1024,151 +1009,6 @@
                 undoButton.disabled = stateHistory.length <= 1;
             }
         });
-
-        // --- GEMINI API ---
-        async function generatePolicyMemo() {
-            memoModal.classList.remove('hidden');
-            memoLoading.classList.remove('hidden');
-            memoContent.innerHTML = ''; // Clear previous content
-            memoContent.appendChild(memoLoading);
-
-
-            // 1. Gather data
-            const currentSimResult = getSimulationResult({
-                capacity: {
-                    solar: parseFloat(sliders.solar.value), wind: parseFloat(sliders.wind.value),
-                    geothermal: parseFloat(sliders.geothermal.value), nuclear: parseFloat(sliders.nuclear.value),
-                    battery4hr: parseFloat(sliders.battery4hr.value), battery8hr: parseFloat(sliders.battery8hr.value),
-                    longduration: parseFloat(sliders.longduration.value), dac: parseFloat(sliders.dac.value),
-                    demandflex: parseFloat(sliders.demandflex.value),
-                },
-                incentives: {
-                    solar: parseFloat(sliders.solarIncentive.value), wind: parseFloat(sliders.windIncentive.value),
-                    geothermal: parseFloat(sliders.geothermalIncentive.value), nuclear: parseFloat(sliders.nuclearIncentive.value),
-                    storage: parseFloat(sliders.storageIncentive.value), dac: parseFloat(sliders.dacIncentive.value),
-                    carbonTax: parseFloat(sliders.carbonTax.value),
-                }
-            });
-            const newTotalAnnualCO2 = currentSimResult.emissions.reduce((a, b) => a + b, 0) * 365;
-
-            const scenarioData = {
-                results: {
-                    billImpact: billImpactEl.textContent,
-                    greenPremium: greenPremiumEl.textContent,
-                    co2Avoided: (customBaselineTotalAnnualCO2 - newTotalAnnualCO2).toLocaleString(undefined, {maximumFractionDigits:0})
-                },
-                capacity: {},
-                incentives: {}
-            };
-
-            for (const key in sliders) {
-                if(parseFloat(sliders[key].value) > 0) {
-                    const group = key.includes('Incentive') || key.includes('Tax') ? 'incentives' : 'capacity';
-                    scenarioData[group][key] = `${sliders[key].value} ${sliderConfig[key].unit}`;
-                }
-            }
-
-            // 2. Construct Prompt
-            const prompt = `
-                You are an expert energy policy analyst. Your task is to write a professional policy memo based on a grid decarbonization scenario.
-                The user has created the following scenario using a simulator:
-
-                **Key Outcomes:**
-                - Impact on Customer Bills: ${scenarioData.results.billImpact}
-                - Green Premium (Cost of Abatement): ${scenarioData.results.greenPremium} per ton of CO2 avoided
-                - Total Annual CO2 Avoided (relative to baseline): ${scenarioData.results.co2Avoided} tons
-
-                **Policy Levers & Investments (New Capacity):**
-                ${Object.entries(scenarioData.capacity).map(([key, value]) => `- ${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}: ${value}`).join('\n')}
-
-                **Policy Levers & Incentives:**
-                ${Object.entries(scenarioData.incentives).map(([key, value]) => `- ${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}: ${value}`).join('\n')}
-
-                **Memo Requirements:**
-                1.  **Executive Summary:** Start with a brief, high-level summary of the proposed plan and its primary outcomes (cost and emissions).
-                2.  **Analysis of Strategy:** Discuss the core strategy. Is it reliant on renewables, nuclear, storage, or a mix? Is it aggressive? What are the key drivers of its success or failure?
-                3.  **Strengths:** What are the strong points of this plan? (e.g., cost-effectiveness, energy independence, specific technology choices).
-                4.  **Challenges & Weaknesses:** What are the potential hurdles? (e.g., land use for solar/wind, grid stability issues from intermittency, high capital costs for nuclear, reliance on unproven technology for long-duration storage).
-                5.  **Feasibility & Recommendations:** Conclude with a brief assessment of the plan's real-world feasibility. Offer one or two concrete recommendations for improvement.
-
-                Write the memo in a clear, professional, and accessible tone. Use markdown for formatting (headings, bold text, lists).
-            `;
-            
-            // 3. Call Gemini API
-            try {
-                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-                const payload = { contents: chatHistory };
-                const apiKey = "" 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-                
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`API request failed with status ${response.status}`);
-                }
-
-                const result = await response.json();
-                
-                if (result.candidates && result.candidates.length > 0 &&
-                    result.candidates[0].content && result.candidates[0].content.parts &&
-                    result.candidates[0].content.parts.length > 0) {
-                    const text = result.candidates[0].content.parts[0].text;
-                    memoLoading.classList.add('hidden');
-                    // A simple markdown to HTML converter
-                    let html = text
-                        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-                        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-                        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-                        .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
-                        .replace(/\*(.*)\*/gim, '<em>$1</em>')
-                        .replace(/^- (.*$)/gim, '<ul><li>$1</li></ul>')
-                        .replace(/<\/ul>\s*<ul>/g, '')
-                        .replace(/\n/g, '<br>');
-
-                    memoContent.innerHTML = html;
-                } else {
-                    throw new Error("Invalid response structure from API.");
-                }
-
-            } catch (error) {
-                memoLoading.classList.add('hidden');
-                memoContent.textContent = `An error occurred while generating the memo: ${error.message}`;
-                console.error(error);
-            }
-        }
-
-        generateMemoButton.addEventListener('click', generatePolicyMemo);
-        closeMemoButton.addEventListener('click', () => memoModal.classList.add('hidden'));
-        copyMemoButton.addEventListener('click', () => {
-            const textToCopy = memoContent.innerText;
-            // Use the Clipboard API
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                copyMemoButton.textContent = 'Copied!';
-                setTimeout(() => {
-                    copyMemoButton.textContent = 'Copy to Clipboard';
-                }, 2000);
-            }).catch(err => {
-                console.error('Failed to copy text: ', err);
-                // Fallback for older browsers
-                 const textArea = document.createElement("textarea");
-                 textArea.value = textToCopy;
-                 document.body.appendChild(textArea);
-                 textArea.focus();
-                 textArea.select();
-                 try {
-                     document.execCommand('copy');
-                     copyMemoButton.textContent = 'Copied!';
-                     setTimeout(() => { copyMemoButton.textContent = 'Copy to Clipboard';}, 2000);
-                 } catch (err) {
-                     console.error('Fallback to copy failed', err);
-                 }
-                 document.body.removeChild(textArea);
-            });
-        });
         
         // --- INITIALIZATION & DYNAMIC CONTENT ---
 
@@ -1229,7 +1069,7 @@
             
             const newBaselineResult = getSimulationResult({
                 capacity: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
-                incentives: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, storage: 0, dac: 0, carbonTax: 0 }
+                incentives: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, storage: 0, dac: 0, carbonTax: 0, exportPrice: 20 }
             });
             customBaselineSystemCost = newBaselineResult.systemCost;
             customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
@@ -1252,7 +1092,7 @@
             // Calculate the initial baseline cost and emissions for the zero-lever scenario
             const initialResult = getSimulationResult({
                 capacity: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
-                incentives: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, storage: 0, dac: 0, carbonTax: 0 }
+                incentives: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, storage: 0, dac: 0, carbonTax: 0, exportPrice: 20 }
             });
             customBaselineSystemCost = initialResult.systemCost;
             customBaselineTotalAnnualCO2 = initialResult.emissions.reduce((a, b) => a + b, 0) * 365;
