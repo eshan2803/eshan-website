@@ -513,7 +513,8 @@
 
             // --- STATE MANAGEMENT ---
             let stateHistory = [];
-            let defaultSliderState = {};
+            let userDefaultState = {};
+            let systemDefaultState = {};
             let customBaselineSystemCost = 0;
             let customBaselineTotalAnnualCO2 = 0;
 
@@ -999,42 +1000,18 @@
             });
             
             makeDefaultButton.addEventListener('click', () => {
-                const currentValues = {};
+                userDefaultState = {}; // Reset before saving new state
                 for (const key in sliders) {
-                    currentValues[key] = parseFloat(sliders[key].value);
-                    defaultSliderState[key] = sliders[key].value;
+                    userDefaultState[key] = sliders[key].value;
                 }
-
-                const currentInputs = {
-                    capacity: {
-                        solar: currentValues.solar, wind: currentValues.wind,
-                        geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
-                        battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
-                        longduration: currentValues.longduration, dac: currentValues.dac,
-                        demandflex: currentValues.demandflex,
-                    },
-                    incentives: {
-                        solar: currentValues.solarIncentive, wind: currentValues.windIncentive,
-                        geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
-                        storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
-                        carbonTax: currentValues.carbonTax,
-                        exportPrice: currentValues.exportPrice,
-                    }
-                };
-
-                const defaultResult = getSimulationResult(currentInputs);
-                customBaselineSystemCost = defaultResult.systemCost;
-                customBaselineTotalAnnualCO2 = defaultResult.emissions.reduce((a, b) => a + b, 0) * 365;
-                
-                runSimulation();
-                saveState();
-                window.alert('Current lever positions have been set as the new default baseline.');
+                window.alert('Current lever positions have been set as the new user default.');
             });
 
             resetToDefaultButton.addEventListener('click', () => {
-                for (const key in defaultSliderState) {
-                    sliders[key].value = defaultSliderState[key];
-                    inputs[key].value = defaultSliderState[key];
+                const stateToApply = Object.keys(userDefaultState).length > 0 ? userDefaultState : systemDefaultState;
+                for (const key in stateToApply) {
+                    sliders[key].value = stateToApply[key];
+                    inputs[key].value = stateToApply[key];
                 }
                 runSimulation();
                 saveState();
@@ -1129,6 +1106,13 @@
                 customBaselineSystemCost = newBaselineResult.systemCost;
                 customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
                 
+                // Save the initial state as the system default
+                systemDefaultState = {};
+                for (const key in sliders) {
+                    systemDefaultState[key] = sliders[key].value;
+                }
+                userDefaultState = {}; // Clear any previous user default
+
                 runSimulation();
                 saveState();
             }
@@ -1168,25 +1152,9 @@
 
                 createGridMixSliders();
                 populateCountryDropdown();
-                
-                for (const key in sliders) {
-                    defaultSliderState[key] = sliders[key].value;
-                }
-                
-                const initialCarbonTax = 35;
-                sliders.carbonTax.value = initialCarbonTax;
-                inputs.carbonTax.value = initialCarbonTax;
-
-                const initialResult = getSimulationResult({
-                    capacity: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
-                    incentives: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, storage: 0, dac: 0, carbonTax: initialCarbonTax, exportPrice: 20 }
-                });
-                customBaselineSystemCost = initialResult.systemCost;
-                customBaselineTotalAnnualCO2 = initialResult.emissions.reduce((a, b) => a + b, 0) * 365;
+                updateBaselineForCountry('default'); // Initialize with California default
 
                 setupInputSyncing();
-                runSimulation();
-                saveState();
             }
 
             await initialize();
