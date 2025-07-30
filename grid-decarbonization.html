@@ -424,6 +424,10 @@
             "Italy": { totalCapacityMW: 120000, mix: { coal: 5.0, naturalGas: 48.0, hydro: 18.0, wind: 10.0, solar: 18.0, nuclear: 0.0, geothermal: 1.0 } },
             "Indonesia": { totalCapacityMW: 72000, mix: { coal: 50.0, naturalGas: 28.0, hydro: 9.0, wind: 0.2, solar: 1.8, nuclear: 0.0, geothermal: 3.0 } }
         };
+        const carbonTaxes = {
+            "Canada": 61, "China": 8, "France": 48, "Germany": 43, "Japan": 2, 
+            "South Korea": 22, "Spain": 16, "United Kingdom": 22
+        };
         const BASE_DEMAND_GWH = [25, 24, 23, 23, 23, 24, 26, 29, 33, 37, 40, 42, 43, 44, 45, 46, 48, 50, 48, 45, 40, 35, 30, 27];
         const ORIGINAL_BASELINE_GENERATION = {
             naturalGas: [17, 16, 15, 15, 16, 16, 15, 12, 11, 10, 11, 11, 10, 9, 9, 9, 21, 30, 31, 33, 31, 27, 20, 17],
@@ -439,25 +443,24 @@
         const WIND_CF_PROFILE = [0.4,0.42,0.45,0.46,0.45,0.4,0.35,0.3,0.25,0.2,0.2,0.2,0.25,0.3,0.35,0.4,0.5,0.6,0.65,0.6,0.55,0.5,0.45,0.4];
         const EMISSION_FACTORS = { naturalGas: 395, hydro: 0, nuclear: 0, solar: 0, wind: 0, geothermal: 0, coal: 850 };
         
-        // --- COST DATA UPDATE ---
         const COST_DATA = {
             capex: { 
                 solar: 1000, wind: 1400, nuclear: 8000, geothermal: 4500,
                 naturalGas: 1100, hydro: 3000, coal: 3500,
                 battery4hr: 300, battery8hr: 350, longduration: 500,
-                dac: 1000 // $/ton of annual capacity
+                dac: 1000
             },
             fixed_om: {
                 solar: 18, wind: 35, nuclear: 140, geothermal: 120,
                 naturalGas: 20, hydro: 20, coal: 40,
                 battery4hr: 15, battery8hr: 15, longduration: 15,
-                dac: 20 // $/ton of annual capacity per year
+                dac: 20
             },
             variable_om: { 
                 solar: 2, wind: 1, nuclear: 10, geothermal: 0,
                 naturalGas: 40, hydro: 5, coal: 30,
                 battery4hr: 2, battery8hr: 2, longduration: 2,
-                dac: 400 // $/ton of CO2 captured
+                dac: 400
             },
             lifetime: {
                 solar: 30, wind: 30, nuclear: 60, geothermal: 30,
@@ -654,7 +657,6 @@
                     }
                 }
                 
-                // --- DAC COST CALCULATION UPDATE ---
                 if (capacity.dac > 0) {
                     const annualDacCapacityTons = capacity.dac * 24 * 365;
                     const n = COST_DATA.lifetime.dac;
@@ -1057,7 +1059,7 @@
             function populateCountryDropdown() {
                 const option = document.createElement('option');
                 option.value = "default";
-                option.textContent = "Default US Mix";
+                option.textContent = "California";
                 countrySelect.appendChild(option);
 
                 for(const country in countryGridMixData) {
@@ -1069,11 +1071,15 @@
             }
 
             function updateBaselineForCountry(countryName) {
+                let newCarbonTax = 0;
                 if (countryName === 'default') {
                     BASELINE_GENERATION = JSON.parse(JSON.stringify(ORIGINAL_BASELINE_GENERATION));
+                    newCarbonTax = 35;
                 } else {
                     const countryData = countryGridMixData[countryName];
                     if (!countryData) return;
+                    
+                    newCarbonTax = carbonTaxes[countryName] || 0;
 
                     const newBaseline = {};
                     let totalDailyGeneration = 0;
@@ -1107,15 +1113,18 @@
                     if (key === 'exportPrice') {
                         sliders[key].value = 20;
                         inputs[key].value = 20;
-                    } else {
+                    } else if (key !== 'carbonTax') {
                         sliders[key].value = 0;
                         inputs[key].value = 0;
                     }
                 });
                 
+                sliders.carbonTax.value = newCarbonTax;
+                inputs.carbonTax.value = newCarbonTax;
+                
                 const newBaselineResult = getSimulationResult({
                     capacity: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
-                    incentives: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, storage: 0, dac: 0, carbonTax: 0, exportPrice: 20 }
+                    incentives: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, storage: 0, dac: 0, carbonTax: newCarbonTax, exportPrice: 20 }
                 });
                 customBaselineSystemCost = newBaselineResult.systemCost;
                 customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
@@ -1161,12 +1170,16 @@
                 populateCountryDropdown();
                 
                 for (const key in sliders) {
-                    defaultSliderState[key] = "0";
+                    defaultSliderState[key] = sliders[key].value;
                 }
                 
+                const initialCarbonTax = 35;
+                sliders.carbonTax.value = initialCarbonTax;
+                inputs.carbonTax.value = initialCarbonTax;
+
                 const initialResult = getSimulationResult({
                     capacity: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
-                    incentives: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, storage: 0, dac: 0, carbonTax: 0, exportPrice: 20 }
+                    incentives: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, storage: 0, dac: 0, carbonTax: initialCarbonTax, exportPrice: 20 }
                 });
                 customBaselineSystemCost = initialResult.systemCost;
                 customBaselineTotalAnnualCO2 = initialResult.emissions.reduce((a, b) => a + b, 0) * 365;
