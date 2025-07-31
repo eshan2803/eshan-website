@@ -1153,6 +1153,8 @@
                 for (const key in sliders) {
                     currentState[key] = sliders[key].value;
                 }
+                currentState.enabledTech = { ...enabledTechnologies }; 
+
                 stateHistory = stateHistory.slice(0, historyIndex + 1);
                 stateHistory.push(currentState);
                 historyIndex++;
@@ -1204,15 +1206,30 @@
                 for (const key in sliders) {
                     userDefaultState[key] = sliders[key].value;
                 }
-                window.alert('Current lever positions have been set as the new user default.');
+                userDefaultState.enabledTech = { ...enabledTechnologies }; 
+                window.alert('Current lever positions and enabled technologies have been set as the new user default.');
             });
 
             resetToDefaultButton.addEventListener('click', () => {
                 const stateToApply = Object.keys(userDefaultState).length > 0 ? userDefaultState : systemDefaultState;
+                
                 for (const key in stateToApply) {
-                    sliders[key].value = stateToApply[key];
-                    inputs[key].value = stateToApply[key];
+                    if (key !== 'enabledTech') {
+                        sliders[key].value = stateToApply[key];
+                        inputs[key].value = stateToApply[key];
+                    }
                 }
+
+                if (stateToApply.enabledTech) {
+                    for (const tech in stateToApply.enabledTech) {
+                        const checkbox = document.getElementById(`toggle-${tech}`);
+                        if (checkbox) {
+                            checkbox.checked = stateToApply.enabledTech[tech];
+                            enabledTechnologies[tech] = stateToApply.enabledTech[tech];
+                        }
+                    }
+                }
+
                 runSimulation();
                 saveState();
             });
@@ -1222,8 +1239,19 @@
                     historyIndex--;
                     const prevState = stateHistory[historyIndex];
                     for (const key in prevState) {
-                        sliders[key].value = prevState[key];
-                        inputs[key].value = prevState[key];
+                        if (key !== 'enabledTech') {
+                            sliders[key].value = prevState[key];
+                            inputs[key].value = prevState[key];
+                        }
+                    }
+                    if (prevState.enabledTech) {
+                        for (const tech in prevState.enabledTech) {
+                            const checkbox = document.getElementById(`toggle-${tech}`);
+                            if (checkbox) {
+                                checkbox.checked = prevState.enabledTech[tech];
+                                enabledTechnologies[tech] = prevState.enabledTech[tech];
+                            }
+                        }
                     }
                     runSimulation();
                     updateUndoRedoButtons();
@@ -1235,8 +1263,19 @@
                     historyIndex++;
                     const nextState = stateHistory[historyIndex];
                     for (const key in nextState) {
-                        sliders[key].value = nextState[key];
-                        inputs[key].value = nextState[key];
+                        if (key !== 'enabledTech') {
+                            sliders[key].value = nextState[key];
+                            inputs[key].value = nextState[key];
+                        }
+                    }
+                    if (nextState.enabledTech) {
+                        for (const tech in nextState.enabledTech) {
+                            const checkbox = document.getElementById(`toggle-${tech}`);
+                            if (checkbox) {
+                                checkbox.checked = nextState.enabledTech[tech];
+                                enabledTechnologies[tech] = nextState.enabledTech[tech];
+                            }
+                        }
                     }
                     runSimulation();
                     updateUndoRedoButtons();
@@ -1338,9 +1377,9 @@
                 for (const key in sliders) {
                     systemDefaultState[key] = sliders[key].value;
                 }
+                systemDefaultState.enabledTech = { ...enabledTechnologies };
                 userDefaultState = {};
                 
-                // Calculate and store default mixes for outlines
                 let totalDefaultCapacity = 0;
                 for (const tech in COST_DATA.capacity_factor) {
                     const gen = activeBaseline[tech] ? activeBaseline[tech].reduce((a, b) => a + b, 0) : 0;
