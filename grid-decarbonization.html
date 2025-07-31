@@ -194,7 +194,7 @@
                         <canvas id="co2EmissionsChart"></canvas>
                     </div>
                      <div class="mt-8">
-                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Real-time Grid Mix (% Nameplate Capacity)</h2>
+                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Installed Capacity Mix (%)</h2>
                         <div id="grid-mix-sliders" class="space-y-3">
                             <!-- Sliders will be dynamically inserted here -->
                         </div>
@@ -222,7 +222,14 @@
                             </select>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
-                             <button id="undo-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors disabled:opacity-50" disabled>Undo</button>
+                             <div class="flex items-center justify-around">
+                                <button id="undo-button" class="p-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                </button>
+                                <button id="redo-button" class="p-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                                </button>
+                             </div>
                              <button id="make-default-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Make Default</button>
                              <button id="reset-to-default-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Reset to Default</button>
                              <button id="reset-to-zero-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Reset to Zero</button>
@@ -507,12 +514,14 @@
             const makeDefaultButton = document.getElementById('make-default-button');
             const resetToDefaultButton = document.getElementById('reset-to-default-button');
             const undoButton = document.getElementById('undo-button');
+            const redoButton = document.getElementById('redo-button');
             const gridMixSlidersContainer = document.getElementById('grid-mix-sliders');
             const countrySelect = document.getElementById('country-select');
             const visitorCountEl = document.getElementById('visitor-count');
 
             // --- STATE MANAGEMENT ---
             let stateHistory = [];
+            let historyIndex = -1;
             let userDefaultState = {};
             let systemDefaultState = {};
             let customBaselineSystemCost = 0;
@@ -950,13 +959,21 @@
 
 
             // --- EVENT LISTENERS ---
+            function updateUndoRedoButtons() {
+                undoButton.disabled = historyIndex <= 0;
+                redoButton.disabled = historyIndex >= stateHistory.length - 1;
+            }
+
             function saveState() {
                 const currentState = {};
                 for (const key in sliders) {
                     currentState[key] = sliders[key].value;
                 }
+                // If we've undone, slice off the future states before adding a new one
+                stateHistory = stateHistory.slice(0, historyIndex + 1);
                 stateHistory.push(currentState);
-                undoButton.disabled = stateHistory.length <= 1;
+                historyIndex++;
+                updateUndoRedoButtons();
             }
             
             function syncInputs(sourceElement, targetElement) {
@@ -1017,17 +1034,29 @@
                 saveState();
             });
 
-
             undoButton.addEventListener('click', () => {
-                if (stateHistory.length > 1) {
-                    stateHistory.pop();
-                    const prevState = stateHistory[stateHistory.length - 1];
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    const prevState = stateHistory[historyIndex];
                     for (const key in prevState) {
                         sliders[key].value = prevState[key];
                         inputs[key].value = prevState[key];
                     }
                     runSimulation();
-                    undoButton.disabled = stateHistory.length <= 1;
+                    updateUndoRedoButtons();
+                }
+            });
+
+            redoButton.addEventListener('click', () => {
+                if (historyIndex < stateHistory.length - 1) {
+                    historyIndex++;
+                    const nextState = stateHistory[historyIndex];
+                    for (const key in nextState) {
+                        sliders[key].value = nextState[key];
+                        inputs[key].value = nextState[key];
+                    }
+                    runSimulation();
+                    updateUndoRedoButtons();
                 }
             });
             
@@ -1051,7 +1080,7 @@
                 let newCarbonTax = 0;
                 if (countryName === 'default') {
                     BASELINE_GENERATION = JSON.parse(JSON.stringify(ORIGINAL_BASELINE_GENERATION));
-                    newCarbonTax = 31;
+                    newCarbonTax = 35;
                 } else {
                     const countryData = countryGridMixData[countryName];
                     if (!countryData) return;
@@ -1106,12 +1135,11 @@
                 customBaselineSystemCost = newBaselineResult.systemCost;
                 customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
                 
-                // Save the initial state as the system default
                 systemDefaultState = {};
                 for (const key in sliders) {
                     systemDefaultState[key] = sliders[key].value;
                 }
-                userDefaultState = {}; // Clear any previous user default
+                userDefaultState = {};
 
                 runSimulation();
                 saveState();
@@ -1152,7 +1180,7 @@
 
                 createGridMixSliders();
                 populateCountryDropdown();
-                updateBaselineForCountry('default'); // Initialize with California default
+                updateBaselineForCountry('default');
 
                 setupInputSyncing();
             }
