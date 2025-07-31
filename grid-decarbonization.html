@@ -971,9 +971,11 @@
                 let totalGeneration = 0;
 
                 for (const tech in generation) {
-                    const techTotal = generation[tech].reduce((a, b) => a + b, 0);
-                    totals[tech] = techTotal;
-                    totalGeneration += techTotal;
+                    if (tech !== 'curtailment') { // Exclude curtailment from total
+                        const techTotal = generation[tech].reduce((a, b) => a + b, 0);
+                        totals[tech] = techTotal;
+                        totalGeneration += techTotal;
+                    }
                 }
 
                 if (totalGeneration === 0) return;
