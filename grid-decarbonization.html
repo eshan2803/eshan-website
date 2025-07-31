@@ -200,10 +200,14 @@
                         </div>
                     </div>
                     <div class="mt-8">
-                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">24-Hour Generation Mix (%)</h2>
+                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Daily Generation Mix (%)</h2>
                         <div id="generation-mix-sliders" class="space-y-3">
                             <!-- New chart sliders will be dynamically inserted here -->
                         </div>
+                    </div>
+                    <div class="mt-8">
+                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly Capacity Factors</h2>
+                        <canvas id="capacityFactorChart"></canvas>
                     </div>
                 </div>
 
@@ -460,6 +464,24 @@
         let BASELINE_GENERATION = JSON.parse(JSON.stringify(ORIGINAL_BASELINE_GENERATION));
         const SOLAR_CF_PROFILE = [0,0,0,0,0,0.05,0.15,0.3,0.5,0.7,0.8,0.85,0.9,0.85,0.8,0.7,0.3,0.05,0,0,0,0,0,0];
         const WIND_CF_PROFILE = [0.4,0.42,0.45,0.46,0.45,0.4,0.35,0.3,0.25,0.2,0.2,0.2,0.25,0.3,0.35,0.4,0.5,0.6,0.65,0.6,0.55,0.5,0.45,0.4];
+        const countryProfiles = {
+            "Germany": {
+                solar: [0,0,0,0,0,0.02,0.1,0.25,0.45,0.6,0.7,0.75,0.7,0.6,0.4,0.15,0.05,0,0,0,0,0,0,0],
+                wind: [0.5,0.52,0.55,0.56,0.55,0.5,0.45,0.4,0.35,0.3,0.3,0.3,0.35,0.4,0.45,0.5,0.6,0.7,0.75,0.7,0.65,0.6,0.55,0.5]
+            },
+            "United Kingdom": {
+                solar: [0,0,0,0,0,0.01,0.08,0.2,0.4,0.55,0.65,0.7,0.65,0.55,0.35,0.1,0.02,0,0,0,0,0,0,0],
+                wind: [0.6,0.62,0.65,0.68,0.66,0.6,0.55,0.5,0.45,0.4,0.4,0.4,0.45,0.5,0.55,0.6,0.7,0.8,0.85,0.8,0.75,0.7,0.65,0.6]
+            },
+            "Australia": {
+                solar: [0,0,0,0,0,0.08,0.2,0.4,0.6,0.8,0.9,0.95,0.9,0.8,0.6,0.3,0.1,0,0,0,0,0,0,0],
+                wind: [0.3,0.3,0.3,0.25,0.2,0.2,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.45,0.4,0.35,0.3,0.3,0.3,0.35,0.4,0.4,0.35,0.3]
+            },
+            "default": {
+                solar: SOLAR_CF_PROFILE,
+                wind: WIND_CF_PROFILE
+            }
+        };
         const EMISSION_FACTORS = { naturalGas: 395, hydro: 0, nuclear: 0, solar: 0, wind: 0, geothermal: 0, coal: 850 };
         
         const COST_DATA = {
@@ -544,6 +566,7 @@
             // --- CHARTING SETUP ---
             const generationCtx = document.getElementById('generationMixChart').getContext('2d');
             const co2Ctx = document.getElementById('co2EmissionsChart').getContext('2d');
+            const capacityFactorCtx = document.getElementById('capacityFactorChart').getContext('2d');
             
             const COLORS = {
                 naturalGas: 'rgba(107, 114, 128, 0.8)', hydro: 'rgba(59, 130, 246, 0.8)', 
@@ -623,9 +646,28 @@
                     }
                 }
             };
+            const capacityFactorChartConfig = {
+                type: 'line',
+                data: {
+                    labels: HOURS,
+                    datasets: [
+                        { label: 'Solar', data: [], borderColor: COLORS.solar, borderWidth: 3, pointRadius: 0, fill: false },
+                        { label: 'Wind', data: [], borderColor: COLORS.wind, borderWidth: 3, pointRadius: 0, fill: false }
+                    ]
+                },
+                options: {
+                    responsive: true, animation: { duration: 0 },
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: {
+                        x: { title: { display: true, text: 'Hour of Day' } },
+                        y: { title: { display: true, text: 'Capacity Factor (%)' }, min: 0, max: 1, ticks: { callback: value => `${value * 100}%` } }
+                    }
+                }
+            };
 
             const generationChart = new Chart(generationCtx, generationChartConfig);
             const co2Chart = new Chart(co2Ctx, co2ChartConfig);
+            const capacityFactorChart = new Chart(capacityFactorCtx, capacityFactorChartConfig);
 
 
             // --- COST CALCULATION ---
@@ -702,7 +744,7 @@
                 return totalAnnualCost;
             }
 
-            function getSimulationResult(inputs) {
+            function getSimulationResult(inputs, solarProfile, windProfile) {
                 let modifiedDemand = [...BASE_DEMAND_GWH];
                 if (inputs.capacity.demandflex > 0) {
                     const peak = Math.max(...modifiedDemand);
@@ -727,8 +769,8 @@
                 };
 
                 for (let i = 0; i < 24; i++) {
-                    newGeneration.solar[i] += inputs.capacity.solar * SOLAR_CF_PROFILE[i];
-                    newGeneration.wind[i] += inputs.capacity.wind * WIND_CF_PROFILE[i];
+                    newGeneration.solar[i] += inputs.capacity.solar * solarProfile[i];
+                    newGeneration.wind[i] += inputs.capacity.wind * windProfile[i];
                     newGeneration.nuclear[i] += inputs.capacity.nuclear * 0.9;
                     newGeneration.geothermal[i] += inputs.capacity.geothermal * 0.9;
                 }
@@ -810,23 +852,31 @@
                 for (const key in sliders) {
                     currentValues[key] = parseFloat(sliders[key].value);
                 }
+                
+                const selectedCountry = countrySelect.value;
+                const solarProfile = countryProfiles[selectedCountry]?.solar || SOLAR_CF_PROFILE;
+                const windProfile = countryProfiles[selectedCountry]?.wind || WIND_CF_PROFILE;
 
-                const result = getSimulationResult({
-                    capacity: {
-                        solar: currentValues.solar, wind: currentValues.wind,
-                        geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
-                        battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
-                        longduration: currentValues.longduration, dac: currentValues.dac,
-                        demandflex: currentValues.demandflex,
+                const result = getSimulationResult(
+                    {
+                        capacity: {
+                            solar: currentValues.solar, wind: currentValues.wind,
+                            geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
+                            battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
+                            longduration: currentValues.longduration, dac: currentValues.dac,
+                            demandflex: currentValues.demandflex,
+                        },
+                        incentives: {
+                            solar: currentValues.solarIncentive, wind: currentValues.windIncentive,
+                            geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
+                            storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
+                            carbonTax: currentValues.carbonTax,
+                            exportPrice: currentValues.exportPrice,
+                        }
                     },
-                    incentives: {
-                        solar: currentValues.solarIncentive, wind: currentValues.windIncentive,
-                        geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
-                        storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
-                        carbonTax: currentValues.carbonTax,
-                        exportPrice: currentValues.exportPrice,
-                    }
-                });
+                    solarProfile,
+                    windProfile
+                );
                 const totalDailyCO2 = result.emissions.reduce((a, b) => a + b, 0);
                 
                 const totalAnnualDemandMWh = result.demand.reduce((a,b) => a+b, 0) * 1000 * 365;
@@ -846,7 +896,7 @@
                     greenPremium = costDifference / co2Avoided;
                 }
 
-                updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2);
+                updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, solarProfile, windProfile);
                 updateGridMixSlider();
                 updateGenerationMixSlider(result.generation);
                 billImpactEl.textContent = `${costPercentageChange.toFixed(0)}%`;
@@ -885,7 +935,7 @@
                 return co2;
             }
 
-            function updateCharts(generation, emissions, demand, totalCO2) {
+            function updateCharts(generation, emissions, demand, totalCO2, solarProfile, windProfile) {
                 const chartData = generationChart.data.datasets;
                 chartData[0].data = generation.coal;
                 chartData[1].data = generation.naturalGas;
@@ -902,6 +952,10 @@
                 co2Chart.data.datasets[0].data = emissions;
                 co2Chart.options.plugins.annotation.annotations.totalCO2.content = `Total Daily CO2: ${Math.round(totalCO2).toLocaleString()} tons`;
                 co2Chart.update('none');
+
+                capacityFactorChart.data.datasets[0].data = solarProfile;
+                capacityFactorChart.data.datasets[1].data = windProfile;
+                capacityFactorChart.update('none');
             }
 
             // --- GRID MIX SLIDER ---
@@ -977,7 +1031,7 @@
                 let totalGeneration = 0;
 
                 for (const tech in generation) {
-                    if (tech !== 'curtailment') { // Exclude curtailment from total
+                    if (tech !== 'curtailment') {
                         const techTotal = generation[tech].reduce((a, b) => a + b, 0);
                         totals[tech] = techTotal;
                         totalGeneration += techTotal;
@@ -1164,15 +1218,18 @@
 
                     const newBaseline = {};
                     let totalDailyGeneration = 0;
+                    
+                    const solarProfile = countryProfiles[countryName]?.solar || SOLAR_CF_PROFILE;
+                    const windProfile = countryProfiles[countryName]?.wind || WIND_CF_PROFILE;
 
                     for(const tech in COST_DATA.capacity_factor) {
                         const techCapacityGW = (countryData.totalCapacityMW / 1000) * ((countryData.mix[tech] || 0) / 100);
                         newBaseline[tech] = Array(24).fill(0);
 
                         if (tech === 'solar') {
-                            for (let i = 0; i < 24; i++) newBaseline.solar[i] = techCapacityGW * SOLAR_CF_PROFILE[i];
+                            for (let i = 0; i < 24; i++) newBaseline.solar[i] = techCapacityGW * solarProfile[i];
                         } else if (tech === 'wind') {
-                            for (let i = 0; i < 24; i++) newBaseline.wind[i] = techCapacityGW * WIND_CF_PROFILE[i];
+                            for (let i = 0; i < 24; i++) newBaseline.wind[i] = techCapacityGW * windProfile[i];
                         } else {
                              for (let i = 0; i < 24; i++) newBaseline[tech][i] = techCapacityGW * COST_DATA.capacity_factor[tech];
                         }
@@ -1203,10 +1260,14 @@
                 sliders.carbonTax.value = newCarbonTax;
                 inputs.carbonTax.value = newCarbonTax;
                 
-                const newBaselineResult = getSimulationResult({
-                    capacity: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
-                    incentives: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, storage: 0, dac: 0, carbonTax: newCarbonTax, exportPrice: 20 }
-                });
+                const newBaselineResult = getSimulationResult(
+                    {
+                        capacity: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
+                        incentives: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, storage: 0, dac: 0, carbonTax: newCarbonTax, exportPrice: 20 }
+                    },
+                    countryProfiles[countryName]?.solar || SOLAR_CF_PROFILE,
+                    countryProfiles[countryName]?.wind || WIND_CF_PROFILE
+                );
                 customBaselineSystemCost = newBaselineResult.systemCost;
                 customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
                 
