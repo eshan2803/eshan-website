@@ -88,11 +88,22 @@
             height: 0.75rem;
             width: 100%;
             overflow: hidden;
+            position: relative;
         }
         .mix-slider-fill {
             height: 100%;
             border-radius: 9999px;
             transition: width 0.2s ease-in-out;
+        }
+        .mix-slider-default-outline {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            border: 1px solid black;
+            border-radius: 9999px;
+            box-sizing: border-box;
+            background: transparent;
         }
         .value-input {
             width: 6rem; /* Adjust width as needed */
@@ -561,6 +572,7 @@
             let systemDefaultState = {};
             let customBaselineSystemCost = 0;
             let customBaselineTotalAnnualCO2 = 0;
+            let enabledTechnologies = {};
 
 
             // --- CHARTING SETUP ---
@@ -671,7 +683,7 @@
 
 
             // --- COST CALCULATION ---
-            function calculateTotalAnnualSystemCost(generation, capacity, incentives, curtailedEnergy) {
+            function calculateTotalAnnualSystemCost(generation, capacity, incentives, curtailedEnergy, activeBaseline) {
                 let totalAnnualCost = 0;
                 const d = COST_DATA.discount_rate;
 
@@ -681,7 +693,7 @@
                     const n = techData.lifetime[tech];
                     const crf = (d * Math.pow(1 + d, n)) / (Math.pow(1 + d, n) - 1);
                     
-                    const baselineCapacityGW = BASELINE_GENERATION[tech] ? (BASELINE_GENERATION[tech].reduce((a, b) => a + b, 0) * 1000) / (techData.capacity_factor[tech] * 8760) / 1000000 : 0;
+                    const baselineCapacityGW = activeBaseline[tech] ? (activeBaseline[tech].reduce((a, b) => a + b, 0) * 1000) / (techData.capacity_factor[tech] * 8760) / 1000000 : 0;
                     const newCapacityGW = capacity[tech] || 0;
                     const totalCapacityKW = (baselineCapacityGW + newCapacityGW) * 1000000;
 
@@ -744,7 +756,7 @@
                 return totalAnnualCost;
             }
 
-            function getSimulationResult(inputs, solarProfile, windProfile) {
+            function getSimulationResult(inputs, solarProfile, windProfile, activeBaseline) {
                 let modifiedDemand = [...BASE_DEMAND_GWH];
                 if (inputs.capacity.demandflex > 0) {
                     const peak = Math.max(...modifiedDemand);
@@ -759,11 +771,11 @@
                 let newGeneration = {
                     coal: Array(24).fill(0),
                     naturalGas: Array(24).fill(0),
-                    hydro: [...BASELINE_GENERATION.hydro], 
-                    nuclear: JSON.parse(JSON.stringify(BASELINE_GENERATION.nuclear)), 
-                    solar: JSON.parse(JSON.stringify(BASELINE_GENERATION.solar)), 
-                    wind: JSON.parse(JSON.stringify(BASELINE_GENERATION.wind)),
-                    geothermal: JSON.parse(JSON.stringify(BASELINE_GENERATION.geothermal)),
+                    hydro: [...activeBaseline.hydro], 
+                    nuclear: [...activeBaseline.nuclear], 
+                    solar: [...activeBaseline.solar], 
+                    wind: [...activeBaseline.wind],
+                    geothermal: [...activeBaseline.geothermal],
                     storage: Array(24).fill(0),
                     curtailment: Array(24).fill(0)
                 };
@@ -812,7 +824,7 @@
                         }
                         
                         if (netLoad > 0) {
-                            const avgHourlyCoalGen = BASELINE_GENERATION.coal.reduce((a, b) => a + b, 0) / 24;
+                            const avgHourlyCoalGen = activeBaseline.coal.reduce((a, b) => a + b, 0) / 24;
                             const coalCapacity = avgHourlyCoalGen / COST_DATA.capacity_factor.coal;
                             const coalToDispatch = Math.min(netLoad, coalCapacity);
                             hourlyCoal[i] = coalToDispatch;
@@ -836,7 +848,7 @@
                 newGeneration.curtailment = secondPassResult.curtailment;
                 
                 const newEmissions = calculateEmissions(newGeneration, inputs.capacity.dac);
-                const newSystemCost = calculateTotalAnnualSystemCost(newGeneration, inputs.capacity, inputs.incentives, newGeneration.curtailment);
+                const newSystemCost = calculateTotalAnnualSystemCost(newGeneration, inputs.capacity, inputs.incentives, newGeneration.curtailment, activeBaseline);
                 
                 return {
                     generation: newGeneration,
@@ -857,6 +869,13 @@
                 const solarProfile = countryProfiles[selectedCountry]?.solar || SOLAR_CF_PROFILE;
                 const windProfile = countryProfiles[selectedCountry]?.wind || WIND_CF_PROFILE;
 
+                let activeBaselineGeneration = JSON.parse(JSON.stringify(BASELINE_GENERATION));
+                for (const tech in enabledTechnologies) {
+                    if (!enabledTechnologies[tech]) {
+                        activeBaselineGeneration[tech] = Array(24).fill(0);
+                    }
+                }
+
                 const result = getSimulationResult(
                     {
                         capacity: {
@@ -875,7 +894,8 @@
                         }
                     },
                     solarProfile,
-                    windProfile
+                    windProfile,
+                    activeBaselineGeneration
                 );
                 const totalDailyCO2 = result.emissions.reduce((a, b) => a + b, 0);
                 
@@ -897,7 +917,7 @@
                 }
 
                 updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, solarProfile, windProfile);
-                updateGridMixSlider();
+                updateGridMixSlider(activeBaselineGeneration);
                 updateGenerationMixSlider(result.generation);
                 billImpactEl.textContent = `${costPercentageChange.toFixed(0)}%`;
                 if (co2Avoided > 0) {
@@ -959,12 +979,12 @@
             }
 
             // --- GRID MIX SLIDER ---
-            function updateGridMixSlider() {
+            function updateGridMixSlider(activeBaseline) {
                 const capacities = {};
                 let totalCapacity = 0;
 
                 for (const tech in COST_DATA.capacity_factor) {
-                    const baselineGen = BASELINE_GENERATION[tech] ? BASELINE_GENERATION[tech].reduce((a, b) => a + b, 0) : 0;
+                    const baselineGen = activeBaseline[tech] ? activeBaseline[tech].reduce((a, b) => a + b, 0) : 0;
                     const baselineCapacity = (baselineGen / (COST_DATA.capacity_factor[tech] * 24));
                     
                     let newCapacity = 0;
@@ -996,7 +1016,21 @@
                     const color = COLORS[tech] || '#ccc';
 
                     const wrapper = document.createElement('div');
-                    wrapper.className = 'grid grid-cols-5 gap-2 items-center';
+                    wrapper.className = 'grid grid-cols-6 gap-2 items-center';
+
+                    const checkboxContainer = document.createElement('div');
+                    checkboxContainer.className = "flex items-center justify-center";
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `toggle-${tech}`;
+                    checkbox.checked = true;
+                    checkbox.className = "form-checkbox h-5 w-5 text-blue-600 rounded";
+                    checkbox.addEventListener('change', () => {
+                        enabledTechnologies[tech] = checkbox.checked;
+                        runSimulation();
+                    });
+                    checkboxContainer.appendChild(checkbox);
+                    wrapper.appendChild(checkboxContainer);
 
                     const label = document.createElement('label');
                     label.textContent = name;
@@ -1260,13 +1294,22 @@
                 sliders.carbonTax.value = newCarbonTax;
                 inputs.carbonTax.value = newCarbonTax;
                 
+                let activeBaseline = JSON.parse(JSON.stringify(BASELINE_GENERATION));
+                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'nuclear', 'geothermal'];
+                techOrder.forEach(tech => {
+                    const checkbox = document.getElementById(`toggle-${tech}`);
+                    checkbox.checked = true;
+                    enabledTechnologies[tech] = true;
+                });
+
                 const newBaselineResult = getSimulationResult(
                     {
                         capacity: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
                         incentives: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, storage: 0, dac: 0, carbonTax: newCarbonTax, exportPrice: 20 }
                     },
                     countryProfiles[countryName]?.solar || SOLAR_CF_PROFILE,
-                    countryProfiles[countryName]?.wind || WIND_CF_PROFILE
+                    countryProfiles[countryName]?.wind || WIND_CF_PROFILE,
+                    activeBaseline
                 );
                 customBaselineSystemCost = newBaselineResult.systemCost;
                 customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
