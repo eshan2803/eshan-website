@@ -573,6 +573,8 @@
             let customBaselineSystemCost = 0;
             let customBaselineTotalAnnualCO2 = 0;
             let enabledTechnologies = {};
+            let defaultCapacityMix = {};
+            let defaultGenerationMix = {};
 
 
             // --- CHARTING SETUP ---
@@ -917,8 +919,8 @@
                 }
 
                 updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, solarProfile, windProfile);
-                updateGridMixSlider(activeBaselineGeneration);
-                updateGenerationMixSlider(result.generation);
+                updateGridMixSlider(activeBaselineGeneration, defaultCapacityMix);
+                updateGenerationMixSlider(result.generation, defaultGenerationMix);
                 billImpactEl.textContent = `${costPercentageChange.toFixed(0)}%`;
                 if (co2Avoided > 0) {
                     greenPremiumEl.textContent = `$${greenPremium.toFixed(0)}`;
@@ -979,7 +981,7 @@
             }
 
             // --- GRID MIX SLIDER ---
-            function updateGridMixSlider(activeBaseline) {
+            function updateGridMixSlider(activeBaseline, defaultMix) {
                 const capacities = {};
                 let totalCapacity = 0;
 
@@ -1002,9 +1004,14 @@
                     const percentage = (capacities[tech] / totalCapacity) * 100;
                     const fillEl = document.getElementById(`mix-fill-${tech}`);
                     const valueEl = document.getElementById(`mix-value-${tech}`);
+                    const outlineEl = document.getElementById(`mix-default-outline-${tech}`);
+                    
                     if (fillEl && valueEl) {
                         fillEl.style.width = `${percentage}%`;
                         valueEl.textContent = `${percentage.toFixed(1)}%`;
+                    }
+                    if (outlineEl && defaultMix[tech] !== undefined) {
+                        outlineEl.style.width = `${defaultMix[tech]}%`;
                     }
                 }
             }
@@ -1045,7 +1052,11 @@
                     fill.id = `mix-fill-${tech}`;
                     fill.className = 'mix-slider-fill';
                     fill.style.backgroundColor = color;
+                    const outline = document.createElement('div');
+                    outline.id = `mix-default-outline-${tech}`;
+                    outline.className = 'mix-slider-default-outline';
                     track.appendChild(fill);
+                    track.appendChild(outline);
                     sliderContainer.appendChild(track);
                     wrapper.appendChild(sliderContainer);
 
@@ -1060,7 +1071,7 @@
             }
 
             // --- GENERATION MIX SLIDER ---
-            function updateGenerationMixSlider(generation) {
+            function updateGenerationMixSlider(generation, defaultMix) {
                 const totals = {};
                 let totalGeneration = 0;
 
@@ -1079,9 +1090,14 @@
                     const percentage = (totals[tech] / totalGeneration) * 100;
                     const fillEl = document.getElementById(`gen-mix-fill-${tech}`);
                     const valueEl = document.getElementById(`gen-mix-value-${tech}`);
+                    const outlineEl = document.getElementById(`gen-mix-default-outline-${tech}`);
+
                     if (fillEl && valueEl) {
                         fillEl.style.width = `${percentage}%`;
                         valueEl.textContent = `${percentage.toFixed(1)}%`;
+                    }
+                    if (outlineEl && defaultMix[tech] !== undefined) {
+                        outlineEl.style.width = `${defaultMix[tech]}%`;
                     }
                 });
             }
@@ -1108,7 +1124,11 @@
                     fill.id = `gen-mix-fill-${tech}`;
                     fill.className = 'mix-slider-fill';
                     fill.style.backgroundColor = color;
+                    const outline = document.createElement('div');
+                    outline.id = `gen-mix-default-outline-${tech}`;
+                    outline.className = 'mix-slider-default-outline';
                     track.appendChild(fill);
+                    track.appendChild(outline);
                     sliderContainer.appendChild(track);
                     wrapper.appendChild(sliderContainer);
 
@@ -1319,6 +1339,31 @@
                     systemDefaultState[key] = sliders[key].value;
                 }
                 userDefaultState = {};
+                
+                // Calculate and store default mixes for outlines
+                let totalDefaultCapacity = 0;
+                for (const tech in COST_DATA.capacity_factor) {
+                    const gen = activeBaseline[tech] ? activeBaseline[tech].reduce((a, b) => a + b, 0) : 0;
+                    const cap = gen / (COST_DATA.capacity_factor[tech] * 24);
+                    defaultCapacityMix[tech] = cap;
+                    totalDefaultCapacity += cap;
+                }
+                for (const tech in defaultCapacityMix) {
+                    defaultCapacityMix[tech] = (defaultCapacityMix[tech] / totalDefaultCapacity) * 100;
+                }
+
+                let totalDefaultGeneration = 0;
+                for (const tech in newBaselineResult.generation) {
+                    if (tech !== 'curtailment') {
+                        const gen = newBaselineResult.generation[tech].reduce((a, b) => a + b, 0);
+                        defaultGenerationMix[tech] = gen;
+                        totalDefaultGeneration += gen;
+                    }
+                }
+                 for (const tech in defaultGenerationMix) {
+                    defaultGenerationMix[tech] = (defaultGenerationMix[tech] / totalDefaultGeneration) * 100;
+                }
+
 
                 runSimulation();
                 saveState();
