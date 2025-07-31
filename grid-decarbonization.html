@@ -199,6 +199,12 @@
                             <!-- Sliders will be dynamically inserted here -->
                         </div>
                     </div>
+                    <div class="mt-8">
+                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">24-Hour Generation Mix (%)</h2>
+                        <div id="generation-mix-sliders" class="space-y-3">
+                            <!-- New chart sliders will be dynamically inserted here -->
+                        </div>
+                    </div>
                 </div>
 
                 <div class="glass-card">
@@ -381,13 +387,13 @@
                                 <input type="range" id="dac-slider" min="0" max="10000" value="0" class="w-full form-input thumb-neutral">
                                 <input type="number" id="dac-input" min="0" max="10000" value="0" class="value-input">
                                 <span class="font-semibold text-gray-900 w-12 text-left" id="dac-unit">t/hr</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </main>
                 </div>
-            </main>
-        </div>
-    </div>
+            </div>
     
     <script type="module">
         // --- FIREBASE IMPORTS ---
@@ -516,6 +522,7 @@
             const undoButton = document.getElementById('undo-button');
             const redoButton = document.getElementById('redo-button');
             const gridMixSlidersContainer = document.getElementById('grid-mix-sliders');
+            const generationMixSlidersContainer = document.getElementById('generation-mix-sliders');
             const countrySelect = document.getElementById('country-select');
             const visitorCountEl = document.getElementById('visitor-count');
 
@@ -835,6 +842,7 @@
 
                 updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2);
                 updateGridMixSlider();
+                updateGenerationMixSlider(result.generation);
                 billImpactEl.textContent = `${costPercentageChange.toFixed(0)}%`;
                 if (co2Avoided > 0) {
                     greenPremiumEl.textContent = `$${greenPremium.toFixed(0)}`;
@@ -920,7 +928,7 @@
                     }
                 }
             }
-
+            
             function createGridMixSliders() {
                 const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'nuclear', 'geothermal'];
                 techOrder.forEach(tech => {
@@ -957,6 +965,66 @@
                 });
             }
 
+            // --- GENERATION MIX SLIDER ---
+            function updateGenerationMixSlider(generation) {
+                const totals = {};
+                let totalGeneration = 0;
+
+                for (const tech in generation) {
+                    const techTotal = generation[tech].reduce((a, b) => a + b, 0);
+                    totals[tech] = techTotal;
+                    totalGeneration += techTotal;
+                }
+
+                if (totalGeneration === 0) return;
+
+                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'nuclear', 'geothermal', 'storage'];
+                techOrder.forEach(tech => {
+                    const percentage = (totals[tech] / totalGeneration) * 100;
+                    const fillEl = document.getElementById(`gen-mix-fill-${tech}`);
+                    const valueEl = document.getElementById(`gen-mix-value-${tech}`);
+                    if (fillEl && valueEl) {
+                        fillEl.style.width = `${percentage}%`;
+                        valueEl.textContent = `${percentage.toFixed(1)}%`;
+                    }
+                });
+            }
+
+            function createGenerationMixSliders() {
+                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'nuclear', 'geothermal', 'storage'];
+                techOrder.forEach(tech => {
+                    const name = tech.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                    const color = COLORS[tech] || '#ccc';
+
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'grid grid-cols-5 gap-2 items-center';
+
+                    const label = document.createElement('label');
+                    label.textContent = name;
+                    label.className = 'col-span-1 text-sm font-medium text-gray-700';
+                    wrapper.appendChild(label);
+
+                    const sliderContainer = document.createElement('div');
+                    sliderContainer.className = 'col-span-3';
+                    const track = document.createElement('div');
+                    track.className = 'mix-slider-track';
+                    const fill = document.createElement('div');
+                    fill.id = `gen-mix-fill-${tech}`;
+                    fill.className = 'mix-slider-fill';
+                    fill.style.backgroundColor = color;
+                    track.appendChild(fill);
+                    sliderContainer.appendChild(track);
+                    wrapper.appendChild(sliderContainer);
+
+                    const value = document.createElement('span');
+                    value.id = `gen-mix-value-${tech}`;
+                    value.className = 'col-span-1 text-sm font-semibold text-right';
+                    value.textContent = '0.0%';
+                    wrapper.appendChild(value);
+
+                    generationMixSlidersContainer.appendChild(wrapper);
+                });
+            }
 
             // --- EVENT LISTENERS ---
             function updateUndoRedoButtons() {
@@ -969,7 +1037,6 @@
                 for (const key in sliders) {
                     currentState[key] = sliders[key].value;
                 }
-                // If we've undone, slice off the future states before adding a new one
                 stateHistory = stateHistory.slice(0, historyIndex + 1);
                 stateHistory.push(currentState);
                 historyIndex++;
@@ -1017,7 +1084,7 @@
             });
             
             makeDefaultButton.addEventListener('click', () => {
-                userDefaultState = {}; // Reset before saving new state
+                userDefaultState = {};
                 for (const key in sliders) {
                     userDefaultState[key] = sliders[key].value;
                 }
@@ -1179,6 +1246,7 @@
                 }
 
                 createGridMixSliders();
+                createGenerationMixSliders();
                 populateCountryDropdown();
                 updateBaselineForCountry('default');
 
