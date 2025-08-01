@@ -804,31 +804,33 @@
                     modifiedDemand[troughIndex] += amountToShift;
                 }
 
-                let newGeneration = {
+                let potentialGeneration = {
                     coal: Array(24).fill(0),
                     naturalGas: Array(24).fill(0),
                     hydro: [...activeBaseline.hydro], 
                     nuclear: [...activeBaseline.nuclear], 
                     solar: [...activeBaseline.solar], 
                     wind: [...activeBaseline.wind],
-                    geothermal: [...activeBaseline.geothermal],
-                    storage: Array(24).fill(0),
-                    curtailment: Array(24).fill(0)
+                    geothermal: [...activeBaseline.geothermal]
                 };
 
                 for (let i = 0; i < 24; i++) {
-                    newGeneration.solar[i] += inputs.capacity.solar * solarProfile[i];
-                    newGeneration.wind[i] += inputs.capacity.wind * windProfile[i];
-                    newGeneration.nuclear[i] += inputs.capacity.nuclear * 0.9;
-                    newGeneration.geothermal[i] += inputs.capacity.geothermal * 0.9;
+                    potentialGeneration.solar[i] += inputs.capacity.solar * solarProfile[i];
+                    potentialGeneration.wind[i] += inputs.capacity.wind * windProfile[i];
+                    potentialGeneration.nuclear[i] += inputs.capacity.nuclear * 0.9;
+                    potentialGeneration.geothermal[i] += inputs.capacity.geothermal * 0.9;
                 }
                 
-                const runDispatch = (initialStorageLevels) => {
+                const runDispatch = (initialStorageLevels, potentialGen) => {
                     let storageLevels = JSON.parse(JSON.stringify(initialStorageLevels));
                     let hourlyDischarge = Array(24).fill(0);
                     let hourlyNaturalGas = Array(24).fill(0);
                     let hourlyCoal = Array(24).fill(0);
                     let hourlyCurtailment = Array(24).fill(0);
+                    let hourlyCurtailmentBySource = {
+                        solar: Array(24).fill(0),
+                        wind: Array(24).fill(0),
+                    };
 
                     const storageCapacities = {
                         battery4hr: inputs.capacity.battery4hr, battery8hr: inputs.capacity.battery8hr, longduration: inputs.capacity.longduration
@@ -839,7 +841,7 @@
                     const storageEfficiency = 0.85;
 
                     for (let i = 0; i < 24; i++) {
-                        const cleanGen = newGeneration.hydro[i] + newGeneration.nuclear[i] + newGeneration.solar[i] + newGeneration.wind[i] + newGeneration.geothermal[i];
+                        const cleanGen = potentialGen.hydro[i] + potentialGen.nuclear[i] + potentialGen.solar[i] + potentialGen.wind[i] + potentialGen.geothermal[i];
                         let netLoad = modifiedDemand[i] - cleanGen;
 
                         if (netLoad < 0) {
@@ -850,6 +852,15 @@
                                 excessGen -= chargeAmount;
                             }
                             hourlyCurtailment[i] = excessGen;
+
+                            if (hourlyCurtailment[i] > 0) {
+                                const potentialVRE = potentialGen.solar[i] + potentialGen.wind[i];
+                                if (potentialVRE > 0) {
+                                    const solarShare = potentialGen.solar[i] / potentialVRE;
+                                    hourlyCurtailmentBySource.solar[i] = hourlyCurtailment[i] * solarShare;
+                                    hourlyCurtailmentBySource.wind[i] = hourlyCurtailment[i] * (1 - solarShare);
+                                }
+                            }
                         } else if (netLoad > 0) {
                             for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
                                 const dischargeAmount = Math.min(netLoad, storageLevels[type], storageDischargeRates[type]);
@@ -861,7 +872,7 @@
                         
                         if (netLoad > 0) {
                             const avgHourlyCoalGen = activeBaseline.coal.reduce((a, b) => a + b, 0) / 24;
-                            const coalCapacity = avgHourlyCoalGen / COST_DATA.capacity_factor.coal;
+                            const coalCapacity = avgHourlyCoalGen > 0 ? avgHourlyCoalGen / COST_DATA.capacity_factor.coal : 0;
                             const coalToDispatch = Math.min(netLoad, coalCapacity);
                             hourlyCoal[i] = coalToDispatch;
                             netLoad -= coalToDispatch;
@@ -871,26 +882,40 @@
                             hourlyNaturalGas[i] = netLoad;
                         }
                     }
-                    return { finalLevels: storageLevels, discharge: hourlyDischarge, gas: hourlyNaturalGas, coal: hourlyCoal, curtailment: hourlyCurtailment };
+                    return { finalLevels: storageLevels, discharge: hourlyDischarge, gas: hourlyNaturalGas, coal: hourlyCoal, curtailment: hourlyCurtailment, curtailmentBySource: hourlyCurtailmentBySource };
                 };
 
                 const emptyInitialState = { battery4hr: 0, battery8hr: 0, longduration: 0 };
-                const firstPassResult = runDispatch(emptyInitialState);
-                const secondPassResult = runDispatch(firstPassResult.finalLevels);
+                const potentialGenForDispatch = JSON.parse(JSON.stringify(potentialGeneration));
+                const firstPassResult = runDispatch(emptyInitialState, potentialGenForDispatch);
+                const secondPassResult = runDispatch(firstPassResult.finalLevels, potentialGenForDispatch);
 
-                newGeneration.storage = secondPassResult.discharge;
-                newGeneration.naturalGas = secondPassResult.gas;
-                newGeneration.coal = secondPassResult.coal;
-                newGeneration.curtailment = secondPassResult.curtailment;
+                let finalGeneration = {
+                    coal: secondPassResult.coal,
+                    naturalGas: secondPassResult.gas,
+                    storage: secondPassResult.discharge,
+                    curtailment: secondPassResult.curtailment,
+                    hydro: [...potentialGeneration.hydro],
+                    nuclear: [...potentialGeneration.nuclear],
+                    geothermal: [...potentialGeneration.geothermal],
+                    solar: [...potentialGeneration.solar],
+                    wind: [...potentialGeneration.wind],
+                };
+
+                for (let i = 0; i < 24; i++) {
+                    finalGeneration.solar[i] -= secondPassResult.curtailmentBySource.solar[i];
+                    finalGeneration.wind[i] -= secondPassResult.curtailmentBySource.wind[i];
+                }
                 
-                const newEmissions = calculateEmissions(newGeneration, inputs.capacity.dac);
-                const newSystemCost = calculateTotalAnnualSystemCost(newGeneration, inputs.capacity, inputs.incentives, newGeneration.curtailment, activeBaseline);
+                const newEmissions = calculateEmissions(finalGeneration, inputs.capacity.dac);
+                const newSystemCost = calculateTotalAnnualSystemCost(finalGeneration, inputs.capacity, inputs.incentives, finalGeneration.curtailment, activeBaseline);
                 
                 return {
-                    generation: newGeneration,
+                    generation: finalGeneration,
                     emissions: newEmissions,
                     systemCost: newSystemCost,
-                    demand: modifiedDemand
+                    demand: modifiedDemand,
+                    curtailmentBySource: secondPassResult.curtailmentBySource
                 };
             }
 
@@ -954,7 +979,7 @@
 
                 updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, solarProfile, windProfile);
                 updateGridMixSlider(activeBaselineGeneration, defaultCapacityMix);
-                updateGenerationMixSlider(result.generation, defaultGenerationMix);
+                updateGenerationMixSlider(result.generation, defaultGenerationMix, result.curtailmentBySource);
                 billImpactEl.textContent = `${costPercentageChange.toFixed(0)}%`;
                 if (co2Avoided > 0) {
                     greenPremiumEl.textContent = `$${greenPremium.toFixed(0)}`;
@@ -1106,7 +1131,7 @@
             }
 
             // --- GENERATION MIX SLIDER ---
-            function updateGenerationMixSlider(generation, defaultMix) {
+            function updateGenerationMixSlider(generation, defaultMix, curtailmentBySource) {
                 const totals = {};
                 let totalGeneration = 0;
 
@@ -1118,23 +1143,67 @@
                     }
                 }
 
-                if (totalGeneration === 0) return;
+                if (totalGeneration > 0) {
+                    const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'nuclear', 'geothermal', 'storage'];
+                    techOrder.forEach(tech => {
+                        const percentage = (totals[tech] / totalGeneration) * 100;
+                        const fillEl = document.getElementById(`gen-mix-fill-${tech}`);
+                        const valueEl = document.getElementById(`gen-mix-value-${tech}`);
+                        const outlineEl = document.getElementById(`gen-mix-default-outline-${tech}`);
 
-                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'nuclear', 'geothermal', 'storage'];
-                techOrder.forEach(tech => {
-                    const percentage = (totals[tech] / totalGeneration) * 100;
-                    const fillEl = document.getElementById(`gen-mix-fill-${tech}`);
-                    const valueEl = document.getElementById(`gen-mix-value-${tech}`);
-                    const outlineEl = document.getElementById(`gen-mix-default-outline-${tech}`);
+                        if (fillEl && valueEl) {
+                            fillEl.style.width = `${percentage}%`;
+                            valueEl.textContent = `${percentage.toFixed(1)}%`;
+                        }
+                        if (outlineEl && defaultMix[tech] !== undefined) {
+                            outlineEl.style.width = `${defaultMix[tech]}%`;
+                        }
+                    });
+                }
 
-                    if (fillEl && valueEl) {
-                        fillEl.style.width = `${percentage}%`;
-                        valueEl.textContent = `${percentage.toFixed(1)}%`;
+                // --- Curtailment Logic ---
+                const curtailmentTrack = document.getElementById('gen-mix-track-curtailment');
+                const curtailmentValue = document.getElementById('gen-mix-value-curtailment');
+                curtailmentTrack.innerHTML = ''; // Clear previous segments
+
+                let totalCurtailed = 0;
+                let totalPotentialGeneration = totalGeneration;
+                const curtailedTotals = {};
+                const techWithCurtailment = ['solar', 'wind']; 
+
+                for (const tech of techWithCurtailment) {
+                    const techCurtailTotal = curtailmentBySource[tech].reduce((a, b) => a + b, 0);
+                    curtailedTotals[tech] = techCurtailTotal;
+                    totalCurtailed += techCurtailTotal;
+                }
+                totalPotentialGeneration += totalCurtailed;
+                
+                if (totalPotentialGeneration > 0) {
+                    const overallCurtailmentPercent = (totalCurtailed / totalPotentialGeneration) * 100;
+                    curtailmentValue.textContent = `${overallCurtailmentPercent.toFixed(1)}%`;
+
+                    if (totalCurtailed > 0) {
+                        for (const tech of techWithCurtailment) {
+                            if (curtailedTotals[tech] > 0) {
+                                const contributionPercent = (curtailedTotals[tech] / totalCurtailed);
+                                const segmentWidth = 100 * contributionPercent; // Segment width is relative to the track
+
+                                const segment = document.createElement('div');
+                                segment.className = 'h-full';
+                                segment.style.backgroundColor = COLORS[tech];
+                                segment.style.width = `${segmentWidth}%`;
+                                segment.style.float = 'left'; // Stack horizontally
+                                curtailmentTrack.appendChild(segment);
+                            }
+                        }
+                        curtailmentTrack.parentElement.style.width = `${overallCurtailmentPercent}%`;
+                    } else {
+                        curtailmentTrack.parentElement.style.width = `0%`;
                     }
-                    if (outlineEl && defaultMix[tech] !== undefined) {
-                        outlineEl.style.width = `${defaultMix[tech]}%`;
-                    }
-                });
+                } else {
+                    curtailmentValue.textContent = '0.0%';
+                    curtailmentTrack.parentElement.style.width = `0%`;
+                }
             }
 
             function createGenerationMixSliders() {
@@ -1175,6 +1244,30 @@
 
                     generationMixSlidersContainer.appendChild(wrapper);
                 });
+
+                // Add Curtailment row separately
+                const wrapper = document.createElement('div');
+                wrapper.className = 'grid grid-cols-5 gap-2 items-center';
+                const label = document.createElement('label');
+                label.textContent = 'Curtailment';
+                label.className = 'col-span-1 text-sm font-medium text-gray-700';
+                wrapper.appendChild(label);
+                const sliderContainer = document.createElement('div');
+                sliderContainer.className = 'col-span-3';
+                const outerTrack = document.createElement('div');
+                outerTrack.className = 'mix-slider-track';
+                const innerTrack = document.createElement('div');
+                innerTrack.id = 'gen-mix-track-curtailment';
+                innerTrack.className = 'h-full w-full';
+                outerTrack.appendChild(innerTrack);
+                sliderContainer.appendChild(outerTrack);
+                wrapper.appendChild(sliderContainer);
+                const value = document.createElement('span');
+                value.id = 'gen-mix-value-curtailment';
+                value.className = 'col-span-1 text-sm font-semibold text-right';
+                value.textContent = '0.0%';
+                wrapper.appendChild(value);
+                generationMixSlidersContainer.appendChild(wrapper);
             }
 
             // --- DEMAND EDIT MODE ---
