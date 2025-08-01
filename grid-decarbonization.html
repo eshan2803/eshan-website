@@ -208,7 +208,6 @@
                                         <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
                                     </svg>
                                 </button>
-                                <!-- ADDED: Revert button -->
                                 <button id="revert-demand-btn" class="p-2 rounded-full hover:bg-gray-200 hidden">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
                                       <path fill-rule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
@@ -496,6 +495,7 @@
             coal: Array(24).fill(0)
         };
         let BASELINE_GENERATION = JSON.parse(JSON.stringify(ORIGINAL_BASELINE_GENERATION));
+        let currentCountryUnscaledBaseline = {};
         const SOLAR_CF_PROFILE = [0,0,0,0,0,0.05,0.15,0.3,0.5,0.7,0.8,0.85,0.9,0.85,0.8,0.7,0.3,0.05,0,0,0,0,0,0];
         const WIND_CF_PROFILE = [0.4,0.42,0.45,0.46,0.45,0.4,0.35,0.3,0.25,0.2,0.2,0.2,0.25,0.3,0.35,0.4,0.5,0.6,0.65,0.6,0.55,0.5,0.45,0.4];
         const countryProfiles = {
@@ -1299,7 +1299,8 @@
                 revertDemandBtn.addEventListener('click', () => {
                     const demandDataset = generationChart.data.datasets.find(ds => ds.label === 'Demand');
                     if (demandDataset) {
-                        demandDataset.data = [...originalDemandBeforeEdit];
+                        // Revert to the absolute initial default demand curve
+                        demandDataset.data = [...BASE_DEMAND_GWH];
                         generationChart.update('none');
                     }
                 });
@@ -1308,19 +1309,19 @@
                     const demandDataset = generationChart.data.datasets.find(ds => ds.label === 'Demand');
                     if (demandDataset) {
                         const newDemand = [...demandDataset.data];
-                        const oldTotalDemand = originalDemandBeforeEdit.reduce((a, b) => a + b, 0);
+                        const defaultTotalDemand = BASE_DEMAND_GWH.reduce((a, b) => a + b, 0);
                         const newTotalDemand = newDemand.reduce((a, b) => a + b, 0);
                         
-                        // Calculate scaling factor, avoid division by zero
-                        const scalingFactor = oldTotalDemand > 0 ? newTotalDemand / oldTotalDemand : 1;
+                        // Calculate scaling factor relative to the absolute default demand
+                        const scalingFactor = defaultTotalDemand > 0 ? newTotalDemand / defaultTotalDemand : 1;
 
                         // Update the global demand profile with the new edited values
                         currentDemand = newDemand;
 
-                        // Scale the baseline generation profiles to match the new total demand
-                        for (const tech in BASELINE_GENERATION) {
-                            if (Array.isArray(BASELINE_GENERATION[tech])) {
-                                BASELINE_GENERATION[tech] = BASELINE_GENERATION[tech].map(val => val * scalingFactor);
+                        // Scale the baseline generation from the clean, unscaled source
+                        for (const tech in currentCountryUnscaledBaseline) {
+                            if (Array.isArray(currentCountryUnscaledBaseline[tech])) {
+                                BASELINE_GENERATION[tech] = currentCountryUnscaledBaseline[tech].map(val => val * scalingFactor);
                             }
                         }
                     }
@@ -1491,8 +1492,11 @@
 
             function updateBaselineForCountry(countryName) {
                 let newCarbonTax = 0;
+                // Always reset the demand curve to the absolute default when changing regions
+                currentDemand = [...BASE_DEMAND_GWH];
+
                 if (countryName === 'default') {
-                    BASELINE_GENERATION = JSON.parse(JSON.stringify(ORIGINAL_BASELINE_GENERATION));
+                    currentCountryUnscaledBaseline = JSON.parse(JSON.stringify(ORIGINAL_BASELINE_GENERATION));
                     newCarbonTax = 31;
                 } else {
                     const countryData = countryGridMixData[countryName];
@@ -1521,15 +1525,17 @@
                     }
                     
                     const totalDailyDemand = BASE_DEMAND_GWH.reduce((a, b) => a + b, 0);
-                    const scalingFactor = totalDailyDemand / totalDailyGeneration;
+                    const scalingFactor = totalDailyDemand > 0 ? totalDailyDemand / totalDailyGeneration : 1;
 
                     for(const tech in newBaseline) {
                         for(let i = 0; i < 24; i++) {
                             newBaseline[tech][i] *= scalingFactor;
                         }
                     }
-                    BASELINE_GENERATION = newBaseline;
+                    currentCountryUnscaledBaseline = newBaseline;
                 }
+                
+                BASELINE_GENERATION = JSON.parse(JSON.stringify(currentCountryUnscaledBaseline));
 
                 Object.keys(sliders).forEach(key => {
                     if (key === 'exportPrice') {
