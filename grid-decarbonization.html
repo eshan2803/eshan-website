@@ -593,7 +593,7 @@
             let defaultCapacityMix = {};
             let defaultGenerationMix = {};
             let isDemandEditMode = false;
-            let originalDemand = [...BASE_DEMAND_GWH];
+            let currentDemand = [...BASE_DEMAND_GWH];
 
 
             // --- CHARTING SETUP ---
@@ -623,7 +623,7 @@
                         { label: 'Wind', data: [], backgroundColor: COLORS.wind },
                         { label: 'Storage', data: [], backgroundColor: COLORS.storage },
                         { label: 'Curtailment', data: [], backgroundColor: COLORS.curtailment },
-                        { label: 'Demand', data: BASE_DEMAND_GWH, type: 'line', borderColor: COLORS.demand, borderWidth: 3, pointRadius: 0, fill: false }
+                        { label: 'Demand', data: currentDemand, type: 'line', borderColor: COLORS.demand, borderWidth: 3, pointRadius: 0, fill: false }
                     ]
                 },
                 options: {
@@ -778,7 +778,7 @@
             }
 
             function getSimulationResult(inputs, solarProfile, windProfile, activeBaseline) {
-                let modifiedDemand = [...BASE_DEMAND_GWH];
+                let modifiedDemand = [...currentDemand];
                 if (inputs.capacity.demandflex > 0) {
                     const peak = Math.max(...modifiedDemand);
                     const trough = Math.min(...modifiedDemand);
@@ -923,7 +923,7 @@
                 const totalAnnualDemandMWh = result.demand.reduce((a,b) => a+b, 0) * 1000 * 365;
                 const newCostPerMWh = result.systemCost / totalAnnualDemandMWh;
 
-                const baselineTotalAnnualDemandMWh = BASE_DEMAND_GWH.reduce((a,b) => a+b, 0) * 1000 * 365;
+                const baselineTotalAnnualDemandMWh = currentDemand.reduce((a,b) => a+b, 0) * 1000 * 365;
                 const baselineCostPerMWh = customBaselineSystemCost / baselineTotalAnnualDemandMWh;
                 
                 const costPercentageChange = ((newCostPerMWh - baselineCostPerMWh) / baselineCostPerMWh) * 100;
