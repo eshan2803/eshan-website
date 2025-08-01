@@ -1035,6 +1035,7 @@
                     checkbox.addEventListener('change', () => {
                         enabledTechnologies[tech] = checkbox.checked;
                         runSimulation();
+                        saveState();
                     });
                     checkboxContainer.appendChild(checkbox);
                     wrapper.appendChild(checkboxContainer);
@@ -1207,6 +1208,48 @@
                     userDefaultState[key] = sliders[key].value;
                 }
                 userDefaultState.enabledTech = { ...enabledTechnologies }; 
+
+                const currentValues = {};
+                for (const key in sliders) {
+                    currentValues[key] = parseFloat(sliders[key].value);
+                }
+                
+                const selectedCountry = countrySelect.value;
+                const solarProfile = countryProfiles[selectedCountry]?.solar || SOLAR_CF_PROFILE;
+                const windProfile = countryProfiles[selectedCountry]?.wind || WIND_CF_PROFILE;
+
+                let activeBaselineGeneration = JSON.parse(JSON.stringify(BASELINE_GENERATION));
+                for (const tech in enabledTechnologies) {
+                    if (!enabledTechnologies[tech]) {
+                        activeBaselineGeneration[tech] = Array(24).fill(0);
+                    }
+                }
+
+                const newBaselineResult = getSimulationResult(
+                    {
+                        capacity: {
+                            solar: currentValues.solar, wind: currentValues.wind,
+                            geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
+                            battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
+                            longduration: currentValues.longduration, dac: currentValues.dac,
+                            demandflex: currentValues.demandflex,
+                        },
+                        incentives: {
+                            solar: currentValues.solarIncentive, wind: currentValues.windIncentive,
+                            geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
+                            storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
+                            carbonTax: currentValues.carbonTax,
+                            exportPrice: currentValues.exportPrice,
+                        }
+                    },
+                    solarProfile,
+                    windProfile,
+                    activeBaselineGeneration
+                );
+                customBaselineSystemCost = newBaselineResult.systemCost;
+                customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
+
+                runSimulation();
                 window.alert('Current lever positions and enabled technologies have been set as the new user default.');
             });
 
