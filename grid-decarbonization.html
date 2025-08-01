@@ -196,8 +196,23 @@
             <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
                 <div class="lg:col-span-2 glass-card">
-                    <div class="mb-8">
-                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly Electricity Generation (GWh)</h2>
+                    <div class="mb-8 relative">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-lora font-semibold text-gray-800">Hourly Electricity Generation (GWh)</h2>
+                            <div id="demand-edit-controls">
+                                <button id="edit-demand-btn" class="p-2 rounded-full hover:bg-gray-200">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                                        <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <button id="confirm-demand-btn" class="p-2 rounded-full hover:bg-gray-200 hidden">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
                         <canvas id="generationMixChart"></canvas>
                     </div>
                     <div class="mb-8">
@@ -564,6 +579,8 @@
             const generationMixSlidersContainer = document.getElementById('generation-mix-sliders');
             const countrySelect = document.getElementById('country-select');
             const visitorCountEl = document.getElementById('visitor-count');
+            const editDemandBtn = document.getElementById('edit-demand-btn');
+            const confirmDemandBtn = document.getElementById('confirm-demand-btn');
 
             // --- STATE MANAGEMENT ---
             let stateHistory = [];
@@ -575,6 +592,8 @@
             let enabledTechnologies = {};
             let defaultCapacityMix = {};
             let defaultGenerationMix = {};
+            let isDemandEditMode = false;
+            let originalDemand = [...BASE_DEMAND_GWH];
 
 
             // --- CHARTING SETUP ---
