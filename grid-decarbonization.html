@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <!-- ADDED: This plugin enables dragging data points on the chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata@2.2.1/dist/chartjs-plugin-dragdata.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;700&display=swap" rel="stylesheet">
@@ -594,6 +596,7 @@
             let defaultGenerationMix = {};
             let isDemandEditMode = false;
             let currentDemand = [...BASE_DEMAND_GWH];
+            let originalDemandBeforeEdit = [];
 
 
             // --- CHARTING SETUP ---
@@ -628,7 +631,12 @@
                 },
                 options: {
                     responsive: true, animation: { duration: 0 },
-                    plugins: { tooltip: { mode: 'index' }, legend: { position: 'bottom' } },
+                    plugins: { 
+                        tooltip: { mode: 'index' }, 
+                        legend: { position: 'bottom' },
+                        // DragData plugin is configured dynamically
+                        dragData: { enabled: false }
+                    },
                     scales: {
                         x: { stacked: true, title: { display: true, text: 'Hour of Day' } },
                         y: { stacked: true, title: { display: true, text: 'Generation (GWh)' } }
@@ -1165,53 +1173,61 @@
             // --- DEMAND EDIT MODE ---
             function setDemandEditMode(enabled) {
                 isDemandEditMode = enabled;
+                const demandDatasetIndex = generationChart.data.datasets.findIndex(ds => ds.label === 'Demand');
+
                 if (enabled) {
                     editDemandBtn.classList.add('hidden');
                     confirmDemandBtn.classList.remove('hidden');
-                    // Make demand line points draggable
-                    const demandDataset = generationChart.data.datasets.find(ds => ds.label === 'Demand' || ds.label === undefined || ds.label === 'demand');
-                    if (demandDataset) {
-                        generationChart.options.plugins.dragData = {
-                            round: 2,
-                            showTooltip: true,
-                            onDragStart: function(e, datasetIndex, index, value) {
-                                return true;
-                            },
-                            onDrag: function(e, datasetIndex, index, value) {
-                                // Optionally, update live
-                            },
-                            onDragEnd: function(e, datasetIndex, index, value) {
-                                // Optionally, update live
-                            }
-                        };
-                        generationChart.options.plugins.dragData.enabled = true;
-                        generationChart.update();
-                    }
+
+                    // Hide other datasets and make the demand line more prominent for editing
+                    generationChart.data.datasets.forEach((dataset, index) => {
+                        if (index !== demandDatasetIndex) {
+                            dataset.hidden = true;
+                        } else {
+                            // Style the demand line for editing
+                            dataset.borderWidth = 4;
+                            dataset.pointRadius = 6;
+                            dataset.pointHoverRadius = 8;
+                            dataset.pointBackgroundColor = 'rgba(17, 24, 39, 1)';
+                            dataset.pointBorderColor = 'white';
+                            dataset.pointBorderWidth = 2;
+                        }
+                    });
+
+                    // Configure and enable the dragData plugin
+                    generationChart.options.plugins.dragData = {
+                        round: 1, // Snap to integer values
+                        showTooltip: true,
+                        onDragEnd: function(e, datasetIndex, index, value) {
+                            generationChart.update('none'); // Update chart visually after a drag
+                        }
+                    };
+                    generationChart.options.plugins.dragData.enabled = true;
+                    generationChart.options.scales.y.stacked = false; // Unstack y-axis for clarity
+                    generationChart.update();
+
                 } else {
                     editDemandBtn.classList.remove('hidden');
                     confirmDemandBtn.classList.add('hidden');
-                    // Disable dragData plugin
+
+                    // Restore visibility and original style of all datasets
+                    generationChart.data.datasets.forEach((dataset, index) => {
+                        dataset.hidden = false;
+                        if (index === demandDatasetIndex) {
+                            // Reset demand line style to its default
+                            dataset.borderWidth = 3;
+                            dataset.pointRadius = 0;
+                            dataset.pointHoverRadius = 0;
+                        }
+                    });
+
+                    // Disable the dragData plugin
                     if (generationChart.options.plugins.dragData) {
                         generationChart.options.plugins.dragData.enabled = false;
-                        generationChart.update();
                     }
+                    generationChart.options.scales.y.stacked = true; // Re-enable stacking
+                    generationChart.update();
                 }
-            }
-
-            if (editDemandBtn && confirmDemandBtn) {
-                editDemandBtn.addEventListener('click', () => {
-                    setDemandEditMode(true);
-                });
-                confirmDemandBtn.addEventListener('click', () => {
-                    // Save edited demand profile from chart
-                    const demandDataset = generationChart.data.datasets.find(ds => ds.label === 'Demand' || ds.label === undefined || ds.label === 'demand');
-                    if (demandDataset) {
-                        currentDemand = [...demandDataset.data];
-                    }
-                    setDemandEditMode(false);
-                    runSimulation();
-                    saveState();
-                });
             }
 
             // --- EVENT LISTENERS ---
@@ -1264,10 +1280,48 @@
                 }
             }
 
+            // UPDATED: Event listeners for demand editing
+            if (editDemandBtn && confirmDemandBtn) {
+                editDemandBtn.addEventListener('click', () => {
+                    originalDemandBeforeEdit = [...currentDemand]; // Save state before editing
+                    setDemandEditMode(true);
+                });
+                confirmDemandBtn.addEventListener('click', () => {
+                    const demandDataset = generationChart.data.datasets.find(ds => ds.label === 'Demand');
+                    if (demandDataset) {
+                        const newDemand = [...demandDataset.data];
+                        const oldTotalDemand = originalDemandBeforeEdit.reduce((a, b) => a + b, 0);
+                        const newTotalDemand = newDemand.reduce((a, b) => a + b, 0);
+                        
+                        // Calculate scaling factor, avoid division by zero
+                        const scalingFactor = oldTotalDemand > 0 ? newTotalDemand / oldTotalDemand : 1;
+
+                        // Update the global demand profile with the new edited values
+                        currentDemand = newDemand;
+
+                        // Scale the baseline generation profiles to match the new total demand
+                        for (const tech in BASELINE_GENERATION) {
+                            if (Array.isArray(BASELINE_GENERATION[tech])) {
+                                BASELINE_GENERATION[tech] = BASELINE_GENERATION[tech].map(val => val * scalingFactor);
+                            }
+                        }
+                    }
+                    
+                    setDemandEditMode(false); // Exit edit mode
+                    runSimulation(); // Recalculate everything with the new demand and baseline
+                    saveState(); // Save the new state to history
+                });
+            }
+
             resetToZeroButton.addEventListener('click', () => {
                 Object.keys(sliders).forEach(key => {
-                    sliders[key].value = 0;
-                    inputs[key].value = 0;
+                    if (key === 'exportPrice') {
+                         sliders[key].value = 20;
+                         inputs[key].value = 20;
+                    } else {
+                        sliders[key].value = 0;
+                        inputs[key].value = 0;
+                    }
                 });
                 runSimulation();
                 saveState();
@@ -1321,7 +1375,12 @@
                 customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
 
                 runSimulation();
-                window.alert('Current lever positions and enabled technologies have been set as the new user default.');
+                // Using a custom modal/alert would be better, but window.alert is simple for now.
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center';
+                modal.innerHTML = `<div class="bg-white p-5 rounded-lg shadow-xl">Current settings saved as user default.</div>`;
+                document.body.appendChild(modal);
+                setTimeout(() => modal.remove(), 2000);
             });
 
             resetToDefaultButton.addEventListener('click', () => {
