@@ -1162,6 +1162,58 @@
                 });
             }
 
+            // --- DEMAND EDIT MODE ---
+            function setDemandEditMode(enabled) {
+                isDemandEditMode = enabled;
+                if (enabled) {
+                    editDemandBtn.classList.add('hidden');
+                    confirmDemandBtn.classList.remove('hidden');
+                    // Make demand line points draggable
+                    const demandDataset = generationChart.data.datasets.find(ds => ds.label === 'Demand' || ds.label === undefined || ds.label === 'demand');
+                    if (demandDataset) {
+                        generationChart.options.plugins.dragData = {
+                            round: 2,
+                            showTooltip: true,
+                            onDragStart: function(e, datasetIndex, index, value) {
+                                return true;
+                            },
+                            onDrag: function(e, datasetIndex, index, value) {
+                                // Optionally, update live
+                            },
+                            onDragEnd: function(e, datasetIndex, index, value) {
+                                // Optionally, update live
+                            }
+                        };
+                        generationChart.options.plugins.dragData.enabled = true;
+                        generationChart.update();
+                    }
+                } else {
+                    editDemandBtn.classList.remove('hidden');
+                    confirmDemandBtn.classList.add('hidden');
+                    // Disable dragData plugin
+                    if (generationChart.options.plugins.dragData) {
+                        generationChart.options.plugins.dragData.enabled = false;
+                        generationChart.update();
+                    }
+                }
+            }
+
+            if (editDemandBtn && confirmDemandBtn) {
+                editDemandBtn.addEventListener('click', () => {
+                    setDemandEditMode(true);
+                });
+                confirmDemandBtn.addEventListener('click', () => {
+                    // Save edited demand profile from chart
+                    const demandDataset = generationChart.data.datasets.find(ds => ds.label === 'Demand' || ds.label === undefined || ds.label === 'demand');
+                    if (demandDataset) {
+                        currentDemand = [...demandDataset.data];
+                    }
+                    setDemandEditMode(false);
+                    runSimulation();
+                    saveState();
+                });
+            }
+
             // --- EVENT LISTENERS ---
             function updateUndoRedoButtons() {
                 undoButton.disabled = historyIndex <= 0;
