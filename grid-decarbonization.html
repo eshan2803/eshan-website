@@ -556,7 +556,7 @@
         // Updated COST_DATA based on recent industry reports (e.g., Lazard LCOE v17, EIA STEO July 2024)
         const COST_DATA = {
             capex: { 
-                solar: 1000, wind: 1400, nuclear: 8000, geothermal: 4500, // $/kW - Increased Solar/Wind capex
+                solar: 1150, wind: 1750, nuclear: 8000, geothermal: 4500, // $/kW - Increased Solar/Wind capex
                 naturalGas: 1100, hydro: 3000, coal: 3500,
                 battery4hr: 300, battery8hr: 400, longduration: 700, // $/kWh
                 dac: 1000 // $/ton/year
@@ -569,7 +569,7 @@
             },
             variable_om: { 
                 solar: 2, wind: 1, nuclear: 10, geothermal: 0, // $/MWh
-                naturalGas: 40, hydro: 5, coal: 30, // $/MWh - Reduced NG VOM based on fuel price forecasts
+                naturalGas: 22, hydro: 5, coal: 30, // $/MWh - Reduced NG VOM based on fuel price forecasts
                 battery4hr: 2, battery8hr: 2, longduration: 2,
                 dac: 400 // $/ton
             },
@@ -657,29 +657,119 @@
                 storage: 'rgba(168, 85, 247, 0.8)', demand: 'rgba(17, 24, 39, 1)',
                 curtailment: 'rgba(253, 186, 116, 0.8)', coal: 'rgba(0, 0, 0, 0.8)'
             };
+
+            // Helper function to create a patterned fill for "to Storage" generation
+            function createPattern(baseColor, patternColor) {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 10;
+                canvas.height = 10;
+                ctx.fillStyle = baseColor;
+                ctx.fillRect(0, 0, 10, 10);
+                ctx.strokeStyle = patternColor;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, 10);
+                ctx.lineTo(10, 0);
+                ctx.moveTo(-1, 1);
+                ctx.lineTo(1, -1);
+                ctx.moveTo(9, 11);
+                ctx.lineTo(11, 9);
+                ctx.stroke();
+                return ctx.createPattern(canvas, 'repeat');
+            }
+
+            const PATTERNS = {
+                solarToStorage: createPattern(COLORS.solar, COLORS.storage),
+                windToStorage: createPattern(COLORS.wind, COLORS.storage),
+                hydroToStorage: createPattern(COLORS.hydro, COLORS.storage),
+                geothermalToStorage: createPattern(COLORS.geothermal, COLORS.storage),
+                nuclearToStorage: createPattern(COLORS.nuclear, COLORS.storage),
+                coalToStorage: createPattern(COLORS.coal, COLORS.storage),
+                naturalGasToStorage: createPattern(COLORS.naturalGas, COLORS.storage),
+            };
             
             const generationChartConfig = {
                 type: 'bar',
                 data: {
                     labels: HOURS,
                     datasets: [
-                        { label: 'Coal', data: [], backgroundColor: COLORS.coal },
-                        { label: 'Natural Gas', data: [], backgroundColor: COLORS.naturalGas },
-                        { label: 'Hydro', data: [], backgroundColor: COLORS.hydro },
-                        { label: 'Geothermal', data: [], backgroundColor: COLORS.geothermal },
-                        { label: 'Nuclear', data: [], backgroundColor: COLORS.nuclear },
-                        { label: 'Solar', data: [], backgroundColor: COLORS.solar },
-                        { label: 'Wind', data: [], backgroundColor: COLORS.wind },
-                        { label: 'Storage', data: [], backgroundColor: COLORS.storage },
-                        { label: 'Curtailment', data: [], backgroundColor: COLORS.curtailment },
-                        { label: 'Demand', data: currentDemand, type: 'line', borderColor: COLORS.demand, borderWidth: 3, pointRadius: 0, fill: false }
+                        { label: 'Coal', data: [], backgroundColor: COLORS.coal, stack: 'generators' },
+                        { label: 'Coal to Storage', data: [], backgroundColor: PATTERNS.coalToStorage, stack: 'generators' },
+                        { label: 'Natural Gas', data: [], backgroundColor: COLORS.naturalGas, stack: 'generators' },
+                        { label: 'Natural Gas to Storage', data: [], backgroundColor: PATTERNS.naturalGasToStorage, stack: 'generators' },
+                        { label: 'Hydro', data: [], backgroundColor: COLORS.hydro, stack: 'generators' },
+                        { label: 'Hydro to Storage', data: [], backgroundColor: PATTERNS.hydroToStorage, stack: 'generators' },
+                        { label: 'Geothermal', data: [], backgroundColor: COLORS.geothermal, stack: 'generators' },
+                        { label: 'Geothermal to Storage', data: [], backgroundColor: PATTERNS.geothermalToStorage, stack: 'generators' },
+                        { label: 'Nuclear', data: [], backgroundColor: COLORS.nuclear, stack: 'generators' },
+                        { label: 'Nuclear to Storage', data: [], backgroundColor: PATTERNS.nuclearToStorage, stack: 'generators' },
+                        { label: 'Solar', data: [], backgroundColor: COLORS.solar, stack: 'generators' },
+                        { label: 'Solar to Storage', data: [], backgroundColor: PATTERNS.solarToStorage, stack: 'generators' },
+                        { label: 'Wind', data: [], backgroundColor: COLORS.wind, stack: 'generators' },
+                        { label: 'Wind to Storage', data: [], backgroundColor: PATTERNS.windToStorage, stack: 'generators' },
+                        { label: 'Storage', data: [], backgroundColor: COLORS.storage, stack: 'generators' },
+                        { label: 'Curtailment', data: [], backgroundColor: COLORS.curtailment, stack: 'generators' },
+                        { label: 'Demand', data: currentDemand, type: 'line', borderColor: COLORS.demand, borderWidth: 3, pointRadius: 0, fill: false, order: -1 }
                     ]
                 },
                 options: {
                     responsive: true, animation: { duration: 0 },
                     plugins: { 
-                        tooltip: { mode: 'index' }, 
-                        legend: { position: 'bottom' },
+                        tooltip: {
+                            mode: 'index',
+                            callbacks: {
+                                title: function(context) {
+                                    return context[0].label;
+                                },
+                                label: function(context) {
+                                    return ''; // We build the full tooltip in the footer
+                                },
+                                footer: function(tooltipItems) {
+                                    const totals = {};
+                                    let stackTotal = 0;
+
+                                    tooltipItems.forEach(function(tooltipItem) {
+                                        let label = tooltipItem.dataset.label;
+                                        const value = tooltipItem.raw;
+                                        if (value === 0) return;
+
+                                        if (label.includes('to Storage')) {
+                                            label = label.replace(' to Storage', '');
+                                        }
+
+                                        totals[label] = (totals[label] || 0) + value;
+                                        
+                                        if(tooltipItem.dataset.type !== 'line') {
+                                            stackTotal += value;
+                                        }
+                                    });
+
+                                    const lines = [];
+                                    // Use a specific order for tooltip clarity
+                                    const tooltipOrder = ['Coal', 'Natural Gas', 'Hydro', 'Geothermal', 'Nuclear', 'Solar', 'Wind', 'Storage', 'Curtailment', 'Demand'];
+                                    tooltipOrder.forEach(label => {
+                                        if (totals[label] > 0) {
+                                            lines.push(`${label}: ${totals[label].toFixed(2)}`);
+                                        }
+                                    });
+                                    
+                                    if(stackTotal > 0) {
+                                        lines.push('------------------');
+                                        lines.push(`Total Gen: ${stackTotal.toFixed(2)}`);
+                                    }
+                                    return lines;
+                                }
+                            }
+                        }, 
+                        legend: { 
+                            position: 'bottom',
+                            labels: {
+                                filter: function(legendItem) {
+                                    return !legendItem.text.includes('to Storage');
+                                }
+                            }
+                        },
                         // DragData plugin is configured dynamically
                         dragData: { enabled: false }
                     },
@@ -870,6 +960,10 @@
                         solar: Array(24).fill(0),
                         wind: Array(24).fill(0),
                     };
+                    let hourlyChargeBySource = {
+                        solar: Array(24).fill(0), wind: Array(24).fill(0), hydro: Array(24).fill(0),
+                        nuclear: Array(24).fill(0), geothermal: Array(24).fill(0)
+                    };
 
                     const storageCapacities = {
                         battery4hr: inputs.capacity.battery4hr, battery8hr: inputs.capacity.battery8hr, longduration: inputs.capacity.longduration
@@ -885,12 +979,25 @@
 
                         if (netLoad < 0) {
                             let excessGen = -netLoad;
+                            let totalChargedThisHour = 0;
+
                             for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
                                 const chargeAmount = Math.min(excessGen, storageCapacities[type] - storageLevels[type], storageDischargeRates[type]);
                                 storageLevels[type] += chargeAmount * storageEfficiency;
                                 excessGen -= chargeAmount;
+                                totalChargedThisHour += chargeAmount;
                             }
                             hourlyCurtailment[i] = excessGen;
+                            
+                            if (totalChargedThisHour > 0) {
+                                const potentialCleanGenForHour = potentialGen.hydro[i] + potentialGen.nuclear[i] + potentialGen.solar[i] + potentialGen.wind[i] + potentialGen.geothermal[i];
+                                if (potentialCleanGenForHour > 0) {
+                                    for (const tech of ['hydro', 'nuclear', 'solar', 'wind', 'geothermal']) {
+                                        const techContribution = potentialGen[tech][i] / potentialCleanGenForHour;
+                                        hourlyChargeBySource[tech][i] = techContribution * totalChargedThisHour;
+                                    }
+                                }
+                            }
 
                             if (hourlyCurtailment[i] > 0) {
                                 const potentialVRE = potentialGen.solar[i] + potentialGen.wind[i];
@@ -921,7 +1028,7 @@
                             hourlyNaturalGas[i] = netLoad;
                         }
                     }
-                    return { finalLevels: storageLevels, discharge: hourlyDischarge, gas: hourlyNaturalGas, coal: hourlyCoal, curtailment: hourlyCurtailment, curtailmentBySource: hourlyCurtailmentBySource };
+                    return { finalLevels: storageLevels, discharge: hourlyDischarge, gas: hourlyNaturalGas, coal: hourlyCoal, curtailment: hourlyCurtailment, curtailmentBySource: hourlyCurtailmentBySource, chargeBySource: hourlyChargeBySource };
                 };
 
                 const emptyInitialState = { battery4hr: 0, battery8hr: 0, longduration: 0 };
@@ -974,7 +1081,8 @@
                     emissions: newEmissions,
                     systemCost: newSystemCost,
                     demand: modifiedDemand,
-                    curtailmentBySource: secondPassResult.curtailmentBySource
+                    curtailmentBySource: secondPassResult.curtailmentBySource,
+                    chargeBySource: secondPassResult.chargeBySource
                 };
             }
 
@@ -1041,7 +1149,7 @@
                     greenPremium = costDifference / co2Avoided;
                 }
 
-                updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, seasonalSolarProfile, seasonalWindProfile);
+                updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, seasonalSolarProfile, seasonalWindProfile, result.chargeBySource);
                 updateGridMixSlider(currentCountryInstalledCapacity, defaultCapacityMix);
                 updateGenerationMixSlider(result.generation, defaultGenerationMix, result.curtailmentBySource);
                 billImpactEl.textContent = `${costPercentageChange.toFixed(0)}%`;
@@ -1080,18 +1188,36 @@
                 return co2;
             }
 
-            function updateCharts(generation, emissions, demand, totalCO2, solarProfile, windProfile) {
+            function updateCharts(generation, emissions, demand, totalCO2, solarProfile, windProfile, chargeBySource) {
                 const chartData = generationChart.data.datasets;
-                chartData[0].data = generation.coal;
-                chartData[1].data = generation.naturalGas;
-                chartData[2].data = generation.hydro;
-                chartData[3].data = generation.geothermal;
-                chartData[4].data = generation.nuclear;
-                chartData[5].data = generation.solar;
-                chartData[6].data = generation.wind;
-                chartData[7].data = generation.storage;
-                chartData[8].data = generation.curtailment;
-                chartData[9].data = demand;
+
+                const techMap = [
+                    { name: 'coal', mainIndex: 0, storageIndex: 1 },
+                    { name: 'naturalGas', mainIndex: 2, storageIndex: 3 },
+                    { name: 'hydro', mainIndex: 4, storageIndex: 5 },
+                    { name: 'geothermal', mainIndex: 6, storageIndex: 7 },
+                    { name: 'nuclear', mainIndex: 8, storageIndex: 9 },
+                    { name: 'solar', mainIndex: 10, storageIndex: 11 },
+                    { name: 'wind', mainIndex: 12, storageIndex: 13 },
+                ];
+
+                techMap.forEach(tech => {
+                    const mainData = [];
+                    const storageData = [];
+                    for (let i = 0; i < 24; i++) {
+                        const totalGen = generation[tech.name][i] || 0;
+                        const toStorage = chargeBySource[tech.name] ? (chargeBySource[tech.name][i] || 0) : 0;
+                        mainData.push(totalGen - toStorage);
+                        storageData.push(toStorage);
+                    }
+                    chartData[tech.mainIndex].data = mainData;
+                    chartData[tech.storageIndex].data = storageData;
+                });
+
+                chartData[14].data = generation.storage; // Discharge
+                chartData[15].data = generation.curtailment;
+                chartData[16].data = demand;
+
                 generationChart.update('none');
 
                 co2Chart.data.datasets[0].data = emissions;
@@ -1568,8 +1694,8 @@
                             exportPrice: currentValues.exportPrice,
                         }
                     },
-                    solarProfile,
-                    windProfile,
+                    seasonalSolarProfile,
+                    seasonalWindProfile,
                     activeBaselineGeneration
                 );
                 customBaselineSystemCost = newBaselineResult.systemCost;
@@ -1846,5 +1972,4 @@
         });
     </script>
 </body>
-</ht
-
+</html>
