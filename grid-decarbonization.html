@@ -1035,7 +1035,7 @@
                 }
 
                 updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, seasonalSolarProfile, seasonalWindProfile);
-                updateGridMixSlider(activeBaselineGeneration, defaultCapacityMix);
+                updateGridMixSlider(currentCountryUnscaledBaseline, defaultCapacityMix);
                 updateGenerationMixSlider(result.generation, defaultGenerationMix, result.curtailmentBySource);
                 billImpactEl.textContent = `${costPercentageChange.toFixed(0)}%`;
                 if (co2Avoided > 0) {
@@ -1097,12 +1097,12 @@
             }
 
             // --- GRID MIX SLIDER ---
-            function updateGridMixSlider(activeBaseline, defaultMix) {
+            function updateGridMixSlider(unscaledBaseline, defaultMix) {
                 const capacities = {};
                 let totalCapacity = 0;
 
                 for (const tech in COST_DATA.capacity_factor) {
-                    const baselineGen = activeBaseline[tech] ? activeBaseline[tech].reduce((a, b) => a + b, 0) : 0;
+                    const baselineGen = unscaledBaseline[tech] ? unscaledBaseline[tech].reduce((a, b) => a + b, 0) : 0;
                     const baselineCapacity = (baselineGen / (COST_DATA.capacity_factor[tech] * 24));
                     
                     let newCapacity = 0;
