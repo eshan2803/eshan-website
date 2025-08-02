@@ -1709,9 +1709,6 @@
                         }
                     }
                     
-                    // FIX: Removed the block that scaled baseline generation to meet seasonal demand.
-                    // This ensures the baseline generation is based purely on capacity and average CFs,
-                    // making it independent of seasonal demand shifts.
                     currentCountryUnscaledBaseline = newBaseline;
                 }
                 
@@ -1763,12 +1760,12 @@
                 userDefaultState = {};
                 
                 let totalDefaultCapacity = 0;
-                for (const tech in COST_DATA.capacity_factor) {
-                    const gen = activeBaseline[tech] ? activeBaseline[tech].reduce((a, b) => a + b, 0) : 0;
-                    const cap = gen / (COST_DATA.capacity_factor[tech] * 24);
-                    defaultCapacityMix[tech] = cap;
-                    totalDefaultCapacity += cap;
+                // FIX: Calculate defaultCapacityMix from the non-seasonal installed capacity, not the seasonal generation baseline
+                for (const tech in currentCountryInstalledCapacity) {
+                    defaultCapacityMix[tech] = currentCountryInstalledCapacity[tech];
+                    totalDefaultCapacity += currentCountryInstalledCapacity[tech];
                 }
+
                 for (const tech in defaultCapacityMix) {
                     defaultCapacityMix[tech] = (defaultCapacityMix[tech] / totalDefaultCapacity) * 100;
                 }
