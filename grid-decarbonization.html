@@ -556,20 +556,20 @@
         // Updated COST_DATA based on recent industry reports (e.g., Lazard LCOE v17, EIA STEO July 2024)
         const COST_DATA = {
             capex: { 
-                solar: 1000, wind: 1500, nuclear: 8000, geothermal: 4500, // $/kW - Increased Solar/Wind capex
+                solar: 1000, wind: 1400, nuclear: 8000, geothermal: 4500, // $/kW - Increased Solar/Wind capex
                 naturalGas: 1100, hydro: 3000, coal: 3500,
                 battery4hr: 300, battery8hr: 400, longduration: 700, // $/kWh
                 dac: 1000 // $/ton/year
             },
             fixed_om: {
-                solar: 15, wind: 45, nuclear: 140, geothermal: 120, // $/kW-year
+                solar: 18, wind: 35, nuclear: 140, geothermal: 120, // $/kW-year
                 naturalGas: 20, hydro: 20, coal: 40,
                 battery4hr: 15, battery8hr: 15, longduration: 15, // $/kW-year
                 dac: 20 // $/ton/year
             },
             variable_om: { 
                 solar: 2, wind: 1, nuclear: 10, geothermal: 0, // $/MWh
-                naturalGas: 30, hydro: 5, coal: 30, // $/MWh - Reduced NG VOM based on fuel price forecasts
+                naturalGas: 40, hydro: 5, coal: 30, // $/MWh - Reduced NG VOM based on fuel price forecasts
                 battery4hr: 2, battery8hr: 2, longduration: 2,
                 dac: 400 // $/ton
             },
@@ -1847,3 +1847,4 @@
     </script>
 </body>
 </ht
+
