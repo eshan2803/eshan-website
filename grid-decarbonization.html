@@ -519,6 +519,7 @@
         };
         let BASELINE_GENERATION = JSON.parse(JSON.stringify(ORIGINAL_BASELINE_GENERATION));
         let currentCountryUnscaledBaseline = {};
+        let currentCountryInstalledCapacity = {};
         const SOLAR_CF_PROFILE = [0,0,0,0,0,0.05,0.15,0.3,0.5,0.7,0.8,0.85,0.9,0.85,0.8,0.7,0.3,0.05,0,0,0,0,0,0];
         const WIND_CF_PROFILE = [0.4,0.42,0.45,0.46,0.45,0.4,0.35,0.3,0.25,0.2,0.2,0.2,0.25,0.3,0.35,0.4,0.5,0.6,0.65,0.6,0.55,0.5,0.45,0.4];
         const SEASONAL_MULTIPLIERS = {
@@ -1035,7 +1036,7 @@
                 }
 
                 updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, seasonalSolarProfile, seasonalWindProfile);
-                updateGridMixSlider(currentCountryUnscaledBaseline, defaultCapacityMix);
+                updateGridMixSlider(currentCountryInstalledCapacity, defaultCapacityMix);
                 updateGenerationMixSlider(result.generation, defaultGenerationMix, result.curtailmentBySource);
                 billImpactEl.textContent = `${costPercentageChange.toFixed(0)}%`;
                 if (co2Avoided > 0) {
@@ -1097,13 +1098,12 @@
             }
 
             // --- GRID MIX SLIDER ---
-            function updateGridMixSlider(unscaledBaseline, defaultMix) {
+            function updateGridMixSlider(installedCapacity, defaultMix) {
                 const capacities = {};
                 let totalCapacity = 0;
 
                 for (const tech in COST_DATA.capacity_factor) {
-                    const baselineGen = unscaledBaseline[tech] ? unscaledBaseline[tech].reduce((a, b) => a + b, 0) : 0;
-                    const baselineCapacity = (baselineGen / (COST_DATA.capacity_factor[tech] * 24));
+                    const baselineCapacity = installedCapacity[tech] || 0;
                     
                     let newCapacity = 0;
                     if (sliders[tech]) {
@@ -1677,8 +1677,10 @@
                     const solarProfile = countryProfiles[countryName]?.solar || SOLAR_CF_PROFILE;
                     const windProfile = countryProfiles[countryName]?.wind || WIND_CF_PROFILE;
 
+                    currentCountryInstalledCapacity = {}; // Reset for new country
                     for(const tech in COST_DATA.capacity_factor) {
                         const techCapacityGW = (countryData.totalCapacityMW / 1000) * ((countryData.mix[tech] || 0) / 100);
+                        currentCountryInstalledCapacity[tech] = techCapacityGW;
                         newBaseline[tech] = Array(24).fill(0);
 
                         if (tech === 'solar') {
