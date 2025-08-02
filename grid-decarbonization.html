@@ -1331,7 +1331,7 @@
                 sliderContainer.appendChild(outerTrack);
                 wrapper.appendChild(sliderContainer);
                 const value = document.createElement('span');
-                value.id = 'gen-mix-value-curtailment';
+                value.id = `gen-mix-value-curtailment`;
                 value.className = 'col-span-1 text-sm font-semibold text-right';
                 value.textContent = '0.0%';
                 wrapper.appendChild(value);
@@ -1690,7 +1690,6 @@
                     newCarbonTax = carbonTaxes[countryName] || 0;
 
                     const newBaseline = {};
-                    let totalDailyGeneration = 0;
                     
                     const solarProfile = countryProfiles[countryName]?.solar || SOLAR_CF_PROFILE;
                     const windProfile = countryProfiles[countryName]?.wind || WIND_CF_PROFILE;
@@ -1708,17 +1707,11 @@
                         } else {
                              for (let i = 0; i < 24; i++) newBaseline[tech][i] = techCapacityGW * COST_DATA.capacity_factor[tech];
                         }
-                        totalDailyGeneration += newBaseline[tech].reduce((a, b) => a + b, 0);
                     }
                     
-                    const totalDailyDemand = currentDemand.reduce((a, b) => a + b, 0);
-                    const scalingFactor = totalDailyDemand > 0 ? totalDailyDemand / totalDailyGeneration : 1;
-
-                    for(const tech in newBaseline) {
-                        for(let i = 0; i < 24; i++) {
-                            newBaseline[tech][i] *= scalingFactor;
-                        }
-                    }
+                    // FIX: Removed the block that scaled baseline generation to meet seasonal demand.
+                    // This ensures the baseline generation is based purely on capacity and average CFs,
+                    // making it independent of seasonal demand shifts.
                     currentCountryUnscaledBaseline = newBaseline;
                 }
                 
