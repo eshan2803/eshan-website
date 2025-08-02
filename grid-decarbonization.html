@@ -1484,26 +1484,19 @@
                 });
                 
                 // Event Listeners for Preset Buttons
-                document.getElementById('preset-spring').addEventListener('click', () => {
+                function setDemandPreset(season) {
                     const demandDataset = generationChart.data.datasets.find(ds => ds.label === 'Demand');
-                    demandDataset.data = [...SEASONAL_DEMAND_PROFILES.spring];
+                    demandDataset.data = [...SEASONAL_DEMAND_PROFILES[season]];
+                    seasonSelect.value = season;
+                    currentSeason = season;
+                    updateBaselineForCountry(countrySelect.value);
                     generationChart.update('none');
-                });
-                document.getElementById('preset-summer').addEventListener('click', () => {
-                    const demandDataset = generationChart.data.datasets.find(ds => ds.label === 'Demand');
-                    demandDataset.data = [...SEASONAL_DEMAND_PROFILES.summer];
-                    generationChart.update('none');
-                });
-                document.getElementById('preset-fall').addEventListener('click', () => {
-                    const demandDataset = generationChart.data.datasets.find(ds => ds.label === 'Demand');
-                    demandDataset.data = [...SEASONAL_DEMAND_PROFILES.fall];
-                    generationChart.update('none');
-                });
-                document.getElementById('preset-winter').addEventListener('click', () => {
-                    const demandDataset = generationChart.data.datasets.find(ds => ds.label === 'Demand');
-                    demandDataset.data = [...SEASONAL_DEMAND_PROFILES.winter];
-                    generationChart.update('none');
-                });
+                }
+
+                document.getElementById('preset-spring').addEventListener('click', () => setDemandPreset('spring'));
+                document.getElementById('preset-summer').addEventListener('click', () => setDemandPreset('summer'));
+                document.getElementById('preset-fall').addEventListener('click', () => setDemandPreset('fall'));
+                document.getElementById('preset-winter').addEventListener('click', () => setDemandPreset('winter'));
             }
 
             resetToZeroButton.addEventListener('click', () => {
@@ -1666,8 +1659,8 @@
 
             function updateBaselineForCountry(countryName) {
                 let newCarbonTax = 0;
-                // Always reset the demand curve to the absolute default when changing regions
-                currentDemand = [...SEASONAL_DEMAND_PROFILES.spring];
+                // Update demand profile based on the current season
+                currentDemand = [...SEASONAL_DEMAND_PROFILES[currentSeason]];
 
                 if (countryName === 'default') {
                     currentCountryUnscaledBaseline = JSON.parse(JSON.stringify(ORIGINAL_BASELINE_GENERATION));
@@ -1709,7 +1702,12 @@
                     currentCountryUnscaledBaseline = newBaseline;
                 }
                 
-                BASELINE_GENERATION = JSON.parse(JSON.stringify(currentCountryUnscaledBaseline));
+                // Apply seasonal multipliers to the unscaled baseline before setting the final BASELINE_GENERATION
+                const seasonallyAdjustedBaseline = JSON.parse(JSON.stringify(currentCountryUnscaledBaseline));
+                const seasonalMultipliers = SEASONAL_MULTIPLIERS[currentSeason];
+                seasonallyAdjustedBaseline.solar = seasonallyAdjustedBaseline.solar.map(val => val * seasonalMultipliers.solar);
+                seasonallyAdjustedBaseline.wind = seasonallyAdjustedBaseline.wind.map(val => val * seasonalMultipliers.wind);
+                BASELINE_GENERATION = seasonallyAdjustedBaseline;
 
                 Object.keys(sliders).forEach(key => {
                     if (key === 'exportPrice') {
