@@ -902,9 +902,29 @@
                     wind: [...potentialGeneration.wind],
                 };
 
+                // Pro-rata curtailment of all clean energy sources based on the total curtailed amount
                 for (let i = 0; i < 24; i++) {
-                    finalGeneration.solar[i] -= secondPassResult.curtailmentBySource.solar[i];
-                    finalGeneration.wind[i] -= secondPassResult.curtailmentBySource.wind[i];
+                    const totalCurtailmentForHour = finalGeneration.curtailment[i];
+                    if (totalCurtailmentForHour > 0) {
+                        const totalCleanPotential = 
+                            potentialGeneration.hydro[i] + 
+                            potentialGeneration.nuclear[i] + 
+                            potentialGeneration.geothermal[i] + 
+                            potentialGeneration.solar[i] + 
+                            potentialGeneration.wind[i];
+                        
+                        if (totalCleanPotential > 0) {
+                            // This is the fraction of clean energy that is actually USED
+                            const usageFraction = (totalCleanPotential - totalCurtailmentForHour) / totalCleanPotential;
+
+                            // Reduce each clean source to its used amount
+                            finalGeneration.hydro[i] *= usageFraction;
+                            finalGeneration.nuclear[i] *= usageFraction;
+                            finalGeneration.geothermal[i] *= usageFraction;
+                            finalGeneration.solar[i] *= usageFraction;
+                            finalGeneration.wind[i] *= usageFraction;
+                        }
+                    }
                 }
                 
                 const newEmissions = calculateEmissions(finalGeneration, inputs.capacity.dac);
