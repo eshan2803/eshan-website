@@ -1471,37 +1471,27 @@
                 confirmDemandBtn.addEventListener('click', () => {
                     const demandDataset = generationChart.data.datasets.find(ds => ds.label === 'Demand');
                     if (demandDataset) {
-                        const newDemand = [...demandDataset.data];
-                        const defaultTotalDemand = SEASONAL_DEMAND_PROFILES.spring.reduce((a, b) => a + b, 0);
-                        const newTotalDemand = newDemand.reduce((a, b) => a + b, 0);
-                        
-                        // Calculate scaling factor relative to the absolute default demand
-                        const scalingFactor = defaultTotalDemand > 0 ? newTotalDemand / defaultTotalDemand : 1;
-
                         // Update the global demand profile with the new edited values
-                        currentDemand = newDemand;
-
-                        // Scale the baseline generation from the clean, unscaled source
-                        for (const tech in currentCountryUnscaledBaseline) {
-                            if (Array.isArray(currentCountryUnscaledBaseline[tech])) {
-                                BASELINE_GENERATION[tech] = currentCountryUnscaledBaseline[tech].map(val => val * scalingFactor);
-                            }
-                        }
+                        currentDemand = [...demandDataset.data];
+                        // NOTE: The faulty logic that incorrectly scaled the baseline generation has been removed.
+                        // The baseline generation is correctly handled by updateBaselineForCountry and is independent
+                        // of the total demand. The simulation will correctly handle any mismatch.
                     }
                     
                     setDemandEditMode(false); // Exit edit mode
-                    runSimulation(); // Recalculate everything with the new demand and baseline
+                    runSimulation(); // Recalculate everything with the new demand
                     saveState(); // Save the new state to history
                 });
                 
                 // Event Listeners for Preset Buttons
                 function setDemandPreset(season) {
-                    const demandDataset = generationChart.data.datasets.find(ds => ds.label === 'Demand');
-                    demandDataset.data = [...SEASONAL_DEMAND_PROFILES[season]];
                     seasonSelect.value = season;
                     currentSeason = season;
                     updateBaselineForCountry(countrySelect.value);
-                    generationChart.update('none');
+                    
+                    // Exit edit mode and save state, making this a final action
+                    setDemandEditMode(false);
+                    saveState();
                 }
 
                 document.getElementById('preset-spring').addEventListener('click', () => setDemandPreset('spring'));
