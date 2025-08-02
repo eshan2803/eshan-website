@@ -206,30 +206,33 @@
                     <div class="mb-8 relative">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-2xl font-lora font-semibold text-gray-800">Hourly Electricity Generation (GWh)</h2>
-                            <div id="demand-edit-controls" class="flex items-center space-x-1">
-                                <button id="edit-demand-btn" class="p-2 rounded-full hover:bg-gray-200" title="Edit demand profile or select a seasonal preset">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
-                                        <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
-                                    </svg>
-                                </button>
-                                <!-- Seasonal Demand Preset Buttons -->
-                                <div id="demand-presets" class="hidden">
-                                    <button id="preset-spring" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Spring</button>
-                                    <button id="preset-summer" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Summer</button>
-                                    <button id="preset-fall" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Fall</button>
-                                    <button id="preset-winter" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Winter</button>
+                            <div class="flex items-center space-x-2">
+                                <span id="current-demand-profile-text" class="text-sm font-medium text-gray-600"></span>
+                                <div id="demand-edit-controls" class="flex items-center space-x-1">
+                                    <button id="edit-demand-btn" class="p-2 rounded-full hover:bg-gray-200" title="Edit demand profile or select a seasonal preset">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                                            <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                    <!-- Seasonal Demand Preset Buttons -->
+                                    <div id="demand-presets" class="hidden">
+                                        <button id="preset-demand-spring" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Spring</button>
+                                        <button id="preset-demand-summer" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Summer</button>
+                                        <button id="preset-demand-fall" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Fall</button>
+                                        <button id="preset-demand-winter" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Winter</button>
+                                    </div>
+                                    <button id="revert-demand-btn" class="p-2 rounded-full hover:bg-gray-200 hidden" title="Revert to original demand profile">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
+                                          <path fill-rule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                    <button id="confirm-demand-btn" class="p-2 rounded-full hover:bg-gray-200 hidden" title="Confirm changes to demand">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
                                 </div>
-                                <button id="revert-demand-btn" class="p-2 rounded-full hover:bg-gray-200 hidden" title="Revert to original demand profile">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fill-rule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
-                                    </svg>
-                                </button>
-                                <button id="confirm-demand-btn" class="p-2 rounded-full hover:bg-gray-200 hidden" title="Confirm changes to demand">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                                    </svg>
-                                </button>
                             </div>
                         </div>
                         <canvas id="generationMixChart"></canvas>
@@ -253,14 +256,32 @@
                     <div class="mt-8">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-2xl font-lora font-semibold text-gray-800">Hourly Capacity Factors</h2>
-                            <div>
-                                <label for="season-select" class="text-sm font-medium text-gray-700 mr-2">Season:</label>
-                                <select id="season-select" class="p-1 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white text-sm">
-                                    <option value="spring">Spring (Default)</option>
-                                    <option value="summer">Summer</option>
-                                    <option value="fall">Fall</option>
-                                    <option value="winter">Winter</option>
-                                </select>
+                             <div class="flex items-center space-x-2">
+                                <span id="current-cf-profile-text" class="text-sm font-medium text-gray-600"></span>
+                                <div id="cf-edit-controls" class="flex items-center space-x-1">
+                                    <button id="edit-cf-btn" class="p-2 rounded-full hover:bg-gray-200" title="Edit capacity factor profiles or select a seasonal preset">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                                            <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                    <div id="cf-presets" class="hidden">
+                                        <button id="preset-cf-spring" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Spring</button>
+                                        <button id="preset-cf-summer" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Summer</button>
+                                        <button id="preset-cf-fall" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Fall</button>
+                                        <button id="preset-cf-winter" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Winter</button>
+                                    </div>
+                                    <button id="revert-cf-btn" class="p-2 rounded-full hover:bg-gray-200 hidden" title="Revert to original capacity factor profiles">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
+                                          <path fill-rule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                    <button id="confirm-cf-btn" class="p-2 rounded-full hover:bg-gray-200 hidden" title="Confirm changes to capacity factors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <canvas id="capacityFactorChart"></canvas>
@@ -553,7 +574,6 @@
         };
         const EMISSION_FACTORS = { naturalGas: 395, hydro: 0, nuclear: 0, solar: 0, wind: 0, geothermal: 0, coal: 850 };
         
-        // Updated COST_DATA based on recent industry reports (e.g., Lazard LCOE v17, EIA STEO July 2024)
         const COST_DATA = {
             capex: { 
                 solar: 1562, wind: 1859, nuclear: 7242, geothermal: 3329, 
@@ -622,12 +642,20 @@
             const gridMixSlidersContainer = document.getElementById('grid-mix-sliders');
             const generationMixSlidersContainer = document.getElementById('generation-mix-sliders');
             const countrySelect = document.getElementById('country-select');
-            const seasonSelect = document.getElementById('season-select');
-            const visitorCountEl = document.getElementById('visitor-count');
+            
+            const currentDemandProfileText = document.getElementById('current-demand-profile-text');
             const editDemandBtn = document.getElementById('edit-demand-btn');
             const confirmDemandBtn = document.getElementById('confirm-demand-btn');
             const revertDemandBtn = document.getElementById('revert-demand-btn');
             const demandPresetsDiv = document.getElementById('demand-presets');
+
+            const currentCFProfileText = document.getElementById('current-cf-profile-text');
+            const editCFBtn = document.getElementById('edit-cf-btn');
+            const confirmCFBtn = document.getElementById('confirm-cf-btn');
+            const revertCFBtn = document.getElementById('revert-cf-btn');
+            const cfPresetsDiv = document.getElementById('cf-presets');
+            const visitorCountEl = document.getElementById('visitor-count');
+
 
             // --- STATE MANAGEMENT ---
             let stateHistory = [];
@@ -639,10 +667,18 @@
             let enabledTechnologies = {};
             let defaultCapacityMix = {};
             let defaultGenerationMix = {};
+            
             let isDemandEditMode = false;
             let currentDemand = [...SEASONAL_DEMAND_PROFILES.spring];
             let originalDemandBeforeEdit = [];
-            let currentSeason = 'spring';
+            let currentDemandProfileName = 'Spring';
+
+            let isCFEditMode = false;
+            let currentSolarCFProfile = [];
+            let currentWindCFProfile = [];
+            let originalSolarCFBeforeEdit = [];
+            let originalWindCFBeforeEdit = [];
+            let currentCFProfileName = 'Spring';
 
 
             // --- CHARTING SETUP ---
@@ -834,7 +870,10 @@
                 },
                 options: {
                     responsive: true, animation: { duration: 0 },
-                    plugins: { legend: { position: 'bottom' } },
+                    plugins: { 
+                        legend: { position: 'bottom' },
+                        dragData: { enabled: false }
+                    },
                     scales: {
                         x: { title: { display: true, text: 'Hour of Day' } },
                         y: { title: { display: true, text: 'Capacity Factor (%)' }, min: 0, max: 1, ticks: { callback: value => `${value * 100}%` } }
@@ -1097,9 +1136,9 @@
                 const baseSolarProfile = countryProfiles[selectedCountry]?.solar || SOLAR_CF_PROFILE;
                 const baseWindProfile = countryProfiles[selectedCountry]?.wind || WIND_CF_PROFILE;
 
-                const seasonalMultipliers = SEASONAL_MULTIPLIERS[currentSeason];
-                const seasonalSolarProfile = baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
-                const seasonalWindProfile = baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
+                const seasonalMultipliers = SEASONAL_MULTIPLIERS[currentCFProfileName.toLowerCase()] || { solar: 1.0, wind: 1.0 };
+                const seasonalSolarProfile = currentSolarCFProfile.length > 0 ? currentSolarCFProfile : baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
+                const seasonalWindProfile = currentWindCFProfile.length > 0 ? currentWindCFProfile : baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
 
 
                 let activeBaselineGeneration = JSON.parse(JSON.stringify(BASELINE_GENERATION));
@@ -1484,7 +1523,7 @@
                     // Highlight the current season's button
                     document.querySelectorAll('#demand-presets button').forEach(btn => {
                         btn.classList.remove('preset-active');
-                        if (btn.id === `preset-${currentSeason}`) {
+                        if (btn.id === `preset-demand-${currentDemandProfileName.toLowerCase()}`) {
                             btn.classList.add('preset-active');
                         }
                     });
@@ -1542,6 +1581,59 @@
                 }
             }
 
+            // --- CF EDIT MODE ---
+            function setCFEditMode(enabled) {
+                isCFEditMode = enabled;
+                
+                if (enabled) {
+                    editCFBtn.classList.add('hidden');
+                    confirmCFBtn.classList.remove('hidden');
+                    revertCFBtn.classList.remove('hidden');
+                    cfPresetsDiv.classList.remove('hidden');
+
+                    document.querySelectorAll('#cf-presets button').forEach(btn => {
+                        btn.classList.remove('preset-active');
+                        if (btn.id === `preset-cf-${currentCFProfileName.toLowerCase()}`) {
+                            btn.classList.add('preset-active');
+                        }
+                    });
+
+                    capacityFactorChart.data.datasets.forEach(dataset => {
+                        dataset.pointRadius = 6;
+                        dataset.pointHoverRadius = 8;
+                        dataset.pointBorderColor = 'white';
+                        dataset.pointBorderWidth = 2;
+                    });
+                    
+                    capacityFactorChart.options.plugins.dragData = {
+                        round: 2, 
+                        showTooltip: true,
+                        onDragEnd: (e, datasetIndex, index, value) => {
+                            // Ensure value stays between 0 and 1
+                            if (value < 0) capacityFactorChart.data.datasets[datasetIndex].data[index] = 0;
+                            if (value > 1) capacityFactorChart.data.datasets[datasetIndex].data[index] = 1;
+                            capacityFactorChart.update('none');
+                        }
+                    };
+                    capacityFactorChart.options.plugins.dragData.enabled = true;
+
+                } else {
+                    editCFBtn.classList.remove('hidden');
+                    confirmCFBtn.classList.add('hidden');
+                    revertCFBtn.classList.add('hidden');
+                    cfPresetsDiv.classList.add('hidden');
+                    
+                    capacityFactorChart.data.datasets.forEach(dataset => {
+                        dataset.pointRadius = 0;
+                    });
+
+                    if (capacityFactorChart.options.plugins.dragData) {
+                        capacityFactorChart.options.plugins.dragData.enabled = false;
+                    }
+                }
+                capacityFactorChart.update();
+            }
+
             // --- EVENT LISTENERS ---
             function updateUndoRedoButtons() {
                 undoButton.disabled = historyIndex <= 0;
@@ -1592,53 +1684,81 @@
                 }
             }
 
-            // Event listeners for demand editing
-            if (editDemandBtn && confirmDemandBtn && revertDemandBtn) {
-                editDemandBtn.addEventListener('click', () => {
-                    originalDemandBeforeEdit = [...currentDemand]; // Save state before editing
-                    setDemandEditMode(true);
-                });
-
-                revertDemandBtn.addEventListener('click', () => {
-                    const demandDataset = generationChart.data.datasets.find(ds => ds.label === 'Demand');
-                    if (demandDataset) {
-                        // Revert to the absolute initial default demand curve
-                        demandDataset.data = [...SEASONAL_DEMAND_PROFILES.spring];
-                        generationChart.update('none');
-                    }
-                });
-
-                confirmDemandBtn.addEventListener('click', () => {
-                    const demandDataset = generationChart.data.datasets.find(ds => ds.label === 'Demand');
-                    if (demandDataset) {
-                        // Update the global demand profile with the new edited values
-                        currentDemand = [...demandDataset.data];
-                        // NOTE: The faulty logic that incorrectly scaled the baseline generation has been removed.
-                        // The baseline generation is correctly handled by updateBaselineForCountry and is independent
-                        // of the total demand. The simulation will correctly handle any mismatch.
-                    }
-                    
-                    setDemandEditMode(false); // Exit edit mode
-                    runSimulation(); // Recalculate everything with the new demand
-                    saveState(); // Save the new state to history
-                });
+            // Central function to apply a seasonal profile to both charts
+            function applySeason(season) {
+                const seasonCapitalized = season.charAt(0).toUpperCase() + season.slice(1);
                 
-                // Event Listeners for Preset Buttons
-                function setDemandPreset(season) {
-                    seasonSelect.value = season;
-                    currentSeason = season;
-                    updateBaselineForCountry(countrySelect.value);
-                    
-                    // Exit edit mode and save state, making this a final action
-                    setDemandEditMode(false);
-                    saveState();
-                }
+                // Update Demand
+                currentDemand = [...SEASONAL_DEMAND_PROFILES[season]];
+                currentDemandProfileName = seasonCapitalized;
+                currentDemandProfileText.textContent = `Profile: ${currentDemandProfileName}`;
 
-                document.getElementById('preset-spring').addEventListener('click', () => setDemandPreset('spring'));
-                document.getElementById('preset-summer').addEventListener('click', () => setDemandPreset('summer'));
-                document.getElementById('preset-fall').addEventListener('click', () => setDemandPreset('fall'));
-                document.getElementById('preset-winter').addEventListener('click', () => setDemandPreset('winter'));
+                // Update Capacity Factors
+                const seasonalMultipliers = SEASONAL_MULTIPLIERS[season];
+                const baseSolarProfile = countryProfiles[countrySelect.value]?.solar || SOLAR_CF_PROFILE;
+                const baseWindProfile = countryProfiles[countrySelect.value]?.wind || WIND_CF_PROFILE;
+                currentSolarCFProfile = baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
+                currentWindCFProfile = baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
+                currentCFProfileName = seasonCapitalized;
+                currentCFProfileText.textContent = `Profile: ${currentCFProfileName}`;
+
+                // Update baselines and run simulation
+                updateBaselineForCountry(countrySelect.value); 
+                
+                // Exit any edit modes
+                setDemandEditMode(false);
+                setCFEditMode(false);
+                saveState();
             }
+
+            // Event listeners for demand editing
+            editDemandBtn.addEventListener('click', () => {
+                originalDemandBeforeEdit = [...currentDemand];
+                setDemandEditMode(true);
+            });
+
+            revertDemandBtn.addEventListener('click', () => {
+                generationChart.data.datasets.find(ds => ds.label === 'Demand').data = [...originalDemandBeforeEdit];
+                generationChart.update('none');
+            });
+
+            confirmDemandBtn.addEventListener('click', () => {
+                currentDemand = [...generationChart.data.datasets.find(ds => ds.label === 'Demand').data];
+                currentDemandProfileName = "User Defined";
+                currentDemandProfileText.textContent = `Profile: ${currentDemandProfileName}`;
+                setDemandEditMode(false);
+                runSimulation();
+                saveState();
+            });
+            
+            ['spring', 'summer', 'fall', 'winter'].forEach(season => {
+                document.getElementById(`preset-demand-${season}`).addEventListener('click', () => applySeason(season));
+                document.getElementById(`preset-cf-${season}`).addEventListener('click', () => applySeason(season));
+            });
+
+            // Event listeners for CF editing
+            editCFBtn.addEventListener('click', () => {
+                originalSolarCFBeforeEdit = [...capacityFactorChart.data.datasets[0].data];
+                originalWindCFBeforeEdit = [...capacityFactorChart.data.datasets[1].data];
+                setCFEditMode(true);
+            });
+
+            revertCFBtn.addEventListener('click', () => {
+                capacityFactorChart.data.datasets[0].data = [...originalSolarCFBeforeEdit];
+                capacityFactorChart.data.datasets[1].data = [...originalWindCFBeforeEdit];
+                capacityFactorChart.update('none');
+            });
+
+            confirmCFBtn.addEventListener('click', () => {
+                currentSolarCFProfile = [...capacityFactorChart.data.datasets[0].data];
+                currentWindCFProfile = [...capacityFactorChart.data.datasets[1].data];
+                currentCFProfileName = "User Defined";
+                currentCFProfileText.textContent = `Profile: ${currentCFProfileName}`;
+                setCFEditMode(false);
+                runSimulation();
+                saveState();
+            });
+
 
             resetToZeroButton.addEventListener('click', () => {
                 Object.keys(sliders).forEach(key => {
@@ -1694,8 +1814,8 @@
                             exportPrice: currentValues.exportPrice,
                         }
                     },
-                    seasonalSolarProfile,
-                    seasonalWindProfile,
+                    currentSolarCFProfile,
+                    currentWindCFProfile,
                     activeBaselineGeneration
                 );
                 customBaselineSystemCost = newBaselineResult.systemCost;
@@ -1804,9 +1924,10 @@
 
             function updateBaselineForCountry(countryName) {
                 let newCarbonTax = 0;
-                // Update demand profile based on the current season
-                currentDemand = [...SEASONAL_DEMAND_PROFILES[currentSeason]];
-
+                
+                // This function now relies on global currentDemand and current CF profiles
+                // which are set by applySeason()
+                
                 if (countryName === 'default') {
                     currentCountryUnscaledBaseline = JSON.parse(JSON.stringify(ORIGINAL_BASELINE_GENERATION));
                      // Calculate the fixed installed capacity for the default case
@@ -1848,7 +1969,7 @@
                 
                 // Apply seasonal multipliers to the unscaled baseline before setting the final BASELINE_GENERATION
                 const seasonallyAdjustedBaseline = JSON.parse(JSON.stringify(currentCountryUnscaledBaseline));
-                const seasonalMultipliers = SEASONAL_MULTIPLIERS[currentSeason];
+                const seasonalMultipliers = SEASONAL_MULTIPLIERS[currentCFProfileName.toLowerCase()] || { solar: 1.0, wind: 1.0 };
                 seasonallyAdjustedBaseline.solar = seasonallyAdjustedBaseline.solar.map(val => val * seasonalMultipliers.solar);
                 seasonallyAdjustedBaseline.wind = seasonallyAdjustedBaseline.wind.map(val => val * seasonalMultipliers.wind);
                 BASELINE_GENERATION = seasonallyAdjustedBaseline;
@@ -1879,8 +2000,8 @@
                         capacity: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
                         incentives: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, storage: 0, dac: 0, carbonTax: newCarbonTax, exportPrice: 20 }
                     },
-                    countryProfiles[countryName]?.solar || SOLAR_CF_PROFILE,
-                    countryProfiles[countryName]?.wind || WIND_CF_PROFILE,
+                    currentSolarCFProfile,
+                    currentWindCFProfile,
                     activeBaseline
                 );
                 customBaselineSystemCost = newBaselineResult.systemCost;
@@ -1918,17 +2039,12 @@
 
 
                 runSimulation();
-                saveState();
+                // Don't save state here, it's handled by the calling function (applySeason or countrySelect change)
             }
 
             countrySelect.addEventListener('change', (e) => {
-                updateBaselineForCountry(e.target.value);
-            });
-
-            seasonSelect.addEventListener('change', (e) => {
-                currentSeason = e.target.value;
-                // We need to re-calculate the baseline generation for the new season
-                updateBaselineForCountry(countrySelect.value); 
+                // When country changes, reset to its default season (Spring)
+                applySeason('spring');
             });
             
             // --- MAIN INITIALIZATION FUNCTION ---
@@ -1963,8 +2079,7 @@
                 createGridMixSliders();
                 createGenerationMixSliders();
                 populateCountryDropdown();
-                updateBaselineForCountry('default');
-
+                applySeason('spring'); // This will set up the initial state correctly
                 setupInputSyncing();
             }
 
@@ -1973,5 +2088,3 @@
     </script>
 </body>
 </html>
-
-
