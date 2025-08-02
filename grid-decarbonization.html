@@ -1754,6 +1754,10 @@
                 currentWindCFProfile = [...capacityFactorChart.data.datasets[1].data];
                 currentCFProfileName = "User Defined";
                 currentCFProfileText.textContent = `Profile: ${currentCFProfileName}`;
+                
+                // Recalculate baselines with the new custom profiles before running the full simulation
+                updateBaselineForCountry(countrySelect.value);
+
                 setCFEditMode(false);
                 runSimulation();
                 saveState();
@@ -1925,18 +1929,14 @@
             function updateBaselineForCountry(countryName) {
                 let newCarbonTax = 0;
                 
-                // This function now relies on global currentDemand and current CF profiles
-                // which are set by applySeason()
-                
                 if (countryName === 'default') {
-                    currentCountryUnscaledBaseline = JSON.parse(JSON.stringify(ORIGINAL_BASELINE_GENERATION));
-                     // Calculate the fixed installed capacity for the default case
                     currentCountryInstalledCapacity = {}; // Reset
                     for(const tech in COST_DATA.capacity_factor) {
-                        const totalDailyGen = currentCountryUnscaledBaseline[tech] ? currentCountryUnscaledBaseline[tech].reduce((a, b) => a + b, 0) : 0;
+                        const totalDailyGen = ORIGINAL_BASELINE_GENERATION[tech] ? ORIGINAL_BASELINE_GENERATION[tech].reduce((a, b) => a + b, 0) : 0;
                         const capacityGW = totalDailyGen / (COST_DATA.capacity_factor[tech] * 24);
                         currentCountryInstalledCapacity[tech] = capacityGW;
                     }
+                    currentCountryUnscaledBaseline = JSON.parse(JSON.stringify(ORIGINAL_BASELINE_GENERATION));
                     newCarbonTax = 31;
                 } else {
                     const countryData = countryGridMixData[countryName];
@@ -1944,36 +1944,40 @@
                     
                     newCarbonTax = carbonTaxes[countryName] || 0;
 
-                    const newBaseline = {};
-                    
-                    const solarProfile = countryProfiles[countryName]?.solar || SOLAR_CF_PROFILE;
-                    const windProfile = countryProfiles[countryName]?.wind || WIND_CF_PROFILE;
-
                     currentCountryInstalledCapacity = {}; // Reset for new country
                     for(const tech in COST_DATA.capacity_factor) {
                         const techCapacityGW = (countryData.totalCapacityMW / 1000) * ((countryData.mix[tech] || 0) / 100);
                         currentCountryInstalledCapacity[tech] = techCapacityGW;
-                        newBaseline[tech] = Array(24).fill(0);
+                    }
 
-                        if (tech === 'solar') {
-                            for (let i = 0; i < 24; i++) newBaseline.solar[i] = techCapacityGW * solarProfile[i];
-                        } else if (tech === 'wind') {
-                            for (let i = 0; i < 24; i++) newBaseline.wind[i] = techCapacityGW * windProfile[i];
-                        } else {
-                             for (let i = 0; i < 24; i++) newBaseline[tech][i] = techCapacityGW * COST_DATA.capacity_factor[tech];
+                    const newUnscaledBaseline = {};
+                    for(const tech in currentCountryInstalledCapacity) {
+                        if (tech !== 'solar' && tech !== 'wind') {
+                             newUnscaledBaseline[tech] = Array(24).fill(currentCountryInstalledCapacity[tech] * COST_DATA.capacity_factor[tech]);
                         }
                     }
-                    
-                    currentCountryUnscaledBaseline = newBaseline;
+                    currentCountryUnscaledBaseline = newUnscaledBaseline;
                 }
                 
-                // Apply seasonal multipliers to the unscaled baseline before setting the final BASELINE_GENERATION
-                const seasonallyAdjustedBaseline = JSON.parse(JSON.stringify(currentCountryUnscaledBaseline));
-                const seasonalMultipliers = SEASONAL_MULTIPLIERS[currentCFProfileName.toLowerCase()] || { solar: 1.0, wind: 1.0 };
-                seasonallyAdjustedBaseline.solar = seasonallyAdjustedBaseline.solar.map(val => val * seasonalMultipliers.solar);
-                seasonallyAdjustedBaseline.wind = seasonallyAdjustedBaseline.wind.map(val => val * seasonalMultipliers.wind);
-                BASELINE_GENERATION = seasonallyAdjustedBaseline;
+                const newBaseline = {};
+                for(const tech in currentCountryInstalledCapacity) {
+                    if (tech === 'solar') {
+                        newBaseline.solar = [];
+                        for (let i = 0; i < 24; i++) newBaseline.solar[i] = currentCountryInstalledCapacity.solar * currentSolarCFProfile[i];
+                    } else if (tech === 'wind') {
+                        newBaseline.wind = [];
+                        for (let i = 0; i < 24; i++) newBaseline.wind[i] = currentCountryInstalledCapacity.wind * currentWindCFProfile[i];
+                    } else {
+                        if(currentCountryUnscaledBaseline[tech]) {
+                            newBaseline[tech] = [...currentCountryUnscaledBaseline[tech]];
+                        } else {
+                            newBaseline[tech] = Array(24).fill(currentCountryInstalledCapacity[tech] * COST_DATA.capacity_factor[tech]);
+                        }
+                    }
+                }
+                BASELINE_GENERATION = newBaseline;
 
+                // Reset sliders
                 Object.keys(sliders).forEach(key => {
                     if (key === 'exportPrice') {
                         sliders[key].value = 20;
@@ -1987,6 +1991,7 @@
                 sliders.carbonTax.value = newCarbonTax;
                 inputs.carbonTax.value = newCarbonTax;
                 
+                // Recalculate baseline costs and default mixes
                 let activeBaseline = JSON.parse(JSON.stringify(BASELINE_GENERATION));
                 const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'nuclear', 'geothermal'];
                 techOrder.forEach(tech => {
@@ -2015,7 +2020,6 @@
                 userDefaultState = {};
                 
                 let totalDefaultCapacity = 0;
-                // FIX: Calculate defaultCapacityMix from the non-seasonal installed capacity, not the seasonal generation baseline
                 for (const tech in currentCountryInstalledCapacity) {
                     defaultCapacityMix[tech] = currentCountryInstalledCapacity[tech];
                     totalDefaultCapacity += currentCountryInstalledCapacity[tech];
@@ -2036,14 +2040,10 @@
                  for (const tech in defaultGenerationMix) {
                     defaultGenerationMix[tech] = (defaultGenerationMix[tech] / totalDefaultGeneration) * 100;
                 }
-
-
                 runSimulation();
-                // Don't save state here, it's handled by the calling function (applySeason or countrySelect change)
             }
 
             countrySelect.addEventListener('change', (e) => {
-                // When country changes, reset to its default season (Spring)
                 applySeason('spring');
             });
             
