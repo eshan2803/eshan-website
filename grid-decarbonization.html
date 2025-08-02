@@ -1114,7 +1114,18 @@
                     totalCapacity += capacities[tech];
                 }
 
-                if (totalCapacity === 0) return;
+                if (totalCapacity === 0) {
+                    // If total capacity is zero, set all percentages to zero.
+                    for (const tech in COST_DATA.capacity_factor) {
+                        const fillEl = document.getElementById(`mix-fill-${tech}`);
+                        const valueEl = document.getElementById(`mix-value-${tech}`);
+                        if(fillEl && valueEl) {
+                            fillEl.style.width = '0%';
+                            valueEl.textContent = '0.0%';
+                        }
+                    }
+                    return;
+                };
 
                 for (const tech in capacities) {
                     const percentage = (capacities[tech] / totalCapacity) * 100;
@@ -1664,6 +1675,13 @@
 
                 if (countryName === 'default') {
                     currentCountryUnscaledBaseline = JSON.parse(JSON.stringify(ORIGINAL_BASELINE_GENERATION));
+                     // Calculate the fixed installed capacity for the default case
+                    currentCountryInstalledCapacity = {}; // Reset
+                    for(const tech in COST_DATA.capacity_factor) {
+                        const totalDailyGen = currentCountryUnscaledBaseline[tech] ? currentCountryUnscaledBaseline[tech].reduce((a, b) => a + b, 0) : 0;
+                        const capacityGW = totalDailyGen / (COST_DATA.capacity_factor[tech] * 24);
+                        currentCountryInstalledCapacity[tech] = capacityGW;
+                    }
                     newCarbonTax = 31;
                 } else {
                     const countryData = countryGridMixData[countryName];
