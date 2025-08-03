@@ -927,7 +927,20 @@
                 options: {
                     responsive: true, animation: { duration: 0 },
                     plugins: { 
-                        legend: { position: 'bottom' }
+                        legend: { position: 'bottom' },
+                        dragData: {
+                            enabled: false, // Start disabled
+                            round: 2,
+                            showTooltip: true,
+                            onDragEnd: (e, datasetIndex, index, value) => {
+                                const chart = e.chart;
+                                let updatedValue = value;
+                                if (value < 0) updatedValue = 0;
+                                if (value > 1) updatedValue = 1;
+                                chart.data.datasets[datasetIndex].data[index] = updatedValue;
+                                chart.update('none');
+                            }
+                        }
                     },
                     scales: {
                         x: { title: { display: true, text: 'Hour of Day' } },
@@ -1678,17 +1691,10 @@
                         dataset.pointBorderWidth = 2;
                     });
                     
-                    capacityFactorChart.options.plugins.dragData = {
-                        round: 2, 
-                        showTooltip: true,
-                        onDragEnd: (e, datasetIndex, index, value) => {
-                            // Ensure value stays between 0 and 1
-                            if (value < 0) capacityFactorChart.data.datasets[datasetIndex].data[index] = 0;
-                            if (value > 1) capacityFactorChart.data.datasets[datasetIndex].data[index] = 1;
-                            capacityFactorChart.update('none');
-                        }
-                    };
-                    capacityFactorChart.options.plugins.dragData.enabled = true;
+                    // Simply enable the pre-configured plugin
+                    if (capacityFactorChart.options.plugins.dragData) {
+                        capacityFactorChart.options.plugins.dragData.enabled = true;
+                    }
 
                 } else {
                     editCFBtn.classList.remove('hidden');
@@ -1700,9 +1706,9 @@
                         dataset.pointRadius = 0;
                     });
 
+                    // Simply disable the plugin
                     if (capacityFactorChart.options.plugins.dragData) {
                         capacityFactorChart.options.plugins.dragData.enabled = false;
-                        capacityFactorChart.options.plugins.dragData.onDragEnd = null;
                     }
                 }
                 capacityFactorChart.update();
