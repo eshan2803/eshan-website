@@ -736,22 +736,22 @@
                 data: {
                     labels: HOURS,
                     datasets: [
-                        { label: 'Coal', data: [], backgroundColor: COLORS.coal, stack: 'generators' },
-                        { label: 'Coal to Storage', data: [], backgroundColor: PATTERNS.coalToStorage, stack: 'generators' },
-                        { label: 'Natural Gas', data: [], backgroundColor: COLORS.naturalGas, stack: 'generators' },
-                        { label: 'Natural Gas to Storage', data: [], backgroundColor: PATTERNS.naturalGasToStorage, stack: 'generators' },
-                        { label: 'Hydro', data: [], backgroundColor: COLORS.hydro, stack: 'generators' },
-                        { label: 'Hydro to Storage', data: [], backgroundColor: PATTERNS.hydroToStorage, stack: 'generators' },
-                        { label: 'Geothermal', data: [], backgroundColor: COLORS.geothermal, stack: 'generators' },
-                        { label: 'Geothermal to Storage', data: [], backgroundColor: PATTERNS.geothermalToStorage, stack: 'generators' },
-                        { label: 'Nuclear', data: [], backgroundColor: COLORS.nuclear, stack: 'generators' },
-                        { label: 'Nuclear to Storage', data: [], backgroundColor: PATTERNS.nuclearToStorage, stack: 'generators' },
-                        { label: 'Solar', data: [], backgroundColor: COLORS.solar, stack: 'generators' },
-                        { label: 'Solar to Storage', data: [], backgroundColor: PATTERNS.solarToStorage, stack: 'generators' },
-                        { label: 'Wind', data: [], backgroundColor: COLORS.wind, stack: 'generators' },
-                        { label: 'Wind to Storage', data: [], backgroundColor: PATTERNS.windToStorage, stack: 'generators' },
-                        { label: 'Storage', data: [], backgroundColor: COLORS.storage, stack: 'generators' },
-                        { label: 'Curtailment', data: [], backgroundColor: COLORS.curtailment, stack: 'generators' },
+                        { label: 'Coal', data: [], backgroundColor: COLORS.coal, stack: 'generators', dragData: false },
+                        { label: 'Coal to Storage', data: [], backgroundColor: PATTERNS.coalToStorage, stack: 'generators', dragData: false },
+                        { label: 'Natural Gas', data: [], backgroundColor: COLORS.naturalGas, stack: 'generators', dragData: false },
+                        { label: 'Natural Gas to Storage', data: [], backgroundColor: PATTERNS.naturalGasToStorage, stack: 'generators', dragData: false },
+                        { label: 'Hydro', data: [], backgroundColor: COLORS.hydro, stack: 'generators', dragData: false },
+                        { label: 'Hydro to Storage', data: [], backgroundColor: PATTERNS.hydroToStorage, stack: 'generators', dragData: false },
+                        { label: 'Geothermal', data: [], backgroundColor: COLORS.geothermal, stack: 'generators', dragData: false },
+                        { label: 'Geothermal to Storage', data: [], backgroundColor: PATTERNS.geothermalToStorage, stack: 'generators', dragData: false },
+                        { label: 'Nuclear', data: [], backgroundColor: COLORS.nuclear, stack: 'generators', dragData: false },
+                        { label: 'Nuclear to Storage', data: [], backgroundColor: PATTERNS.nuclearToStorage, stack: 'generators', dragData: false },
+                        { label: 'Solar', data: [], backgroundColor: COLORS.solar, stack: 'generators', dragData: false },
+                        { label: 'Solar to Storage', data: [], backgroundColor: PATTERNS.solarToStorage, stack: 'generators', dragData: false },
+                        { label: 'Wind', data: [], backgroundColor: COLORS.wind, stack: 'generators', dragData: false },
+                        { label: 'Wind to Storage', data: [], backgroundColor: PATTERNS.windToStorage, stack: 'generators', dragData: false },
+                        { label: 'Storage', data: [], backgroundColor: COLORS.storage, stack: 'generators', dragData: false },
+                        { label: 'Curtailment', data: [], backgroundColor: COLORS.curtailment, stack: 'generators', dragData: false },
                         { label: 'Demand', data: currentDemand, type: 'line', borderColor: COLORS.demand, borderWidth: 3, pointRadius: 0, fill: false, order: -1 }
                     ]
                 },
@@ -1598,6 +1598,7 @@
                     // Disable the dragData plugin
                     if (generationChart.options.plugins.dragData) {
                         generationChart.options.plugins.dragData.enabled = false;
+                        generationChart.options.plugins.dragData.onDragEnd = null;
                     }
                     generationChart.options.scales.y.stacked = true; // Re-enable stacking
                     generationChart.update();
@@ -1652,6 +1653,7 @@
 
                     if (capacityFactorChart.options.plugins.dragData) {
                         capacityFactorChart.options.plugins.dragData.enabled = false;
+                        capacityFactorChart.options.plugins.dragData.onDragEnd = null;
                     }
                 }
                 capacityFactorChart.update();
