@@ -189,7 +189,7 @@
             border-radius: 1rem; /* Match card radius */
             transition: box-shadow 0.3s ease-in-out;
         }
-        .tutorial-highlight-circle {
+        .tutorial-highlight-rounded {
              box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.7), 0 0 20px 10px rgba(59, 130, 246, 0.4);
              border-radius: 9999px;
         }
@@ -2142,6 +2142,13 @@
                     position: 'left'
                 },
                 {
+                    element: '#make-default-button',
+                    title: 'Save Your Scenario',
+                    text: 'Once you find a set of policies you like, you can save them as your new default. The cost metrics will then be calculated relative to this new baseline.',
+                    position: 'top',
+                    highlightClass: 'tutorial-highlight-rounded'
+                },
+                {
                     element: '#tutorial-step-4',
                     title: 'Key Outcome Metrics',
                     text: 'Your goal is to get CO2 emissions to zero while keeping costs low. These cards show the impact on electricity bills and the cost of avoiding CO2.',
@@ -2149,10 +2156,17 @@
                 },
                 {
                     element: '#edit-demand-btn',
-                    title: 'Customize the Simulation',
-                    text: 'Click the edit icons on the charts to create your own custom daily demand profiles or change the weather-dependent output of solar and wind.',
-                    position: 'bottom',
-                    highlightClass: 'tutorial-highlight-circle'
+                    title: 'Customize Demand',
+                    text: 'Click the edit icon to create your own custom daily demand profile, or select a seasonal preset.',
+                    position: 'left',
+                    highlightClass: 'tutorial-highlight-rounded'
+                },
+                {
+                    element: '#edit-cf-btn',
+                    title: 'Customize Weather',
+                    text: 'Click this edit icon to change the hourly performance of solar and wind to simulate different weather conditions.',
+                    position: 'left',
+                    highlightClass: 'tutorial-highlight-rounded'
                 }
             ];
 
@@ -2180,7 +2194,7 @@
                 overlay.style.display = 'none';
                 popover.style.display = 'none';
                 if (highlightedElement) {
-                    highlightedElement.classList.remove('tutorial-highlight', 'tutorial-highlight-circle');
+                    highlightedElement.classList.remove('tutorial-highlight', 'tutorial-highlight-rounded');
                 }
                 localStorage.setItem('gridSimulatorTutorialSeen', 'true');
             }
@@ -2195,7 +2209,7 @@
 
                 // Remove previous highlight
                 if (highlightedElement) {
-                    highlightedElement.classList.remove('tutorial-highlight', 'tutorial-highlight-circle');
+                    highlightedElement.classList.remove('tutorial-highlight', 'tutorial-highlight-rounded');
                 }
 
                 titleEl.textContent = step.title;
