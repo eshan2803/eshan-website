@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
-    <!-- ADDED: This plugin enables dragging data points on the chart -->
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata@2.2.1/dist/chartjs-plugin-dragdata.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -160,9 +159,58 @@
             background-color: #4b5563 !important; /* A darker gray */
             color: #ffffff !important;
         }
+
+        /* --- TUTORIAL STYLES --- */
+        #tutorial-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 9998;
+            display: none; /* Hidden by default */
+        }
+        #tutorial-popover {
+            position: absolute;
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            z-index: 9999;
+            width: 320px;
+            display: none; /* Hidden by default */
+            transition: top 0.3s ease-in-out, left 0.3s ease-in-out;
+        }
+        .tutorial-highlight {
+            position: relative;
+            z-index: 9999;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.7), 0 0 20px 10px rgba(59, 130, 246, 0.4);
+            border-radius: 1rem; /* Match card radius */
+            transition: box-shadow 0.3s ease-in-out;
+        }
+        .tutorial-highlight-circle {
+             box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.7), 0 0 20px 10px rgba(59, 130, 246, 0.4);
+             border-radius: 9999px;
+        }
+
     </style>
 </head>
 <body class="antialiased">
+
+    <!-- TUTORIAL HTML -->
+    <div id="tutorial-overlay"></div>
+    <div id="tutorial-popover">
+        <h3 id="tutorial-title" class="text-xl font-lora font-bold mb-2 text-gray-800"></h3>
+        <p id="tutorial-text" class="text-gray-600 mb-4"></p>
+        <div class="flex justify-between items-center">
+            <button id="tutorial-skip" class="text-sm text-gray-500 hover:text-gray-800">Skip Tour</button>
+            <div>
+                <button id="tutorial-prev" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 mr-2">Prev</button>
+                <button id="tutorial-next" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">Next</button>
+            </div>
+        </div>
+    </div>
 
     <div class="mesh-gradient-container">
         <div class="mesh-gradient-1"></div>
@@ -190,7 +238,7 @@
 
         <div class="container mx-auto p-4 md:p-8 pt-0">
 
-            <section class="text-center mb-12">
+            <section id="tutorial-step-1" class="text-center mb-12">
                 <h1 class="font-lora text-5xl md:text-6xl font-medium leading-tight text-gray-900">Grid Decarbonization Simulator</h1>
                 <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
                     Your challenge: Use policy levers for clean energy and direct air capture to eliminate CO2 emissions from the electricity grid, while minimizing the impact on customer bill.
@@ -202,7 +250,7 @@
 
             <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                <div class="lg:col-span-2 glass-card">
+                <div id="tutorial-step-2" class="lg:col-span-2 glass-card">
                     <div class="mb-8 relative">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-2xl font-lora font-semibold text-gray-800">Hourly Electricity Generation (GWh)</h2>
@@ -288,8 +336,8 @@
                     </div>
                 </div>
 
-                <div class="glass-card">
-                    <div class="mb-8">
+                <div class="lg:col-span-1 space-y-8">
+                    <div id="tutorial-step-4" class="glass-card">
                         <div class="grid grid-cols-2 gap-4 text-center">
                             <div>
                                 <h3 class="text-xl font-lora font-semibold text-gray-800">Impact on Bills</h3>
@@ -306,7 +354,7 @@
                         </div>
                     </div>
 
-                    <div class="space-y-6">
+                    <div id="tutorial-step-3" class="glass-card space-y-6">
                          <div class="mb-6">
                             <label for="country-select" class="block text-md font-medium text-gray-700 mb-2">Select Default Grid Mix</label>
                             <select id="country-select" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
@@ -477,9 +525,11 @@
                                 </div>
                             </div>
                         </div>
-                    </main>
+                    </div>
                 </div>
-            </div>
+            </main>
+        </div>
+    </div>
     
     <script type="module">
         // --- FIREBASE IMPORTS ---
@@ -2071,6 +2121,147 @@
                 applySeason('spring');
             });
             
+            // --- TUTORIAL LOGIC ---
+            const tutorialSteps = [
+                {
+                    element: '#tutorial-step-1',
+                    title: 'Welcome to the Grid Simulator!',
+                    text: 'This interactive tool lets you explore pathways to a zero-carbon electricity grid. Let\'s take a quick tour of the main features.',
+                    position: 'center'
+                },
+                {
+                    element: '#tutorial-step-2',
+                    title: 'Live Simulation Charts',
+                    text: 'These charts show the real-time results of your decisions. See how the generation mix and CO2 emissions change as you adjust the levers.',
+                    position: 'right'
+                },
+                {
+                    element: '#tutorial-step-3',
+                    title: 'Your Control Panel',
+                    text: 'This is where you make things happen! Use these sliders to deploy new technologies, set government incentives, and choose a starting grid mix.',
+                    position: 'left'
+                },
+                {
+                    element: '#tutorial-step-4',
+                    title: 'Key Outcome Metrics',
+                    text: 'Your goal is to get CO2 emissions to zero while keeping costs low. These cards show the impact on electricity bills and the cost of avoiding CO2.',
+                    position: 'bottom'
+                },
+                {
+                    element: '#edit-demand-btn',
+                    title: 'Customize the Simulation',
+                    text: 'Click the edit icons on the charts to create your own custom daily demand profiles or change the weather-dependent output of solar and wind.',
+                    position: 'bottom',
+                    highlightClass: 'tutorial-highlight-circle'
+                }
+            ];
+
+            let currentStep = 0;
+            const overlay = document.getElementById('tutorial-overlay');
+            const popover = document.getElementById('tutorial-popover');
+            const titleEl = document.getElementById('tutorial-title');
+            const textEl = document.getElementById('tutorial-text');
+            const prevBtn = document.getElementById('tutorial-prev');
+            const nextBtn = document.getElementById('tutorial-next');
+            const skipBtn = document.getElementById('tutorial-skip');
+            let highlightedElement = null;
+
+            function startTutorial() {
+                if (localStorage.getItem('gridSimulatorTutorialSeen')) {
+                    return; // Don't show if already seen
+                }
+                currentStep = 0;
+                overlay.style.display = 'block';
+                popover.style.display = 'block';
+                showTutorialStep(currentStep);
+            }
+
+            function endTutorial() {
+                overlay.style.display = 'none';
+                popover.style.display = 'none';
+                if (highlightedElement) {
+                    highlightedElement.classList.remove('tutorial-highlight', 'tutorial-highlight-circle');
+                }
+                localStorage.setItem('gridSimulatorTutorialSeen', 'true');
+            }
+
+            function showTutorialStep(stepIndex) {
+                if (stepIndex < 0 || stepIndex >= tutorialSteps.length) {
+                    endTutorial();
+                    return;
+                }
+
+                const step = tutorialSteps[stepIndex];
+
+                // Remove previous highlight
+                if (highlightedElement) {
+                    highlightedElement.classList.remove('tutorial-highlight', 'tutorial-highlight-circle');
+                }
+
+                titleEl.textContent = step.title;
+                textEl.textContent = step.text;
+
+                const targetElement = document.querySelector(step.element);
+                highlightedElement = targetElement;
+
+                if (!targetElement) {
+                    console.warn(`Tutorial element not found: ${step.element}`);
+                    // Position popover in the center if element not found
+                    popover.style.top = '50%';
+                    popover.style.left = '50%';
+                    popover.style.transform = 'translate(-50%, -50%)';
+                } else {
+                    targetElement.classList.add(step.highlightClass || 'tutorial-highlight');
+                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    const targetRect = targetElement.getBoundingClientRect();
+                    const popoverRect = popover.getBoundingClientRect();
+
+                    // Position popover based on step definition
+                    switch (step.position) {
+                        case 'bottom':
+                            popover.style.top = `${targetRect.bottom + 15}px`;
+                            popover.style.left = `${targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2)}px`;
+                            break;
+                        case 'top':
+                            popover.style.top = `${targetRect.top - popoverRect.height - 15}px`;
+                            popover.style.left = `${targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2)}px`;
+                            break;
+                        case 'left':
+                            popover.style.top = `${targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2)}px`;
+                            popover.style.left = `${targetRect.left - popoverRect.width - 15}px`;
+                            break;
+                        case 'right':
+                            popover.style.top = `${targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2)}px`;
+                            popover.style.left = `${targetRect.right + 15}px`;
+                            break;
+                        case 'center':
+                            popover.style.top = '50%';
+                            popover.style.left = '50%';
+                            popover.style.transform = 'translate(-50%, -50%)';
+                            break;
+                    }
+                }
+
+                // Update button states
+                prevBtn.style.display = stepIndex === 0 ? 'none' : 'inline-block';
+                nextBtn.textContent = stepIndex === tutorialSteps.length - 1 ? 'Finish' : 'Next';
+            }
+
+            nextBtn.addEventListener('click', () => {
+                currentStep++;
+                showTutorialStep(currentStep);
+            });
+
+            prevBtn.addEventListener('click', () => {
+                currentStep--;
+                showTutorialStep(currentStep);
+            });
+
+            skipBtn.addEventListener('click', endTutorial);
+            overlay.addEventListener('click', endTutorial);
+
+
             // --- MAIN INITIALIZATION FUNCTION ---
             async function initialize() {
                 try {
@@ -2105,6 +2296,9 @@
                 populateCountryDropdown();
                 applySeason('spring'); // This will set up the initial state correctly
                 setupInputSyncing();
+                
+                // Start the tutorial after a short delay to allow the page to render
+                setTimeout(startTutorial, 500);
             }
 
             await initialize();
@@ -2112,4 +2306,3 @@
     </script>
 </body>
 </html>
-
