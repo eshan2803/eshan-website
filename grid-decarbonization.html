@@ -289,15 +289,20 @@
                 </div>
 
                 <div class="glass-card">
-                    <div class="mb-8 grid grid-cols-2 gap-4 text-center">
-                        <div>
-                            <h3 class="text-xl font-lora font-semibold text-gray-800">Impact on Bills</h3>
-                            <p id="bill-impact" class="text-5xl font-bold text-blue-600 mt-2">0%</p>
+                    <div class="mb-8">
+                        <div class="grid grid-cols-2 gap-4 text-center">
+                            <div>
+                                <h3 class="text-xl font-lora font-semibold text-gray-800">Impact on Bills</h3>
+                                <p id="bill-impact" class="text-5xl font-bold text-blue-600 mt-2">0%</p>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-lora font-semibold text-gray-800">Abatement Cost</h3>
+                                <p id="green-premium" class="text-5xl font-bold text-blue-600 mt-2">$---</p>
+                                 <span class="text-sm text-gray-600">/ ton CO2 avoided</span>
+                            </div>
                         </div>
-                        <div>
-                            <h3 class="text-xl font-lora font-semibold text-gray-800">Abatement Cost</h3>
-                            <p id="green-premium" class="text-5xl font-bold text-blue-600 mt-2">$---</p>
-                             <span class="text-sm text-gray-600">/ ton CO2 avoided</span>
+                         <div class="text-center -mt-4">
+                            <p id="co2-avoided-text" class="text-md font-medium text-gray-700"></p>
                         </div>
                     </div>
 
@@ -589,7 +594,7 @@
             },
             variable_om: { 
                 solar: 2, wind: 1, nuclear: 10, geothermal: 0, // $/MWh
-                naturalGas: 40, hydro: 5, coal: 30, // $/MWh - Reduced NG VOM based on fuel price forecasts
+                naturalGas: 40, hydro: 5, coal: 30, // $/MWh 
                 battery4hr: 2, battery8hr: 2, longduration: 2,
                 dac: 400 // $/ton
             },
@@ -634,6 +639,7 @@
 
             const billImpactEl = document.getElementById('bill-impact');
             const greenPremiumEl = document.getElementById('green-premium');
+            const co2AvoidedEl = document.getElementById('co2-avoided-text');
             const resetToZeroButton = document.getElementById('reset-to-zero-button');
             const makeDefaultButton = document.getElementById('make-default-button');
             const resetToDefaultButton = document.getElementById('reset-to-default-button');
@@ -1212,6 +1218,23 @@
                     greenPremiumEl.className = 'text-5xl font-bold text-red-600 mt-2';
                 } else {
                     greenPremiumEl.className = 'text-5xl font-bold text-blue-600 mt-2';
+                }
+
+                const baselineDailyCO2 = customBaselineTotalAnnualCO2 / 365;
+                const dailyCO2Avoided = baselineDailyCO2 - totalDailyCO2;
+
+                if (dailyCO2Avoided > 0) {
+                    const co2AvoidedPercent = baselineDailyCO2 > 0 ? (dailyCO2Avoided / baselineDailyCO2) * 100 : 0;
+                    co2AvoidedEl.textContent = `CO2 avoided: ${dailyCO2Avoided.toLocaleString('en-US', {maximumFractionDigits: 0})} tons (${co2AvoidedPercent.toFixed(0)}%)`;
+                    co2AvoidedEl.className = 'text-md font-medium text-green-600';
+                } else if (dailyCO2Avoided < 0) {
+                    const co2Increase = -dailyCO2Avoided;
+                    const co2IncreasePercent = baselineDailyCO2 > 0 ? (co2Increase / baselineDailyCO2) * 100 : 0;
+                    co2AvoidedEl.textContent = `CO2 increased: ${co2Increase.toLocaleString('en-US', {maximumFractionDigits: 0})} tons (${co2IncreasePercent.toFixed(0)}%)`;
+                     co2AvoidedEl.className = 'text-md font-medium text-red-600';
+                } else {
+                    co2AvoidedEl.textContent = 'CO2 avoided: 0 tons (0%)';
+                    co2AvoidedEl.className = 'text-md font-medium text-gray-700';
                 }
             }
             
@@ -2088,4 +2111,3 @@
     </script>
 </body>
 </html>
-
