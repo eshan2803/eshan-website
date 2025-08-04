@@ -161,35 +161,41 @@
         }
 
         /* --- TUTORIAL STYLES --- */
+        #tutorial-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 9998;
+            display: none; /* Controlled by JS */
+        }
         #tutorial-popover {
             position: fixed;
             background-color: white;
             padding: 1.5rem;
             border-radius: 0.75rem;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-            z-index: 10001; /* Higher than highlight */
+            z-index: 10001;
             width: 320px;
             max-width: 90vw;
-            display: none; /* Hidden by default */
-            transition: top 0.3s ease-in-out, left 0.3s ease-in-out, opacity 0.3s;
+            display: none;
+            transition: top 0.3s ease-in-out, left 0.3s ease-in-out, transform 0.3s ease-in-out;
         }
-        .tutorial-highlight {
+        .tutorial-highlight-active {
             position: relative;
-            z-index: 10000;
-            /* The blue glow + the dark overlay shadow */
+            z-index: 9999;
             box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.7), 
                         0 0 20px 10px rgba(59, 130, 246, 0.4),
                         0 0 0 9999px rgba(0, 0, 0, 0.6);
-            border-radius: 1rem; /* Match card radius */
             transition: box-shadow 0.3s ease-in-out;
         }
-        .tutorial-highlight-rounded {
-            position: relative;
-            z-index: 10000;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.7), 
-                        0 0 20px 10px rgba(59, 130, 246, 0.4),
-                        0 0 0 9999px rgba(0, 0, 0, 0.6);
-            border-radius: 9999px;
+        .tutorial-highlight-active.rounded-full {
+             border-radius: 9999px;
+        }
+        .tutorial-highlight-active.rounded-lg {
+             border-radius: 1rem;
         }
 
     </style>
@@ -197,6 +203,7 @@
 <body class="antialiased">
 
     <!-- TUTORIAL HTML -->
+    <div id="tutorial-overlay"></div>
     <div id="tutorial-popover">
         <h3 id="tutorial-title" class="text-xl font-lora font-bold mb-2 text-gray-800"></h3>
         <p id="tutorial-text" class="text-gray-600 mb-4"></p>
@@ -243,11 +250,14 @@
                  <a href="grid-model-documentation.html" class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors text-sm font-medium mt-4">
                     📖 View Documentation
                 </a>
+                <p class="mt-4 text-sm text-gray-600">
+                    Send your queries at <a href="mailto:hello@eshansingh.xyz" class="text-blue-600 hover:underline">hello@eshansingh.xyz</a>
+                </p>
             </section>
 
             <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                <div id="tutorial-step-2" class="lg:col-span-2 glass-card">
+                <div id="tutorial-step-2" class="lg:col-span-2 glass-card rounded-lg">
                     <div class="mb-8 relative">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-2xl font-lora font-semibold text-gray-800">Hourly Electricity Generation (GWh)</h2>
@@ -334,7 +344,7 @@
                 </div>
 
                 <div class="lg:col-span-1 space-y-8">
-                    <div id="tutorial-step-5" class="glass-card">
+                    <div id="tutorial-step-5" class="glass-card rounded-lg">
                         <div class="grid grid-cols-2 gap-4 text-center">
                             <div>
                                 <h3 class="text-xl font-lora font-semibold text-gray-800">Impact on Bills</h3>
@@ -351,7 +361,7 @@
                         </div>
                     </div>
 
-                    <div id="tutorial-step-3" class="glass-card space-y-6">
+                    <div id="tutorial-step-3" class="glass-card space-y-6 rounded-lg">
                          <div class="mb-6">
                             <label for="country-select" class="block text-md font-medium text-gray-700 mb-2">Select Default Grid Mix</label>
                             <select id="country-select" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
@@ -2118,7 +2128,7 @@
             // --- TUTORIAL LOGIC ---
             const tutorialSteps = [
                 {
-                    element: '#tutorial-step-1',
+                    // No element for the first step, so it will be centered.
                     title: 'Welcome to the Grid Simulator!',
                     text: 'This interactive tool lets you explore pathways to a zero-carbon electricity grid. Let\'s take a quick tour of the main features.',
                     position: 'center'
@@ -2127,44 +2137,48 @@
                     element: '#tutorial-step-2',
                     title: 'Live Simulation Charts',
                     text: 'These charts show the real-time results of your decisions. See how the generation mix and CO2 emissions change as you adjust the levers.',
-                    position: 'right'
+                    position: 'right',
+                    highlightClass: 'rounded-lg'
                 },
                 {
                     element: '#tutorial-step-3',
                     title: 'Your Control Panel',
                     text: 'This is where you make things happen! Use these sliders to deploy new technologies, set government incentives, and choose a starting grid mix.',
-                    position: 'left'
+                    position: 'left',
+                    highlightClass: 'rounded-lg'
                 },
                 {
                     element: '#make-default-button',
                     title: 'Save Your Scenario',
                     text: 'Once you find a set of policies you like, you can save them as your new default. The cost metrics will then be calculated relative to this new baseline.',
                     position: 'top',
-                    highlightClass: 'tutorial-highlight-rounded'
+                    highlightClass: 'rounded-full'
                 },
                 {
                     element: '#tutorial-step-5',
                     title: 'Key Outcome Metrics',
                     text: 'Your goal is to get CO2 emissions to zero while keeping costs low. These cards show the impact on electricity bills and the cost of avoiding CO2.',
-                    position: 'bottom'
+                    position: 'bottom',
+                    highlightClass: 'rounded-lg'
                 },
                 {
                     element: '#edit-demand-btn',
                     title: 'Customize Demand',
                     text: 'Click the edit icon to create your own custom daily demand profile, or select a seasonal preset.',
                     position: 'left',
-                    highlightClass: 'tutorial-highlight-rounded'
+                    highlightClass: 'rounded-full'
                 },
                 {
                     element: '#edit-cf-btn',
                     title: 'Customize Weather',
                     text: 'Click this edit icon to change the hourly performance of solar and wind to simulate different weather conditions.',
                     position: 'left',
-                    highlightClass: 'tutorial-highlight-rounded'
+                    highlightClass: 'rounded-full'
                 }
             ];
 
             let currentStep = 0;
+            const overlay = document.getElementById('tutorial-overlay');
             const popover = document.getElementById('tutorial-popover');
             const titleEl = document.getElementById('tutorial-title');
             const textEl = document.getElementById('tutorial-text');
@@ -2182,64 +2196,56 @@
             }
 
             function endTutorial() {
+                overlay.style.display = 'none';
                 popover.style.display = 'none';
                 if (highlightedElement) {
-                    highlightedElement.classList.remove('tutorial-highlight', 'tutorial-highlight-rounded');
+                    highlightedElement.classList.remove('tutorial-highlight-active', 'rounded-full', 'rounded-lg');
                 }
                 localStorage.setItem('gridSimulatorTutorialSeen', 'true');
             }
             
             function positionPopover(targetElement, popoverEl, position) {
-                const targetRect = targetElement.getBoundingClientRect();
-                
-                popoverEl.style.visibility = 'hidden';
-                popoverEl.style.display = 'block';
                 const popoverRect = popoverEl.getBoundingClientRect();
-                popoverEl.style.display = 'none';
-                popoverEl.style.visibility = 'visible';
-
                 const viewportWidth = window.innerWidth;
                 const viewportHeight = window.innerHeight;
                 const margin = 15;
 
-                let top, left;
+                let top, left, transform;
 
-                switch (position) {
-                    case 'bottom':
-                        top = targetRect.bottom + margin;
-                        left = targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2);
-                        break;
-                    case 'top':
-                        top = targetRect.top - popoverRect.height - margin;
-                        left = targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2);
-                        break;
-                    case 'left':
-                        top = targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2);
-                        left = targetRect.left - popoverRect.width - margin;
-                        break;
-                    case 'right':
-                    default:
-                        top = targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2);
-                        left = targetRect.right + margin;
-                        break;
-                    case 'center':
-                         top = viewportHeight / 2 - popoverRect.height / 2;
-                         left = viewportWidth / 2 - popoverRect.width / 2;
-                         break;
-                }
-
-                if (left < margin) left = margin;
-                if (left + popoverRect.width > viewportWidth - margin) {
-                    left = viewportWidth - popoverRect.width - margin;
-                }
-                if (top < margin) top = margin;
-                if (top + popoverRect.height > viewportHeight - margin) {
-                    top = viewportHeight - popoverRect.height - margin;
+                if (position === 'center' || !targetElement) {
+                    top = '50%';
+                    left = '50%';
+                    transform = 'translate(-50%, -50%)';
+                } else {
+                    const targetRect = targetElement.getBoundingClientRect();
+                    switch (position) {
+                        case 'bottom':
+                            top = `${targetRect.bottom + margin}px`;
+                            left = `${targetRect.left + (targetRect.width / 2)}px`;
+                            transform = 'translateX(-50%)';
+                            break;
+                        case 'top':
+                            top = `${targetRect.top - popoverRect.height - margin}px`;
+                            left = `${targetRect.left + (targetRect.width / 2)}px`;
+                            transform = 'translateX(-50%)';
+                            break;
+                        case 'left':
+                            top = `${targetRect.top + (targetRect.height / 2)}px`;
+                            left = `${targetRect.left - popoverRect.width - margin}px`;
+                            transform = 'translateY(-50%)';
+                            break;
+                        case 'right':
+                        default:
+                            top = `${targetRect.top + (targetRect.height / 2)}px`;
+                            left = `${targetRect.right + margin}px`;
+                            transform = 'translateY(-50%)';
+                            break;
+                    }
                 }
                 
-                popoverEl.style.top = `${top}px`;
-                popoverEl.style.left = `${left}px`;
-                popoverEl.style.transform = '';
+                popoverEl.style.top = top;
+                popoverEl.style.left = left;
+                popoverEl.style.transform = transform;
                 popoverEl.style.display = 'block';
             }
 
@@ -2252,27 +2258,35 @@
                 const step = tutorialSteps[stepIndex];
 
                 if (highlightedElement) {
-                    highlightedElement.classList.remove('tutorial-highlight', 'tutorial-highlight-rounded');
+                    highlightedElement.classList.remove('tutorial-highlight-active', 'rounded-full', 'rounded-lg');
+                    highlightedElement = null;
                 }
 
                 titleEl.textContent = step.title;
                 textEl.textContent = step.text;
                 popover.style.display = 'none';
 
-                const targetElement = document.querySelector(step.element);
-                highlightedElement = targetElement;
+                let targetElement;
+                if (step.element) {
+                    targetElement = document.querySelector(step.element);
+                }
 
-                if (!targetElement) {
-                    console.warn(`Tutorial element not found: ${step.element}`);
-                    positionPopover(document.body, popover, 'center');
-                } else {
-                    targetElement.classList.add(step.highlightClass || 'tutorial-highlight');
+                if (targetElement) {
+                    overlay.style.display = 'none'; // Hide the generic overlay
+                    highlightedElement = targetElement;
+                    highlightedElement.classList.add('tutorial-highlight-active');
+                    if (step.highlightClass) {
+                        highlightedElement.classList.add(step.highlightClass);
+                    }
                     
-                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                    highlightedElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
 
                     setTimeout(() => {
-                        positionPopover(targetElement, popover, step.position);
+                        positionPopover(highlightedElement, popover, step.position);
                     }, 400); 
+                } else {
+                    overlay.style.display = 'block'; // Show the generic overlay for the centered step
+                    positionPopover(null, popover, 'center');
                 }
 
                 prevBtn.style.display = stepIndex === 0 ? 'none' : 'inline-block';
