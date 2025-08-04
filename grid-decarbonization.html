@@ -46,6 +46,10 @@
             position: absolute; 
             top: 0; left: 0; right: 0; bottom: 0; 
             z-index: -1;
+            animation: pulse-bg 15s infinite alternate;
+        }
+         .tutorial-active .mesh-gradient-1 {
+            animation: none !important;
         }
         .form-input {
             width: 100%;
@@ -182,8 +186,7 @@
             position: relative;
             z-index: 9999;
             box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.7), 
-                        0 0 20px 10px rgba(59, 130, 246, 0.4),
-                        0 0 0 9999px rgba(0, 0, 0, 0.6);
+                        0 0 20px 10px rgba(59, 130, 246, 0.4);
             transition: box-shadow 0.3s ease-in-out;
         }
         .tutorial-highlight-active.rounded-full {
@@ -2186,11 +2189,13 @@
                 if (localStorage.getItem('gridSimulatorTutorialSeen')) {
                     return; // Don't show if already seen
                 }
+                document.body.classList.add('tutorial-active');
                 currentStep = 0;
                 showTutorialStep(currentStep);
             }
 
             function endTutorial() {
+                document.body.classList.remove('tutorial-active');
                 overlay.style.display = 'none';
                 popover.style.display = 'none';
                 if (highlightedElement) {
@@ -2205,53 +2210,51 @@
                 const viewportHeight = window.innerHeight;
                 const margin = 15;
 
-                let top, left, transform;
+                let top, left;
 
                 if (position === 'center' || !targetElement) {
-                    top = '50%';
-                    left = '50%';
-                    transform = 'translate(-50%, -50%)';
-                } else {
-                    const targetRect = targetElement.getBoundingClientRect();
-                    switch (position) {
-                        case 'bottom':
-                            top = targetRect.bottom + margin;
-                            left = targetRect.left + (targetRect.width / 2);
-                            transform = 'translateX(-50%)';
-                            break;
-                        case 'top':
-                            top = targetRect.top - popoverRect.height - margin;
-                            left = targetRect.left + (targetRect.width / 2);
-                            transform = 'translateX(-50%)';
-                            break;
-                        case 'left':
-                            top = targetRect.top + (targetRect.height / 2);
-                            left = targetRect.left - popoverRect.width - margin;
-                            transform = 'translateY(-50%)';
-                            break;
-                        case 'right':
-                        default:
-                            top = targetRect.top + (targetRect.height / 2);
-                            left = targetRect.right + margin;
-                            transform = 'translateY(-50%)';
-                            break;
-                    }
-                    // Boundary checks
-                    if (top < margin) top = margin;
-                    if (left < margin) left = margin;
-                    if (left + popoverRect.width > viewportWidth - margin) {
-                        left = viewportWidth - popoverRect.width - margin;
-                    }
-                    if (top + popoverRect.height > viewportHeight - margin) {
-                        top = viewportHeight - popoverRect.height - margin;
-                    }
+                    popoverEl.style.top = '50%';
+                    popoverEl.style.left = '50%';
+                    popoverEl.style.transform = 'translate(-50%, -50%)';
+                    popoverEl.style.display = 'block';
+                    return;
+                }
 
-                    // Convert to pixel values for direct assignment
-                    popoverEl.style.top = `${top}px`;
-                    popoverEl.style.left = `${left}px`;
-                    popoverEl.style.transform = transform;
+                const targetRect = targetElement.getBoundingClientRect();
+
+                switch (position) {
+                    case 'bottom':
+                        top = targetRect.bottom + margin;
+                        left = targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2);
+                        break;
+                    case 'top':
+                        top = targetRect.top - popoverRect.height - margin;
+                        left = targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2);
+                        break;
+                    case 'left':
+                        top = targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2);
+                        left = targetRect.left - popoverRect.width - margin;
+                        break;
+                    case 'right':
+                    default:
+                        top = targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2);
+                        left = targetRect.right + margin;
+                        break;
+                }
+
+                // Boundary checks
+                if (left < margin) left = margin;
+                if (left + popoverRect.width > viewportWidth - margin) {
+                    left = viewportWidth - popoverRect.width - margin;
+                }
+                if (top < margin) top = margin;
+                if (top + popoverRect.height > viewportHeight - margin) {
+                    top = viewportHeight - popoverRect.height - margin;
                 }
                 
+                popoverEl.style.top = `${top}px`;
+                popoverEl.style.left = `${left}px`;
+                popoverEl.style.transform = 'none';
                 popoverEl.style.display = 'block';
             }
 
@@ -2272,13 +2275,14 @@
                 textEl.textContent = step.text;
                 popover.style.display = 'none';
 
+                overlay.style.display = 'block';
+
                 let targetElement;
                 if (step.element) {
                     targetElement = document.querySelector(step.element);
                 }
 
                 if (targetElement) {
-                    overlay.style.display = 'none'; // Hide the generic overlay
                     highlightedElement = targetElement;
                     highlightedElement.classList.add('tutorial-highlight-active');
                     if (step.highlightClass) {
@@ -2291,7 +2295,6 @@
                         positionPopover(highlightedElement, popover, step.position);
                     }, 400); 
                 } else {
-                    overlay.style.display = 'block'; // Show the generic overlay for the centered step
                     positionPopover(null, popover, 'center');
                 }
 
