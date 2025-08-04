@@ -48,9 +48,8 @@
             z-index: -1;
             animation: pulse-bg 15s infinite alternate;
         }
-        @keyframes pulse-bg {
-            0% { transform: scale(1); }
-            100% { transform: scale(1.1); }
+         .tutorial-active .mesh-gradient-1 {
+            animation: none !important;
         }
         .form-input {
             width: 100%;
@@ -169,29 +168,33 @@
             height: 100vh;
             background-color: rgba(0, 0, 0, 0.6);
             z-index: 9998;
-            display: none; /* Hidden by default */
+            display: none; /* Controlled by JS */
         }
         #tutorial-popover {
-            position: absolute;
+            position: fixed;
             background-color: white;
             padding: 1.5rem;
             border-radius: 0.75rem;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-            z-index: 9999;
+            z-index: 10001;
             width: 320px;
-            display: none; /* Hidden by default */
-            transition: top 0.3s ease-in-out, left 0.3s ease-in-out;
+            max-width: 90vw;
+            display: none;
+            transition: top 0.3s ease-in-out, left 0.3s ease-in-out, transform 0.3s ease-in-out;
         }
-        .tutorial-highlight {
+        .tutorial-highlight-active {
             position: relative;
             z-index: 9999;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.7), 0 0 20px 10px rgba(59, 130, 246, 0.4);
-            border-radius: 1rem; /* Match card radius */
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.7), 
+                        0 0 20px 10px rgba(59, 130, 246, 0.4),
+                        0 0 0 9999px rgba(0, 0, 0, 0.6);
             transition: box-shadow 0.3s ease-in-out;
         }
-        .tutorial-highlight-rounded {
-             box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.7), 0 0 20px 10px rgba(59, 130, 246, 0.4);
+        .tutorial-highlight-active.rounded-full {
              border-radius: 9999px;
+        }
+        .tutorial-highlight-active.rounded-lg {
+             border-radius: 1rem;
         }
 
     </style>
@@ -246,11 +249,14 @@
                  <a href="grid-model-documentation.html" class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors text-sm font-medium mt-4">
                     📖 View Documentation
                 </a>
+                <p class="mt-4 text-sm text-gray-600">
+                    Send your queries at <a href="mailto:hello@eshansingh.xyz" class="text-blue-600 hover:underline">hello@eshansingh.xyz</a>
+                </p>
             </section>
 
             <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                <div id="tutorial-step-2" class="lg:col-span-2 glass-card">
+                <div id="tutorial-step-2" class="lg:col-span-2 glass-card rounded-lg">
                     <div class="mb-8 relative">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-2xl font-lora font-semibold text-gray-800">Hourly Electricity Generation (GWh)</h2>
@@ -337,7 +343,7 @@
                 </div>
 
                 <div class="lg:col-span-1 space-y-8">
-                    <div id="tutorial-step-5" class="glass-card">
+                    <div id="tutorial-step-5" class="glass-card rounded-lg">
                         <div class="grid grid-cols-2 gap-4 text-center">
                             <div>
                                 <h3 class="text-xl font-lora font-semibold text-gray-800">Impact on Bills</h3>
@@ -354,7 +360,7 @@
                         </div>
                     </div>
 
-                    <div id="tutorial-step-3" class="glass-card space-y-6">
+                    <div id="tutorial-step-3" class="glass-card space-y-6 rounded-lg">
                          <div class="mb-6">
                             <label for="country-select" class="block text-md font-medium text-gray-700 mb-2">Select Default Grid Mix</label>
                             <select id="country-select" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
@@ -2121,7 +2127,7 @@
             // --- TUTORIAL LOGIC ---
             const tutorialSteps = [
                 {
-                    element: '#tutorial-step-1',
+                    // No element for the first step, so it will be centered.
                     title: 'Welcome to the Grid Simulator!',
                     text: 'This interactive tool lets you explore pathways to a zero-carbon electricity grid. Let\'s take a quick tour of the main features.',
                     position: 'center'
@@ -2130,40 +2136,43 @@
                     element: '#tutorial-step-2',
                     title: 'Live Simulation Charts',
                     text: 'These charts show the real-time results of your decisions. See how the generation mix and CO2 emissions change as you adjust the levers.',
-                    position: 'right'
+                    position: 'right',
+                    highlightClass: 'rounded-lg'
                 },
                 {
                     element: '#tutorial-step-3',
                     title: 'Your Control Panel',
                     text: 'This is where you make things happen! Use these sliders to deploy new technologies, set government incentives, and choose a starting grid mix.',
-                    position: 'left'
+                    position: 'left',
+                    highlightClass: 'rounded-lg'
                 },
                 {
                     element: '#make-default-button',
                     title: 'Save Your Scenario',
                     text: 'Once you find a set of policies you like, you can save them as your new default. The cost metrics will then be calculated relative to this new baseline.',
                     position: 'top',
-                    highlightClass: 'tutorial-highlight-rounded'
+                    highlightClass: 'rounded-full'
                 },
                 {
                     element: '#tutorial-step-5',
                     title: 'Key Outcome Metrics',
                     text: 'Your goal is to get CO2 emissions to zero while keeping costs low. These cards show the impact on electricity bills and the cost of avoiding CO2.',
-                    position: 'bottom'
+                    position: 'bottom',
+                    highlightClass: 'rounded-lg'
                 },
                 {
                     element: '#edit-demand-btn',
                     title: 'Customize Demand',
                     text: 'Click the edit icon to create your own custom daily demand profile, or select a seasonal preset.',
                     position: 'left',
-                    highlightClass: 'tutorial-highlight-rounded'
+                    highlightClass: 'rounded-full'
                 },
                 {
                     element: '#edit-cf-btn',
                     title: 'Customize Weather',
                     text: 'Click this edit icon to change the hourly performance of solar and wind to simulate different weather conditions.',
-                    position: 'left',
-                    highlightClass: 'tutorial-highlight-rounded'
+                    position: 'top',
+                    highlightClass: 'rounded-full'
                 }
             ];
 
@@ -2181,19 +2190,74 @@
                 if (localStorage.getItem('gridSimulatorTutorialSeen')) {
                     return; // Don't show if already seen
                 }
+                document.body.classList.add('tutorial-active');
                 currentStep = 0;
-                overlay.style.display = 'block';
-                popover.style.display = 'block';
                 showTutorialStep(currentStep);
             }
 
             function endTutorial() {
+                document.body.classList.remove('tutorial-active');
                 overlay.style.display = 'none';
                 popover.style.display = 'none';
                 if (highlightedElement) {
-                    highlightedElement.classList.remove('tutorial-highlight', 'tutorial-highlight-rounded');
+                    highlightedElement.classList.remove('tutorial-highlight-active', 'rounded-full', 'rounded-lg');
                 }
                 localStorage.setItem('gridSimulatorTutorialSeen', 'true');
+            }
+            
+            function positionPopover(targetElement, popoverEl, position) {
+                const popoverRect = popoverEl.getBoundingClientRect();
+                const margin = 15;
+
+                if (position === 'center' || !targetElement) {
+                    popoverEl.style.left = '50%';
+                    popoverEl.style.top = '50%';
+                    popoverEl.style.transform = 'translate(-50%, -50%)';
+                    popoverEl.style.display = 'block';
+                    return;
+                }
+
+                const targetRect = targetElement.getBoundingClientRect();
+                let top, left;
+
+                switch (position) {
+                    case 'top':
+                        top = targetRect.top - popoverRect.height - margin;
+                        left = targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2);
+                        break;
+                    case 'bottom':
+                        top = targetRect.bottom + margin;
+                        left = targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2);
+                        break;
+                    case 'left':
+                        top = targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2);
+                        left = targetRect.left - popoverRect.width - margin;
+                        break;
+                    case 'right':
+                    default:
+                        top = targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2);
+                        left = targetRect.right + margin;
+                        break;
+                }
+
+                // Boundary checks to prevent going off-screen
+                if (top < margin) {
+                    top = margin;
+                }
+                if (left < margin) {
+                    left = margin;
+                }
+                if (left + popoverRect.width > window.innerWidth - margin) {
+                    left = window.innerWidth - popoverRect.width - margin;
+                }
+                if (top + popoverRect.height > window.innerHeight - margin) {
+                    top = window.innerHeight - popoverRect.height - margin;
+                }
+
+                popoverEl.style.top = `${top}px`;
+                popoverEl.style.left = `${left}px`;
+                popoverEl.style.transform = 'none'; // Remove transform to use absolute top/left
+                popoverEl.style.display = 'block';
             }
 
             function showTutorialStep(stepIndex) {
@@ -2204,57 +2268,39 @@
 
                 const step = tutorialSteps[stepIndex];
 
-                // Remove previous highlight
+                // Cleanup previous step
                 if (highlightedElement) {
-                    highlightedElement.classList.remove('tutorial-highlight', 'tutorial-highlight-rounded');
+                    highlightedElement.classList.remove('tutorial-highlight-active', 'rounded-full', 'rounded-lg');
+                    highlightedElement = null;
                 }
 
                 titleEl.textContent = step.title;
                 textEl.textContent = step.text;
+                popover.style.display = 'none'; // Hide until positioned
 
-                const targetElement = document.querySelector(step.element);
-                highlightedElement = targetElement;
+                let targetElement = step.element ? document.querySelector(step.element) : null;
 
-                if (!targetElement) {
-                    console.warn(`Tutorial element not found: ${step.element}`);
-                    // Position popover in the center if element not found
-                    popover.style.top = '50%';
-                    popover.style.left = '50%';
-                    popover.style.transform = 'translate(-50%, -50%)';
-                } else {
-                    targetElement.classList.add(step.highlightClass || 'tutorial-highlight');
-                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    
-                    const targetRect = targetElement.getBoundingClientRect();
-                    const popoverRect = popover.getBoundingClientRect();
-
-                    // Position popover based on step definition
-                    switch (step.position) {
-                        case 'bottom':
-                            popover.style.top = `${targetRect.bottom + 15}px`;
-                            popover.style.left = `${targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2)}px`;
-                            break;
-                        case 'top':
-                            popover.style.top = `${targetRect.top - popoverRect.height - 15}px`;
-                            popover.style.left = `${targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2)}px`;
-                            break;
-                        case 'left':
-                            popover.style.top = `${targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2)}px`;
-                            popover.style.left = `${targetRect.left - popoverRect.width - 15}px`;
-                            break;
-                        case 'right':
-                            popover.style.top = `${targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2)}px`;
-                            popover.style.left = `${targetRect.right + 15}px`;
-                            break;
-                        case 'center':
-                            popover.style.top = '50%';
-                            popover.style.left = '50%';
-                            popover.style.transform = 'translate(-50%, -50%)';
-                            break;
+                if (targetElement) {
+                    // For steps with a specific element to highlight
+                    overlay.style.display = 'none'; // Hide the main overlay
+                    highlightedElement = targetElement;
+                    highlightedElement.classList.add('tutorial-highlight-active');
+                    if (step.highlightClass) {
+                        highlightedElement.classList.add(step.highlightClass);
                     }
+                    
+                    highlightedElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+
+                    // Delay positioning until after scroll
+                    setTimeout(() => {
+                        positionPopover(highlightedElement, popover, step.position);
+                    }, 400); 
+                } else {
+                    // For the centered, introductory step
+                    overlay.style.display = 'block'; // Show the main overlay
+                    positionPopover(null, popover, 'center');
                 }
 
-                // Update button states
                 prevBtn.style.display = stepIndex === 0 ? 'none' : 'inline-block';
                 nextBtn.textContent = stepIndex === tutorialSteps.length - 1 ? 'Finish' : 'Next';
             }
@@ -2270,7 +2316,6 @@
             });
 
             skipBtn.addEventListener('click', endTutorial);
-            overlay.addEventListener('click', endTutorial);
 
 
             // --- MAIN INITIALIZATION FUNCTION ---
