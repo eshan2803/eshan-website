@@ -46,11 +46,6 @@
             position: absolute; 
             top: 0; left: 0; right: 0; bottom: 0; 
             z-index: -1;
-            animation: pulse-bg 15s infinite alternate;
-        }
-        @keyframes pulse-bg {
-            0% { transform: scale(1); }
-            100% { transform: scale(1.1); }
         }
         .form-input {
             width: 100%;
@@ -2220,32 +2215,43 @@
                     const targetRect = targetElement.getBoundingClientRect();
                     switch (position) {
                         case 'bottom':
-                            top = `${targetRect.bottom + margin}px`;
-                            left = `${targetRect.left + (targetRect.width / 2)}px`;
+                            top = targetRect.bottom + margin;
+                            left = targetRect.left + (targetRect.width / 2);
                             transform = 'translateX(-50%)';
                             break;
                         case 'top':
-                            top = `${targetRect.top - popoverRect.height - margin}px`;
-                            left = `${targetRect.left + (targetRect.width / 2)}px`;
+                            top = targetRect.top - popoverRect.height - margin;
+                            left = targetRect.left + (targetRect.width / 2);
                             transform = 'translateX(-50%)';
                             break;
                         case 'left':
-                            top = `${targetRect.top + (targetRect.height / 2)}px`;
-                            left = `${targetRect.left - popoverRect.width - margin}px`;
+                            top = targetRect.top + (targetRect.height / 2);
+                            left = targetRect.left - popoverRect.width - margin;
                             transform = 'translateY(-50%)';
                             break;
                         case 'right':
                         default:
-                            top = `${targetRect.top + (targetRect.height / 2)}px`;
-                            left = `${targetRect.right + margin}px`;
+                            top = targetRect.top + (targetRect.height / 2);
+                            left = targetRect.right + margin;
                             transform = 'translateY(-50%)';
                             break;
                     }
+                    // Boundary checks
+                    if (top < margin) top = margin;
+                    if (left < margin) left = margin;
+                    if (left + popoverRect.width > viewportWidth - margin) {
+                        left = viewportWidth - popoverRect.width - margin;
+                    }
+                    if (top + popoverRect.height > viewportHeight - margin) {
+                        top = viewportHeight - popoverRect.height - margin;
+                    }
+
+                    // Convert to pixel values for direct assignment
+                    popoverEl.style.top = `${top}px`;
+                    popoverEl.style.left = `${left}px`;
+                    popoverEl.style.transform = transform;
                 }
                 
-                popoverEl.style.top = top;
-                popoverEl.style.left = left;
-                popoverEl.style.transform = transform;
                 popoverEl.style.display = 'block';
             }
 
