@@ -161,37 +161,35 @@
         }
 
         /* --- TUTORIAL STYLES --- */
-        #tutorial-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: rgba(0, 0, 0, 0.6);
-            z-index: 9998;
-            display: none; /* Hidden by default */
-        }
         #tutorial-popover {
-            position: absolute;
+            position: fixed;
             background-color: white;
             padding: 1.5rem;
             border-radius: 0.75rem;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-            z-index: 9999;
+            z-index: 10001; /* Higher than highlight */
             width: 320px;
+            max-width: 90vw;
             display: none; /* Hidden by default */
-            transition: top 0.3s ease-in-out, left 0.3s ease-in-out;
+            transition: top 0.3s ease-in-out, left 0.3s ease-in-out, opacity 0.3s;
         }
         .tutorial-highlight {
             position: relative;
-            z-index: 9999;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.7), 0 0 20px 10px rgba(59, 130, 246, 0.4);
+            z-index: 10000;
+            /* The blue glow + the dark overlay shadow */
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.7), 
+                        0 0 20px 10px rgba(59, 130, 246, 0.4),
+                        0 0 0 9999px rgba(0, 0, 0, 0.6);
             border-radius: 1rem; /* Match card radius */
             transition: box-shadow 0.3s ease-in-out;
         }
         .tutorial-highlight-rounded {
-             box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.7), 0 0 20px 10px rgba(59, 130, 246, 0.4);
-             border-radius: 9999px;
+            position: relative;
+            z-index: 10000;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.7), 
+                        0 0 20px 10px rgba(59, 130, 246, 0.4),
+                        0 0 0 9999px rgba(0, 0, 0, 0.6);
+            border-radius: 9999px;
         }
 
     </style>
@@ -199,7 +197,6 @@
 <body class="antialiased">
 
     <!-- TUTORIAL HTML -->
-    <div id="tutorial-overlay"></div>
     <div id="tutorial-popover">
         <h3 id="tutorial-title" class="text-xl font-lora font-bold mb-2 text-gray-800"></h3>
         <p id="tutorial-text" class="text-gray-600 mb-4"></p>
@@ -2168,7 +2165,6 @@
             ];
 
             let currentStep = 0;
-            const overlay = document.getElementById('tutorial-overlay');
             const popover = document.getElementById('tutorial-popover');
             const titleEl = document.getElementById('tutorial-title');
             const textEl = document.getElementById('tutorial-text');
@@ -2182,18 +2178,69 @@
                     return; // Don't show if already seen
                 }
                 currentStep = 0;
-                overlay.style.display = 'block';
-                popover.style.display = 'block';
                 showTutorialStep(currentStep);
             }
 
             function endTutorial() {
-                overlay.style.display = 'none';
                 popover.style.display = 'none';
                 if (highlightedElement) {
                     highlightedElement.classList.remove('tutorial-highlight', 'tutorial-highlight-rounded');
                 }
                 localStorage.setItem('gridSimulatorTutorialSeen', 'true');
+            }
+            
+            function positionPopover(targetElement, popoverEl, position) {
+                const targetRect = targetElement.getBoundingClientRect();
+                
+                popoverEl.style.visibility = 'hidden';
+                popoverEl.style.display = 'block';
+                const popoverRect = popoverEl.getBoundingClientRect();
+                popoverEl.style.display = 'none';
+                popoverEl.style.visibility = 'visible';
+
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+                const margin = 15;
+
+                let top, left;
+
+                switch (position) {
+                    case 'bottom':
+                        top = targetRect.bottom + margin;
+                        left = targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2);
+                        break;
+                    case 'top':
+                        top = targetRect.top - popoverRect.height - margin;
+                        left = targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2);
+                        break;
+                    case 'left':
+                        top = targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2);
+                        left = targetRect.left - popoverRect.width - margin;
+                        break;
+                    case 'right':
+                    default:
+                        top = targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2);
+                        left = targetRect.right + margin;
+                        break;
+                    case 'center':
+                         top = viewportHeight / 2 - popoverRect.height / 2;
+                         left = viewportWidth / 2 - popoverRect.width / 2;
+                         break;
+                }
+
+                if (left < margin) left = margin;
+                if (left + popoverRect.width > viewportWidth - margin) {
+                    left = viewportWidth - popoverRect.width - margin;
+                }
+                if (top < margin) top = margin;
+                if (top + popoverRect.height > viewportHeight - margin) {
+                    top = viewportHeight - popoverRect.height - margin;
+                }
+                
+                popoverEl.style.top = `${top}px`;
+                popoverEl.style.left = `${left}px`;
+                popoverEl.style.transform = '';
+                popoverEl.style.display = 'block';
             }
 
             function showTutorialStep(stepIndex) {
@@ -2204,57 +2251,30 @@
 
                 const step = tutorialSteps[stepIndex];
 
-                // Remove previous highlight
                 if (highlightedElement) {
                     highlightedElement.classList.remove('tutorial-highlight', 'tutorial-highlight-rounded');
                 }
 
                 titleEl.textContent = step.title;
                 textEl.textContent = step.text;
+                popover.style.display = 'none';
 
                 const targetElement = document.querySelector(step.element);
                 highlightedElement = targetElement;
 
                 if (!targetElement) {
                     console.warn(`Tutorial element not found: ${step.element}`);
-                    // Position popover in the center if element not found
-                    popover.style.top = '50%';
-                    popover.style.left = '50%';
-                    popover.style.transform = 'translate(-50%, -50%)';
+                    positionPopover(document.body, popover, 'center');
                 } else {
                     targetElement.classList.add(step.highlightClass || 'tutorial-highlight');
-                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     
-                    const targetRect = targetElement.getBoundingClientRect();
-                    const popoverRect = popover.getBoundingClientRect();
+                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
 
-                    // Position popover based on step definition
-                    switch (step.position) {
-                        case 'bottom':
-                            popover.style.top = `${targetRect.bottom + 15}px`;
-                            popover.style.left = `${targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2)}px`;
-                            break;
-                        case 'top':
-                            popover.style.top = `${targetRect.top - popoverRect.height - 15}px`;
-                            popover.style.left = `${targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2)}px`;
-                            break;
-                        case 'left':
-                            popover.style.top = `${targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2)}px`;
-                            popover.style.left = `${targetRect.left - popoverRect.width - 15}px`;
-                            break;
-                        case 'right':
-                            popover.style.top = `${targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2)}px`;
-                            popover.style.left = `${targetRect.right + 15}px`;
-                            break;
-                        case 'center':
-                            popover.style.top = '50%';
-                            popover.style.left = '50%';
-                            popover.style.transform = 'translate(-50%, -50%)';
-                            break;
-                    }
+                    setTimeout(() => {
+                        positionPopover(targetElement, popover, step.position);
+                    }, 400); 
                 }
 
-                // Update button states
                 prevBtn.style.display = stepIndex === 0 ? 'none' : 'inline-block';
                 nextBtn.textContent = stepIndex === tutorialSteps.length - 1 ? 'Finish' : 'Next';
             }
@@ -2270,7 +2290,6 @@
             });
 
             skipBtn.addEventListener('click', endTutorial);
-            overlay.addEventListener('click', endTutorial);
 
 
             // --- MAIN INITIALIZATION FUNCTION ---
