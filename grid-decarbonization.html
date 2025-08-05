@@ -1386,9 +1386,9 @@
                     const mainData = [];
                     const storageData = [];
                     for (let i = 0; i < 24; i++) {
-                        const totalGen = generation[tech.name][i] || 0;
+                        const toGrid = generation[tech.name][i] || 0;
                         const toStorage = chargeBySource[tech.name] ? (chargeBySource[tech.name][i] || 0) : 0;
-                        mainData.push(totalGen - toStorage);
+                        mainData.push(toGrid);
                         storageData.push(toStorage);
                     }
                     chartData[tech.mainIndex].data = mainData;
