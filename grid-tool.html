@@ -2147,20 +2147,10 @@
 
                 // --- NEW: Scale demand profile based on country's peak load ---
                 const baseProfile = SEASONAL_DEMAND_PROFILES[profileName];
-                const baseSeason = profileName.split('-')[0];
-                const highProfile = SEASONAL_DEMAND_PROFILES[`${baseSeason}-high`];
-                const highPeak = Math.max(...highProfile);
+                const basePeak = Math.max(...baseProfile);
                 const countryPeak = countryData.peakLoadMW / 1000; // Convert to GW
-                const scalingFactor = countryPeak / highPeak;
-                if (profileName.endsWith('-high')) {
-                  currentDemand = baseProfile.map(val => val * scalingFactor);
-                } else if (profileName.endsWith('-typical')) {
-                  // Always 0.6 × high profile (already set in SEASONAL_DEMAND_PROFILES), then scale to 0.6 × country peak
-                  currentDemand = baseProfile.map(val => val * scalingFactor);
-                } else {
-                  // fallback
-                  currentDemand = baseProfile.map(val => val * scalingFactor);
-                }
+                const scalingFactor = countryPeak / basePeak;
+                currentDemand = baseProfile.map(val => val * scalingFactor);
 
                 currentCountryInstalledCapacity = {}; // Reset for new country
                 for(const tech in COST_DATA.capacity_factor) {
