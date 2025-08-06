@@ -32,7 +32,7 @@
             position: relative;
             z-index: 1;
             overflow: hidden;
-        }
+        }a
         .mesh-gradient-1 {
             background-image: radial-gradient(at 40% 20%, hsla(28,100%,74%,1) 0px, transparent 50%),
                               radial-gradient(at 80% 20%, hsla(189,100%,56%,1) 0px, transparent 50%),
@@ -1107,10 +1107,7 @@
                     currentPotential.biomass[i] += inputs.capacity.biomass * COST_DATA.capacity_factor.biomass;
                 }
                 
-                // NEW: Calculate total daily hydro budget
                 const hydroCapacity = (currentCountryInstalledCapacity.hydro || 0) + (inputs.capacity.hydro || 0);
-                const hydroCF = COST_DATA.capacity_factor.hydro;
-                let totalDailyHydroEnergy = hydroCapacity * hydroCF * 24;
                 const maxHourlyHydroOutput = hydroCapacity;
 
 
@@ -1144,44 +1141,49 @@
                 let hourlyDeficit = Array(24).fill(0);
                 let hourlyExcess = Array(24).fill(0);
                 
+                // --- 2. BASELINE HYDRO & DISPLACE ---
+                const hydroShape = [0.8, 0.7, 0.7, 0.7, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.2, 1.1, 1.1, 1.0, 1.0, 1.1, 1.3, 1.5, 1.4, 1.2, 1.0, 0.9, 0.8, 0.8];
+                let baselineHydro = hydroShape.map(h => h * maxHourlyHydroOutput * COST_DATA.capacity_factor.hydro);
+                let displacedHydroEnergy = 0;
 
-                // --- 2. FIRST PASS: DISPATCH NON-HYDRO CLEAN ENERGY, CALCULATE HOURLY BALANCE ---
+
+                // --- 3. DISPATCH ALL OTHER CLEAN, CALCULATE BALANCE & DISPLACED HYDRO ---
                 for (let i = 0; i < 24; i++) {
-                    let dispatchedThisHour = 0;
-                    let remainingDemand = modifiedDemand[i];
-
-                    // Merit order: Inflexible -> VRE 
+                    let cleanGenThisHour = 0;
+                    
+                    // Inflexible
                     const inflexibleGen = currentPotential.nuclear[i] + currentPotential.geothermal[i] + currentPotential.biomass[i];
-                    const dispatchedInflexible = Math.min(inflexibleGen, remainingDemand);
-                    if (inflexibleGen > 0) {
-                        finalGeneration.nuclear[i] = currentPotential.nuclear[i] * (dispatchedInflexible / inflexibleGen);
-                        finalGeneration.geothermal[i] = currentPotential.geothermal[i] * (dispatchedInflexible / inflexibleGen);
-                        finalGeneration.biomass[i] = currentPotential.biomass[i] * (dispatchedInflexible / inflexibleGen);
-                    }
-                    dispatchedThisHour += dispatchedInflexible;
-                    remainingDemand -= dispatchedInflexible;
-
+                    finalGeneration.nuclear[i] = currentPotential.nuclear[i];
+                    finalGeneration.geothermal[i] = currentPotential.geothermal[i];
+                    finalGeneration.biomass[i] = currentPotential.biomass[i];
+                    cleanGenThisHour += inflexibleGen;
+                    
+                    // VRE
                     const vreGen = currentPotential.solar[i] + currentPotential.wind[i];
-                    const dispatchedVRE = Math.min(vreGen, remainingDemand);
-                    if (vreGen > 0) {
-                        finalGeneration.solar[i] = dispatchedVRE * (currentPotential.solar[i] / vreGen);
-                        finalGeneration.wind[i] = dispatchedVRE * (currentPotential.wind[i] / vreGen);
-                    }
-                    dispatchedThisHour += dispatchedVRE;
-                    remainingDemand -= dispatchedVRE;
+                    finalGeneration.solar[i] = currentPotential.solar[i];
+                    finalGeneration.wind[i] = currentPotential.wind[i];
+                    cleanGenThisHour += vreGen;
 
-                    // Calculate balance
-                    const totalPotentialClean = inflexibleGen + vreGen;
-                    const balance = totalPotentialClean - dispatchedThisHour;
+                    // Baseline Hydro
+                    finalGeneration.hydro[i] = baselineHydro[i];
+                    cleanGenThisHour += baselineHydro[i];
 
-                    if (balance > 0) {
+                    const balance = cleanGenThisHour - modifiedDemand[i];
+
+                    if (balance > 0) { // Excess generation
                         hourlyExcess[i] = balance;
-                    } else {
-                        hourlyDeficit[i] = remainingDemand;
+                        
+                        // Displace hydro first
+                        const hydroToDisplace = Math.min(finalGeneration.hydro[i], hourlyExcess[i]);
+                        finalGeneration.hydro[i] -= hydroToDisplace;
+                        displacedHydroEnergy += hydroToDisplace;
+                        hourlyExcess[i] -= hydroToDisplace;
+                    } else { // Deficit
+                        hourlyDeficit[i] = -balance;
                     }
                 }
 
-                // --- 3. SECOND PASS: HANDLE STORAGE (CHARGE ONLY) ---
+                // --- 4. CHARGE STORAGE & CURTAILMENT ---
                 for (let i = 0; i < 24; i++) {
                     if (hourlyExcess[i] > 0) {
                         let availableToCharge = hourlyExcess[i];
@@ -1203,7 +1205,6 @@
                     }
                 }
                 
-                // Attribute remaining excess to curtailment by source
                 for(let i=0; i<24; i++){
                     if(hourlyExcess[i] > 0){
                         const unusedSolar = currentPotential.solar[i] - finalGeneration.solar[i] - finalGeneration.solarToStorage[i];
@@ -1216,46 +1217,37 @@
                     }
                 }
                 finalGeneration.curtailment = hourlyExcess;
-                
-                // --- 4. NEW: DISPATCH HYDRO ECONOMICALLY ---
-                while (totalDailyHydroEnergy > 0.01) {
+
+                // --- 5. REDEPLOY DISPLACED HYDRO ---
+                while (displacedHydroEnergy > 0.01) {
                     let maxDeficit = 0;
                     let maxDeficitHour = -1;
-
-                    // Find hour with highest deficit
                     for (let i = 0; i < 24; i++) {
                         if (hourlyDeficit[i] > maxDeficit) {
                             maxDeficit = hourlyDeficit[i];
                             maxDeficitHour = i;
                         }
                     }
+                    if (maxDeficitHour === -1) break;
 
-                    if (maxDeficitHour === -1) {
-                        // No more deficit to fill, any remaining hydro is spilled/curtailed
-                        break; 
-                    }
-
-                    // Amount to dispatch is limited by deficit, hourly max power, and remaining daily energy
                     const hydroToDispatch = Math.min(
                         hourlyDeficit[maxDeficitHour],
-                        maxHourlyHydroOutput - finalGeneration.hydro[maxDeficitHour], // Room available in this hour
-                        totalDailyHydroEnergy
+                        maxHourlyHydroOutput - finalGeneration.hydro[maxDeficitHour],
+                        displacedHydroEnergy
                     );
 
                     if (hydroToDispatch < 0.01) {
-                        // Can't dispatch a meaningful amount, find next best hour
-                        hourlyDeficit[maxDeficitHour] = 0; // Mark this hour as done for this loop
-                        if (Math.max(...hourlyDeficit) <=0) break;
+                        hourlyDeficit[maxDeficitHour] = 0;
+                        if (Math.max(...hourlyDeficit) <= 0) break;
                         continue;
                     }
 
                     finalGeneration.hydro[maxDeficitHour] += hydroToDispatch;
                     hourlyDeficit[maxDeficitHour] -= hydroToDispatch;
-                    totalDailyHydroEnergy -= hydroToDispatch;
+                    displacedHydroEnergy -= hydroToDispatch;
                 }
 
-
-                // --- 5. DISCHARGE STORAGE ---
+                // --- 6. DISCHARGE STORAGE ---
                 let totalEnergyInStorage = Object.values(storageLevels).reduce((a, b) => a + b, 0);
                 while (totalEnergyInStorage > 0.01) {
                     let maxDeficit = 0;
@@ -1279,10 +1271,10 @@
                             dischargedThisCycle += dischargeAmount;
                         }
                     }
-                    if (dischargedThisCycle < 0.01) break; // No more discharge possible
+                    if (dischargedThisCycle < 0.01) break;
                 }
 
-                // --- 6. FINAL PASS: DISPATCH FOSSIL FUELS ---
+                // --- 7. FINAL PASS: DISPATCH FOSSIL FUELS ---
                 for (let i = 0; i < 24; i++) {
                     if (hourlyDeficit[i] > 0) {
                         let remainingDeficit = hourlyDeficit[i];
@@ -1299,7 +1291,7 @@
                     }
                 }
                 
-                // --- 7. CALCULATE FINAL RESULTS ---
+                // --- 8. CALCULATE FINAL RESULTS ---
                 const newEmissions = calculateEmissions(finalGeneration, inputs.capacity.dac);
                 const newSystemCost = calculateTotalAnnualSystemCost(finalGeneration, inputs.capacity, inputs.incentives, finalGeneration.curtailment, currentCountryInstalledCapacity, baselineStorageGWh);
                 
@@ -1318,8 +1310,6 @@
                 for (const key in sliders) {
                     currentValues[key] = parseFloat(sliders[key].value);
                 }
-                // Debug: Print currentDemand at the start of simulation
-                console.log('[runSimulation] currentDemand:', currentDemand);
                 
                 const selectedCountry = countrySelect.value;
                 const baseSolarProfile = (countryProfiles[selectedCountry] || countryProfiles.default).solar;
@@ -1382,17 +1372,6 @@
                 }
 
                 updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, seasonalSolarProfile, seasonalWindProfile);
-                // Debug: Print demand passed to updateCharts
-                console.log('[runSimulation] demand passed to updateCharts:', result.demand);
-                // Debug: Print chart's demand dataset after update
-                setTimeout(() => {
-                  if (generationChart && generationChart.data && generationChart.data.datasets) {
-                    const demandDS = generationChart.data.datasets.find(ds => ds.label === 'Demand');
-                    if (demandDS) {
-                      console.log('[runSimulation] generationChart Demand dataset:', demandDS.data);
-                    }
-                  }
-                }, 100);
                 updateGridMixSlider(currentCountryInstalledCapacity, defaultCapacityMix);
                 updateGenerationMixSlider(result.generation, defaultGenerationMix, result.curtailmentBySource);
                 billImpactEl.textContent = `${costPercentageChange.toFixed(0)}%`;
@@ -2553,10 +2532,6 @@
             }
 
             await initialize();
-
-            console.log('Spring High:', SEASONAL_DEMAND_PROFILES['spring-high']);
-            console.log('Spring Typical:', SEASONAL_DEMAND_PROFILES['spring-typical']);
-            console.log('Ratio:', SEASONAL_DEMAND_PROFILES['spring-typical'].map((v,i) => v/SEASONAL_DEMAND_PROFILES['spring-high'][i]));
         });
     </script>
 </body>
