@@ -1284,8 +1284,9 @@
                 const selectedCountry = countrySelect.value;
                 const baseSolarProfile = (countryProfiles[selectedCountry] || countryProfiles.default).solar;
                 const baseWindProfile = (countryProfiles[selectedCountry] || countryProfiles.default).wind;
-
-                const seasonalMultipliers = SEASONAL_MULTIPLIERS[currentDemandProfileName.toLowerCase()] || { solar: 1.0, wind: 1.0 };
+                
+                const baseSeason = currentDemandProfileName.split(' ')[0].toLowerCase();
+                const seasonalMultipliers = SEASONAL_MULTIPLIERS[baseSeason] || { solar: 1.0, wind: 1.0 };
                 const seasonalSolarProfile = currentSolarCFProfile.length > 0 ? currentSolarCFProfile : baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
                 const seasonalWindProfile = currentWindCFProfile.length > 0 ? currentWindCFProfile : baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
 
