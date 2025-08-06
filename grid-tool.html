@@ -1849,14 +1849,32 @@
                 const seasonDisplay = currentSeasonName.charAt(0).toUpperCase() + currentSeasonName.slice(1);
                 currentDemandProfileText.textContent = `${demandLevelDisplay} ${seasonDisplay}`;
                 runSimulation();
-                // --- Fix: Ensure generator datasets are preserved and chart is updated ---
+                // --- Set current scenario as new default (like clicking Make Default) ---
+                userDefaultState = {};
+                for (const key in sliders) {
+                    userDefaultState[key] = sliders[key].value;
+                }
+                userDefaultState.enabledTech = { ...enabledTechnologies };
+                // Recalculate baseline/metrics
+                const newBaselineResult = getSimulationResult(
+                    {
+                        capacity: { ...userDefaultState },
+                        incentives: { ...userDefaultState },
+                        enabledTech: { ...userDefaultState.enabledTech }
+                    },
+                    currentSolarCFProfile,
+                    currentWindCFProfile,
+                    BASELINE_POTENTIAL_GENERATION,
+                    currentBaselineStorage
+                );
+                customBaselineSystemCost = newBaselineResult.systemCost;
+                customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
                 if (typeof generationChart !== 'undefined' && generationChart.data && generationChart.data.datasets) {
                     // Find the demand dataset
                     const demandDataset = generationChart.data.datasets.find(ds => ds.label === 'Demand');
                     if (demandDataset) {
                         demandDataset.data = [...currentDemand];
                     }
-                    // Optionally, re-populate generator datasets if needed (if you have a function for this, call it here)
                     generationChart.update();
                 }
                 saveState();
