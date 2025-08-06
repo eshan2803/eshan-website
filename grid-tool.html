@@ -1283,4 +1283,1264 @@
                 }
 
                 // --- 6. FINAL PASS: DISPATCH FOSSIL FUELS ---
-                for (let i = 0; i 
+                for (let i = 0; i < 24; i++) {
+                    if (hourlyDeficit[i] > 0) {
+                        let remainingDeficit = hourlyDeficit[i];
+                        const coalCapacity = currentPotential.coal[i];
+                        const coalToDispatch = Math.min(remainingDeficit, coalCapacity);
+                        finalGeneration.coal[i] += coalToDispatch;
+                        remainingDeficit -= coalToDispatch;
+
+                        if (remainingDeficit > 0) {
+                             const ngCapacity = currentPotential.naturalGas[i];
+                             const ngToDispatch = Math.min(remainingDeficit, ngCapacity);
+                             finalGeneration.naturalGas[i] += ngToDispatch;
+                        }
+                    }
+                }
+                
+                // --- 7. CALCULATE FINAL RESULTS ---
+                const newEmissions = calculateEmissions(finalGeneration, inputs.capacity.dac);
+                const newSystemCost = calculateTotalAnnualSystemCost(finalGeneration, inputs.capacity, inputs.incentives, finalGeneration.curtailment, currentCountryInstalledCapacity, baselineStorageGWh);
+                
+                return {
+                    generation: finalGeneration,
+                    emissions: newEmissions,
+                    systemCost: newSystemCost,
+                    demand: modifiedDemand,
+                    curtailmentBySource: curtailmentBySource,
+                };
+            }
+
+
+            function runSimulation() {
+                const currentValues = {};
+                for (const key in sliders) {
+                    currentValues[key] = parseFloat(sliders[key].value);
+                }
+                
+                const selectedCountry = countrySelect.value;
+                const baseSolarProfile = (countryProfiles[selectedCountry] || countryProfiles.default).solar;
+                const baseWindProfile = (countryProfiles[selectedCountry] || countryProfiles.default).wind;
+                
+                const baseSeason = currentDemandProfileName.split(' ')[0].toLowerCase();
+                const seasonalMultipliers = SEASONAL_MULTIPLIERS[baseSeason] || { solar: 1.0, wind: 1.0 };
+                const seasonalSolarProfile = currentSolarCFProfile.length > 0 ? currentSolarCFProfile : baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
+                const seasonalWindProfile = currentWindCFProfile.length > 0 ? currentWindCFProfile : baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
+
+
+                let activePotentialGeneration = JSON.parse(JSON.stringify(BASELINE_POTENTIAL_GENERATION));
+                for (const tech in enabledTechnologies) {
+                    if (!enabledTechnologies[tech]) {
+                        activePotentialGeneration[tech] = Array(24).fill(0);
+                    }
+                }
+
+                const result = getSimulationResult(
+                    {
+                        capacity: {
+                            solar: currentValues.solar, wind: currentValues.wind,
+                            geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
+                            biomass: currentValues.biomass,
+                            battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
+                            longduration: currentValues.longduration, dac: currentValues.dac,
+                            demandflex: currentValues.demandflex,
+                        },
+                        incentives: {
+                            solar: currentValues.solarIncentive, wind: currentValues.windIncentive,
+                            geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
+                            biomass: currentValues.biomassIncentive,
+                            storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
+                            carbonTax: currentValues.carbonTax,
+                            exportPrice: currentValues.exportPrice,
+                        }
+                    },
+                    seasonalSolarProfile,
+                    seasonalWindProfile,
+                    activePotentialGeneration,
+                    currentBaselineStorage
+                );
+                const totalDailyCO2 = result.emissions.reduce((a, b) => a + b, 0);
+                
+                const totalAnnualDemandMWh = result.demand.reduce((a,b) => a+b, 0) * 1000 * 365;
+                const newCostPerMWh = totalAnnualDemandMWh > 0 ? result.systemCost / totalAnnualDemandMWh : 0;
+
+                const baselineTotalAnnualDemandMWh = currentDemand.reduce((a,b) => a+b, 0) * 1000 * 365;
+                const baselineCostPerMWh = baselineTotalAnnualDemandMWh > 0 ? customBaselineSystemCost / baselineTotalAnnualDemandMWh : 0;
+                
+                const costPercentageChange = baselineCostPerMWh > 0 ? ((newCostPerMWh - baselineCostPerMWh) / baselineCostPerMWh) * 100 : 0;
+
+                const newTotalAnnualCO2 = result.emissions.reduce((a, b) => a + b, 0) * 365;
+                const co2Avoided = customBaselineTotalAnnualCO2 - newTotalAnnualCO2;
+                const costDifference = result.systemCost - customBaselineSystemCost;
+
+                let greenPremium = 0;
+                if (co2Avoided > 0) {
+                    greenPremium = costDifference / co2Avoided;
+                }
+
+                updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, seasonalSolarProfile, seasonalWindProfile);
+                updateGridMixSlider(currentCountryInstalledCapacity, defaultCapacityMix);
+                updateGenerationMixSlider(result.generation, defaultGenerationMix, result.curtailmentBySource);
+                billImpactEl.textContent = `${costPercentageChange.toFixed(0)}%`;
+                if (co2Avoided > 0) {
+                    greenPremiumEl.textContent = `$${greenPremium.toFixed(0)}`;
+                } else {
+                    greenPremiumEl.textContent = '$---';
+                }
+
+                if(costPercentageChange > 0) {
+                    billImpactEl.className = 'text-5xl font-bold text-red-600 mt-2';
+                } else if (costPercentageChange < 0) {
+                    billImpactEl.className = 'text-5xl font-bold text-green-600 mt-2';
+                } else {
+                     billImpactEl.className = 'text-5xl font-bold text-blue-600 mt-2';
+                }
+
+                if (greenPremium < 0) {
+                    greenPremiumEl.className = 'text-5xl font-bold text-green-600 mt-2';
+                } else if (greenPremium > 0 && co2Avoided > 0) {
+                    greenPremiumEl.className = 'text-5xl font-bold text-red-600 mt-2';
+                } else {
+                    greenPremiumEl.className = 'text-5xl font-bold text-blue-600 mt-2';
+                }
+
+                const baselineDailyCO2 = customBaselineTotalAnnualCO2 / 365;
+                const dailyCO2Avoided = baselineDailyCO2 - totalDailyCO2;
+
+                if (Math.abs(dailyCO2Avoided) < 0.01) {
+                    co2AvoidedEl.textContent = `CO2 avoided: 0 tons (0%)`;
+                    co2AvoidedEl.className = 'text-md font-medium text-gray-700';
+                } else if (dailyCO2Avoided > 0) {
+                    const co2AvoidedPercent = baselineDailyCO2 > 0 ? (dailyCO2Avoided / baselineDailyCO2) * 100 : 0;
+                    co2AvoidedEl.textContent = `CO2 avoided: ${dailyCO2Avoided.toLocaleString('en-US', {maximumFractionDigits: 0})} tons (${co2AvoidedPercent.toFixed(0)}%)`;
+                    co2AvoidedEl.className = 'text-md font-medium text-green-600';
+                } else { // dailyCO2Avoided is negative
+                    const co2Increase = -dailyCO2Avoided;
+                    const co2IncreasePercent = baselineDailyCO2 > 0 ? (co2Increase / baselineDailyCO2) * 100 : 0;
+                    co2AvoidedEl.textContent = `CO2 increased: ${co2Increase.toLocaleString('en-US', {maximumFractionDigits: 0})} tons (${co2IncreasePercent.toFixed(0)}%)`;
+                     co2AvoidedEl.className = 'text-md font-medium text-red-600';
+                }
+            }
+            
+            function calculateEmissions(generation, dacRate) {
+                const co2 = [];
+                for (let i = 0; i < 24; i++) {
+                    let hourlyEmission = 0;
+                    hourlyEmission += (generation.naturalGas[i] || 0) * EMISSION_FACTORS.naturalGas;
+                    hourlyEmission += (generation.coal[i] || 0) * EMISSION_FACTORS.coal;
+                    hourlyEmission += (generation.biomass[i] || 0) * EMISSION_FACTORS.biomass; // Added biomass
+                    hourlyEmission -= dacRate;
+                    co2.push(Math.max(0, hourlyEmission));
+                }
+                return co2;
+            }
+
+            function updateCharts(generation, emissions, demand, totalCO2, solarProfile, windProfile) {
+                const chartData = generationChart.data.datasets;
+                
+                // Map generation sources to their primary dataset index
+                const techMap = {
+                    coal: 0, naturalGas: 1, hydro: 2, geothermal: 3, biomass: 4,
+                    nuclear: 5, solar: 6, wind: 7, storage: 8, curtailment: 9,
+                    solarToStorage: 10, windToStorage: 11
+                };
+
+                // Update datasets
+                for (const tech in techMap) {
+                    if (generation[tech]) {
+                        chartData[techMap[tech]].data = generation[tech];
+                    }
+                }
+                chartData[12].data = demand; // Update demand line
+
+                generationChart.update('none');
+
+                co2Chart.data.datasets[0].data = emissions;
+                co2Chart.options.plugins.annotation.annotations.totalCO2.content = `Total Daily CO2: ${Math.round(totalCO2).toLocaleString()} tons`;
+                co2Chart.update('none');
+
+                capacityFactorChart.data.datasets[0].data = solarProfile;
+                capacityFactorChart.data.datasets[1].data = windProfile;
+                capacityFactorChart.update('none');
+            }
+
+            // --- GRID MIX SLIDER ---
+            function updateGridMixSlider(installedCapacity, defaultMix) {
+                const capacities = {};
+                let totalCapacity = 0;
+
+                for (const tech in COST_DATA.capacity_factor) {
+                    const baselineCapacity = installedCapacity[tech] || 0;
+                    
+                    let newCapacity = 0;
+                    if (sliders[tech]) {
+                        newCapacity = parseFloat(sliders[tech].value);
+                    }
+                    
+                    capacities[tech] = baselineCapacity + newCapacity;
+                    totalCapacity += capacities[tech];
+                }
+
+                if (totalCapacity === 0) {
+                    // If total capacity is zero, set all percentages to zero.
+                    for (const tech in COST_DATA.capacity_factor) {
+                        const fillEl = document.getElementById(`mix-fill-${tech}`);
+                        const valueEl = document.getElementById(`mix-value-${tech}`);
+                        if(fillEl && valueEl) {
+                            fillEl.style.width = '0%';
+                            valueEl.textContent = '0.0%';
+                        }
+                    }
+                    return;
+                };
+
+                for (const tech in capacities) {
+                    const percentage = (capacities[tech] / totalCapacity) * 100;
+                    const fillEl = document.getElementById(`mix-fill-${tech}`);
+                    const valueEl = document.getElementById(`mix-value-${tech}`);
+                    const outlineEl = document.getElementById(`mix-default-outline-${tech}`);
+                    
+                    if (fillEl && valueEl) {
+                        fillEl.style.width = `${percentage}%`;
+                        valueEl.textContent = `${percentage.toFixed(1)}%`;
+                    }
+                    if (outlineEl && defaultMix[tech] !== undefined) {
+                        outlineEl.style.width = `${defaultMix[tech]}%`;
+                    }
+                }
+            }
+            
+            function createGridMixSliders() {
+                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'nuclear', 'geothermal', 'biomass'];
+                techOrder.forEach(tech => {
+                    const name = tech.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                    const color = COLORS[tech] || '#ccc';
+
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'grid grid-cols-6 gap-2 items-center mix-slider-row';
+                    wrapper.dataset.tech = tech; // Add data attribute for tooltip
+
+                    const checkboxContainer = document.createElement('div');
+                    checkboxContainer.className = "flex items-center justify-center";
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `toggle-${tech}`;
+                    checkbox.checked = true;
+                    checkbox.className = "form-checkbox h-5 w-5 text-blue-600 rounded";
+                    checkbox.addEventListener('change', () => {
+                        enabledTechnologies[tech] = checkbox.checked;
+                        runSimulation();
+                        saveState();
+                    });
+                    checkboxContainer.appendChild(checkbox);
+                    wrapper.appendChild(checkboxContainer);
+
+                    const label = document.createElement('label');
+                    label.textContent = name;
+                    label.className = 'col-span-1 text-sm font-medium text-gray-700';
+                    wrapper.appendChild(label);
+
+                    const sliderContainer = document.createElement('div');
+                    sliderContainer.className = 'col-span-3';
+                    const track = document.createElement('div');
+                    track.className = 'mix-slider-track';
+                    const fill = document.createElement('div');
+                    fill.id = `mix-fill-${tech}`;
+                    fill.className = 'mix-slider-fill';
+                    fill.style.backgroundColor = color;
+                    const outline = document.createElement('div');
+                    outline.id = `mix-default-outline-${tech}`;
+                    outline.className = 'mix-slider-default-outline';
+                    track.appendChild(fill);
+                    track.appendChild(outline);
+                    sliderContainer.appendChild(track);
+                    wrapper.appendChild(sliderContainer);
+
+                    const value = document.createElement('span');
+                    value.id = `mix-value-${tech}`;
+                    value.className = 'col-span-1 text-sm font-semibold text-right';
+                    value.textContent = '0.0%';
+                    wrapper.appendChild(value);
+
+                    gridMixSlidersContainer.appendChild(wrapper);
+                });
+            }
+
+            // --- GENERATION MIX SLIDER ---
+            function updateGenerationMixSlider(generation, defaultMix, curtailmentBySource) {
+                dailyGenerationTotalsGWh = {}; // Clear previous totals
+                let totalGeneration = 0;
+
+                // Sum up generation to grid (excluding storage charging)
+                const gridTechs = ['coal', 'naturalGas', 'hydro', 'geothermal', 'biomass', 'nuclear', 'solar', 'wind', 'storage'];
+                gridTechs.forEach(tech => {
+                    const techTotal = (generation[tech] || []).reduce((a, b) => a + b, 0);
+                    dailyGenerationTotalsGWh[tech] = techTotal;
+                    totalGeneration += techTotal;
+                });
+
+                if (totalGeneration > 0) {
+                    gridTechs.forEach(tech => {
+                        const percentage = (dailyGenerationTotalsGWh[tech] / totalGeneration) * 100;
+                        const fillEl = document.getElementById(`gen-mix-fill-${tech}`);
+                        const valueEl = document.getElementById(`gen-mix-value-${tech}`);
+                        const outlineEl = document.getElementById(`gen-mix-default-outline-${tech}`);
+
+                        if (fillEl && valueEl) {
+                            fillEl.style.width = `${percentage}%`;
+                            valueEl.textContent = `${percentage.toFixed(1)}%`;
+                        }
+                        if (outlineEl && defaultMix[tech] !== undefined) {
+                            outlineEl.style.width = `${defaultMix[tech]}%`;
+                        }
+                    });
+                } else { // Handle case with zero generation
+                     gridTechs.forEach(tech => {
+                        const fillEl = document.getElementById(`gen-mix-fill-${tech}`);
+                        const valueEl = document.getElementById(`gen-mix-value-${tech}`);
+                        if(fillEl && valueEl) {
+                            fillEl.style.width = '0%';
+                            valueEl.textContent = '0.0%';
+                        }
+                    });
+                }
+
+                // --- Curtailment Logic ---
+                const curtailmentTrack = document.getElementById('gen-mix-track-curtailment');
+                const curtailmentValue = document.getElementById('gen-mix-value-curtailment');
+                curtailmentTrack.innerHTML = ''; // Clear previous segments
+
+                let totalCurtailed = (generation.curtailment || []).reduce((a, b) => a + b, 0);
+                dailyGenerationTotalsGWh['curtailment'] = totalCurtailed; // For tooltip
+                let totalPotentialGeneration = totalGeneration + totalCurtailed + (generation.solarToStorage || []).reduce((a,b)=>a+b,0) + (generation.windToStorage || []).reduce((a,b)=>a+b,0);
+                
+                if (totalPotentialGeneration > 0) {
+                    const overallCurtailmentPercent = (totalCurtailed / totalPotentialGeneration) * 100;
+                    curtailmentValue.textContent = `${overallCurtailmentPercent.toFixed(1)}%`;
+
+                    if (totalCurtailed > 0) {
+                        const solarCurtail = (curtailmentBySource.solar || []).reduce((a,b)=>a+b,0) || 0;
+                        const windCurtail = (curtailmentBySource.wind || []).reduce((a,b)=>a+b,0) || 0;
+
+                        const techWithCurtailment = [{tech: 'solar', val: solarCurtail}, {tech: 'wind', val: windCurtail}];
+
+                        techWithCurtailment.forEach(item => {
+                             if (item.val > 0) {
+                                const contributionPercent = (item.val / totalCurtailed);
+                                const segmentWidth = 100 * contributionPercent; 
+
+                                const segment = document.createElement('div');
+                                segment.className = 'h-full';
+                                segment.style.backgroundColor = COLORS[item.tech];
+                                segment.style.width = `${segmentWidth}%`;
+                                segment.style.float = 'left'; // Stack horizontally
+                                curtailmentTrack.appendChild(segment);
+                            }
+                        });
+                        curtailmentTrack.parentElement.style.width = `${overallCurtailmentPercent}%`;
+                    } else {
+                        curtailmentTrack.parentElement.style.width = `0%`;
+                    }
+                } else {
+                    curtailmentValue.textContent = '0.0%';
+                    curtailmentTrack.parentElement.style.width = `0%`;
+                }
+            }
+
+            function createGenerationMixSliders() {
+                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'nuclear', 'geothermal', 'biomass', 'storage'];
+                techOrder.forEach(tech => {
+                    const name = tech.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                    const color = COLORS[tech] || '#ccc';
+
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'grid grid-cols-5 gap-2 items-center mix-slider-row';
+                    wrapper.dataset.tech = tech; // Add data attribute for tooltip
+
+                    const label = document.createElement('label');
+                    label.textContent = name;
+                    label.className = 'col-span-1 text-sm font-medium text-gray-700';
+                    wrapper.appendChild(label);
+
+                    const sliderContainer = document.createElement('div');
+                    sliderContainer.className = 'col-span-3';
+                    const track = document.createElement('div');
+                    track.className = 'mix-slider-track';
+                    const fill = document.createElement('div');
+                    fill.id = `gen-mix-fill-${tech}`;
+                    fill.className = 'mix-slider-fill';
+                    fill.style.backgroundColor = color;
+                    const outline = document.createElement('div');
+                    outline.id = `gen-mix-default-outline-${tech}`;
+                    outline.className = 'mix-slider-default-outline';
+                    track.appendChild(fill);
+                    track.appendChild(outline);
+                    sliderContainer.appendChild(track);
+                    wrapper.appendChild(sliderContainer);
+
+                    const value = document.createElement('span');
+                    value.id = `gen-mix-value-${tech}`;
+                    value.className = 'col-span-1 text-sm font-semibold text-right';
+                    value.textContent = '0.0%';
+                    wrapper.appendChild(value);
+
+                    generationMixSlidersContainer.appendChild(wrapper);
+                });
+
+                // Add Curtailment row separately
+                const wrapper = document.createElement('div');
+                wrapper.className = 'grid grid-cols-5 gap-2 items-center mix-slider-row';
+                wrapper.dataset.tech = 'curtailment';
+                const label = document.createElement('label');
+                label.textContent = 'Curtailment';
+                label.className = 'col-span-1 text-sm font-medium text-gray-700';
+                wrapper.appendChild(label);
+                const sliderContainer = document.createElement('div');
+                sliderContainer.className = 'col-span-3';
+                const outerTrack = document.createElement('div');
+                outerTrack.className = 'mix-slider-track';
+                const innerTrack = document.createElement('div');
+                innerTrack.id = 'gen-mix-track-curtailment';
+                innerTrack.className = 'h-full w-full';
+                outerTrack.appendChild(innerTrack);
+                sliderContainer.appendChild(outerTrack);
+                wrapper.appendChild(sliderContainer);
+                const value = document.createElement('span');
+                value.id = `gen-mix-value-curtailment`;
+                value.className = 'col-span-1 text-sm font-semibold text-right';
+                value.textContent = '0.0%';
+                wrapper.appendChild(value);
+                generationMixSlidersContainer.appendChild(wrapper);
+            }
+
+            // --- DEMAND EDIT MODE ---
+            function setDemandEditMode(enabled) {
+                isDemandEditMode = enabled;
+                const demandDatasetIndex = generationChart.data.datasets.findIndex(ds => ds.label === 'Demand');
+
+                if (enabled) {
+                    editDemandBtn.classList.add('hidden');
+                    confirmDemandBtn.classList.remove('hidden');
+                    revertDemandBtn.classList.remove('hidden');
+                    demandPresetsDiv.classList.remove('hidden');
+
+                    // Highlight the current season's button
+                    document.querySelectorAll('#demand-presets button').forEach(btn => {
+                        btn.classList.remove('preset-active');
+                        if (btn.id === `preset-demand-${currentDemandProfileName.toLowerCase().replace(' ', '-')}`) {
+                            btn.classList.add('preset-active');
+                        }
+                    });
+
+                    // Hide other datasets and make the demand line more prominent for editing
+                    generationChart.data.datasets.forEach((dataset, index) => {
+                        if (index !== demandDatasetIndex) {
+                            dataset.hidden = true;
+                        } else {
+                            // Style the demand line for editing
+                            dataset.borderWidth = 4;
+                            dataset.pointRadius = 6;
+                            dataset.pointHoverRadius = 8;
+                            dataset.pointBackgroundColor = 'rgba(17, 24, 39, 1)';
+                            dataset.pointBorderColor = 'white';
+                            dataset.pointBorderWidth = 2;
+                        }
+                    });
+
+                    // Configure and enable the dragData plugin
+                    generationChart.options.plugins.dragData = {
+                        round: 1, // Snap to integer values
+                        showTooltip: true,
+                        onDragEnd: function(e, datasetIndex, index, value) {
+                            generationChart.update('none'); // Update chart visually after a drag
+                        }
+                    };
+                    generationChart.options.plugins.dragData.enabled = true;
+                    generationChart.options.scales.y.stacked = false; // Unstack y-axis for clarity
+                    generationChart.update();
+
+                } else {
+                    editDemandBtn.classList.remove('hidden');
+                    confirmDemandBtn.classList.add('hidden');
+                    revertDemandBtn.classList.add('hidden');
+                    demandPresetsDiv.classList.add('hidden');
+
+                    // Restore visibility and original style of all datasets
+                    generationChart.data.datasets.forEach((dataset, index) => {
+                        dataset.hidden = false;
+                        if (index === demandDatasetIndex) {
+                            // Reset demand line style to its default
+                            dataset.borderWidth = 3;
+                            dataset.pointRadius = 0;
+                            dataset.pointHoverRadius = 0;
+                        }
+                    });
+
+                    // Disable the dragData plugin
+                    if (generationChart.options.plugins.dragData) {
+                        generationChart.options.plugins.dragData.enabled = false;
+                        generationChart.options.plugins.dragData.onDragEnd = null;
+                    }
+                    generationChart.options.scales.y.stacked = true; // Re-enable stacking
+                    generationChart.update();
+                }
+            }
+
+            // --- CF EDIT MODE ---
+            function setCFEditMode(enabled) {
+                isCFEditMode = enabled;
+                
+                if (enabled) {
+                    editCFBtn.classList.add('hidden');
+                    confirmCFBtn.classList.remove('hidden');
+                    revertCFBtn.classList.remove('hidden');
+                    cfPresetsDiv.classList.remove('hidden');
+
+                    document.querySelectorAll('#cf-presets button').forEach(btn => {
+                        btn.classList.remove('preset-active');
+                        if (btn.id === `preset-cf-${currentCFProfileName.toLowerCase()}`) {
+                            btn.classList.add('preset-active');
+                        }
+                    });
+
+                    capacityFactorChart.data.datasets.forEach(dataset => {
+                        dataset.pointRadius = 6;
+                        dataset.pointHoverRadius = 8;
+                        dataset.pointBorderColor = 'white';
+                        dataset.pointBorderWidth = 2;
+                        dataset.dragData = true; // Enable dragging for this dataset
+                    });
+
+                } else {
+                    editCFBtn.classList.remove('hidden');
+                    confirmCFBtn.classList.add('hidden');
+                    revertCFBtn.classList.add('hidden');
+                    cfPresetsDiv.classList.add('hidden');
+                    
+                    capacityFactorChart.data.datasets.forEach(dataset => {
+                        dataset.pointRadius = 0;
+                        dataset.dragData = false; // Disable dragging for this dataset
+                    });
+                }
+                capacityFactorChart.update();
+            }
+
+            // --- EVENT LISTENERS ---
+            function updateUndoRedoButtons() {
+                undoButton.disabled = historyIndex <= 0;
+                redoButton.disabled = historyIndex >= stateHistory.length - 1;
+            }
+
+            function saveState() {
+                const currentState = {};
+                for (const key in sliders) {
+                    currentState[key] = sliders[key].value;
+                }
+                currentState.enabledTech = { ...enabledTechnologies }; 
+
+                stateHistory = stateHistory.slice(0, historyIndex + 1);
+                stateHistory.push(currentState);
+                historyIndex++;
+                updateUndoRedoButtons();
+            }
+            
+            function syncInputs(sourceElement, targetElement) {
+                targetElement.value = sourceElement.value;
+            }
+
+            function setupInputSyncing() {
+                for (const key in sliders) {
+                    const slider = sliders[key];
+                    const input = inputs[key];
+
+                    slider.addEventListener('input', () => {
+                        syncInputs(slider, input);
+                        runSimulation();
+                    });
+                    
+                    input.addEventListener('input', () => {
+                        let value = parseFloat(input.value);
+                        const min = parseFloat(slider.min);
+                        const max = parseFloat(slider.max);
+                        if (isNaN(value)) value = min;
+                        if (value > max) value = max;
+                        if (value < min) value = min;
+                        input.value = value;
+                        syncInputs(input, slider);
+                        runSimulation();
+                    });
+
+                    slider.addEventListener('change', saveState);
+                    input.addEventListener('change', saveState);
+                }
+            }
+
+            // Central function to apply a seasonal profile
+            function applySeason(profileName) { // e.g., 'spring-typical'
+                const nameParts = profileName.split('-');
+                const baseSeason = nameParts[0]; // 'spring'
+                const profileDisplayName = nameParts.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' '); // 'Spring Typical'
+
+                // Update Demand Profile
+                currentDemandProfileName = profileDisplayName;
+                currentDemandProfileText.textContent = currentDemandProfileName;
+
+                // Update Capacity Factor Profile - using the base season
+                const cfProfileDisplayName = baseSeason.charAt(0).toUpperCase() + baseSeason.slice(1);
+                const seasonalMultipliers = SEASONAL_MULTIPLIERS[baseSeason];
+                const baseSolarProfile = (countryProfiles[countrySelect.value] || countryProfiles.default).solar;
+                const baseWindProfile = (countryProfiles[countrySelect.value] || countryProfiles.default).wind;
+                currentSolarCFProfile = baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
+                currentWindCFProfile = baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
+                currentCFProfileName = cfProfileDisplayName; // This is 'Spring', 'Summer', etc.
+                currentCFProfileText.textContent = currentCFProfileName;
+
+                // Update baselines and run simulation
+                // updateBaselineForCountry needs the demand profile, which is now identified by the full profileName
+                updateBaselineForCountry(countrySelect.value, profileName); 
+                
+                // Exit any edit modes
+                setDemandEditMode(false);
+                setCFEditMode(false);
+                saveState();
+            }
+
+            // Event listeners for demand editing
+            editDemandBtn.addEventListener('click', () => {
+                originalDemandBeforeEdit = [...currentDemand];
+                setDemandEditMode(true);
+            });
+
+            revertDemandBtn.addEventListener('click', () => {
+                generationChart.data.datasets.find(ds => ds.label === 'Demand').data = [...originalDemandBeforeEdit];
+                generationChart.update('none');
+            });
+
+            confirmDemandBtn.addEventListener('click', () => {
+                currentDemand = [...generationChart.data.datasets.find(ds => ds.label === 'Demand').data];
+                currentDemandProfileName = "User Defined";
+                currentDemandProfileText.textContent = currentDemandProfileName;
+                setDemandEditMode(false);
+                runSimulation();
+                saveState();
+            });
+            
+            const demandProfiles = [
+                'spring-typical', 'spring-high', 'summer-typical', 'summer-high', 
+                'fall-typical', 'fall-high', 'winter-typical', 'winter-high'
+            ];
+            demandProfiles.forEach(profile => {
+                document.getElementById(`preset-demand-${profile}`).addEventListener('click', () => applySeason(profile));
+            });
+
+            ['spring', 'summer', 'fall', 'winter'].forEach(season => {
+                document.getElementById(`preset-cf-${season}`).addEventListener('click', () => {
+                    // When a CF preset is clicked, we default to the 'typical' demand for that season
+                    applySeason(`${season}-typical`);
+                });
+            });
+
+            // Event listeners for CF editing
+            editCFBtn.addEventListener('click', () => {
+                originalSolarCFBeforeEdit = [...capacityFactorChart.data.datasets[0].data];
+                originalWindCFBeforeEdit = [...capacityFactorChart.data.datasets[1].data];
+                setCFEditMode(true);
+            });
+
+            revertCFBtn.addEventListener('click', () => {
+                capacityFactorChart.data.datasets[0].data = [...originalSolarCFBeforeEdit];
+                capacityFactorChart.data.datasets[1].data = [...originalWindCFBeforeEdit];
+                capacityFactorChart.update('none');
+            });
+
+            confirmCFBtn.addEventListener('click', () => {
+                currentSolarCFProfile = [...capacityFactorChart.data.datasets[0].data];
+                currentWindCFProfile = [...capacityFactorChart.data.datasets[1].data];
+                currentCFProfileName = "User Defined";
+                currentCFProfileText.textContent = currentCFProfileName;
+                
+                // When confirming a custom CF, we need a demand profile to pair it with.
+                // We'll use the last selected demand profile's name.
+                const lastDemandProfile = currentDemandProfileName.toLowerCase().replace(' ', '-');
+                updateBaselineForCountry(countrySelect.value, lastDemandProfile);
+
+                setCFEditMode(false);
+                runSimulation();
+                saveState();
+            });
+
+
+            resetToZeroButton.addEventListener('click', () => {
+                Object.keys(sliders).forEach(key => {
+                    if (key === 'exportPrice') {
+                         sliders[key].value = 20;
+                         inputs[key].value = 20;
+                    } else {
+                        sliders[key].value = 0;
+                        inputs[key].value = 0;
+                    }
+                });
+                runSimulation();
+                saveState();
+            });
+            
+            makeDefaultButton.addEventListener('click', () => {
+                userDefaultState = {};
+                for (const key in sliders) {
+                    userDefaultState[key] = sliders[key].value;
+                }
+                userDefaultState.enabledTech = { ...enabledTechnologies }; 
+
+                const currentValues = {};
+                for (const key in sliders) {
+                    currentValues[key] = parseFloat(sliders[key].value);
+                }
+                
+                const selectedCountry = countrySelect.value;
+                const solarProfile = (countryProfiles[selectedCountry] || countryProfiles.default).solar;
+                const windProfile = (countryProfiles[selectedCountry] || countryProfiles.default).wind;
+
+                let activePotentialGeneration = JSON.parse(JSON.stringify(BASELINE_POTENTIAL_GENERATION));
+                for (const tech in enabledTechnologies) {
+                    if (!enabledTechnologies[tech]) {
+                        activePotentialGeneration[tech] = Array(24).fill(0);
+                    }
+                }
+
+                const newBaselineResult = getSimulationResult(
+                    {
+                        capacity: {
+                            solar: currentValues.solar, wind: currentValues.wind,
+                            geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
+                            biomass: currentValues.biomass,
+                            battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
+                            longduration: currentValues.longduration, dac: currentValues.dac,
+                            demandflex: currentValues.demandflex,
+                        },
+                        incentives: {
+                            solar: currentValues.solarIncentive, wind: currentValues.windIncentive,
+                            geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
+                            biomass: currentValues.biomassIncentive,
+                            storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
+                            carbonTax: currentValues.carbonTax,
+                            exportPrice: currentValues.exportPrice,
+                        }
+                    },
+                    currentSolarCFProfile,
+                    currentWindCFProfile,
+                    activePotentialGeneration,
+                    currentBaselineStorage
+                );
+                customBaselineSystemCost = newBaselineResult.systemCost;
+                customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
+
+                runSimulation();
+                // Create a more prominent modal message
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50';
+                modal.innerHTML = `
+                    <div class="bg-white p-6 rounded-lg shadow-2xl text-center">
+                        <p class="text-lg font-semibold text-gray-800">Current settings saved as user default.</p>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                setTimeout(() => modal.remove(), 2000);
+            });
+
+            resetToDefaultButton.addEventListener('click', () => {
+                const stateToApply = Object.keys(userDefaultState).length > 0 ? userDefaultState : systemDefaultState;
+                
+                for (const key in stateToApply) {
+                    if (key !== 'enabledTech') {
+                        sliders[key].value = stateToApply[key];
+                        inputs[key].value = stateToApply[key];
+                    }
+                }
+
+                if (stateToApply.enabledTech) {
+                    for (const tech in stateToApply.enabledTech) {
+                        const checkbox = document.getElementById(`toggle-${tech}`);
+                        if (checkbox) {
+                            checkbox.checked = stateToApply.enabledTech[tech];
+                            enabledTechnologies[tech] = stateToApply.enabledTech[tech];
+                        }
+                    }
+                }
+
+                runSimulation();
+                saveState();
+            });
+
+            undoButton.addEventListener('click', () => {
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    const prevState = stateHistory[historyIndex];
+                    for (const key in prevState) {
+                        if (key !== 'enabledTech') {
+                            sliders[key].value = prevState[key];
+                            inputs[key].value = prevState[key];
+                        }
+                    }
+                    if (prevState.enabledTech) {
+                        for (const tech in prevState.enabledTech) {
+                            const checkbox = document.getElementById(`toggle-${tech}`);
+                            if (checkbox) {
+                                checkbox.checked = prevState.enabledTech[tech];
+                                enabledTechnologies[tech] = prevState.enabledTech[tech];
+                            }
+                        }
+                    }
+                    runSimulation();
+                    updateUndoRedoButtons();
+                }
+            });
+
+            redoButton.addEventListener('click', () => {
+                if (historyIndex < stateHistory.length - 1) {
+                    historyIndex++;
+                    const nextState = stateHistory[historyIndex];
+                    for (const key in nextState) {
+                        if (key !== 'enabledTech') {
+                            sliders[key].value = nextState[key];
+                            inputs[key].value = nextState[key];
+                        }
+                    }
+                    if (nextState.enabledTech) {
+                        for (const tech in nextState.enabledTech) {
+                            const checkbox = document.getElementById(`toggle-${tech}`);
+                            if (checkbox) {
+                                checkbox.checked = nextState.enabledTech[tech];
+                                enabledTechnologies[tech] = nextState.enabledTech[tech];
+                            }
+                        }
+                    }
+                    runSimulation();
+                    updateUndoRedoButtons();
+                }
+            });
+            
+            // --- INITIALIZATION & DYNAMIC CONTENT ---
+
+            function populateCountryDropdown() {
+                // Clear existing options
+                countrySelect.innerHTML = '';
+                // Add California first and select it
+                const caOption = document.createElement('option');
+                caOption.value = "California";
+                caOption.textContent = "California";
+                countrySelect.appendChild(caOption);
+
+                for(const country in countryGridMixData) {
+                    if (country !== "California") {
+                        const option = document.createElement('option');
+                        option.value = country;
+                        option.textContent = country;
+                        countrySelect.appendChild(option);
+                    }
+                }
+                countrySelect.value = "California";
+            }
+
+            function updateBaselineForCountry(countryName, profileName) { // profileName is e.g., 'spring-typical'
+                let newCarbonTax = 0;
+                let countryData = countryGridMixData[countryName];
+                
+                if (!countryData) {
+                    console.error(`No data for country: ${countryName}`);
+                    return;
+                }
+                
+                newCarbonTax = carbonTaxes[countryName] || 0;
+
+                // --- NEW: Scale demand profile based on country's peak load ---
+                const baseProfile = SEASONAL_DEMAND_PROFILES[profileName];
+                const basePeak = Math.max(...baseProfile);
+                const countryPeak = countryData.peakLoadMW / 1000; // Convert to GW
+                const scalingFactor = countryPeak / basePeak;
+                currentDemand = baseProfile.map(val => val * scalingFactor);
+
+                currentCountryInstalledCapacity = {}; // Reset for new country
+                for(const tech in COST_DATA.capacity_factor) {
+                    const techCapacityGW = (countryData.totalCapacityMW / 1000) * ((countryData.mix[tech] || 0) / 100);
+                    currentCountryInstalledCapacity[tech] = techCapacityGW;
+                }
+                
+                currentBaselineStorage = countryData.storageGWh || {};
+
+                const potentialGeneration = {};
+                for(const tech in currentCountryInstalledCapacity) {
+                    potentialGeneration[tech] = Array(24).fill(0);
+                    const cf = COST_DATA.capacity_factor[tech];
+                    let capacity = currentCountryInstalledCapacity[tech];
+
+                    if (tech === 'solar') {
+                        for (let i = 0; i < 24; i++) potentialGeneration.solar[i] = capacity * currentSolarCFProfile[i];
+                    } else if (tech === 'wind') {
+                        for (let i = 0; i < 24; i++) potentialGeneration.wind[i] = capacity * currentWindCFProfile[i];
+                    } else if (tech === 'hydro') {
+                        for (let i = 0; i < 24; i++) potentialGeneration.hydro[i] = capacity; // Max power capacity
+                    } else if (tech === 'naturalGas' || tech === 'coal') {
+                        // *** FIX: Allow dispatchable fossil fuels to ramp to 100% of capacity at any hour ***
+                        for (let i = 0; i < 24; i++) potentialGeneration[tech][i] = capacity * 1.0;
+                    } else {
+                        // For other dispatchable sources (Nuclear, Geothermal), use their standard high CF
+                        for (let i = 0; i < 24; i++) potentialGeneration[tech][i] = capacity * cf;
+                    }
+                }
+                BASELINE_POTENTIAL_GENERATION = potentialGeneration;
+
+                // Reset policy levers and set country-specific defaults
+                Object.keys(sliders).forEach(key => {
+                    sliders[key].value = 0;
+                    inputs[key].value = 0;
+                });
+                
+                sliders.carbonTax.value = newCarbonTax;
+                inputs.carbonTax.value = newCarbonTax;
+
+                const newExportPrice = countryData.defaultExportPrice ?? 20;
+                sliders.exportPrice.value = newExportPrice;
+                inputs.exportPrice.value = newExportPrice;
+                
+                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'nuclear', 'geothermal', 'biomass'];
+                techOrder.forEach(tech => {
+                    const checkbox = document.getElementById(`toggle-${tech}`);
+                    if(checkbox) {
+                       checkbox.checked = true;
+                       enabledTechnologies[tech] = true;
+                    }
+                });
+
+                // Calculate the true baseline cost and generation profile by running a dispatch simulation
+                const baselineResult = getSimulationResult(
+                    { // All policy levers at 0
+                        capacity: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, biomass: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
+                        incentives: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, biomass: 0, storage: 0, dac: 0, carbonTax: newCarbonTax, exportPrice: newExportPrice }
+                    },
+                    currentSolarCFProfile,
+                    currentWindCFProfile,
+                    BASELINE_POTENTIAL_GENERATION,
+                    currentBaselineStorage
+                );
+                customBaselineSystemCost = baselineResult.systemCost;
+                customBaselineTotalAnnualCO2 = baselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
+                
+                systemDefaultState = {};
+                for (const key in sliders) {
+                    systemDefaultState[key] = sliders[key].value;
+                }
+                systemDefaultState.enabledTech = { ...enabledTechnologies };
+                userDefaultState = {};
+                
+                let totalDefaultCapacity = 0;
+                for (const tech in currentCountryInstalledCapacity) {
+                    defaultCapacityMix[tech] = currentCountryInstalledCapacity[tech];
+                    totalDefaultCapacity += currentCountryInstalledCapacity[tech];
+                }
+
+                if (totalDefaultCapacity > 0) {
+                    for (const tech in defaultCapacityMix) {
+                        defaultCapacityMix[tech] = (defaultCapacityMix[tech] / totalDefaultCapacity) * 100;
+                    }
+                }
+
+                let totalDefaultGeneration = 0;
+                for (const tech in baselineResult.generation) {
+                    if (tech !== 'curtailment' && tech !== 'solarToStorage' && tech !== 'windToStorage') {
+                        const gen = baselineResult.generation[tech].reduce((a, b) => a + b, 0);
+                        defaultGenerationMix[tech] = gen;
+                        totalDefaultGeneration += gen;
+                    }
+                }
+                 if (totalDefaultGeneration > 0) {
+                    for (const tech in defaultGenerationMix) {
+                        defaultGenerationMix[tech] = (defaultGenerationMix[tech] / totalDefaultGeneration) * 100;
+                    }
+                }
+                runSimulation();
+            }
+
+            countrySelect.addEventListener('change', (e) => {
+                applySeason('spring-typical');
+            });
+            
+            // --- TOOLTIP LOGIC ---
+            document.addEventListener('mousemove', (e) => {
+                hoverTooltip.style.left = e.pageX + 15 + 'px';
+                hoverTooltip.style.top = e.pageY + 15 + 'px';
+            });
+
+            gridMixSlidersContainer.addEventListener('mouseover', (e) => {
+                const row = e.target.closest('.mix-slider-row');
+                if (!row) return;
+                const tech = row.dataset.tech;
+                if (!tech) return;
+
+                const baselineCapacity = currentCountryInstalledCapacity[tech] || 0;
+                const newCapacity = (sliders[tech] ? parseFloat(sliders[tech].value) : 0) || 0;
+                const totalCapacity = baselineCapacity + newCapacity;
+
+                hoverTooltip.innerHTML = `Total Capacity: ${totalCapacity.toFixed(2)} GW`;
+                hoverTooltip.classList.remove('hidden');
+            });
+            gridMixSlidersContainer.addEventListener('mouseout', () => {
+                hoverTooltip.classList.add('hidden');
+            });
+            
+            generationMixSlidersContainer.addEventListener('mouseover', (e) => {
+                const row = e.target.closest('.mix-slider-row');
+                if (!row) return;
+                const tech = row.dataset.tech;
+                if (!tech || dailyGenerationTotalsGWh[tech] === undefined) return;
+
+                const totalGWh = dailyGenerationTotalsGWh[tech];
+                const label = tech === 'curtailment' ? 'Total Daily Curtailment' : 'Total Daily Generation';
+                hoverTooltip.innerHTML = `${label}: ${totalGWh.toFixed(2)} GWh`;
+                hoverTooltip.classList.remove('hidden');
+            });
+             generationMixSlidersContainer.addEventListener('mouseout', () => {
+                hoverTooltip.classList.add('hidden');
+            });
+
+
+            // --- TUTORIAL LOGIC ---
+            const tutorialSteps = [
+                {
+                    // No element for the first step, so it will be centered.
+                    title: 'Welcome to the Grid Simulator!',
+                    text: 'This interactive tool lets you explore pathways to a zero-carbon electricity grid. Let\'s take a quick tour of the main features.',
+                    position: 'center'
+                },
+                {
+                    element: '#tutorial-step-2',
+                    title: 'Live Simulation Charts',
+                    text: 'These charts show the real-time results of your decisions. See how the generation mix and CO2 emissions change as you adjust the levers.',
+                    position: 'right',
+                    highlightClass: 'rounded-lg'
+                },
+                {
+                    element: '#tutorial-step-3',
+                    title: 'Your Control Panel',
+                    text: 'This is where you make things happen! Use these sliders to deploy new technologies, set government incentives, and choose a starting grid mix.',
+                    position: 'left',
+                    highlightClass: 'rounded-lg'
+                },
+                {
+                    element: '#make-default-button',
+                    title: 'Save Your Scenario',
+                    text: 'Once you find a set of policies you like, you can save them as your new default. The cost metrics will then be calculated relative to this new baseline.',
+                    position: 'top',
+                    highlightClass: 'rounded-full'
+                },
+                {
+                    element: '#tutorial-step-5',
+                    title: 'Key Outcome Metrics',
+                    text: 'Your goal is to get CO2 emissions to zero while keeping costs low. These cards show the impact on electricity bills and the cost of avoiding CO2.',
+                    position: 'bottom',
+                    highlightClass: 'rounded-lg'
+                },
+                {
+                    element: '#edit-demand-btn',
+                    title: 'Customize Demand',
+                    text: 'Click the edit icon to create your own custom daily demand profile, or select a seasonal preset.',
+                    position: 'left',
+                    highlightClass: 'rounded-full'
+                },
+                {
+                    element: '#edit-cf-btn',
+                    title: 'Customize Weather',
+                    text: 'Click this edit icon to change the hourly performance of solar and wind to simulate different weather conditions.',
+                    position: 'top',
+                    highlightClass: 'rounded-full'
+                }
+            ];
+
+            let currentStep = 0;
+            const overlay = document.getElementById('tutorial-overlay');
+            const popover = document.getElementById('tutorial-popover');
+            const titleEl = document.getElementById('tutorial-title');
+            const textEl = document.getElementById('tutorial-text');
+            const prevBtn = document.getElementById('tutorial-prev');
+            const nextBtn = document.getElementById('tutorial-next');
+            const skipBtn = document.getElementById('tutorial-skip');
+            let highlightedElement = null;
+
+            function startTutorial() {
+                if (localStorage.getItem('gridSimulatorTutorialSeen')) {
+                    return; // Don't show if already seen
+                }
+                document.body.classList.add('tutorial-active');
+                currentStep = 0;
+                showTutorialStep(currentStep);
+            }
+
+            function endTutorial() {
+                document.body.classList.remove('tutorial-active');
+                overlay.style.display = 'none';
+                popover.style.display = 'none';
+                if (highlightedElement) {
+                    highlightedElement.classList.remove('tutorial-highlight-active', 'rounded-full', 'rounded-lg');
+                }
+                localStorage.setItem('gridSimulatorTutorialSeen', 'true');
+            }
+            
+            function positionPopover(targetElement, popoverEl, position) {
+                // Temporarily make popover visible to get its dimensions
+                popoverEl.style.visibility = 'hidden';
+                popoverEl.style.display = 'block';
+
+                const popoverRect = popoverEl.getBoundingClientRect();
+                const margin = 15;
+
+                if (position === 'center' || !targetElement) {
+                    popoverEl.style.left = '50%';
+                    popoverEl.style.top = '50%';
+                    popoverEl.style.transform = 'translate(-50%, -50%)';
+                    popoverEl.style.visibility = 'visible';
+                    return;
+                }
+
+                const targetRect = targetElement.getBoundingClientRect();
+                let top, left;
+
+                switch (position) {
+                    case 'top':
+                        top = targetRect.top - popoverRect.height - margin;
+                        left = targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2);
+                        break;
+                    case 'bottom':
+                        top = targetRect.bottom + margin;
+                        left = targetRect.left + (targetRect.width / 2) - (popoverRect.width / 2);
+                        break;
+                    case 'left':
+                        top = targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2);
+                        left = targetRect.left - popoverRect.width - margin;
+                        break;
+                    case 'right':
+                    default:
+                        top = targetRect.top + (targetRect.height / 2) - (popoverRect.height / 2);
+                        left = targetRect.right + margin;
+                        break;
+                }
+
+                // Boundary checks to prevent going off-screen
+                if (top < margin) {
+                    top = margin;
+                }
+                if (left < margin) {
+                    left = margin;
+                }
+                if (left + popoverRect.width > window.innerWidth - margin) {
+                    left = window.innerWidth - popoverRect.width - margin;
+                }
+                if (top + popoverRect.height > window.innerHeight - margin) {
+                    top = window.innerHeight - popoverRect.height - margin;
+                }
+
+                popoverEl.style.top = `${top}px`;
+                popoverEl.style.left = `${left}px`;
+                popoverEl.style.transform = 'none'; // Remove transform to use absolute top/left
+                popoverEl.style.visibility = 'visible';
+            }
+
+            function showTutorialStep(stepIndex) {
+                if (stepIndex < 0 || stepIndex >= tutorialSteps.length) {
+                    endTutorial();
+                    return;
+                }
+
+                const step = tutorialSteps[stepIndex];
+
+                if (highlightedElement) {
+                    highlightedElement.classList.remove('tutorial-highlight-active', 'rounded-full', 'rounded-lg');
+                    highlightedElement = null;
+                }
+
+                titleEl.textContent = step.title;
+                textEl.textContent = step.text;
+
+                let targetElement;
+                if (step.element) {
+                    targetElement = document.querySelector(step.element);
+                }
+
+                if (targetElement) {
+                    overlay.style.display = 'none'; // Hide the generic overlay
+                    highlightedElement = targetElement;
+                    highlightedElement.classList.add('tutorial-highlight-active');
+                    if (step.highlightClass) {
+                        highlightedElement.classList.add(step.highlightClass);
+                    }
+                    
+                    highlightedElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+
+                    setTimeout(() => {
+                        positionPopover(highlightedElement, popover, step.position);
+                    }, 400); 
+                } else {
+                    overlay.style.display = 'block'; // Show the generic overlay for the centered step
+                    positionPopover(null, popover, 'center');
+                }
+
+                prevBtn.style.display = stepIndex === 0 ? 'none' : 'inline-block';
+                nextBtn.textContent = stepIndex === tutorialSteps.length - 1 ? 'Finish' : 'Next';
+            }
+
+            nextBtn.addEventListener('click', () => {
+                currentStep++;
+                showTutorialStep(currentStep);
+            });
+
+            prevBtn.addEventListener('click', () => {
+                currentStep--;
+                showTutorialStep(currentStep);
+            });
+
+            skipBtn.addEventListener('click', endTutorial);
+
+
+            // --- MAIN INITIALIZATION FUNCTION ---
+            async function initialize() {
+                try {
+                    await signInAnonymously(auth);
+                    console.log("Firebase authentication successful.");
+                } catch (error) {
+                    console.error("Firebase authentication failed:", error);
+                    visitorCountEl.textContent = "Auth Failed";
+                    return;
+                }
+
+                const counterRef = doc(db, `artifacts/${appId}/public/data/counters/visitor_counter`);
+                try {
+                    const newCount = await runTransaction(db, async (transaction) => {
+                        const counterDoc = await transaction.get(counterRef);
+                        if (!counterDoc.exists()) {
+                            transaction.set(counterRef, { count: 1 });
+                            return 1;
+                        }
+                        const newCount = counterDoc.data().count + 1;
+                        transaction.update(counterRef, { count: newCount });
+                        return newCount;
+                    });
+                    visitorCountEl.textContent = newCount.toLocaleString();
+                } catch (e) {
+                    console.error("Firestore transaction failed: ", e);
+                    visitorCountEl.textContent = "DB Error";
+                }
+
+                createGridMixSliders();
+                createGenerationMixSliders();
+                populateCountryDropdown();
+                applySeason('spring-typical'); // This will set up the initial state correctly for California
+                setupInputSyncing();
+                
+                // Start the tutorial after a short delay to allow the page to render
+                setTimeout(startTutorial, 500);
+            }
+
+            await initialize();
+        });
+    </script>
+</body>
+</html>
