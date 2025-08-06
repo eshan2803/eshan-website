@@ -1869,14 +1869,16 @@
                 );
                 customBaselineSystemCost = newBaselineResult.systemCost;
                 customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
-                if (typeof generationChart !== 'undefined' && generationChart.data && generationChart.data.datasets) {
-                    // Find the demand dataset
-                    const demandDataset = generationChart.data.datasets.find(ds => ds.label === 'Demand');
-                    if (demandDataset) {
-                        demandDataset.data = [...currentDemand];
-                    }
-                    generationChart.update();
-                }
+                // Update all generator datasets in the chart to match the new baseline
+                updateCharts(
+                    newBaselineResult.generation,
+                    newBaselineResult.emissions,
+                    currentDemand,
+                    0,
+                    currentSolarCFProfile,
+                    currentWindCFProfile,
+                    newBaselineResult.curtailmentBySource
+                );
                 saveState();
             }
             
