@@ -589,7 +589,7 @@
         
         const countryGridMixData = {
             "California": { 
-                totalCapacityMW: 89207, peakLoadMW: 52061, // CAISO record peak
+                totalCapacityMW: 85522, peakLoadMW: 52061, // CAISO record peak, total capacity adjusted for 13.427GW Hydro
                 mix: { coal: 0.1, naturalGas: 43.4, hydro: 15.7, wind: 7.1, solar: 26.1, nuclear: 2.7, geothermal: 3.0, biomass: 1.4 },
                 storageGWh: { battery4hr: 43.2 },
                 defaultExportPrice: -20
@@ -642,6 +642,14 @@
 
         const SOLAR_CF_PROFILE = [0,0,0,0,0,0.05,0.15,0.3,0.5,0.7,0.8,0.85,0.9,0.85,0.8,0.7,0.3,0.05,0,0,0,0,0,0];
         const WIND_CF_PROFILE = [0.4,0.42,0.45,0.46,0.45,0.4,0.35,0.3,0.25,0.2,0.2,0.2,0.25,0.3,0.35,0.4,0.5,0.6,0.65,0.6,0.55,0.5,0.45,0.4];
+        
+        const SEASONAL_HYDRO_CF = {
+            spring: 0.35,
+            summer: 0.30,
+            fall: 0.20,
+            winter: 0.25
+        };
+
         const SEASONAL_MULTIPLIERS = {
             spring: { solar: 1.0, wind: 1.0 },
             summer: { solar: 1.1, wind: 0.7 },
@@ -780,6 +788,7 @@
             let isCFEditMode = false;
             let currentSolarCFProfile = [];
             let currentWindCFProfile = [];
+            let currentHydroCF = SEASONAL_HYDRO_CF.spring; // Initialize with spring
             let originalSolarCFBeforeEdit = [];
             let originalWindCFBeforeEdit = [];
             let currentCFProfileName = 'Spring';
@@ -792,7 +801,7 @@
             
             const COLORS = {
                 naturalGas: 'rgba(107, 114, 128, 0.8)', hydro: 'rgba(59, 130, 246, 0.8)', 
-                nuclear: 'rgba(239, 68, 68, 0.8)', solar: 'rgba(251, 191, 36, 0.8)', 
+                nuclear: 'rgba(239, 68, 68, 0.8)', solar: 'rgba(251, 191, 36, 1)', 
                 wind: 'rgba(16, 185, 129, 0.8)', geothermal: 'rgba(120, 40, 40, 0.8)',
                 biomass: 'rgba(101, 67, 33, 0.8)',
                 storage: 'rgba(168, 85, 247, 0.8)', demand: 'rgba(17, 24, 39, 1)',
@@ -1085,7 +1094,7 @@
             }
 
             // --- REWRITTEN DISPATCH LOGIC ---
-            function getSimulationResult(inputs, solarProfile, windProfile, potentialGen, baselineStorageGWh = {}) {
+            function getSimulationResult(inputs, solarProfile, windProfile, potentialGen, baselineStorageGWh = {}, hydroCF) {
                 // --- 1. INITIAL SETUP ---
                 let modifiedDemand = [...currentDemand];
                 if (inputs.capacity.demandflex > 0) {
@@ -1108,7 +1117,7 @@
                 }
                 
                 const hydroCapacity = (currentCountryInstalledCapacity.hydro || 0) + (inputs.capacity.hydro || 0);
-                const maxHourlyHydroOutput = hydroCapacity;
+                const maxHourlyHydroOutput = hydroCapacity * 0.35; // New power limit
 
 
                 let finalGeneration = {
@@ -1141,13 +1150,7 @@
                 let hourlyDeficit = Array(24).fill(0);
                 let hourlyExcess = Array(24).fill(0);
                 
-                // --- 2. BASELINE HYDRO & DISPLACE ---
-                const hydroShape = [0.8, 0.7, 0.7, 0.7, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.2, 1.1, 1.1, 1.0, 1.0, 1.1, 1.3, 1.5, 1.4, 1.2, 1.0, 0.9, 0.8, 0.8];
-                let baselineHydro = hydroShape.map(h => h * maxHourlyHydroOutput * COST_DATA.capacity_factor.hydro);
-                let displacedHydroEnergy = 0;
-
-
-                // --- 3. DISPATCH ALL OTHER CLEAN, CALCULATE BALANCE & DISPLACED HYDRO ---
+                // --- 2. DISPATCH INFLEXIBLE & VRE, CALCULATE INITIAL BALANCE ---
                 for (let i = 0; i < 24; i++) {
                     let cleanGenThisHour = 0;
                     
@@ -1158,46 +1161,90 @@
                     finalGeneration.biomass[i] = currentPotential.biomass[i];
                     cleanGenThisHour += inflexibleGen;
                     
-                    // VRE
+                    // VRE (Solar & Wind)
                     const vreGen = currentPotential.solar[i] + currentPotential.wind[i];
                     finalGeneration.solar[i] = currentPotential.solar[i];
                     finalGeneration.wind[i] = currentPotential.wind[i];
                     cleanGenThisHour += vreGen;
 
-                    // Baseline Hydro
-                    finalGeneration.hydro[i] = baselineHydro[i];
-                    cleanGenThisHour += baselineHydro[i];
-
                     const balance = cleanGenThisHour - modifiedDemand[i];
 
-                    if (balance > 0) { // Excess generation
+                    if (balance > 0) {
                         hourlyExcess[i] = balance;
-                        
-                        // Displace hydro first
-                        const hydroToDisplace = Math.min(finalGeneration.hydro[i], hourlyExcess[i]);
-                        finalGeneration.hydro[i] -= hydroToDisplace;
-                        displacedHydroEnergy += hydroToDisplace;
-                        hourlyExcess[i] -= hydroToDisplace;
-                    } else { // Deficit
+                    } else {
                         hourlyDeficit[i] = -balance;
                     }
                 }
 
-                // --- 4. CHARGE STORAGE & CURTAILMENT ---
-                // This section has been rewritten to correctly attribute excess energy.
+                // --- 3. ADVANCED HYDRO DISPATCH (NEW LOGIC) ---
+                const totalDailyHydroEnergy = (hydroCapacity * hydroCF * 24);
+                const baseloadHydroEnergy = totalDailyHydroEnergy * 0.40; // 40% for baseload/ancillary services
+                let flexibleHydroEnergy = totalDailyHydroEnergy * 0.60;   // 60% for flexible peaking
+
+                // 3a. Dispatch "Baseload" Hydro
+                const baseloadHours = [];
+                // Determine baseload hours dynamically: any hour where there isn't an excess of VRE generation.
                 for (let i = 0; i < 24; i++) {
-                    // hourlyExcess[i] holds the non-hydro clean excess for this hour.
+                    if (hourlyExcess[i] <= 0) { // If there is no excess generation...
+                        baseloadHours.push(i);   // ...it's a potential hour for baseload hydro.
+                    }
+                }
+                const hourlyBaseloadHydro = baseloadHours.length > 0 ? baseloadHydroEnergy / baseloadHours.length : 0;
+                
+                baseloadHours.forEach(i => {
+                    const hydroToDispatch = Math.min(hourlyBaseloadHydro, hourlyDeficit[i], maxHourlyHydroOutput);
+                    finalGeneration.hydro[i] += hydroToDispatch;
+                    hourlyDeficit[i] -= hydroToDispatch;
+                });
+
+                // 3b. Dispatch "Flexible" Hydro based on Net Load and Ramp
+                while (flexibleHydroEnergy > 0.01) {
+                    // Calculate Net Load and Ramp in every iteration for accuracy
+                    let netLoad = [];
+                    let hourlyRamp = [];
+                    for(let i=0; i<24; i++){
+                        netLoad[i] = hourlyDeficit[i]; // Deficit is our current net load
+                        hourlyRamp[i] = (i > 0) ? netLoad[i] - netLoad[i-1] : netLoad[i];
+                    }
+
+                    let maxPriority = -Infinity;
+                    let maxPriorityHour = -1;
+                    for (let i = 0; i < 24; i++) {
+                        // We only want to dispatch hydro where there is still a deficit
+                        if (hourlyDeficit[i] > 0.01) {
+                            const priorityScore = (0.7 * hourlyRamp[i]) + (0.3 * netLoad[i]);
+                            if (priorityScore > maxPriority) {
+                                maxPriority = priorityScore;
+                                maxPriorityHour = i;
+                            }
+                        }
+                    }
+
+                    if (maxPriorityHour === -1) break; // No more deficit to fill
+
+                    const hydroToDispatch = Math.min(
+                        0.1, // Dispatch in small increments
+                        flexibleHydroEnergy,
+                        hourlyDeficit[maxPriorityHour],
+                        maxHourlyHydroOutput - finalGeneration.hydro[maxPriorityHour]
+                    );
+
+                    if (hydroToDispatch < 0.001) break; // Stop if dispatch amount is negligible
+
+                    finalGeneration.hydro[maxPriorityHour] += hydroToDispatch;
+                    hourlyDeficit[maxPriorityHour] -= hydroToDispatch;
+                    flexibleHydroEnergy -= hydroToDispatch;
+                }
+
+
+                // --- 4. CHARGE STORAGE & CURTAILMENT ---
+                for (let i = 0; i < 24; i++) {
                     if (hourlyExcess[i] > 0) {
                         let excessToDistribute = hourlyExcess[i];
                         
-                        // --- Step 4a: Determine charging amount ---
                         let chargeForThisHour = 0;
                         for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
-                            const chargeAmount = Math.min(
-                                excessToDistribute,
-                                storageCapacities[type] - storageLevels[type],
-                                storageChargeRates[type]
-                            );
+                            const chargeAmount = Math.min(excessToDistribute, storageCapacities[type] - storageLevels[type], storageChargeRates[type]);
                             if (chargeAmount > 0) {
                                 storageLevels[type] += chargeAmount * storageEfficiency;
                                 excessToDistribute -= chargeAmount;
@@ -1205,100 +1252,41 @@
                             }
                         }
 
-                        // --- Step 4b: Determine curtailment amount ---
                         const curtailmentForThisHour = excessToDistribute;
                         finalGeneration.curtailment[i] = curtailmentForThisHour;
-                        curtailmentBySource.solar[i] = 0; // Initialize for this hour
-                        curtailmentBySource.wind[i] = 0;  // Initialize for this hour
-
-                        // --- Step 4c: Attribute what was charged and what was curtailed to VRE sources ---
-                        // This logic splits the potential generation into three buckets: to grid, to storage, and curtailed.
+                        
                         const potentialSolar = currentPotential.solar[i];
                         const potentialWind = currentPotential.wind[i];
                         const totalPotentialVRE = potentialSolar + potentialWind;
 
-                        // We also need to account for excess from other clean sources
-                        const potentialOtherClean = {
-                            nuclear: currentPotential.nuclear[i],
-                            geothermal: currentPotential.geothermal[i],
-                            biomass: currentPotential.biomass[i]
-                        };
-                        const totalPotentialOtherClean = Object.values(potentialOtherClean).reduce((a, b) => a + b, 0);
-                        const totalPotentialExcessSources = totalPotentialVRE + totalPotentialOtherClean;
-                        
-                        const originalExcessThisHour = chargeForThisHour + curtailmentForThisHour;
+                        if (totalPotentialVRE > 0) {
+                            const solarProportion = potentialSolar / totalPotentialVRE;
+                            const windProportion = potentialWind / totalPotentialVRE;
 
-                        if (totalPotentialExcessSources > 0) {
-                            // Attribute to Solar
-                            const solarProportion = potentialSolar / totalPotentialExcessSources;
-                            const solarExcessTotal = originalExcessThisHour * solarProportion;
-                            const solarToCharge = Math.min(potentialSolar, chargeForThisHour * solarProportion);
-                            const solarToCurtail = solarExcessTotal - solarToCharge;
-                            
-                            if (solarExcessTotal > 0) {
-                                finalGeneration.solarToStorage[i] = solarToCharge;
-                                curtailmentBySource.solar[i] = solarToCurtail;
-                                finalGeneration.solar[i] = potentialSolar - solarToCharge - solarToCurtail;
-                            }
+                            const solarCharge = chargeForThisHour * solarProportion;
+                            const windCharge = chargeForThisHour * windProportion;
+                            finalGeneration.solarToStorage[i] = solarCharge;
+                            finalGeneration.windToStorage[i] = windCharge;
 
-                            // Attribute to Wind
-                            const windProportion = potentialWind / totalPotentialExcessSources;
-                            const windExcessTotal = originalExcessThisHour * windProportion;
-                            const windToCharge = Math.min(potentialWind, chargeForThisHour * windProportion);
-                            const windToCurtail = windExcessTotal - windToCharge;
-                            
-                            if (windExcessTotal > 0) {
-                                finalGeneration.windToStorage[i] = windToCharge;
-                                curtailmentBySource.wind[i] = windToCurtail;
-                                finalGeneration.wind[i] = potentialWind - windToCharge - windToCurtail;
-                            }
+                            const solarCurtail = curtailmentForThisHour * solarProportion;
+                            const windCurtail = curtailmentForThisHour * windProportion;
+                            curtailmentBySource.solar[i] = solarCurtail;
+                            curtailmentBySource.wind[i] = windCurtail;
 
-                            // Attribute curtailment to other clean sources
-                            for (const tech in potentialOtherClean) {
-                                const techProportion = potentialOtherClean[tech] / totalPotentialExcessSources;
-                                const techCurtailment = originalExcessThisHour * techProportion;
-                                finalGeneration[tech][i] -= techCurtailment;
-                            }
+                            finalGeneration.solar[i] = potentialSolar - solarCharge - solarCurtail;
+                            finalGeneration.wind[i] = potentialWind - windCharge - windCurtail;
                         }
                     }
                 }
 
 
-                // --- 5. REDEPLOY DISPLACED HYDRO ---
-                while (displacedHydroEnergy > 0.01) {
-                    let maxDeficit = 0;
-                    let maxDeficitHour = -1;
-                    for (let i = 0; i < 24; i++) {
-                        if (hourlyDeficit[i] > maxDeficit) {
-                            maxDeficit = hourlyDeficit[i];
-                            maxDeficitHour = i;
-                        }
-                    }
-                    if (maxDeficitHour === -1) break;
-
-                    const hydroToDispatch = Math.min(
-                        hourlyDeficit[maxDeficitHour],
-                        maxHourlyHydroOutput - finalGeneration.hydro[maxDeficitHour],
-                        displacedHydroEnergy
-                    );
-
-                    if (hydroToDispatch < 0.01) {
-                        break;
-                    }
-
-                    finalGeneration.hydro[maxDeficitHour] += hydroToDispatch;
-                    hourlyDeficit[maxDeficitHour] -= hydroToDispatch;
-                    displacedHydroEnergy -= hydroToDispatch;
-                }
-
-                // --- 6. DISCHARGE STORAGE (NEW PIECEWISE LOGIC) ---
+                // --- 5. DISCHARGE STORAGE (PIECEWISE LOGIC) ---
                 let totalEnergyInStorage = Object.values(storageLevels).reduce((a, b) => a + b, 0);
-                const dispatchIncrement = 0.1; // Dispatch in small 0.1 GWh chunks for more realistic arbitrage
+                const dispatchIncrement = 0.1; 
 
                 while (totalEnergyInStorage > 0.01) {
                     let maxDeficit = 0;
                     let maxDeficitHour = -1;
-                    // Find the hour with the greatest need (proxy for highest price) in every iteration
                     for (let i = 0; i < 24; i++) {
                         if (hourlyDeficit[i] > maxDeficit) {
                             maxDeficit = hourlyDeficit[i];
@@ -1306,41 +1294,28 @@
                         }
                     }
 
-                    // If there's no deficit left to fill, stop discharging
-                    if (maxDeficitHour === -1 || maxDeficit < 0.01) {
-                        break;
-                    }
+                    if (maxDeficitHour === -1 || maxDeficit < 0.01) break;
 
                     let dischargedThisCycle = 0;
-                    // Try to discharge one small increment from the first available storage type
                     for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
                         if (storageLevels[type] > 0.01) {
-                            const amountToDischarge = Math.min(
-                                dispatchIncrement,              // The small chunk size
-                                hourlyDeficit[maxDeficitHour],  // Don't discharge more than needed for this hour
-                                storageLevels[type],            // Don't discharge more than is available in this battery
-                                storageDischargeRates[type]     // Don't exceed the battery's power rating
-                            );
-
+                            const amountToDischarge = Math.min(dispatchIncrement, hourlyDeficit[maxDeficitHour], storageLevels[type], storageDischargeRates[type]);
                             if (amountToDischarge > 0) {
                                 finalGeneration.storage[maxDeficitHour] += amountToDischarge;
                                 storageLevels[type] -= amountToDischarge;
                                 hourlyDeficit[maxDeficitHour] -= amountToDischarge;
                                 totalEnergyInStorage -= amountToDischarge;
                                 dischargedThisCycle += amountToDischarge;
-                                break; // IMPORTANT: We've dispatched one chunk, so we break to re-find the new max deficit hour
+                                break; 
                             }
                         }
                     }
 
-                    // If we couldn't discharge anything in a full pass (e.g., limited by discharge rates), stop to prevent an infinite loop.
-                    if (dischargedThisCycle < 0.001) {
-                        break;
-                    }
+                    if (dischargedThisCycle < 0.001) break;
                 }
 
 
-                // --- 7. FINAL PASS: DISPATCH FOSSIL FUELS ---
+                // --- 6. FINAL PASS: DISPATCH FOSSIL FUELS ---
                 for (let i = 0; i < 24; i++) {
                     if (hourlyDeficit[i] > 0) {
                         let remainingDeficit = hourlyDeficit[i];
@@ -1357,7 +1332,7 @@
                     }
                 }
                 
-                // --- 8. CALCULATE FINAL RESULTS ---
+                // --- 7. CALCULATE FINAL RESULTS ---
                 const newEmissions = calculateEmissions(finalGeneration, inputs.capacity.dac);
                 const newSystemCost = calculateTotalAnnualSystemCost(finalGeneration, inputs.capacity, inputs.incentives, finalGeneration.curtailment, currentCountryInstalledCapacity, baselineStorageGWh);
                 
@@ -1416,7 +1391,8 @@
                     seasonalSolarProfile,
                     seasonalWindProfile,
                     activePotentialGeneration,
-                    currentBaselineStorage
+                    currentBaselineStorage,
+                    currentHydroCF
                 );
                 const totalDailyCO2 = result.emissions.reduce((a, b) => a + b, 0);
                 
@@ -1951,6 +1927,7 @@
                 const baseWindProfile = (countryProfiles[countrySelect.value] || countryProfiles.default).wind;
                 currentSolarCFProfile = baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
                 currentWindCFProfile = baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
+                currentHydroCF = SEASONAL_HYDRO_CF[baseSeason]; // Set seasonal hydro CF
                 currentCFProfileName = cfProfileDisplayName; // This is 'Spring', 'Summer', etc.
                 currentCFProfileText.textContent = currentCFProfileName;
 
@@ -2088,7 +2065,8 @@
                     currentSolarCFProfile,
                     currentWindCFProfile,
                     activePotentialGeneration,
-                    currentBaselineStorage
+                    currentBaselineStorage,
+                    currentHydroCF
                 );
                 customBaselineSystemCost = newBaselineResult.systemCost;
                 customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
@@ -2285,7 +2263,8 @@
                     currentSolarCFProfile,
                     currentWindCFProfile,
                     BASELINE_POTENTIAL_GENERATION,
-                    currentBaselineStorage
+                    currentBaselineStorage,
+                    currentHydroCF
                 );
                 customBaselineSystemCost = baselineResult.systemCost;
                 customBaselineTotalAnnualCO2 = baselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
