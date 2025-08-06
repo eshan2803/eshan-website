@@ -303,7 +303,7 @@
                         <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly CO2 Emissions (Metric Tons)</h2>
                         <canvas id="co2EmissionsChart"></canvas>
                     </div>
-                     <div class="mt-8">
+                     <div id="tutorial-step-4" class="mt-8">
                         <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Installed Capacity Mix (%)</h2>
                         <div id="grid-mix-sliders" class="space-y-3">
                             <!-- Sliders will be dynamically inserted here -->
@@ -2459,6 +2459,13 @@
                     highlightClass: 'rounded-lg'
                 },
                 {
+                    element: '#tutorial-step-4',
+                    title: 'Manage Existing Resources',
+                    text: 'Use these checkboxes to turn off an existing resource type and watch the impact it has on emissions and costs.',
+                    position: 'right',
+                    highlightClass: 'rounded-lg'
+                },
+                {
                     element: '#make-default-button',
                     title: 'Save Your Scenario',
                     text: 'Once you find a set of policies you like, you can save them as your new default. The cost metrics will then be calculated relative to this new baseline.',
@@ -2676,3 +2683,7 @@
     </script>
 </body>
 </html>
+" is selected.
+I am asking a question about the code that is selected.
+I want to make the following changes to the selected code:
+In the tutorial cards, can we add one more in the middle highlighting the 'Installed Capacity Mix (%)' chart saying: Turn Off an Existing resource and watch the impact it has on emissions and cos
