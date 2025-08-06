@@ -265,7 +265,7 @@
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-2xl font-lora font-semibold text-gray-800">Hourly Electricity Generation (GWh)</h2>
                             <div class="flex items-center space-x-2">
-                                <span id="current-demand-profile-text" class="text-sm font-medium text-gray-600"></span>
+                                <div id="current-demand-profile-text" class="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded-full mr-1"></div>
                                 <div id="demand-edit-controls" class="flex items-center space-x-1">
                                     <button id="edit-demand-btn" class="p-2 rounded-full hover:bg-gray-200" title="Edit demand profile or select a seasonal preset">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -315,7 +315,7 @@
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-2xl font-lora font-semibold text-gray-800">Hourly Capacity Factors</h2>
                              <div class="flex items-center space-x-2">
-                                <span id="current-cf-profile-text" class="text-sm font-medium text-gray-600"></span>
+                                <div id="current-cf-profile-text" class="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded-full mr-1"></div>
                                 <div id="cf-edit-controls" class="flex items-center space-x-1">
                                     <button id="edit-cf-btn" class="p-2 rounded-full hover:bg-gray-200" title="Edit capacity factor profiles or select a seasonal preset">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -1828,22 +1828,22 @@
                 }
             }
 
-            // Central function to apply a seasonal profile to both charts
+            // Central function to apply a seasonal profile
             function applySeason(season) {
                 const seasonCapitalized = season.charAt(0).toUpperCase() + season.slice(1);
                 
-                // Update Demand - This will be rescaled in updateBaselineForCountry
+                // Update Demand Profile
                 currentDemandProfileName = seasonCapitalized;
-                currentDemandProfileText.textContent = `Profile: ${currentDemandProfileName}`;
+                currentDemandProfileText.textContent = currentDemandProfileName;
 
-                // Update Capacity Factors
+                // Update Capacity Factor Profile
                 const seasonalMultipliers = SEASONAL_MULTIPLIERS[season];
                 const baseSolarProfile = (countryProfiles[countrySelect.value] || countryProfiles.default).solar;
                 const baseWindProfile = (countryProfiles[countrySelect.value] || countryProfiles.default).wind;
                 currentSolarCFProfile = baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
                 currentWindCFProfile = baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
                 currentCFProfileName = seasonCapitalized;
-                currentCFProfileText.textContent = `Profile: ${currentCFProfileName}`;
+                currentCFProfileText.textContent = currentCFProfileName;
 
                 // Update baselines and run simulation
                 updateBaselineForCountry(countrySelect.value, season); 
@@ -1868,7 +1868,7 @@
             confirmDemandBtn.addEventListener('click', () => {
                 currentDemand = [...generationChart.data.datasets.find(ds => ds.label === 'Demand').data];
                 currentDemandProfileName = "User Defined";
-                currentDemandProfileText.textContent = `Profile: ${currentDemandProfileName}`;
+                currentDemandProfileText.textContent = currentDemandProfileName;
                 setDemandEditMode(false);
                 runSimulation();
                 saveState();
@@ -1896,9 +1896,8 @@
                 currentSolarCFProfile = [...capacityFactorChart.data.datasets[0].data];
                 currentWindCFProfile = [...capacityFactorChart.data.datasets[1].data];
                 currentCFProfileName = "User Defined";
-                currentCFProfileText.textContent = `Profile: ${currentCFProfileName}`;
+                currentCFProfileText.textContent = currentCFProfileName;
                 
-                // Recalculate baselines with the new custom profiles before running the full simulation
                 updateBaselineForCountry(countrySelect.value, currentDemandProfileName.toLowerCase());
 
                 setCFEditMode(false);
