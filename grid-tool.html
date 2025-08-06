@@ -628,10 +628,10 @@
             'winter-high':    [32, 30, 29, 29, 30, 34, 40, 45, 44, 42, 40, 39, 39, 40, 41, 43, 45, 46, 45, 42, 39, 36, 34, 32]
         };
         // Generate 'typical' profiles by scaling 'high' profiles
-        SEASONAL_DEMAND_PROFILES['spring-typical'] = SEASONAL_DEMAND_PROFILES['spring-high'].map(d => d * 0.7);
-        SEASONAL_DEMAND_PROFILES['summer-typical'] = SEASONAL_DEMAND_PROFILES['summer-high'].map(d => d * 0.7);
-        SEASONAL_DEMAND_PROFILES['fall-typical']   = SEASONAL_DEMAND_PROFILES['fall-high'].map(d => d * 0.7);
-        SEASONAL_DEMAND_PROFILES['winter-typical'] = SEASONAL_DEMAND_PROFILES['winter-high'].map(d => d * 0.7);
+        SEASONAL_DEMAND_PROFILES['spring-typical'] = SEASONAL_DEMAND_PROFILES['spring-high'].map(d => d * 0.6);
+        SEASONAL_DEMAND_PROFILES['summer-typical'] = SEASONAL_DEMAND_PROFILES['summer-high'].map(d => d * 0.6);
+        SEASONAL_DEMAND_PROFILES['fall-typical']   = SEASONAL_DEMAND_PROFILES['fall-high'].map(d => d * 0.6);
+        SEASONAL_DEMAND_PROFILES['winter-typical'] = SEASONAL_DEMAND_PROFILES['winter-high'].map(d => d * 0.6);
 
         
         // This object will hold the calculated POTENTIAL generation, not a pre-dispatched baseline.
@@ -2507,4 +2507,3 @@
     </script>
 </body>
 </html>
-" in the canv
