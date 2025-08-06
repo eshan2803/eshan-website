@@ -1184,39 +1184,85 @@
                 }
 
                 // --- 4. CHARGE STORAGE & CURTAILMENT ---
+                // This section has been rewritten to correctly attribute excess energy.
                 for (let i = 0; i < 24; i++) {
+                    // hourlyExcess[i] holds the non-hydro clean excess for this hour.
                     if (hourlyExcess[i] > 0) {
-                        let availableToCharge = hourlyExcess[i];
+                        let excessToDistribute = hourlyExcess[i];
+                        
+                        // --- Step 4a: Determine charging amount ---
+                        let chargeForThisHour = 0;
                         for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
-                            const chargeAmount = Math.min(availableToCharge, storageCapacities[type] - storageLevels[type], storageChargeRates[type]);
+                            const chargeAmount = Math.min(
+                                excessToDistribute,
+                                storageCapacities[type] - storageLevels[type],
+                                storageChargeRates[type]
+                            );
                             if (chargeAmount > 0) {
                                 storageLevels[type] += chargeAmount * storageEfficiency;
-                                hourlyExcess[i] -= chargeAmount;
-                                
-                                const unusedSolar = currentPotential.solar[i] - finalGeneration.solar[i];
-                                const unusedWind = currentPotential.wind[i] - finalGeneration.wind[i];
-                                const totalUnusedVRE = unusedSolar + unusedWind;
-                                if (totalUnusedVRE > 0) {
-                                    finalGeneration.solarToStorage[i] += chargeAmount * (unusedSolar / totalUnusedVRE);
-                                    finalGeneration.windToStorage[i] += chargeAmount * (unusedWind / totalUnusedVRE);
-                                }
+                                excessToDistribute -= chargeAmount;
+                                chargeForThisHour += chargeAmount;
+                            }
+                        }
+
+                        // --- Step 4b: Determine curtailment amount ---
+                        const curtailmentForThisHour = excessToDistribute;
+                        finalGeneration.curtailment[i] = curtailmentForThisHour;
+                        curtailmentBySource.solar[i] = 0; // Initialize for this hour
+                        curtailmentBySource.wind[i] = 0;  // Initialize for this hour
+
+                        // --- Step 4c: Attribute what was charged and what was curtailed to VRE sources ---
+                        // This logic splits the potential generation into three buckets: to grid, to storage, and curtailed.
+                        const potentialSolar = currentPotential.solar[i];
+                        const potentialWind = currentPotential.wind[i];
+                        const totalPotentialVRE = potentialSolar + potentialWind;
+
+                        // We also need to account for excess from other clean sources
+                        const potentialOtherClean = {
+                            nuclear: currentPotential.nuclear[i],
+                            geothermal: currentPotential.geothermal[i],
+                            biomass: currentPotential.biomass[i]
+                        };
+                        const totalPotentialOtherClean = Object.values(potentialOtherClean).reduce((a, b) => a + b, 0);
+                        const totalPotentialExcessSources = totalPotentialVRE + totalPotentialOtherClean;
+                        
+                        const originalExcessThisHour = chargeForThisHour + curtailmentForThisHour;
+
+                        if (totalPotentialExcessSources > 0) {
+                            // Attribute to Solar
+                            const solarProportion = potentialSolar / totalPotentialExcessSources;
+                            const solarExcessTotal = originalExcessThisHour * solarProportion;
+                            const solarToCharge = Math.min(potentialSolar, chargeForThisHour * solarProportion);
+                            const solarToCurtail = solarExcessTotal - solarToCharge;
+                            
+                            if (solarExcessTotal > 0) {
+                                finalGeneration.solarToStorage[i] = solarToCharge;
+                                curtailmentBySource.solar[i] = solarToCurtail;
+                                finalGeneration.solar[i] = potentialSolar - solarToCharge - solarToCurtail;
+                            }
+
+                            // Attribute to Wind
+                            const windProportion = potentialWind / totalPotentialExcessSources;
+                            const windExcessTotal = originalExcessThisHour * windProportion;
+                            const windToCharge = Math.min(potentialWind, chargeForThisHour * windProportion);
+                            const windToCurtail = windExcessTotal - windToCharge;
+                            
+                            if (windExcessTotal > 0) {
+                                finalGeneration.windToStorage[i] = windToCharge;
+                                curtailmentBySource.wind[i] = windToCurtail;
+                                finalGeneration.wind[i] = potentialWind - windToCharge - windToCurtail;
+                            }
+
+                            // Attribute curtailment to other clean sources
+                            for (const tech in potentialOtherClean) {
+                                const techProportion = potentialOtherClean[tech] / totalPotentialExcessSources;
+                                const techCurtailment = originalExcessThisHour * techProportion;
+                                finalGeneration[tech][i] -= techCurtailment;
                             }
                         }
                     }
                 }
-                
-                for(let i=0; i<24; i++){
-                    if(hourlyExcess[i] > 0){
-                        const unusedSolar = currentPotential.solar[i] - finalGeneration.solar[i] - finalGeneration.solarToStorage[i];
-                        const unusedWind = currentPotential.wind[i] - finalGeneration.wind[i] - finalGeneration.windToStorage[i];
-                        const totalUnused = unusedSolar + unusedWind;
-                        if(totalUnused > 0){
-                            curtailmentBySource.solar[i] = hourlyExcess[i] * (unusedSolar / totalUnused);
-                            curtailmentBySource.wind[i] = hourlyExcess[i] * (unusedWind / totalUnused);
-                        }
-                    }
-                }
-                finalGeneration.curtailment = hourlyExcess;
+
 
                 // --- 5. REDEPLOY DISPLACED HYDRO ---
                 while (displacedHydroEnergy > 0.01) {
