@@ -1291,32 +1291,54 @@
                     displacedHydroEnergy -= hydroToDispatch;
                 }
 
-                // --- 6. DISCHARGE STORAGE ---
+                // --- 6. DISCHARGE STORAGE (NEW PIECEWISE LOGIC) ---
                 let totalEnergyInStorage = Object.values(storageLevels).reduce((a, b) => a + b, 0);
+                const dispatchIncrement = 0.1; // Dispatch in small 0.1 GWh chunks for more realistic arbitrage
+
                 while (totalEnergyInStorage > 0.01) {
                     let maxDeficit = 0;
                     let maxDeficitHour = -1;
+                    // Find the hour with the greatest need (proxy for highest price) in every iteration
                     for (let i = 0; i < 24; i++) {
                         if (hourlyDeficit[i] > maxDeficit) {
                             maxDeficit = hourlyDeficit[i];
                             maxDeficitHour = i;
                         }
                     }
-                    if (maxDeficitHour === -1) break;
+
+                    // If there's no deficit left to fill, stop discharging
+                    if (maxDeficitHour === -1 || maxDeficit < 0.01) {
+                        break;
+                    }
 
                     let dischargedThisCycle = 0;
+                    // Try to discharge one small increment from the first available storage type
                     for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
-                        const dischargeAmount = Math.min(hourlyDeficit[maxDeficitHour], storageLevels[type], storageDischargeRates[type]);
-                        if (dischargeAmount > 0) {
-                            finalGeneration.storage[maxDeficitHour] += dischargeAmount;
-                            storageLevels[type] -= dischargeAmount;
-                            hourlyDeficit[maxDeficitHour] -= dischargeAmount;
-                            totalEnergyInStorage -= dischargeAmount;
-                            dischargedThisCycle += dischargeAmount;
+                        if (storageLevels[type] > 0.01) {
+                            const amountToDischarge = Math.min(
+                                dispatchIncrement,              // The small chunk size
+                                hourlyDeficit[maxDeficitHour],  // Don't discharge more than needed for this hour
+                                storageLevels[type],            // Don't discharge more than is available in this battery
+                                storageDischargeRates[type]     // Don't exceed the battery's power rating
+                            );
+
+                            if (amountToDischarge > 0) {
+                                finalGeneration.storage[maxDeficitHour] += amountToDischarge;
+                                storageLevels[type] -= amountToDischarge;
+                                hourlyDeficit[maxDeficitHour] -= amountToDischarge;
+                                totalEnergyInStorage -= amountToDischarge;
+                                dischargedThisCycle += amountToDischarge;
+                                break; // IMPORTANT: We've dispatched one chunk, so we break to re-find the new max deficit hour
+                            }
                         }
                     }
-                    if (dischargedThisCycle < 0.01) break;
+
+                    // If we couldn't discharge anything in a full pass (e.g., limited by discharge rates), stop to prevent an infinite loop.
+                    if (dischargedThisCycle < 0.001) {
+                        break;
+                    }
                 }
+
 
                 // --- 7. FINAL PASS: DISPATCH FOSSIL FUELS ---
                 for (let i = 0; i < 24; i++) {
