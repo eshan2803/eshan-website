@@ -2109,11 +2109,6 @@
                     const cf = COST_DATA.capacity_factor[tech];
                     let capacity = currentCountryInstalledCapacity[tech];
 
-                    if (tech === 'solar' && countryName === 'California') {
-                        // Simulate solar overbuild to show storage/curtailment by default
-                        capacity *= 2.5; 
-                    }
-
                     if (tech === 'solar') {
                         for (let i = 0; i < 24; i++) potentialGeneration.solar[i] = capacity * currentSolarCFProfile[i];
                     } else if (tech === 'wind') {
@@ -2485,5 +2480,4 @@
         });
     </script>
 </body>
-</html>
-" in the canv
+</ht
