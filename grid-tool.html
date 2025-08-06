@@ -589,31 +589,112 @@
         
         const countryGridMixData = {
             "California": { 
-                totalCapacityMW: 85522, peakLoadMW: 52061, // CAISO record peak, total capacity adjusted for 13.427GW Hydro
+                totalCapacityMW: 85522, 
+                peakLoadsMW: { summer: 52061, winter: 47500, fall: 46000, spring: 41000 },
                 mix: { coal: 0.1, naturalGas: 43.4, hydro: 15.7, wind: 7.1, solar: 26.1, nuclear: 2.7, geothermal: 3.0, biomass: 1.4 },
                 storageGWh: { battery4hr: 43.2 },
                 defaultExportPrice: -20
             },
-            "China": { totalCapacityMW: 2586460, peakLoadMW: 1340000, mix: { coal: 43.0, naturalGas: 7.8, hydro: 16.1, wind: 15.8, solar: 15.1, nuclear: 2.2, geothermal: 0.1, biomass: 0.5 } },
-            "United States": { totalCapacityMW: 1212700, peakLoadMW: 800000, mix: { coal: 16.0, naturalGas: 49.1, hydro: 8.0, wind: 11.6, solar: 7.0, nuclear: 8.0, geothermal: 0.3, biomass: 1.0 } },
-            "India": { totalCapacityMW: 436200, peakLoadMW: 243000, mix: { coal: 55.0, naturalGas: 6.0, hydro: 10.7, wind: 10.0, solar: 16.6, nuclear: 1.7, geothermal: 0.0, biomass: 2.5 } },
-            "Japan": { totalCapacityMW: 292500, peakLoadMW: 181000, mix: { coal: 20.0, naturalGas: 35.1, hydro: 17.0, wind: 1.7, solar: 15.0, nuclear: 11.0, geothermal: 0.2, biomass: 1.5 } },
-            "Russia": { totalCapacityMW: 246500, peakLoadMW: 160000, mix: { coal: 15.0, naturalGas: 52.0, hydro: 20.0, wind: 0.8, solar: 0.7, nuclear: 11.5, geothermal: 0.0, biomass: 0.2 } },
-            "Brazil": { totalCapacityMW: 178000, peakLoadMW: 101860, mix: { coal: 2.0, naturalGas: 19.0, hydro: 60.0, wind: 10.0, solar: 8.0, nuclear: 1.0, geothermal: 0.0, biomass: 8.0 } },
-            "Germany": { totalCapacityMW: 200000, peakLoadMW: 84000, mix: { coal: 15.0, naturalGas: 40.0, hydro: 4.0, wind: 25.0, solar: 10.0, nuclear: 6.0, geothermal: 0.0, biomass: 5.0 } },
-            "Canada": { totalCapacityMW: 163000, peakLoadMW: 140000, mix: { coal: 5.0, naturalGas: 13.0, hydro: 58.0, wind: 8.0, solar: 2.0, nuclear: 14.0, geothermal: 0.0, biomass: 2.0 } },
-            "South Korea": { totalCapacityMW: 120000, peakLoadMW: 93000, mix: { coal: 35.0, naturalGas: 20.0, hydro: 5.0, wind: 1.5, solar: 11.5, nuclear: 27.0, geothermal: 0.0, biomass: 1.0 } },
-            "France": { totalCapacityMW: 110000, peakLoadMW: 102000, mix: { coal: 1.0, naturalGas: 11.0, hydro: 10.0, wind: 8.0, solar: 5.0, nuclear: 65.0, geothermal: 0.0, biomass: 0.5 } },
-            "United Kingdom": { totalCapacityMW: 75900, peakLoadMW: 60000, mix: { coal: 2.0, naturalGas: 40.0, hydro: 2.0, wind: 28.0, solar: 18.0, nuclear: 9.0, geothermal: 0.0, biomass: 5.0 } },
-            "Australia": { totalCapacityMW: 63400, peakLoadMW: 47000, mix: { coal: 47.0, naturalGas: 18.0, hydro: 14.0, wind: 9.0, solar: 12.0, nuclear: 0.0, geothermal: 0.0, biomass: 1.0 } },
-            "Spain": { totalCapacityMW: 117000, peakLoadMW: 45000, mix: { coal: 3.0, naturalGas: 23.0, hydro: 17.0, wind: 27.0, solar: 20.0, nuclear: 7.0, geothermal: 0.0, biomass: 1.5 } },
-            "Italy": { totalCapacityMW: 120000, peakLoadMW: 60000, mix: { coal: 5.0, naturalGas: 48.0, hydro: 18.0, wind: 10.0, solar: 18.0, nuclear: 0.0, geothermal: 1.0, biomass: 2.0 } },
-            "Indonesia": { totalCapacityMW: 72000, peakLoadMW: 50000, mix: { coal: 50.0, naturalGas: 28.0, hydro: 9.0, wind: 0.2, solar: 1.8, nuclear: 0.0, geothermal: 3.0, biomass: 1.0 } },
-            "South Africa": { totalCapacityMW: 58095, peakLoadMW: 34000, mix: { coal: 80.0, naturalGas: 6.0, hydro: 6.0, wind: 5.0, solar: 3.0, nuclear: 0.0, geothermal: 0.0, biomass: 0.5 } },
-            "Mexico": { totalCapacityMW: 85500, peakLoadMW: 50000, mix: { coal: 6.0, naturalGas: 59.0, hydro: 15.0, wind: 9.0, solar: 10.0, nuclear: 1.0, geothermal: 1.0, biomass: 0.5 } },
-            "Norway": { totalCapacityMW: 38000, peakLoadMW: 25000, mix: { coal: 0.0, naturalGas: 0.0, hydro: 92.0, wind: 8.0, solar: 0.0, nuclear: 0.0, geothermal: 0.0, biomass: 0.0 } },
-            "New Zealand": { totalCapacityMW: 9500, peakLoadMW: 7000, mix: { coal: 0.0, naturalGas: 15.0, hydro: 57.0, wind: 7.0, solar: 1.0, nuclear: 0.0, geothermal: 20.0, biomass: 1.0 } },
-            "Vietnam": { totalCapacityMW: 76620, peakLoadMW: 45000, mix: { coal: 33.0, naturalGas: 9.0, hydro: 29.0, wind: 6.0, solar: 23.0, nuclear: 0.0, geothermal: 0.0, biomass: 1.0 } }
+            "China": { 
+                totalCapacityMW: 2586460, 
+                peakLoadsMW: { summer: 1340000, winter: 1206000, fall: 1179200, spring: 1072000 },
+                mix: { coal: 43.0, naturalGas: 7.8, hydro: 16.1, wind: 15.8, solar: 15.1, nuclear: 2.2, geothermal: 0.1, biomass: 0.5 } 
+            },
+            "United States": { 
+                totalCapacityMW: 1212700, 
+                peakLoadsMW: { summer: 800000, winter: 720000, fall: 704000, spring: 640000 },
+                mix: { coal: 16.0, naturalGas: 49.1, hydro: 8.0, wind: 11.6, solar: 7.0, nuclear: 8.0, geothermal: 0.3, biomass: 1.0 } 
+            },
+            "India": { 
+                totalCapacityMW: 436200, 
+                peakLoadsMW: { summer: 243000, winter: 206550, fall: 213840, spring: 194400 }, // Monsoon/Summer peak
+                mix: { coal: 55.0, naturalGas: 6.0, hydro: 10.7, wind: 10.0, solar: 16.6, nuclear: 1.7, geothermal: 0.0, biomass: 2.5 } 
+            },
+            "Japan": { 
+                totalCapacityMW: 292500, 
+                peakLoadsMW: { summer: 181000, winter: 162900, fall: 159280, spring: 144800 },
+                mix: { coal: 20.0, naturalGas: 35.1, hydro: 17.0, wind: 1.7, solar: 15.0, nuclear: 11.0, geothermal: 0.2, biomass: 1.5 } 
+            },
+            "Russia": { 
+                totalCapacityMW: 246500, 
+                peakLoadsMW: { winter: 160000, summer: 144000, fall: 140800, spring: 128000 }, // Winter peak
+                mix: { coal: 15.0, naturalGas: 52.0, hydro: 20.0, wind: 0.8, solar: 0.7, nuclear: 11.5, geothermal: 0.0, biomass: 0.2 } 
+            },
+            "Brazil": { 
+                totalCapacityMW: 178000, 
+                peakLoadsMW: { summer: 101860, winter: 91674, fall: 89637, spring: 81488 }, // Summer peak
+                mix: { coal: 2.0, naturalGas: 19.0, hydro: 60.0, wind: 10.0, solar: 8.0, nuclear: 1.0, geothermal: 0.0, biomass: 8.0 } 
+            },
+            "Germany": { 
+                totalCapacityMW: 200000, 
+                peakLoadsMW: { winter: 84000, summer: 75600, fall: 73920, spring: 67200 }, // Winter peak
+                mix: { coal: 15.0, naturalGas: 40.0, hydro: 4.0, wind: 25.0, solar: 10.0, nuclear: 6.0, geothermal: 0.0, biomass: 5.0 } 
+            },
+            "Canada": { 
+                totalCapacityMW: 163000, 
+                peakLoadsMW: { winter: 140000, summer: 126000, fall: 123200, spring: 112000 }, // Winter peak
+                mix: { coal: 5.0, naturalGas: 13.0, hydro: 58.0, wind: 8.0, solar: 2.0, nuclear: 14.0, geothermal: 0.0, biomass: 2.0 } 
+            },
+            "South Korea": { 
+                totalCapacityMW: 120000, 
+                peakLoadsMW: { summer: 93000, winter: 83700, fall: 81840, spring: 74400 },
+                mix: { coal: 35.0, naturalGas: 20.0, hydro: 5.0, wind: 1.5, solar: 11.5, nuclear: 27.0, geothermal: 0.0, biomass: 1.0 } 
+            },
+            "France": { 
+                totalCapacityMW: 110000, 
+                peakLoadsMW: { winter: 102000, summer: 91800, fall: 89760, spring: 81600 }, // Winter peak
+                mix: { coal: 1.0, naturalGas: 11.0, hydro: 10.0, wind: 8.0, solar: 5.0, nuclear: 65.0, geothermal: 0.0, biomass: 0.5 } 
+            },
+            "United Kingdom": { 
+                totalCapacityMW: 75900, 
+                peakLoadsMW: { winter: 60000, summer: 54000, fall: 52800, spring: 48000 }, // Winter peak
+                mix: { coal: 2.0, naturalGas: 40.0, hydro: 2.0, wind: 28.0, solar: 18.0, nuclear: 9.0, geothermal: 0.0, biomass: 5.0 } 
+            },
+            "Australia": { 
+                totalCapacityMW: 63400, 
+                peakLoadsMW: { summer: 47000, winter: 42300, fall: 41360, spring: 37600 }, // Summer peak (Southern Hemisphere)
+                mix: { coal: 47.0, naturalGas: 18.0, hydro: 14.0, wind: 9.0, solar: 12.0, nuclear: 0.0, geothermal: 0.0, biomass: 1.0 } 
+            },
+            "Spain": { 
+                totalCapacityMW: 117000, 
+                peakLoadsMW: { summer: 45000, winter: 40500, fall: 39600, spring: 36000 },
+                mix: { coal: 3.0, naturalGas: 23.0, hydro: 17.0, wind: 27.0, solar: 20.0, nuclear: 7.0, geothermal: 0.0, biomass: 1.5 } 
+            },
+            "Italy": { 
+                totalCapacityMW: 120000, 
+                peakLoadsMW: { summer: 60000, winter: 54000, fall: 52800, spring: 48000 },
+                mix: { coal: 5.0, naturalGas: 48.0, hydro: 18.0, wind: 10.0, solar: 18.0, nuclear: 0.0, geothermal: 1.0, biomass: 2.0 } 
+            },
+            "Indonesia": { 
+                totalCapacityMW: 72000, 
+                peakLoadsMW: { summer: 50000, winter: 45000, fall: 44000, spring: 40000 },
+                mix: { coal: 50.0, naturalGas: 28.0, hydro: 9.0, wind: 0.2, solar: 1.8, nuclear: 0.0, geothermal: 3.0, biomass: 1.0 } 
+            },
+            "South Africa": { 
+                totalCapacityMW: 58095, 
+                peakLoadsMW: { winter: 34000, summer: 30600, fall: 29920, spring: 27200 }, // Winter peak (Southern Hemisphere)
+                mix: { coal: 80.0, naturalGas: 6.0, hydro: 6.0, wind: 5.0, solar: 3.0, nuclear: 0.0, geothermal: 0.0, biomass: 0.5 } 
+            },
+            "Mexico": { 
+                totalCapacityMW: 85500, 
+                peakLoadsMW: { summer: 50000, winter: 45000, fall: 44000, spring: 40000 },
+                mix: { coal: 6.0, naturalGas: 59.0, hydro: 15.0, wind: 9.0, solar: 10.0, nuclear: 1.0, geothermal: 1.0, biomass: 0.5 } 
+            },
+            "Norway": { 
+                totalCapacityMW: 38000, 
+                peakLoadsMW: { winter: 25000, summer: 22500, fall: 22000, spring: 20000 }, // Winter peak
+                mix: { coal: 0.0, naturalGas: 0.0, hydro: 92.0, wind: 8.0, solar: 0.0, nuclear: 0.0, geothermal: 0.0, biomass: 0.0 } 
+            },
+            "New Zealand": { 
+                totalCapacityMW: 9500, 
+                peakLoadsMW: { winter: 7000, summer: 6300, fall: 6160, spring: 5600 }, // Winter peak (Southern Hemisphere)
+                mix: { coal: 0.0, naturalGas: 15.0, hydro: 57.0, wind: 7.0, solar: 1.0, nuclear: 0.0, geothermal: 20.0, biomass: 1.0 } 
+            },
+            "Vietnam": { 
+                totalCapacityMW: 76620, 
+                peakLoadsMW: { summer: 45000, winter: 40500, fall: 39600, spring: 36000 },
+                mix: { coal: 33.0, naturalGas: 9.0, hydro: 29.0, wind: 6.0, solar: 23.0, nuclear: 0.0, geothermal: 0.0, biomass: 1.0 } 
+            }
         };
 
         const carbonTaxes = {
@@ -627,12 +708,6 @@
             'fall-high':      [27, 25, 24, 23, 23, 24, 27, 31, 34, 36, 37, 38, 39, 40, 41, 43, 46, 50, 49, 46, 42, 37, 32, 29],
             'winter-high':    [32, 30, 29, 29, 30, 34, 40, 45, 44, 42, 40, 39, 39, 40, 41, 43, 45, 46, 45, 42, 39, 36, 34, 32]
         };
-        // Generate 'typical' profiles by scaling 'high' profiles
-        SEASONAL_DEMAND_PROFILES['spring-typical'] = SEASONAL_DEMAND_PROFILES['spring-high'].map(d => d * 0.6);
-        SEASONAL_DEMAND_PROFILES['summer-typical'] = SEASONAL_DEMAND_PROFILES['summer-high'].map(d => d * 0.6);
-        SEASONAL_DEMAND_PROFILES['fall-typical']   = SEASONAL_DEMAND_PROFILES['fall-high'].map(d => d * 0.6);
-        SEASONAL_DEMAND_PROFILES['winter-typical'] = SEASONAL_DEMAND_PROFILES['winter-high'].map(d => d * 0.6);
-
         
         // This object will hold the calculated POTENTIAL generation, not a pre-dispatched baseline.
         let BASELINE_POTENTIAL_GENERATION = {}; 
@@ -781,7 +856,7 @@
             let defaultGenerationMix = {};
             
             let isDemandEditMode = false;
-            let currentDemand = [...SEASONAL_DEMAND_PROFILES['spring-typical']];
+            let currentDemand = [...SEASONAL_DEMAND_PROFILES['spring-high']];
             let originalDemandBeforeEdit = [];
             let currentDemandProfileName = 'Spring Typical';
 
@@ -2180,7 +2255,14 @@
                 countrySelect.value = "California";
             }
 
-            function updateBaselineForCountry(countryName, profileName) { // profileName is e.g., 'spring-typical'
+            function updateBaselineForCountry(countryName, profileName) { // e.g., 'spring-typical'
+                const TYPICAL_DAY_SCALING_FACTORS = {
+                    summer: 0.82,
+                    fall: 0.77,
+                    winter: 0.73,
+                    spring: 0.79
+                };
+
                 let newCarbonTax = 0;
                 let countryData = countryGridMixData[countryName];
                 
@@ -2191,18 +2273,25 @@
                 
                 newCarbonTax = carbonTaxes[countryName] || 0;
 
-                // --- NEW: Scale demand profile based on country's peak load ---
-                const baseProfile = SEASONAL_DEMAND_PROFILES[profileName];
-                const basePeak = Math.max(...baseProfile);
-                let countryPeak = countryData.peakLoadMW / 1000; // Convert to GW
+                const nameParts = profileName.split('-'); // e.g., ['spring', 'typical']
+                const baseSeason = nameParts[0];
+                const profileType = nameParts[1];
 
-                // --- FIX: Adjust country peak based on whether the profile is 'typical' or 'high' ---
-                if (profileName.includes('-typical')) {
-                    countryPeak *= 0.6; // Scale down for typical demand days
+                // Always use the 'high' profile as the base shape for scaling
+                const baseProfile = SEASONAL_DEMAND_PROFILES[`${baseSeason}-high`];
+                const basePeak = Math.max(...baseProfile);
+                
+                // Get the 'high' peak for the season from the country data
+                const countryHighPeakMW = countryData.peakLoadsMW[baseSeason];
+                let targetPeakGW = countryHighPeakMW / 1000;
+
+                // If it's a 'typical' day, scale down the target peak using the new seasonal ratios
+                if (profileType === 'typical') {
+                    targetPeakGW *= TYPICAL_DAY_SCALING_FACTORS[baseSeason];
                 }
 
-                const scalingFactor = countryPeak / basePeak;
-                currentDemand = baseProfile.map(val => val * scalingFactor);
+                const finalScalingFactor = targetPeakGW / basePeak;
+                currentDemand = baseProfile.map(val => val * finalScalingFactor);
                 
                 currentCountryInstalledCapacity = {}; // Reset for new country
                 for(const tech in COST_DATA.capacity_factor) {
@@ -2225,10 +2314,8 @@
                     } else if (tech === 'hydro') {
                         for (let i = 0; i < 24; i++) potentialGeneration.hydro[i] = capacity; // Max power capacity
                     } else if (tech === 'naturalGas' || tech === 'coal') {
-                        // *** FIX: Allow dispatchable fossil fuels to ramp to 100% of capacity at any hour ***
                         for (let i = 0; i < 24; i++) potentialGeneration[tech][i] = capacity * 1.0;
                     } else {
-                        // For other dispatchable sources (Nuclear, Geothermal), use their standard high CF
                         for (let i = 0; i < 24; i++) potentialGeneration[tech][i] = capacity * cf;
                     }
                 }
