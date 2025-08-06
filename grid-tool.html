@@ -703,8 +703,7 @@
                 dac: document.getElementById('dac-slider'), solarIncentive: document.getElementById('solar-incentive-slider'),
                 windIncentive: document.getElementById('wind-incentive-slider'), geothermalIncentive: document.getElementById('geothermal-incentive-slider'),
                 nuclearIncentive: document.getElementById('nuclear-incentive-slider'), biomassIncentive: document.getElementById('biomass-incentive-slider'),
-                storageIncentive: document.getElementById('storage-incentive-slider'),
-                dacIncentive: document.getElementById('dac-incentive-slider'), carbonTax: document.getElementById('carbon-tax-slider'),
+                storageIncentive: document.getElementById('storage-incentive-slider'), dacIncentive: document.getElementById('dac-incentive-slider'), carbonTax: document.getElementById('carbon-tax-slider'),
                 exportPrice: document.getElementById('export-price-slider'),
             };
             const inputs = {
@@ -716,8 +715,7 @@
                 dac: document.getElementById('dac-input'), solarIncentive: document.getElementById('solar-incentive-input'),
                 windIncentive: document.getElementById('wind-incentive-input'), geothermalIncentive: document.getElementById('geothermal-incentive-input'),
                 nuclearIncentive: document.getElementById('nuclear-incentive-input'), biomassIncentive: document.getElementById('biomass-incentive-input'),
-                storageIncentive: document.getElementById('storage-incentive-input'),
-                dacIncentive: document.getElementById('dac-incentive-input'), carbonTax: document.getElementById('carbon-tax-input'),
+                storageIncentive: document.getElementById('storage-incentive-input'), dacIncentive: document.getElementById('dac-incentive-input'), carbonTax: document.getElementById('carbon-tax-input'),
                 exportPrice: document.getElementById('export-price-input'),
             };
 
@@ -763,7 +761,6 @@
             let currentDemand = [...SEASONAL_DEMAND_PROFILES.spring];
             let originalDemandBeforeEdit = [];
             let currentSeasonName = 'Spring';
-            let currentDemandLevelName = 'Typical';
 
 
             let isCFEditMode = false;
@@ -1292,9 +1289,8 @@
                 
                 const seasonalMultipliers = SEASONAL_MULTIPLIERS[currentCFSeasonName.toLowerCase()] || { solar: 1.0, wind: 1.0 };
                 const cfLevelMultiplier = CF_LEVEL_MULTIPLIERS[currentCFLevelName.toLowerCase()] || 1.0;
-
-                const seasonalSolarProfile = currentSolarCFProfile.length > 0 ? currentSolarCFProfile : baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar * cfLevelMultiplier));
-                const seasonalWindProfile = currentWindCFProfile.length > 0 ? currentWindCFProfile : baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind * cfLevelMultiplier));
+                const solarProfile = (countryProfiles[selectedCountry] || countryProfiles.default).solar.map(cf => Math.min(1, cf * seasonalMultipliers.solar * cfLevelMultiplier));
+                const windProfile = (countryProfiles[selectedCountry] || countryProfiles.default).wind.map(cf => Math.min(1, cf * seasonalMultipliers.wind * cfLevelMultiplier));
 
 
                 let activePotentialGeneration = JSON.parse(JSON.stringify(BASELINE_POTENTIAL_GENERATION));
@@ -1323,8 +1319,8 @@
                             exportPrice: currentValues.exportPrice,
                         }
                     },
-                    seasonalSolarProfile,
-                    seasonalWindProfile,
+                    solarProfile,
+                    windProfile,
                     activePotentialGeneration,
                     currentBaselineStorage
                 );
@@ -1703,8 +1699,8 @@
 
                     document.querySelectorAll('#demand-presets button').forEach(btn => {
                         btn.classList.remove('preset-active');
-                        const [season, level] = btn.id.split('-').slice(2);
-                        if (season === currentSeasonName.toLowerCase() && level === currentDemandLevelName.toLowerCase()) {
+                        const season = btn.id.split('-')[2];
+                        if (season === currentSeasonName.toLowerCase()) {
                             btn.classList.add('preset-active');
                         }
                     });
@@ -1770,8 +1766,8 @@
 
                     document.querySelectorAll('#cf-presets button').forEach(btn => {
                         btn.classList.remove('preset-active');
-                        const [season, level] = btn.id.split('-').slice(2);
-                        if (season === currentCFSeasonName.toLowerCase() && level === currentCFLevelName.toLowerCase()) {
+                        const season = btn.id.split('-')[2];
+                        if (season === currentCFSeasonName.toLowerCase()) {
                             btn.classList.add('preset-active');
                         }
                     });
@@ -1811,7 +1807,6 @@
                 }
                 currentState.enabledTech = { ...enabledTechnologies }; 
                 currentState.season = currentSeasonName;
-                currentState.level = currentDemandLevelName;
                 currentState.cfSeason = currentCFSeasonName;
                 currentState.cfLevel = currentCFLevelName;
 
@@ -1852,43 +1847,15 @@
                 }
             }
 
-            function applyDemandProfile(season, level) {
-                // 12 demand presets: 3 levels x 4 seasons
+            function applyDemandProfile(season) {
+                // Only 4 demand presets: 1 per season
                 currentSeasonName = season;
-                currentDemandLevelName = level;
-                // Set the baseline to the default grid mix for the new demand profile
-                updateBaselineForCountry(countrySelect.value, season, level);
+                updateBaselineForCountry(countrySelect.value, season);
                 setDemandEditMode(false);
                 // Update demand profile text
-                const demandLevelDisplay = currentDemandLevelName.charAt(0).toUpperCase() + currentDemandLevelName.slice(1);
                 const seasonDisplay = currentSeasonName.charAt(0).toUpperCase() + currentSeasonName.slice(1);
-                currentDemandProfileText.textContent = `${demandLevelDisplay} ${seasonDisplay}`;
-                // Set userDefaultState to empty so the system uses the default grid as baseline
+                currentDemandProfileText.textContent = `${seasonDisplay}`;
                 userDefaultState = {};
-                // --- Update chart with baseline/default grid generation ---
-                if (typeof BASELINE_POTENTIAL_GENERATION !== 'undefined' && typeof getSimulationResult === 'function') {
-                    const baselineResult = getSimulationResult(
-                        {
-                            capacity: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, biomass: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
-                            incentives: { solar: 0, wind: 0, geothermal: 0, nuclear: 0, biomass: 0, storage: 0, dac: 0, carbonTax: 0, exportPrice: 20 },
-                            enabledTech: { ...enabledTechnologies }
-                        },
-                        currentSolarCFProfile,
-                        currentWindCFProfile,
-                        BASELINE_POTENTIAL_GENERATION,
-                        currentBaselineStorage
-                    );
-                    updateCharts(
-                        baselineResult.generation,
-                        baselineResult.emissions,
-                        currentDemand,
-                        0,
-                        currentSolarCFProfile,
-                        currentWindCFProfile,
-                        baselineResult.curtailmentBySource
-                    );
-                }
-                // Run simulation and update chart/metrics (will use default grid as baseline)
                 runSimulation();
                 saveState();
             }
@@ -1921,7 +1888,6 @@
             confirmDemandBtn.addEventListener('click', () => {
                 currentDemand = [...generationChart.data.datasets.find(ds => ds.label === 'Demand').data];
                 currentSeasonName = "Custom";
-                currentDemandLevelName = "";
                 currentDemandProfileText.textContent = `Custom`;
                 updateBaselineForCountry(countrySelect.value, 'spring', 'typical'); // Recalculate baseline
                 setDemandEditMode(false);
@@ -2055,7 +2021,7 @@
                     }
                 }
                 
-                applyDemandProfile(stateToApply.season || 'spring', stateToApply.level || 'typical');
+                applyDemandProfile(stateToApply.season || 'spring');
                 applyCFProfile(stateToApply.cfSeason || 'spring', stateToApply.cfLevel || 'typical');
 
                 runSimulation();
@@ -2081,7 +2047,7 @@
                             }
                         }
                     }
-                    applyDemandProfile(prevState.season || 'spring', prevState.level || 'typical');
+                    applyDemandProfile(prevState.season || 'spring');
                     applyCFProfile(prevState.cfSeason || 'spring', prevState.cfLevel || 'typical');
 
                     runSimulation();
@@ -2108,7 +2074,7 @@
                             }
                         }
                     }
-                    applyDemandProfile(nextState.season || 'spring', nextState.level || 'typical');
+                    applyDemandProfile(nextState.season || 'spring');
                     applyCFProfile(nextState.cfSeason || 'spring', nextState.cfLevel || 'typical');
 
                     runSimulation();
@@ -2136,7 +2102,7 @@
                 countrySelect.value = "California";
             }
 
-            function updateBaselineForCountry(countryName, season, level) {
+            function updateBaselineForCountry(countryName, season) {
                 let newCarbonTax = 0;
                 let countryData = countryGridMixData[countryName];
                 
@@ -2147,7 +2113,7 @@
                 
                 newCarbonTax = carbonTaxes[countryName] || 0;
                 
-                const demandMultiplier = DEMAND_LEVEL_MULTIPLIERS[level] || 1.0;
+                const demandMultiplier = 1.0;
                 const baseProfile = SEASONAL_DEMAND_PROFILES[season];
                 const basePeak = Math.max(...baseProfile);
                 const countryPeak = countryData.peakLoadMW / 1000;
@@ -2252,26 +2218,19 @@
             function createPresetButtons(container, type) {
                 container.innerHTML = '';
                 const seasons = ['spring', 'summer', 'fall', 'winter'];
-                const levels = ['low', 'typical', 'high'];
                 if (type === 'demand') {
-                    // 12 demand presets: 3 levels x 4 seasons
+                    // Only 4 demand presets: 1 per season
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center space-x-2';
                     seasons.forEach(season => {
-                        const row = document.createElement('div');
-                        row.className = 'flex items-center space-x-2';
-                        const label = document.createElement('span');
-                        label.className = 'font-semibold w-16';
-                        label.textContent = season.charAt(0).toUpperCase() + season.slice(1);
-                        row.appendChild(label);
-                        levels.forEach(level => {
-                            const button = document.createElement('button');
-                            button.id = `preset-demand-${season}-${level}`;
-                            button.className = 'px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors';
-                            button.textContent = level.charAt(0).toUpperCase() + level.slice(1);
-                            button.addEventListener('click', () => applyDemandProfile(season, level));
-                            row.appendChild(button);
-                        });
-                        container.appendChild(row);
+                        const button = document.createElement('button');
+                        button.id = `preset-demand-${season}`;
+                        button.className = 'px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors';
+                        button.textContent = season.charAt(0).toUpperCase() + season.slice(1);
+                        button.addEventListener('click', () => applyDemandProfile(season));
+                        row.appendChild(button);
                     });
+                    container.appendChild(row);
                 } else if (type === 'cf') {
                     // 4 CF presets: 1 per season, always 'typical' level
                     const row = document.createElement('div');
@@ -2293,7 +2252,7 @@
             }
 
             countrySelect.addEventListener('change', (e) => {
-                applyDemandProfile('spring', 'typical');
+                applyDemandProfile('spring');
                 applyCFProfile('spring', 'typical');
             });
             
@@ -2552,7 +2511,7 @@
                 populateCountryDropdown();
                 createPresetButtons(demandPresetsDiv, 'demand');
                 createPresetButtons(cfPresetsDiv, 'cf');
-                applyDemandProfile('spring', 'typical');
+                applyDemandProfile('spring');
                 applyCFProfile('spring', 'typical');
                 setupInputSyncing();
                 
