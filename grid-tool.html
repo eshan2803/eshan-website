@@ -1204,7 +1204,9 @@
                     let hourlyRamp = [];
                     for(let i=0; i<24; i++){
                         netLoad[i] = hourlyDeficit[i]; // Deficit is our current net load
-                        hourlyRamp[i] = (i > 0) ? netLoad[i] - netLoad[i-1] : netLoad[i];
+                    }
+                    for(let i=0; i<24; i++){
+                         hourlyRamp[i] = (i > 0) ? netLoad[i] - netLoad[i-1] : netLoad[0] - netLoad[23];
                     }
 
                     let maxPriority = -Infinity;
