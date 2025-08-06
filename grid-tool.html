@@ -1237,9 +1237,7 @@
                     );
 
                     if (hydroToDispatch < 0.01) {
-                        hourlyDeficit[maxDeficitHour] = 0;
-                        if (Math.max(...hourlyDeficit) <= 0) break;
-                        continue;
+                        break;
                     }
 
                     finalGeneration.hydro[maxDeficitHour] += hydroToDispatch;
