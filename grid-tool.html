@@ -1842,43 +1842,17 @@
                 // 12 demand presets: 3 levels x 4 seasons
                 currentSeasonName = season;
                 currentDemandLevelName = level;
+                // Set the baseline to the default grid mix for the new demand profile
                 updateBaselineForCountry(countrySelect.value, season, level);
                 setDemandEditMode(false);
                 // Update demand profile text
                 const demandLevelDisplay = currentDemandLevelName.charAt(0).toUpperCase() + currentDemandLevelName.slice(1);
                 const seasonDisplay = currentSeasonName.charAt(0).toUpperCase() + currentSeasonName.slice(1);
                 currentDemandProfileText.textContent = `${demandLevelDisplay} ${seasonDisplay}`;
-                runSimulation();
-                // --- Set current scenario as new default (like clicking Make Default) ---
+                // Set userDefaultState to empty so the system uses the default grid as baseline
                 userDefaultState = {};
-                for (const key in sliders) {
-                    userDefaultState[key] = sliders[key].value;
-                }
-                userDefaultState.enabledTech = { ...enabledTechnologies };
-                // Recalculate baseline/metrics
-                const newBaselineResult = getSimulationResult(
-                    {
-                        capacity: { ...userDefaultState },
-                        incentives: { ...userDefaultState },
-                        enabledTech: { ...userDefaultState.enabledTech }
-                    },
-                    currentSolarCFProfile,
-                    currentWindCFProfile,
-                    BASELINE_POTENTIAL_GENERATION,
-                    currentBaselineStorage
-                );
-                customBaselineSystemCost = newBaselineResult.systemCost;
-                customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
-                // Update all generator datasets in the chart to match the new baseline
-                updateCharts(
-                    newBaselineResult.generation,
-                    newBaselineResult.emissions,
-                    currentDemand,
-                    0,
-                    currentSolarCFProfile,
-                    currentWindCFProfile,
-                    newBaselineResult.curtailmentBySource
-                );
+                // Run simulation and update chart/metrics (will use default grid as baseline)
+                runSimulation();
                 saveState();
             }
             
