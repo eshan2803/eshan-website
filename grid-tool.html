@@ -1849,6 +1849,16 @@
                 const seasonDisplay = currentSeasonName.charAt(0).toUpperCase() + currentSeasonName.slice(1);
                 currentDemandProfileText.textContent = `${demandLevelDisplay} ${seasonDisplay}`;
                 runSimulation();
+                // --- Fix: Ensure generator datasets are preserved and chart is updated ---
+                if (typeof generationChart !== 'undefined' && generationChart.data && generationChart.data.datasets) {
+                    // Find the demand dataset
+                    const demandDataset = generationChart.data.datasets.find(ds => ds.label === 'Demand');
+                    if (demandDataset) {
+                        demandDataset.data = [...currentDemand];
+                    }
+                    // Optionally, re-populate generator datasets if needed (if you have a function for this, call it here)
+                    generationChart.update();
+                }
                 saveState();
             }
             
