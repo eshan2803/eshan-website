@@ -158,57 +158,84 @@
     <main class="container mx-auto px-8 pb-16">
         <div class="glass-card rounded-2xl p-8 shadow-xl">
             <section class="documentation-content">
-                <h2 class="text-center text-4xl font-bold text-gray-800 mb-8 font-lora">Grid Decarbonization Simulator</h2>
+                <h2 class="text-center text-4xl font-bold text-gray-800 mb-8 font-lora">Grid Decarbonization Simulator: Documentation</h2>
 
                 <h3>1. Introduction</h3>
                 <p>
                     The Grid Decarbonization Simulator is an educational tool designed to provide a simplified yet powerful look into the challenge of transitioning an electricity grid to 100% clean energy. It allows users to act as policymakers, adding new clean energy sources, energy storage, and other technologies to a baseline grid. The goal is to understand the complex trade-offs between cost, reliability, and emissions.
                 </p>
                 <p>
-                    The model simulates a 24-hour period of grid operation, showing how different technologies work together to meet a fluctuating electricity demand. Users can immediately see the impact of their decisions on hourly generation, CO2 emissions, and two key financial metrics: the change in electricity bills and the "Green Premium." This documentation explains the core logic behind the simulation, including how resources are dispatched, how costs are calculated, and what key assumptions are made.
+                    The model simulates a 24-hour period of grid operation, showing how different technologies work together to meet a fluctuating electricity demand. Users can immediately see the impact of their decisions on hourly generation, CO2 emissions, and two key financial metrics: the change in electricity bills and the "Abatement Cost." This documentation explains the core logic behind the simulation, including how resources are dispatched, how costs are calculated, and what key assumptions are made.
                 </p>
 
-                <h3>2. Methodology: How the Simulation Works</h3>
+                <h3>2. Key Features and Controls</h3>
+                 <h4>2.1. Selecting a Scenario</h4>
+                <p>
+                    The first step is to choose a grid to simulate. You can select from a wide range of countries and regions using the dropdown menu. Each region comes with a pre-loaded grid mix, total capacity, and realistic seasonal peak demand values based on real-world data.
+                </p>
+                <p>
+                    You can also select a <strong>Demand Profile</strong> for a specific season (e.g., Summer, Winter) and type (Typical vs. High). This allows you to test your grid against different conditions, from a normal spring day to an extreme summer heatwave. The model uses realistic, data-driven scaling to adjust the peak demand for each season and profile type.
+                </p>
+                
+                <h4>2.2. Policy and Technology Levers</h4>
+                <p>
+                    The control panel on the right is where you make your decisions. The levers are divided into three main categories:
+                </p>
+                <ul>
+                    <li><strong>Policy Levers:</strong> Here you can add new generating capacity (Solar, Wind, Nuclear, etc.) and energy storage. You can also deploy technologies like Demand Flexibility, which shifts some electricity use from peak to off-peak hours.</li>
+                    <li><strong>Government Incentives:</strong> These levers allow you to simulate government policies. You can set a Carbon Tax, provide subsidies for clean energy (PTC) and storage (ITC), or set a price for exporting excess electricity.</li>
+                    <li><strong>Direct Air Capture (DAC):</strong> This section allows you to deploy DAC technology, which actively removes CO2 from the atmosphere, and provide incentives for it.</li>
+                </ul>
+                
+                <h4>2.3. Managing the Grid</h4>
+                <ul>
+                    <li><strong>Retiring Plants:</strong> In the "Installed Capacity Mix" chart, you can uncheck a box next to an energy source to simulate retiring that entire fleet of power plants.</li>
+                    <li><strong>Customizing Profiles:</strong> You can click the "edit" icon next to the Demand or Capacity Factor profiles to manually adjust their hourly values, allowing you to create custom scenarios.</li>
+                     <li><strong>Scenario Management:</strong> Use the Undo/Redo buttons to step through your changes. You can also set your current configuration as the new "Default" to compare future changes against it.</li>
+                </ul>
+                
+                <h3>3. Methodology: How the Simulation Works</h3>
                 <p>
                     The simulator operates on an hourly time-step over a 24-hour day. The core of the model is a <strong>dispatch algorithm</strong>, which decides which power plants should run in each hour to meet the electricity demand at the lowest possible cost while respecting the limitations of each technology.
                 </p>
 
-                <h4>2.1. The Dispatch Logic: A Step-by-Step Guide</h4>
+                <h4>3.1. The Dispatch Logic: A Step-by-Step Guide</h4>
                 <p>
                     Imagine you are a grid operator. Your primary job is to make sure there is always exactly enough electricity being generated to meet what everyone is using (the "demand"). The model follows a logical "merit order" to decide which power plants to turn on.
                 </p>
                 <ol>
                     <li>
-                        <strong>Start with "Must-Take" Renewables:</strong> The model first calculates how much electricity is generated from solar and wind power in a given hour. These are considered "must-take" because their fuel (sun and wind) is free, but we can't control when they are available. Firm, clean sources like nuclear, geothermal, and hydro are also added at this stage.
+                        <strong>Calculate Initial Balance:</strong> The model first determines the hourly generation from "must-run" clean sources (Nuclear, Geothermal, Biomass) and "variable" renewables (Solar, Wind). It compares this initial generation to the hourly demand to see if there is an energy surplus or a deficit.
                     </li>
                     <li>
-                        <strong>Calculate Net Load:</strong> The model then calculates the <strong>Net Load</strong> for the hour. This is the remaining electricity demand that still needs to be met after all the initial clean energy has been used.
-                        <br>
-                        <code>Net Load = Total Demand - (Solar + Wind + Nuclear + Hydro + Geothermal)</code>
+                        <strong>Smart Hydro Dispatch:</strong> Hydroelectric power is dispatched strategically. A portion is used as a steady "baseload" resource. The rest is used flexibly to meet the highest-priority needs, specifically targeting hours with the largest energy deficits and the steepest ramps in demand.
                     </li>
                     <li>
-                        <strong>Handle Excess Generation (Charging Batteries):</strong> If the Net Load is negative, it means we have more clean energy than we need. This excess power isn't wasted; it's used to charge the batteries (4-hour, 8-hour, and long-duration storage). The model accounts for an <strong>85% round-trip efficiency</strong> by only storing 85% of the excess energy that goes into the batteries.
+                        <strong>Charge Storage with Excess Energy:</strong> If there's a surplus of clean energy in any hour, the model uses it to charge the different types of battery storage (4-hour, 8-hour, etc.), accounting for an 85% charging efficiency.
                     </li>
                     <li>
-                        <strong>Handle Energy Shortfall (Discharging Batteries):</strong> If the Net Load is positive, it means we have an energy shortfall. The model first calls upon the batteries to discharge and cover this gap. It will use the cheapest available stored energy first.
+                        <strong>Discharge Storage to Meet Deficits:</strong> If there is an energy deficit, the model discharges the batteries to cover the gap. It prioritizes discharging to meet the largest remaining deficits first.
                     </li>
                     <li>
-                        <strong>Use Fossil Fuels as a Last Resort:</strong> If there is still a shortfall after the batteries have been fully discharged, the model turns on the fossil fuel power plants. It prioritizes them based on their operating cost and emissions, typically using coal first (if available in the grid mix) and then natural gas to meet any remaining demand.
+                        <strong>Use Fossil Fuels as a Last Resort:</strong> If a deficit still remains after hydro and storage have been used, the model turns on the fossil fuel plants (first Coal, then Natural Gas) to meet the final demand.
                     </li>
                     <li>
-                        <strong>Curtailment:</strong> If there is excess renewable energy but all the batteries are full, that extra energy has nowhere to go and is "curtailed" (essentially thrown away). The model visualizes this as curtailed energy, which can be sold to neighboring grids if an "Export Price" is set.
+                        <strong>Curtailment and Exports:</strong> If there is excess renewable energy but all the batteries are full, that extra energy has nowhere to go and is "curtailed." However, if you set a positive "Export Price," this curtailed energy can be sold to neighboring grids, generating revenue.
                     </li>
                 </ol>
                 <p>
                     <strong>A Note on the Two-Pass System:</strong> Because the amount of energy in the batteries at the start of the day affects how much they can discharge at the end of the day, the model runs the 24-hour simulation twice. The first run figures out the battery levels at the end of the day, and the second run uses that information to start the day, creating a more realistic, continuous loop.
                 </p>
 
-                <h4>2.2. Cost Calculation Framework</h4>
+                <h4>3.2. Cost Calculation Framework</h4>
                 <p>
                     The model calculates the total annual cost of running the grid. This is not just the fuel cost; it's a comprehensive calculation similar to a Levelized Cost of Energy (LCOE) analysis, which includes upfront construction costs, ongoing maintenance, and fuel.
                 </p>
                 <ul>
-                    <li><strong>Capital Costs (CAPEX):</strong> This is the cost of building new power plants and storage facilities. Since a power plant lasts for many years (e.g., 30 for solar, 60 for nuclear), the model calculates an "annualized" cost, which is like a yearly mortgage payment for the plant. This is done using a Capital Recovery Factor (CRF).</li>
+                    <li><strong>Capital Costs (CAPEX):</strong> This is the cost of building new power plants and storage facilities. Since a power plant lasts for many years (e.g., 30 for solar, 60 for nuclear), the model calculates an "annualized" cost, which is like a yearly mortgage payment for the plant. This is done using a Capital Recovery Factor (CRF) with a 7% discount rate (d). The formula is:
+                        <br>
+                        <code>CRF = (d * (1 + d)^n) / ((1 + d)^n - 1)</code>, where 'n' is the lifetime of the plant in years.
+                    </li>
                     <li><strong>Fixed O&M Costs:</strong> These are the costs to keep a plant ready, even if it's not generating electricity (e.g., staff salaries, rent). This is calculated per kilowatt of capacity.</li>
                     <li><strong>Variable O&M Costs:</strong> These are the costs that depend on how much electricity is generated (e.g., fuel for natural gas plants, routine maintenance). This is calculated per megawatt-hour of generation.</li>
                     <li><strong>Government Incentives:</strong> The model includes several policy levers that affect cost:
@@ -220,48 +247,53 @@
                     </li>
                 </ul>
 
-                <h4>2.3. Financial Metrics Explained</h4>
+                <h4>3.3. Financial Metrics Explained</h4>
                 <ul>
                     <li>
                         <strong>Impact on Bills:</strong> This metric shows the percentage change in the average cost of electricity ($/MWh) compared to a baseline scenario. The baseline is either the initial grid mix or a new baseline set by the user with the "Make Default" button. A positive value means your new grid is more expensive, and bills would go up.
+                        <br>
+                        <code>Impact = ((New Cost per MWh - Baseline Cost per MWh) / Baseline Cost per MWh) * 100%</code>
                     </li>
                     <li>
-                        <strong>Green Premium:</strong> This is the extra cost to avoid one ton of CO2 emissions. It's calculated by taking the total increase in the grid's annual cost and dividing it by the total tons of CO2 emissions that were avoided compared to the baseline. If the Green Premium is negative, it means you are actually saving money while also reducing emissions!
+                        <strong>Abatement Cost:</strong> This is the extra cost to avoid one ton of CO2 emissions. It's calculated by taking the total increase in the grid's annual cost and dividing it by the total tons of CO2 emissions that were avoided compared to the baseline. If the Abatement Cost is negative, it means you are actually saving money while also reducing emissions!
+                        <br>
+                        <code>Abatement Cost = (New Annual Cost - Baseline Annual Cost) / (Baseline CO2 Tons - New CO2 Tons)</code>
                     </li>
                 </ul>
 
-                <h3>3. Model Parameters and Assumptions</h3>
+                <h3>4. Model Parameters and Assumptions</h3>
                 <p>
                     The simulator uses a set of default parameters for costs, lifetimes, and emissions based on public data from sources like the National Renewable Energy Laboratory (NREL) and the U.S. Energy Information Administration (EIA).
                 </p>
 
-                <h4>3.1. Technology Cost and Lifetime Assumptions</h4>
+                <h4>4.1. Technology Cost and Lifetime Assumptions</h4>
                 <table class="parameter-table">
                     <thead>
                         <tr>
                             <th>Technology</th>
-                            <th>Capital Cost (CAPEX)</th>
-                            <th>Fixed O&M</th>
-                            <th>Variable O&M</th>
+                            <th>Capital Cost (CAPEX) [$/kW]</th>
+                            <th>Fixed O&M [$/kW-yr]</th>
+                            <th>Variable O&M [$/MWh]</th>
                             <th>Lifetime [Years]</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td>Solar</td><td>1,000 [$/kW]</td><td>18 [$/kW-yr]</td><td>2 [$/MWh]</td><td>30</td></tr>
-                        <tr><td>Wind</td><td>1,400 [$/kW]</td><td>35 [$/kW-yr]</td><td>1 [$/MWh]</td><td>30</td></tr>
-                        <tr><td>Nuclear</td><td>8,000 [$/kW]</td><td>140 [$/kW-yr]</td><td>10 [$/MWh]</td><td>60</td></tr>
-                        <tr><td>Geothermal</td><td>4,500 [$/kW]</td><td>120 [$/kW-yr]</td><td>0 [$/MWh]</td><td>30</td></tr>
-                        <tr><td>Natural Gas</td><td>1,100 [$/kW]</td><td>20 [$/kW-yr]</td><td>40 (fuel) [$/MWh]</td><td>30</td></tr>
-                        <tr><td>Coal</td><td>3,500 [$/kW]</td><td>40 [$/kW-yr]</td><td>30 (fuel) [$/MWh]</td><td>40</td></tr>
-                        <tr><td>4-hr Battery</td><td>300 [$/kWh]</td><td>15 [$/kW-yr]</td><td>2 [$/MWh]</td><td>15</td></tr>
-                        <tr><td>8-hr Battery</td><td>350 [$/kWh]</td><td>15 [$/kW-yr]</td><td>2 [$/MWh]</td><td>15</td></tr>
-                        <tr><td>Long Duration Storage</td><td>500 [$/kWh]</td><td>15 [$/kW-yr]</td><td>2 [$/MWh]</td><td>25</td></tr>
-                        <tr><td>Direct Air Capture (DAC)</td><td>1000 [$/ton-yr]</td><td>20 [$/ton-yr]</td><td>400 [$/ton CO2]</td><td>25</td></tr>
+                        <tr><td>Solar</td><td>1,300</td><td>18</td><td>2</td><td>30</td></tr>
+                        <tr><td>Wind</td><td>1,700</td><td>35</td><td>1</td><td>30</td></tr>
+                        <tr><td>Nuclear</td><td>7,242</td><td>140</td><td>10</td><td>60</td></tr>
+                        <tr><td>Geothermal</td><td>3,329</td><td>120</td><td>0</td><td>30</td></tr>
+                        <tr><td>Biomass</td><td>3,500</td><td>100</td><td>15</td><td>25</td></tr>
+                        <tr><td>Natural Gas</td><td>1,300</td><td>20</td><td>40 (fuel)</td><td>30</td></tr>
+                        <tr><td>Coal</td><td>4,407</td><td>40</td><td>30 (fuel)</td><td>40</td></tr>
+                        <tr><td>4-hr Battery</td><td>400 ($/kWh)</td><td>15</td><td>2</td><td>15</td></tr>
+                        <tr><td>8-hr Battery</td><td>400 ($/kWh)</td><td>15</td><td>2</td><td>15</td></tr>
+                        <tr><td>Long Duration Storage</td><td>700 ($/kWh)</td><td>15</td><td>2</td><td>25</td></tr>
+                        <tr><td>Direct Air Capture</td><td>1000 ($/t/yr)</td><td>20 ($/t/yr)</td><td>400 ($/t)</td><td>25</td></tr>
                     </tbody>
                 </table>
-                <p><em>Note: Battery CAPEX is given in $/kWh of storage capacity. Power plant costs are in $/kW of power capacity. DAC costs are in $/ton of annual CO2 removal capacity, and its variable cost is in $/ton of CO2 removed.</em></p>
+                <p><em>Note: Battery and DAC costs are based on their respective units (kWh and tons), not power capacity (kW).</em></p>
 
-                <h4>3.2. Emissions and Capacity Factors</h4>
+                <h4>4.2. Emissions and Capacity Factors</h4>
                 <table class="parameter-table">
                     <thead>
                         <tr>
@@ -273,15 +305,16 @@
                     <tbody>
                         <tr><td>Coal</td><td>850</td><td>60%</td></tr>
                         <tr><td>Natural Gas</td><td>395</td><td>55%</td></tr>
-                        <tr><td>Solar</td><td>0</td><td>25% (with hourly profile)</td></tr>
-                        <tr><td>Wind</td><td>0</td><td>35% (with hourly profile)</td></tr>
+                        <tr><td>Solar</td><td>0</td><td>~25% (Varies seasonally and hourly)</td></tr>
+                        <tr><td>Wind</td><td>0</td><td>~35% (Varies seasonally and hourly)</td></tr>
                         <tr><td>Nuclear</td><td>0</td><td>90%</td></tr>
                         <tr><td>Geothermal</td><td>0</td><td>90%</td></tr>
-                        <tr><td>Hydro</td><td>0</td><td>45%</td></tr>
+                        <tr><td>Biomass</td><td>0</td><td>85%</td></tr>
+                        <tr><td>Hydro</td><td>0</td><td>~35% (Varies seasonally)</td></tr>
                     </tbody>
                 </table>
                  <p>
-                    <strong>Capacity Factor</strong> is the ratio of the actual electricity produced by a plant over a period to the maximum possible electricity it could have produced. For example, a solar plant can only generate power when the sun is shining, so its capacity factor is much lower than a nuclear plant that can run 24/7. The model uses realistic hourly profiles for solar and wind.
+                    <strong>Capacity Factor</strong> is the ratio of the actual electricity produced by a plant over a period to the maximum possible electricity it could have produced. For example, a solar plant can only generate power when the sun is shining, so its capacity factor is much lower than a nuclear plant that can run 24/7. The model uses realistic hourly profiles for solar and wind, and seasonal averages for hydro.
                 </p>
             </section>
         </div>
