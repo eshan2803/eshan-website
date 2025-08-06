@@ -2123,7 +2123,11 @@
                         // Simulate a simple daily hydro profile
                         const hydroShape = [0.8, 0.7, 0.7, 0.7, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.2, 1.1, 1.1, 1.0, 1.0, 1.1, 1.3, 1.5, 1.4, 1.2, 1.0, 0.9, 0.8, 0.8];
                         for (let i = 0; i < 24; i++) potentialGeneration.hydro[i] = capacity * cf * hydroShape[i];
+                    } else if (tech === 'naturalGas' || tech === 'coal') {
+                        // *** FIX: Allow dispatchable fossil fuels to ramp to 100% of capacity at any hour ***
+                        for (let i = 0; i < 24; i++) potentialGeneration[tech][i] = capacity * 1.0;
                     } else {
+                        // For other dispatchable sources (Nuclear, Geothermal), use their standard high CF
                         for (let i = 0; i < 24; i++) potentialGeneration[tech][i] = capacity * cf;
                     }
                 }
