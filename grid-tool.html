@@ -274,11 +274,15 @@
                                         </svg>
                                     </button>
                                     <!-- Seasonal Demand Preset Buttons -->
-                                    <div id="demand-presets" class="hidden">
-                                        <button id="preset-demand-spring" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Spring</button>
-                                        <button id="preset-demand-summer" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Summer</button>
-                                        <button id="preset-demand-fall" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Fall</button>
-                                        <button id="preset-demand-winter" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Winter</button>
+                                    <div id="demand-presets" class="hidden flex flex-wrap gap-2">
+                                        <button id="preset-demand-spring-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Spring Typical</button>
+                                        <button id="preset-demand-spring-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Spring High</button>
+                                        <button id="preset-demand-summer-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Summer Typical</button>
+                                        <button id="preset-demand-summer-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Summer High</button>
+                                        <button id="preset-demand-fall-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Fall Typical</button>
+                                        <button id="preset-demand-fall-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Fall High</button>
+                                        <button id="preset-demand-winter-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Winter Typical</button>
+                                        <button id="preset-demand-winter-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Winter High</button>
                                     </div>
                                     <button id="revert-demand-btn" class="p-2 rounded-full hover:bg-gray-200 hidden" title="Revert to original demand profile">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
@@ -597,7 +601,7 @@
             "Russia": { totalCapacityMW: 246500, peakLoadMW: 160000, mix: { coal: 15.0, naturalGas: 52.0, hydro: 20.0, wind: 0.8, solar: 0.7, nuclear: 11.5, geothermal: 0.0, biomass: 0.2 } },
             "Brazil": { totalCapacityMW: 178000, peakLoadMW: 101860, mix: { coal: 2.0, naturalGas: 19.0, hydro: 60.0, wind: 10.0, solar: 8.0, nuclear: 1.0, geothermal: 0.0, biomass: 8.0 } },
             "Germany": { totalCapacityMW: 200000, peakLoadMW: 84000, mix: { coal: 15.0, naturalGas: 40.0, hydro: 4.0, wind: 25.0, solar: 10.0, nuclear: 6.0, geothermal: 0.0, biomass: 5.0 } },
-            "Canada": { totalCapacityMW: 150000, peakLoadMW: 140000, mix: { coal: 5.0, naturalGas: 13.0, hydro: 58.0, wind: 8.0, solar: 2.0, nuclear: 14.0, geothermal: 0.0, biomass: 2.0 } },
+            "Canada": { totalCapacityMW: 163000, peakLoadMW: 140000, mix: { coal: 5.0, naturalGas: 13.0, hydro: 58.0, wind: 8.0, solar: 2.0, nuclear: 14.0, geothermal: 0.0, biomass: 2.0 } },
             "South Korea": { totalCapacityMW: 120000, peakLoadMW: 93000, mix: { coal: 35.0, naturalGas: 20.0, hydro: 5.0, wind: 1.5, solar: 11.5, nuclear: 27.0, geothermal: 0.0, biomass: 1.0 } },
             "France": { totalCapacityMW: 110000, peakLoadMW: 102000, mix: { coal: 1.0, naturalGas: 11.0, hydro: 10.0, wind: 8.0, solar: 5.0, nuclear: 65.0, geothermal: 0.0, biomass: 0.5 } },
             "United Kingdom": { totalCapacityMW: 75900, peakLoadMW: 60000, mix: { coal: 2.0, naturalGas: 40.0, hydro: 2.0, wind: 28.0, solar: 18.0, nuclear: 9.0, geothermal: 0.0, biomass: 5.0 } },
@@ -618,12 +622,17 @@
             "Mexico": 3, "Norway": 85, "New Zealand": 50
         };
         const SEASONAL_DEMAND_PROFILES = {
-            // UPDATED to better reflect CAISO shapes
-            spring: [28, 26, 25, 24, 24, 25, 28, 32, 33, 32, 30, 28, 27, 28, 30, 34, 39, 45, 48, 46, 42, 38, 34, 30],
-            summer: [30, 28, 27, 26, 26, 27, 29, 33, 37, 40, 42, 44, 46, 48, 50, 52, 55, 56, 55, 52, 48, 43, 38, 33],
-            fall:   [27, 25, 24, 23, 23, 24, 27, 31, 34, 36, 37, 38, 39, 40, 41, 43, 46, 50, 49, 46, 42, 37, 32, 29],
-            winter: [32, 30, 29, 29, 30, 34, 40, 45, 44, 42, 40, 39, 39, 40, 41, 43, 45, 46, 45, 42, 39, 36, 34, 32]
+            'spring-high':    [28, 26, 25, 24, 24, 25, 28, 32, 33, 32, 30, 28, 27, 28, 30, 34, 39, 45, 48, 46, 42, 38, 34, 30],
+            'summer-high':    [30, 28, 27, 26, 26, 27, 29, 33, 37, 40, 42, 44, 46, 48, 50, 52, 55, 56, 55, 52, 48, 43, 38, 33],
+            'fall-high':      [27, 25, 24, 23, 23, 24, 27, 31, 34, 36, 37, 38, 39, 40, 41, 43, 46, 50, 49, 46, 42, 37, 32, 29],
+            'winter-high':    [32, 30, 29, 29, 30, 34, 40, 45, 44, 42, 40, 39, 39, 40, 41, 43, 45, 46, 45, 42, 39, 36, 34, 32]
         };
+        // Generate 'typical' profiles by scaling 'high' profiles
+        SEASONAL_DEMAND_PROFILES['spring-typical'] = SEASONAL_DEMAND_PROFILES['spring-high'].map(d => d * 0.6);
+        SEASONAL_DEMAND_PROFILES['summer-typical'] = SEASONAL_DEMAND_PROFILES['summer-high'].map(d => d * 0.6);
+        SEASONAL_DEMAND_PROFILES['fall-typical']   = SEASONAL_DEMAND_PROFILES['fall-high'].map(d => d * 0.6);
+        SEASONAL_DEMAND_PROFILES['winter-typical'] = SEASONAL_DEMAND_PROFILES['winter-high'].map(d => d * 0.6);
+
         
         // This object will hold the calculated POTENTIAL generation, not a pre-dispatched baseline.
         let BASELINE_POTENTIAL_GENERATION = {}; 
@@ -764,9 +773,9 @@
             let defaultGenerationMix = {};
             
             let isDemandEditMode = false;
-            let currentDemand = [...SEASONAL_DEMAND_PROFILES.spring];
+            let currentDemand = [...SEASONAL_DEMAND_PROFILES['spring-typical']];
             let originalDemandBeforeEdit = [];
-            let currentDemandProfileName = 'Spring';
+            let currentDemandProfileName = 'Spring Typical';
 
             let isCFEditMode = false;
             let currentSolarCFProfile = [];
@@ -1097,6 +1106,13 @@
                     currentPotential.geothermal[i] += inputs.capacity.geothermal * COST_DATA.capacity_factor.geothermal;
                     currentPotential.biomass[i] += inputs.capacity.biomass * COST_DATA.capacity_factor.biomass;
                 }
+                
+                // NEW: Calculate total daily hydro budget
+                const hydroCapacity = (currentCountryInstalledCapacity.hydro || 0) + (inputs.capacity.hydro || 0);
+                const hydroCF = COST_DATA.capacity_factor.hydro;
+                let totalDailyHydroEnergy = hydroCapacity * hydroCF * 24;
+                const maxHourlyHydroOutput = hydroCapacity;
+
 
                 let finalGeneration = {
                     coal: Array(24).fill(0), naturalGas: Array(24).fill(0),
@@ -1129,12 +1145,12 @@
                 let hourlyExcess = Array(24).fill(0);
                 
 
-                // --- 2. FIRST PASS: DISPATCH CLEAN, CALCULATE HOURLY BALANCE ---
+                // --- 2. FIRST PASS: DISPATCH NON-HYDRO CLEAN ENERGY, CALCULATE HOURLY BALANCE ---
                 for (let i = 0; i < 24; i++) {
                     let dispatchedThisHour = 0;
                     let remainingDemand = modifiedDemand[i];
 
-                    // Merit order: Inflexible -> VRE -> Hydro
+                    // Merit order: Inflexible -> VRE 
                     const inflexibleGen = currentPotential.nuclear[i] + currentPotential.geothermal[i] + currentPotential.biomass[i];
                     const dispatchedInflexible = Math.min(inflexibleGen, remainingDemand);
                     if (inflexibleGen > 0) {
@@ -1154,14 +1170,8 @@
                     dispatchedThisHour += dispatchedVRE;
                     remainingDemand -= dispatchedVRE;
 
-                    const hydroGen = currentPotential.hydro[i];
-                    const dispatchedHydro = Math.min(hydroGen, remainingDemand);
-                    finalGeneration.hydro[i] = dispatchedHydro;
-                    dispatchedThisHour += dispatchedHydro;
-                    remainingDemand -= dispatchedHydro;
-
                     // Calculate balance
-                    const totalPotentialClean = inflexibleGen + vreGen + hydroGen;
+                    const totalPotentialClean = inflexibleGen + vreGen;
                     const balance = totalPotentialClean - dispatchedThisHour;
 
                     if (balance > 0) {
@@ -1171,8 +1181,7 @@
                     }
                 }
 
-                // --- 3. SECOND PASS: HANDLE STORAGE (CHARGE/DISCHARGE) ---
-                // Charge from excess
+                // --- 3. SECOND PASS: HANDLE STORAGE (CHARGE ONLY) ---
                 for (let i = 0; i < 24; i++) {
                     if (hourlyExcess[i] > 0) {
                         let availableToCharge = hourlyExcess[i];
@@ -1207,8 +1216,46 @@
                     }
                 }
                 finalGeneration.curtailment = hourlyExcess;
+                
+                // --- 4. NEW: DISPATCH HYDRO ECONOMICALLY ---
+                while (totalDailyHydroEnergy > 0.01) {
+                    let maxDeficit = 0;
+                    let maxDeficitHour = -1;
 
-                // Discharge to meet deficit (iterative for peak-shaving)
+                    // Find hour with highest deficit
+                    for (let i = 0; i < 24; i++) {
+                        if (hourlyDeficit[i] > maxDeficit) {
+                            maxDeficit = hourlyDeficit[i];
+                            maxDeficitHour = i;
+                        }
+                    }
+
+                    if (maxDeficitHour === -1) {
+                        // No more deficit to fill, any remaining hydro is spilled/curtailed
+                        break; 
+                    }
+
+                    // Amount to dispatch is limited by deficit, hourly max power, and remaining daily energy
+                    const hydroToDispatch = Math.min(
+                        hourlyDeficit[maxDeficitHour],
+                        maxHourlyHydroOutput - finalGeneration.hydro[maxDeficitHour], // Room available in this hour
+                        totalDailyHydroEnergy
+                    );
+
+                    if (hydroToDispatch < 0.01) {
+                        // Can't dispatch a meaningful amount, find next best hour
+                        hourlyDeficit[maxDeficitHour] = 0; // Mark this hour as done for this loop
+                        if (Math.max(...hourlyDeficit) <=0) break;
+                        continue;
+                    }
+
+                    finalGeneration.hydro[maxDeficitHour] += hydroToDispatch;
+                    hourlyDeficit[maxDeficitHour] -= hydroToDispatch;
+                    totalDailyHydroEnergy -= hydroToDispatch;
+                }
+
+
+                // --- 5. DISCHARGE STORAGE ---
                 let totalEnergyInStorage = Object.values(storageLevels).reduce((a, b) => a + b, 0);
                 while (totalEnergyInStorage > 0.01) {
                     let maxDeficit = 0;
@@ -1235,7 +1282,7 @@
                     if (dischargedThisCycle < 0.01) break; // No more discharge possible
                 }
 
-                // --- 4. FINAL PASS: DISPATCH FOSSIL FUELS ---
+                // --- 6. FINAL PASS: DISPATCH FOSSIL FUELS ---
                 for (let i = 0; i < 24; i++) {
                     if (hourlyDeficit[i] > 0) {
                         let remainingDeficit = hourlyDeficit[i];
@@ -1252,7 +1299,7 @@
                     }
                 }
                 
-                // --- 5. CALCULATE FINAL RESULTS ---
+                // --- 7. CALCULATE FINAL RESULTS ---
                 const newEmissions = calculateEmissions(finalGeneration, inputs.capacity.dac);
                 const newSystemCost = calculateTotalAnnualSystemCost(finalGeneration, inputs.capacity, inputs.incentives, finalGeneration.curtailment, currentCountryInstalledCapacity, baselineStorageGWh);
                 
@@ -1275,8 +1322,9 @@
                 const selectedCountry = countrySelect.value;
                 const baseSolarProfile = (countryProfiles[selectedCountry] || countryProfiles.default).solar;
                 const baseWindProfile = (countryProfiles[selectedCountry] || countryProfiles.default).wind;
-
-                const seasonalMultipliers = SEASONAL_MULTIPLIERS[currentDemandProfileName.toLowerCase()] || { solar: 1.0, wind: 1.0 };
+                
+                const baseSeason = currentDemandProfileName.split(' ')[0].toLowerCase();
+                const seasonalMultipliers = SEASONAL_MULTIPLIERS[baseSeason] || { solar: 1.0, wind: 1.0 };
                 const seasonalSolarProfile = currentSolarCFProfile.length > 0 ? currentSolarCFProfile : baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
                 const seasonalWindProfile = currentWindCFProfile.length > 0 ? currentWindCFProfile : baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
 
@@ -1680,7 +1728,7 @@
                     // Highlight the current season's button
                     document.querySelectorAll('#demand-presets button').forEach(btn => {
                         btn.classList.remove('preset-active');
-                        if (btn.id === `preset-demand-${currentDemandProfileName.toLowerCase()}`) {
+                        if (btn.id === `preset-demand-${currentDemandProfileName.toLowerCase().replace(' ', '-')}`) {
                             btn.classList.add('preset-active');
                         }
                     });
@@ -1829,24 +1877,28 @@
             }
 
             // Central function to apply a seasonal profile
-            function applySeason(season) {
-                const seasonCapitalized = season.charAt(0).toUpperCase() + season.slice(1);
-                
+            function applySeason(profileName) { // e.g., 'spring-typical'
+                const nameParts = profileName.split('-');
+                const baseSeason = nameParts[0]; // 'spring'
+                const profileDisplayName = nameParts.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' '); // 'Spring Typical'
+
                 // Update Demand Profile
-                currentDemandProfileName = seasonCapitalized;
+                currentDemandProfileName = profileDisplayName;
                 currentDemandProfileText.textContent = currentDemandProfileName;
 
-                // Update Capacity Factor Profile
-                const seasonalMultipliers = SEASONAL_MULTIPLIERS[season];
+                // Update Capacity Factor Profile - using the base season
+                const cfProfileDisplayName = baseSeason.charAt(0).toUpperCase() + baseSeason.slice(1);
+                const seasonalMultipliers = SEASONAL_MULTIPLIERS[baseSeason];
                 const baseSolarProfile = (countryProfiles[countrySelect.value] || countryProfiles.default).solar;
                 const baseWindProfile = (countryProfiles[countrySelect.value] || countryProfiles.default).wind;
                 currentSolarCFProfile = baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
                 currentWindCFProfile = baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
-                currentCFProfileName = seasonCapitalized;
+                currentCFProfileName = cfProfileDisplayName; // This is 'Spring', 'Summer', etc.
                 currentCFProfileText.textContent = currentCFProfileName;
 
                 // Update baselines and run simulation
-                updateBaselineForCountry(countrySelect.value, season); 
+                // updateBaselineForCountry needs the demand profile, which is now identified by the full profileName
+                updateBaselineForCountry(countrySelect.value, profileName); 
                 
                 // Exit any edit modes
                 setDemandEditMode(false);
@@ -1874,9 +1926,19 @@
                 saveState();
             });
             
+            const demandProfiles = [
+                'spring-typical', 'spring-high', 'summer-typical', 'summer-high', 
+                'fall-typical', 'fall-high', 'winter-typical', 'winter-high'
+            ];
+            demandProfiles.forEach(profile => {
+                document.getElementById(`preset-demand-${profile}`).addEventListener('click', () => applySeason(profile));
+            });
+
             ['spring', 'summer', 'fall', 'winter'].forEach(season => {
-                document.getElementById(`preset-demand-${season}`).addEventListener('click', () => applySeason(season));
-                document.getElementById(`preset-cf-${season}`).addEventListener('click', () => applySeason(season));
+                document.getElementById(`preset-cf-${season}`).addEventListener('click', () => {
+                    // When a CF preset is clicked, we default to the 'typical' demand for that season
+                    applySeason(`${season}-typical`);
+                });
             });
 
             // Event listeners for CF editing
@@ -1898,7 +1960,10 @@
                 currentCFProfileName = "User Defined";
                 currentCFProfileText.textContent = currentCFProfileName;
                 
-                updateBaselineForCountry(countrySelect.value, currentDemandProfileName.toLowerCase());
+                // When confirming a custom CF, we need a demand profile to pair it with.
+                // We'll use the last selected demand profile's name.
+                const lastDemandProfile = currentDemandProfileName.toLowerCase().replace(' ', '-');
+                updateBaselineForCountry(countrySelect.value, lastDemandProfile);
 
                 setCFEditMode(false);
                 runSimulation();
@@ -2077,7 +2142,7 @@
                 countrySelect.value = "California";
             }
 
-            function updateBaselineForCountry(countryName, season) {
+            function updateBaselineForCountry(countryName, profileName) { // profileName is e.g., 'spring-typical'
                 let newCarbonTax = 0;
                 let countryData = countryGridMixData[countryName];
                 
@@ -2089,7 +2154,7 @@
                 newCarbonTax = carbonTaxes[countryName] || 0;
 
                 // --- NEW: Scale demand profile based on country's peak load ---
-                const baseProfile = SEASONAL_DEMAND_PROFILES[season];
+                const baseProfile = SEASONAL_DEMAND_PROFILES[profileName];
                 const basePeak = Math.max(...baseProfile);
                 const countryPeak = countryData.peakLoadMW / 1000; // Convert to GW
                 const scalingFactor = countryPeak / basePeak;
@@ -2109,19 +2174,12 @@
                     const cf = COST_DATA.capacity_factor[tech];
                     let capacity = currentCountryInstalledCapacity[tech];
 
-                    if (tech === 'solar' && countryName === 'California') {
-                        // Simulate solar overbuild to show storage/curtailment by default
-                        capacity *= 2.5; 
-                    }
-
                     if (tech === 'solar') {
                         for (let i = 0; i < 24; i++) potentialGeneration.solar[i] = capacity * currentSolarCFProfile[i];
                     } else if (tech === 'wind') {
                         for (let i = 0; i < 24; i++) potentialGeneration.wind[i] = capacity * currentWindCFProfile[i];
                     } else if (tech === 'hydro') {
-                        // Simulate a simple daily hydro profile
-                        const hydroShape = [0.8, 0.7, 0.7, 0.7, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.2, 1.1, 1.1, 1.0, 1.0, 1.1, 1.3, 1.5, 1.4, 1.2, 1.0, 0.9, 0.8, 0.8];
-                        for (let i = 0; i < 24; i++) potentialGeneration.hydro[i] = capacity * cf * hydroShape[i];
+                        for (let i = 0; i < 24; i++) potentialGeneration.hydro[i] = capacity; // Max power capacity
                     } else if (tech === 'naturalGas' || tech === 'coal') {
                         // *** FIX: Allow dispatchable fossil fuels to ramp to 100% of capacity at any hour ***
                         for (let i = 0; i < 24; i++) potentialGeneration[tech][i] = capacity * 1.0;
@@ -2204,7 +2262,7 @@
             }
 
             countrySelect.addEventListener('change', (e) => {
-                applySeason('spring');
+                applySeason('spring-typical');
             });
             
             // --- TOOLTIP LOGIC ---
@@ -2474,7 +2532,7 @@
                 createGridMixSliders();
                 createGenerationMixSliders();
                 populateCountryDropdown();
-                applySeason('spring'); // This will set up the initial state correctly for California
+                applySeason('spring-typical'); // This will set up the initial state correctly for California
                 setupInputSyncing();
                 
                 // Start the tutorial after a short delay to allow the page to render
@@ -2482,6 +2540,10 @@
             }
 
             await initialize();
+
+            console.log('Spring High:', SEASONAL_DEMAND_PROFILES['spring-high']);
+            console.log('Spring Typical:', SEASONAL_DEMAND_PROFILES['spring-typical']);
+            console.log('Ratio:', SEASONAL_DEMAND_PROFILES['spring-typical'].map((v,i) => v/SEASONAL_DEMAND_PROFILES['spring-high'][i]));
         });
     </script>
 </body>
