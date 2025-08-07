@@ -2001,7 +2001,15 @@
                 for (const key in sliders) {
                     currentState[key] = sliders[key].value;
                 }
-                currentState.enabledTech = { ...enabledTechnologies }; 
+                currentState.enabledTech = { ...enabledTechnologies };
+                // Save custom profiles for undo/redo
+                currentState.demandProfile = [...currentDemand];
+                currentState.solarCFProfile = [...currentSolarCFProfile];
+                currentState.windCFProfile = [...currentWindCFProfile];
+                currentState.offshoreWindCFProfile = [...currentOffshoreWindCFProfile];
+                currentState.demandProfileName = currentDemandProfileName;
+                currentState.cfProfileName = currentCFProfileName;
+                currentState.hydroCF = currentHydroCF;
 
                 stateHistory = stateHistory.slice(0, historyIndex + 1);
                 stateHistory.push(currentState);
@@ -2156,22 +2164,28 @@
             });
             
             makeDefaultButton.addEventListener('click', () => {
+                // Save levers
                 userDefaultState = {};
                 for (const key in sliders) {
                     userDefaultState[key] = sliders[key].value;
                 }
-                userDefaultState.enabledTech = { ...enabledTechnologies }; 
+                userDefaultState.enabledTech = { ...enabledTechnologies };
 
+                // Save custom profiles
+                userDefaultState.demandProfile = [...currentDemand];
+                userDefaultState.solarCFProfile = [...currentSolarCFProfile];
+                userDefaultState.windCFProfile = [...currentWindCFProfile];
+                userDefaultState.offshoreWindCFProfile = [...currentOffshoreWindCFProfile];
+                userDefaultState.demandProfileName = currentDemandProfileName;
+                userDefaultState.cfProfileName = currentCFProfileName;
+                userDefaultState.hydroCF = currentHydroCF;
+
+                // Get current lever values for baseline calculation
                 const currentValues = {};
                 for (const key in sliders) {
                     currentValues[key] = parseFloat(sliders[key].value);
                 }
                 
-                const selectedCountry = countrySelect.value;
-                const solarProfile = (countryProfiles[selectedCountry] || countryProfiles.default).solar;
-                const windProfile = (countryProfiles[selectedCountry] || countryProfiles.default).wind;
-                const offshoreWindProfile = (countryProfiles[selectedCountry] || countryProfiles.default).offshoreWind;
-
                 let activePotentialGeneration = JSON.parse(JSON.stringify(BASELINE_POTENTIAL_GENERATION));
                 for (const tech in enabledTechnologies) {
                     if (!enabledTechnologies[tech]) {
@@ -2179,6 +2193,7 @@
                     }
                 }
 
+                // Recalculate the baseline with the current settings
                 const newBaselineResult = getSimulationResult(
                     {
                         capacity: {
@@ -2205,11 +2220,16 @@
                     currentBaselineStorage,
                     currentHydroCF
                 );
+                
+                // Update the active baseline values AND save them to the user default state
                 customBaselineSystemCost = newBaselineResult.systemCost;
                 customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
+                userDefaultState.baselineCost = customBaselineSystemCost;
+                userDefaultState.baselineCO2 = customBaselineTotalAnnualCO2;
 
-                runSimulation();
-                // Create a more prominent modal message
+                runSimulation(); // Re-run simulation to update metrics relative to the new baseline
+                
+                // Show confirmation message
                 const modal = document.createElement('div');
                 modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50';
                 modal.innerHTML = `
@@ -2222,74 +2242,95 @@
             });
 
             resetToDefaultButton.addEventListener('click', () => {
-                const stateToApply = Object.keys(userDefaultState).length > 0 ? userDefaultState : systemDefaultState;
-                
-                for (const key in stateToApply) {
-                    if (key !== 'enabledTech') {
-                        sliders[key].value = stateToApply[key];
-                        inputs[key].value = stateToApply[key];
-                    }
-                }
+                const isUserDefaultAvailable = Object.keys(userDefaultState).length > 0;
 
-                if (stateToApply.enabledTech) {
-                    for (const tech in stateToApply.enabledTech) {
-                        const checkbox = document.getElementById(`toggle-${tech}`);
-                        if (checkbox) {
-                            checkbox.checked = stateToApply.enabledTech[tech];
-                            enabledTechnologies[tech] = stateToApply.enabledTech[tech];
+                if (isUserDefaultAvailable) {
+                    const stateToApply = userDefaultState;
+
+                    // Restore profiles
+                    currentDemand = [...stateToApply.demandProfile];
+                    currentSolarCFProfile = [...stateToApply.solarCFProfile];
+                    currentWindCFProfile = [...stateToApply.windCFProfile];
+                    currentOffshoreWindCFProfile = [...stateToApply.offshoreWindCFProfile];
+                    currentDemandProfileName = stateToApply.demandProfileName;
+                    currentCFProfileName = stateToApply.cfProfileName;
+                    currentHydroCF = stateToApply.hydroCF;
+                    currentDemandProfileText.textContent = currentDemandProfileName;
+                    currentCFProfileText.textContent = currentCFProfileName;
+
+                    // Restore baselines
+                    customBaselineSystemCost = stateToApply.baselineCost;
+                    customBaselineTotalAnnualCO2 = stateToApply.baselineCO2;
+
+                    // Restore levers and toggles
+                    for (const key in stateToApply) {
+                        if (sliders[key] && inputs[key]) {
+                            sliders[key].value = stateToApply[key];
+                            inputs[key].value = stateToApply[key];
                         }
                     }
+                    if (stateToApply.enabledTech) {
+                        for (const tech in stateToApply.enabledTech) {
+                            const checkbox = document.getElementById(`toggle-${tech}`);
+                            if (checkbox) {
+                                checkbox.checked = stateToApply.enabledTech[tech];
+                                enabledTechnologies[tech] = stateToApply.enabledTech[tech];
+                            }
+                        }
+                    }
+                } else {
+                    // No user default, so reset to system default
+                    applySeason('spring-typical'); 
                 }
 
                 runSimulation();
                 saveState();
             });
 
+            function restoreState(state) {
+                 // Restore profiles
+                currentDemand = [...state.demandProfile];
+                currentSolarCFProfile = [...state.solarCFProfile];
+                currentWindCFProfile = [...state.windCFProfile];
+                currentOffshoreWindCFProfile = [...state.offshoreWindCFProfile];
+                currentDemandProfileName = state.demandProfileName;
+                currentCFProfileName = state.cfProfileName;
+                currentHydroCF = state.hydroCF;
+                currentDemandProfileText.textContent = currentDemandProfileName;
+                currentCFProfileText.textContent = currentCFProfileName;
+
+                // Restore levers
+                for (const key in state) {
+                    if (sliders[key] && inputs[key]) {
+                        sliders[key].value = state[key];
+                        inputs[key].value = state[key];
+                    }
+                }
+                // Restore toggles
+                if (state.enabledTech) {
+                    for (const tech in state.enabledTech) {
+                        const checkbox = document.getElementById(`toggle-${tech}`);
+                        if (checkbox) {
+                            checkbox.checked = state.enabledTech[tech];
+                            enabledTechnologies[tech] = state.enabledTech[tech];
+                        }
+                    }
+                }
+                runSimulation();
+                updateUndoRedoButtons();
+            }
+
             undoButton.addEventListener('click', () => {
                 if (historyIndex > 0) {
                     historyIndex--;
-                    const prevState = stateHistory[historyIndex];
-                    for (const key in prevState) {
-                        if (key !== 'enabledTech') {
-                            sliders[key].value = prevState[key];
-                            inputs[key].value = prevState[key];
-                        }
-                    }
-                    if (prevState.enabledTech) {
-                        for (const tech in prevState.enabledTech) {
-                            const checkbox = document.getElementById(`toggle-${tech}`);
-                            if (checkbox) {
-                                checkbox.checked = prevState.enabledTech[tech];
-                                enabledTechnologies[tech] = prevState.enabledTech[tech];
-                            }
-                        }
-                    }
-                    runSimulation();
-                    updateUndoRedoButtons();
+                    restoreState(stateHistory[historyIndex]);
                 }
             });
 
             redoButton.addEventListener('click', () => {
                 if (historyIndex < stateHistory.length - 1) {
                     historyIndex++;
-                    const nextState = stateHistory[historyIndex];
-                    for (const key in nextState) {
-                        if (key !== 'enabledTech') {
-                            sliders[key].value = nextState[key];
-                            inputs[key].value = nextState[key];
-                        }
-                    }
-                    if (nextState.enabledTech) {
-                        for (const tech in nextState.enabledTech) {
-                            const checkbox = document.getElementById(`toggle-${tech}`);
-                            if (checkbox) {
-                                checkbox.checked = nextState.enabledTech[tech];
-                                enabledTechnologies[tech] = nextState.enabledTech[tech];
-                            }
-                        }
-                    }
-                    runSimulation();
-                    updateUndoRedoButtons();
+                    restoreState(stateHistory[historyIndex]);
                 }
             });
             
@@ -2337,21 +2378,21 @@
                 const baseSeason = nameParts[0];
                 const profileType = nameParts[1];
 
-                // Always use the 'high' profile as the base shape for scaling
-                const baseProfile = SEASONAL_DEMAND_PROFILES[`${baseSeason}-high`];
-                const basePeak = Math.max(...baseProfile);
-                
-                // Get the 'high' peak for the season from the country data
-                const countryHighPeakMW = countryData.peakLoadsMW[baseSeason];
-                let targetPeakGW = countryHighPeakMW / 1000;
+                // Only update demand from presets if the name is not 'User Defined'
+                if (currentDemandProfileName !== 'User Defined') {
+                    const baseProfile = SEASONAL_DEMAND_PROFILES[`${baseSeason}-high`];
+                    const basePeak = Math.max(...baseProfile);
+                    
+                    const countryHighPeakMW = countryData.peakLoadsMW[baseSeason];
+                    let targetPeakGW = countryHighPeakMW / 1000;
 
-                // If it's a 'typical' day, scale down the target peak using the new seasonal ratios
-                if (profileType === 'typical') {
-                    targetPeakGW *= TYPICAL_DAY_SCALING_FACTORS[baseSeason];
+                    if (profileType === 'typical') {
+                        targetPeakGW *= TYPICAL_DAY_SCALING_FACTORS[baseSeason];
+                    }
+
+                    const finalScalingFactor = targetPeakGW / basePeak;
+                    currentDemand = baseProfile.map(val => val * finalScalingFactor);
                 }
-
-                const finalScalingFactor = targetPeakGW / basePeak;
-                currentDemand = baseProfile.map(val => val * finalScalingFactor);
                 
                 currentCountryInstalledCapacity = {}; // Reset for new country
                 for(const tech in COST_DATA.capacity_factor) {
@@ -2746,4 +2787,3 @@
     </script>
 </body>
 </html>
-
