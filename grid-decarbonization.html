@@ -880,6 +880,7 @@
             let enabledTechnologies = {};
             let defaultCapacityMix = {};
             let defaultGenerationMix = {};
+            let currentSystemDefaultProfileName = 'spring-typical';
             
             let isDemandEditMode = false;
             let currentDemand = [...SEASONAL_DEMAND_PROFILES['spring-high']];
@@ -2050,6 +2051,7 @@
 
             // Central function to apply a seasonal profile
             function applySeason(profileName) { // e.g., 'spring-typical'
+                currentSystemDefaultProfileName = profileName;
                 const nameParts = profileName.split('-');
                 const baseSeason = nameParts[0]; // 'spring'
                 const profileDisplayName = nameParts.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' '); // 'Spring Typical'
@@ -2245,46 +2247,12 @@
                 const isUserDefaultAvailable = Object.keys(userDefaultState).length > 0;
 
                 if (isUserDefaultAvailable) {
-                    const stateToApply = userDefaultState;
-
-                    // Restore profiles
-                    currentDemand = [...stateToApply.demandProfile];
-                    currentSolarCFProfile = [...stateToApply.solarCFProfile];
-                    currentWindCFProfile = [...stateToApply.windCFProfile];
-                    currentOffshoreWindCFProfile = [...stateToApply.offshoreWindCFProfile];
-                    currentDemandProfileName = stateToApply.demandProfileName;
-                    currentCFProfileName = stateToApply.cfProfileName;
-                    currentHydroCF = stateToApply.hydroCF;
-                    currentDemandProfileText.textContent = currentDemandProfileName;
-                    currentCFProfileText.textContent = currentCFProfileName;
-
-                    // Restore baselines
-                    customBaselineSystemCost = stateToApply.baselineCost;
-                    customBaselineTotalAnnualCO2 = stateToApply.baselineCO2;
-
-                    // Restore levers and toggles
-                    for (const key in stateToApply) {
-                        if (sliders[key] && inputs[key]) {
-                            sliders[key].value = stateToApply[key];
-                            inputs[key].value = stateToApply[key];
-                        }
-                    }
-                    if (stateToApply.enabledTech) {
-                        for (const tech in stateToApply.enabledTech) {
-                            const checkbox = document.getElementById(`toggle-${tech}`);
-                            if (checkbox) {
-                                checkbox.checked = stateToApply.enabledTech[tech];
-                                enabledTechnologies[tech] = stateToApply.enabledTech[tech];
-                            }
-                        }
-                    }
+                    restoreState(userDefaultState);
+                    saveState();
                 } else {
-                    // No user default, so reset to system default
-                    applySeason('spring-typical'); 
+                    // No user default, so reset to the last selected system default
+                    applySeason(currentSystemDefaultProfileName);
                 }
-
-                runSimulation();
-                saveState();
             });
 
             function restoreState(state) {
