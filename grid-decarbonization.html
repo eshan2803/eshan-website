@@ -1588,7 +1588,7 @@
                 generationChart.update('none');
 
                 co2Chart.data.datasets[0].data = emissions;
-                co2Chart.options.plugins.annotation.annotations.totalCO2.content = `Total Daily CO2: ${totalCO2.toLocaleString(undefined, {maximumFractionDigits: 1})} tons`;
+                co2Chart.options.plugins.annotation.annotations.totalCO2.content = `Total Daily CO2: ${totalCO2.toLocaleString(undefined, {maximumFractionDigits: 0})} tons`;
                 co2Chart.update('none');
 
                 capacityFactorChart.data.datasets[0].data = solarProfile;
@@ -2727,4 +2727,4 @@
         });
     </script>
 </body>
-</html>
+</ht
