@@ -436,6 +436,18 @@
                         <tr><td>Winter</td><td>0.6x</td><td>1.1x</td><td>1.1x</td></tr>
                     </tbody>
                 </table>
+                <h3>5. Model Limitations and Assumptions</h3>
+                <p>
+                    Transparency is key to understanding the simulator's results. While powerful, the model is a simplification of a real-world grid and has several important limitations:
+                </p>
+                <ul>
+                    <li><strong>Single-Day Simulation:</strong> The model simulates a single, representative 24-hour period for a given season. It does not capture seasonal variations, long-term weather patterns, or multi-day storage dynamics (often called "seasonal storage"). The model gets around this limitation partially by wrapping around the battery discharge from end of the day to the start of the day.</li>
+                    <li><strong>No Transmission Constraints:</strong> The model assumes a "copper plate" grid, meaning there are no bottlenecks or congestion in the transmission network. In reality, getting power from where it's generated to where it's needed is a major challenge and cost. Importantly, a significant chunk of renewable curtailment occurs not from overgeneration, but from congestion along transmission lines.</li>
+                    <li><strong>Simplified Market Dynamics:</strong> The simulation uses a merit-order dispatch but does not model complex market behaviors like price bidding, ancillary services (e.g., frequency regulation), or capacity markets.</li>
+                    <li><strong>Simplified Billing:</strong> The simulation calculates the bill based on average cost of dispatch. In most regions across the globe, the plant on the margin dictates the price, and not the average of all plants. A simplified version of such marginal cost based billing is under work. </li>
+                    <li><strong>Perfect Foresight:</strong> The model knows the demand and renewable generation for all 24 hours in advance, allowing it to optimize perfectly. Real-world grid operators must contend with uncertainty and forecasting errors.</li>
+                    <li><strong>Generic Cost Data:</strong> The capital and operational costs are based on regional or national averages (primarily from U.S. sources like NREL and EIA) and do not capture all local site-specific cost variations.</li>
+                </ul>
             </section>
         </div>
     </main>
@@ -601,3 +613,4 @@
 
 </body>
 </html>
+
