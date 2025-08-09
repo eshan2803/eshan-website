@@ -1210,7 +1210,7 @@
             }
 
             // --- REWRITTEN DISPATCH LOGIC ---
-            function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProfile, potentialGen, baselineStorageGWh = {}, hydroCF) {
+            function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProfile, potentialGen, baselineStorageGWh = {}, hydroCF, countryName) {
                 const VRE_SOURCES = ['solar', 'wind', 'offshoreWind'];
                 const INFLEXIBLE_SOURCES = ['nuclear', 'geothermal', 'biomass'];
                 
@@ -1253,8 +1253,8 @@
                     currentPotential.biomass[i] += inputs.capacity.biomass * COST_DATA.capacity_factor.biomass;
                 }
                 const hydroCapacity = (currentCountryInstalledCapacity.hydro || 0) + (inputs.capacity.hydro || 0);
-                // FIX: Removed the artificial 0.32 multiplier on hydro capacity
-                const maxHourlyHydroOutput = hydroCapacity; 
+                // FIX: Apply hydro cap only for California
+                const maxHourlyHydroOutput = countryName === 'California' ? hydroCapacity * 0.32 : hydroCapacity;
 
                 const storageTypes = ['battery4hr', 'battery8hr', 'longduration'];
                 const storageCapacities = {};
@@ -1463,7 +1463,8 @@
                     seasonalOffshoreWindProfile,
                     activePotentialGeneration,
                     currentBaselineStorage,
-                    currentHydroCF
+                    currentHydroCF,
+                    selectedCountry // Pass country name to simulation
                 );
                 const totalDailyCO2 = result.emissions.reduce((a, b) => a + b, 0);
                 
@@ -2185,7 +2186,8 @@
                     currentOffshoreWindCFProfile,
                     activePotentialGeneration,
                     currentBaselineStorage,
-                    currentHydroCF
+                    currentHydroCF,
+                    countrySelect.value
                 );
                 
                 customBaselineSystemCost = newBaselineResult.systemCost;
@@ -2376,7 +2378,8 @@
                     currentOffshoreWindCFProfile,
                     BASELINE_POTENTIAL_GENERATION,
                     currentBaselineStorage,
-                    currentHydroCF
+                    currentHydroCF,
+                    countryName
                 );
                 customBaselineSystemCost = baselineResult.systemCost;
                 customBaselineTotalAnnualCO2 = baselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
