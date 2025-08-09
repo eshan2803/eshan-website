@@ -1284,16 +1284,21 @@
                 // --- 4. CALCULATE INITIAL NET LOAD ---
                 let netLoad = Array(24).fill(0);
                 for (let i = 0; i < 24; i++) {
-                    let cleanGenThisHour = 0;
-                    const allCleanSources = [...INFLEXIBLE_SOURCES, ...VRE_SOURCES];
-                    
-                    allCleanSources.forEach(tech => {
+                    let inflexibleGenThisHour = 0;
+                    INFLEXIBLE_SOURCES.forEach(tech => {
                         const potential = currentPotential[tech][i];
                         finalGeneration[tech][i] = potential; 
-                        cleanGenThisHour += potential;
+                        inflexibleGenThisHour += potential;
+                    });
+                    
+                    let vreGenThisHour = 0;
+                    VRE_SOURCES.forEach(tech => {
+                        const potential = currentPotential[tech][i];
+                        finalGeneration[tech][i] = potential;
+                        vreGenThisHour += potential;
                     });
 
-                    netLoad[i] = modifiedDemand[i] - cleanGenThisHour;
+                    netLoad[i] = modifiedDemand[i] - inflexibleGenThisHour - vreGenThisHour;
                 }
 
                 // --- 5. CHARGE STORAGE & CURTAIL EXCESS ---
@@ -1314,19 +1319,22 @@
                         const curtailmentForThisHour = excessToDistribute;
                         finalGeneration.curtailment[i] = curtailmentForThisHour;
                         
-                        const totalUsedVRE = chargeForThisHour + curtailmentForThisHour;
-                        const potentialVRE = VRE_SOURCES.reduce((sum, tech) => sum + currentPotential[tech][i], 0);
-
-                        if (potentialVRE > 0) {
+                        const totalUsedForStorageAndCurtailment = chargeForThisHour + curtailmentForThisHour;
+                        let potentialVREThisHour = VRE_SOURCES.reduce((sum, tech) => sum + finalGeneration[tech][i], 0);
+                        
+                        // FIX: Ensure potentialVREThisHour is not zero to avoid division by zero
+                        if (potentialVREThisHour > 0) {
                             VRE_SOURCES.forEach(tech => {
-                                const vreProportion = currentPotential[tech][i] / potentialVRE;
-                                const chargeAttribution = chargeForThisHour * vreProportion;
-                                const curtailAttribution = curtailmentForThisHour * vreProportion;
+                                const proportion = finalGeneration[tech][i] / potentialVREThisHour;
+                                const chargeAttribution = chargeForThisHour * proportion;
+                                const curtailAttribution = curtailmentForThisHour * proportion;
                                 
                                 finalGeneration[`${tech}ToStorage`][i] = chargeAttribution;
                                 curtailmentBySource[tech][i] = curtailAttribution;
                                 
                                 finalGeneration[tech][i] -= (chargeAttribution + curtailAttribution);
+                                // Ensure generation doesn't go negative
+                                finalGeneration[tech][i] = Math.max(0, finalGeneration[tech][i]);
                             });
                         }
                     }
