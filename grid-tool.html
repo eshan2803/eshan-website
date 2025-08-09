@@ -116,8 +116,8 @@
         /* Color-coded slider thumbs */
         .thumb-solar::-webkit-slider-thumb { background-color: rgba(251, 191, 36, 1); }
         .thumb-solar::-moz-range-thumb { background-color: rgba(251, 191, 36, 1); }
-        .thumb-wind::-webkit-slider-thumb { background-color: rgba(16, 185, 129, 1); }
-        .thumb-wind::-moz-range-thumb { background-color: rgba(16, 185, 129, 1); }
+        .thumb-wind::-webkit-slider-thumb { background-color: rgba(52, 211, 153, 1); } /* Lighter green */
+        .thumb-wind::-moz-range-thumb { background-color: rgba(52, 211, 153, 1); } /* Lighter green */
         .thumb-offshoreWind::-webkit-slider-thumb { background-color: rgba(12, 148, 103, 1); }
         .thumb-offshoreWind::-moz-range-thumb { background-color: rgba(12, 148, 103, 1); }
         .thumb-geothermal::-webkit-slider-thumb { background-color: rgba(120, 40, 40, 1); }
@@ -914,7 +914,8 @@
             const COLORS = {
                 naturalGas: 'rgba(107, 114, 128, 0.8)', hydro: 'rgba(59, 130, 246, 0.8)', 
                 nuclear: 'rgba(239, 68, 68, 0.8)', solar: 'rgba(251, 191, 36, 1)', 
-                wind: 'rgba(16, 185, 129, 0.8)', offshoreWind: 'rgba(12, 148, 103, 0.8)', 
+                wind: 'rgba(52, 211, 153, 0.8)', /* CHANGE: Lighter green for Onshore Wind */
+                offshoreWind: 'rgba(12, 148, 103, 0.8)', 
                 geothermal: 'rgba(120, 40, 40, 0.8)',
                 biomass: 'rgba(101, 67, 33, 0.8)',
                 storage: 'rgba(168, 85, 247, 0.8)', demand: 'rgba(17, 24, 39, 1)',
@@ -959,16 +960,17 @@
                 type: 'bar',
                 data: {
                     labels: HOURS,
+                    // CHANGE: Reordered datasets for baseload-to-peaker stacking
                     datasets: [
-                        { label: 'Coal', data: [], backgroundColor: COLORS.coal, stack: 'generators', dragData: false },
-                        { label: 'Natural Gas', data: [], backgroundColor: COLORS.naturalGas, stack: 'generators', dragData: false },
-                        { label: 'Hydro', data: [], backgroundColor: COLORS.hydro, stack: 'generators', dragData: false },
+                        { label: 'Nuclear', data: [], backgroundColor: COLORS.nuclear, stack: 'generators', dragData: false },
                         { label: 'Geothermal', data: [], backgroundColor: COLORS.geothermal, stack: 'generators', dragData: false },
                         { label: 'Biomass', data: [], backgroundColor: COLORS.biomass, stack: 'generators', dragData: false },
-                        { label: 'Nuclear', data: [], backgroundColor: COLORS.nuclear, stack: 'generators', dragData: false },
-                        { label: 'Solar', data: [], backgroundColor: COLORS.solar, stack: 'generators', dragData: false },
+                        { label: 'Hydro', data: [], backgroundColor: COLORS.hydro, stack: 'generators', dragData: false },
                         { label: 'Onshore Wind', data: [], backgroundColor: COLORS.wind, stack: 'generators', dragData: false },
                         { label: 'Offshore Wind', data: [], backgroundColor: COLORS.offshoreWind, stack: 'generators', dragData: false },
+                        { label: 'Solar', data: [], backgroundColor: COLORS.solar, stack: 'generators', dragData: false },
+                        { label: 'Natural Gas', data: [], backgroundColor: COLORS.naturalGas, stack: 'generators', dragData: false },
+                        { label: 'Coal', data: [], backgroundColor: COLORS.coal, stack: 'generators', dragData: false },
                         { label: 'Storage', data: [], backgroundColor: COLORS.storage, stack: 'generators', dragData: false },
                         { label: 'Curtailment', data: [], backgroundColor: COLORS.curtailment, stack: 'generators', dragData: false },
                         { label: 'Solar to Storage', data: [], backgroundColor: PATTERNS.solarToStorage, stack: 'generators', dragData: false, hidden: false },
@@ -1455,7 +1457,6 @@
                 const seasonalMultipliers = SEASONAL_MULTIPLIERS[baseSeason] || { solar: 1.0, wind: 1.0, offshoreWind: 1.0 };
                 const seasonalSolarProfile = currentSolarCFProfile.length > 0 ? currentSolarCFProfile : baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
                 const seasonalWindProfile = currentWindCFProfile.length > 0 ? currentWindCFProfile : baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
-                // FIX: Corrected variable name from currentOffshoreWindProfile to currentOffshoreWindCFProfile
                 const seasonalOffshoreWindProfile = currentOffshoreWindCFProfile.length > 0 ? currentOffshoreWindCFProfile : baseOffshoreWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.offshoreWind));
 
 
@@ -1571,10 +1572,11 @@
             function updateCharts(generation, emissions, demand, totalCO2, solarProfile, windProfile, offshoreWindProfile) {
                 const chartData = generationChart.data.datasets;
                 
-                // Map generation sources to their primary dataset index
+                // CHANGE: Updated the techMap to reflect the new dataset order
                 const techMap = {
-                    coal: 0, naturalGas: 1, hydro: 2, geothermal: 3, biomass: 4,
-                    nuclear: 5, solar: 6, wind: 7, offshoreWind: 8, storage: 9, curtailment: 10,
+                    nuclear: 0, geothermal: 1, biomass: 2, hydro: 3, 
+                    wind: 4, offshoreWind: 5, solar: 6, 
+                    naturalGas: 7, coal: 8, storage: 9, curtailment: 10,
                     solarToStorage: 11, windToStorage: 12, offshoreWindToStorage: 13
                 };
 
@@ -2396,7 +2398,6 @@
                     },
                     currentSolarCFProfile,
                     currentWindCFProfile,
-                    // FIX: Corrected variable name from currentOffshoreWindProfile to currentOffshoreWindCFProfile
                     currentOffshoreWindCFProfile,
                     BASELINE_POTENTIAL_GENERATION,
                     currentBaselineStorage,
