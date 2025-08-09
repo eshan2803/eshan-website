@@ -2441,8 +2441,9 @@
                 runSimulation();
             }
 
+            // CHANGE: Updated the event listener to persist the demand profile
             countrySelect.addEventListener('change', (e) => {
-                applySeason('spring-typical');
+                applySeason(currentSystemDefaultProfileName);
             });
             
             // --- TOOLTIP LOGIC ---
