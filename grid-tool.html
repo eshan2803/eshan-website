@@ -31,8 +31,8 @@
         .mesh-gradient-container {
             position: relative;
             z-index: 1;
-            overflow: hidden;
-        }a
+            /* CHANGE: Removed overflow: hidden; which was preventing sticky positioning */
+        }
         .mesh-gradient-1 {
             background-image: radial-gradient(at 40% 20%, hsla(28,100%,74%,1) 0px, transparent 50%),
                               radial-gradient(at 80% 20%, hsla(189,100%,56%,1) 0px, transparent 50%),
@@ -353,7 +353,6 @@
                 </div>
 
                 <div class="lg:col-span-1 space-y-8">
-                    <!-- CHANGE: Added sticky positioning classes -->
                     <div id="tutorial-step-5" class="glass-card rounded-lg sticky top-6 z-10">
                         <div class="grid grid-cols-2 gap-4 text-center">
                             <div>
@@ -1456,6 +1455,7 @@
                 const seasonalMultipliers = SEASONAL_MULTIPLIERS[baseSeason] || { solar: 1.0, wind: 1.0, offshoreWind: 1.0 };
                 const seasonalSolarProfile = currentSolarCFProfile.length > 0 ? currentSolarCFProfile : baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
                 const seasonalWindProfile = currentWindCFProfile.length > 0 ? currentWindCFProfile : baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
+                // FIX: Corrected variable name from currentOffshoreWindProfile to currentOffshoreWindCFProfile
                 const seasonalOffshoreWindProfile = currentOffshoreWindCFProfile.length > 0 ? currentOffshoreWindCFProfile : baseOffshoreWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.offshoreWind));
 
 
@@ -2396,6 +2396,7 @@
                     },
                     currentSolarCFProfile,
                     currentWindCFProfile,
+                    // FIX: Corrected variable name from currentOffshoreWindProfile to currentOffshoreWindCFProfile
                     currentOffshoreWindCFProfile,
                     BASELINE_POTENTIAL_GENERATION,
                     currentBaselineStorage,
