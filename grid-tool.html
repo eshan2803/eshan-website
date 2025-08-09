@@ -1211,11 +1211,9 @@
 
             // --- REWRITTEN DISPATCH LOGIC ---
             function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProfile, potentialGen, baselineStorageGWh = {}, hydroCF) {
-                // --- 1. INITIAL SETUP & MERIT ORDER DEFINITION ---
                 const VRE_SOURCES = ['solar', 'wind', 'offshoreWind'];
                 const INFLEXIBLE_SOURCES = ['nuclear', 'geothermal', 'biomass'];
-                const DISPATCHABLE_HIERARCHY = ['hydro', 'storage', 'naturalGas', 'coal'];
-
+                
                 let finalGeneration = {
                     coal: Array(24).fill(0), naturalGas: Array(24).fill(0),
                     hydro: Array(24).fill(0), nuclear: Array(24).fill(0),
@@ -1226,7 +1224,6 @@
                 };
                 let curtailmentBySource = { solar: Array(24).fill(0), wind: Array(24).fill(0), offshoreWind: Array(24).fill(0) };
 
-                // --- 2. PREPARE DEMAND AND POTENTIAL GENERATION ---
                 let modifiedDemand = [...currentDemand];
                 if (inputs.capacity.demandflex > 0) {
                     const originalPeak = Math.max(...currentDemand);
@@ -1238,9 +1235,7 @@
                         const currentTrough = Math.min(...modifiedDemand);
                         const peakIndex = modifiedDemand.indexOf(currentPeak);
                         const troughIndex = modifiedDemand.indexOf(currentTrough);
-
                         if (peakIndex === troughIndex || currentPeak <= currentTrough) break;
-
                         const amountThisIteration = Math.min(shiftIncrement, totalAmountToShift);
                         modifiedDemand[peakIndex] -= amountThisIteration;
                         modifiedDemand[troughIndex] += amountThisIteration;
@@ -1258,9 +1253,9 @@
                     currentPotential.biomass[i] += inputs.capacity.biomass * COST_DATA.capacity_factor.biomass;
                 }
                 const hydroCapacity = (currentCountryInstalledCapacity.hydro || 0) + (inputs.capacity.hydro || 0);
-                const maxHourlyHydroOutput = hydroCapacity * 0.32;
+                // FIX: Removed the artificial 0.32 multiplier on hydro capacity
+                const maxHourlyHydroOutput = hydroCapacity; 
 
-                // --- 3. STORAGE SETUP ---
                 const storageTypes = ['battery4hr', 'battery8hr', 'longduration'];
                 const storageCapacities = {};
                 const storageChargeRates = {};
@@ -1281,27 +1276,17 @@
                 const storageEfficiency = 0.85;
                 let storageLevels = { battery4hr: 0, battery8hr: 0, longduration: 0 };
 
-                // --- 4. CALCULATE INITIAL NET LOAD ---
                 let netLoad = Array(24).fill(0);
                 for (let i = 0; i < 24; i++) {
-                    let inflexibleGenThisHour = 0;
-                    INFLEXIBLE_SOURCES.forEach(tech => {
+                    let totalPotentialGenThisHour = 0;
+                    [...INFLEXIBLE_SOURCES, ...VRE_SOURCES].forEach(tech => {
                         const potential = currentPotential[tech][i];
                         finalGeneration[tech][i] = potential; 
-                        inflexibleGenThisHour += potential;
+                        totalPotentialGenThisHour += potential;
                     });
-                    
-                    let vreGenThisHour = 0;
-                    VRE_SOURCES.forEach(tech => {
-                        const potential = currentPotential[tech][i];
-                        finalGeneration[tech][i] = potential;
-                        vreGenThisHour += potential;
-                    });
-
-                    netLoad[i] = modifiedDemand[i] - inflexibleGenThisHour - vreGenThisHour;
+                    netLoad[i] = modifiedDemand[i] - totalPotentialGenThisHour;
                 }
 
-                // --- 5. CHARGE STORAGE & CURTAIL EXCESS ---
                 for (let i = 0; i < 24; i++) {
                     if (netLoad[i] < 0) {
                         let excessToDistribute = -netLoad[i];
@@ -1319,28 +1304,28 @@
                         const curtailmentForThisHour = excessToDistribute;
                         finalGeneration.curtailment[i] = curtailmentForThisHour;
                         
-                        const totalUsedForStorageAndCurtailment = chargeForThisHour + curtailmentForThisHour;
-                        let potentialVREThisHour = VRE_SOURCES.reduce((sum, tech) => sum + finalGeneration[tech][i], 0);
-                        
-                        // FIX: Ensure potentialVREThisHour is not zero to avoid division by zero
-                        if (potentialVREThisHour > 0) {
-                            VRE_SOURCES.forEach(tech => {
-                                const proportion = finalGeneration[tech][i] / potentialVREThisHour;
-                                const chargeAttribution = chargeForThisHour * proportion;
-                                const curtailAttribution = curtailmentForThisHour * proportion;
+                        let availableForCurtailment = 0;
+                        [...INFLEXIBLE_SOURCES, ...VRE_SOURCES].forEach(tech => {
+                            availableForCurtailment += finalGeneration[tech][i];
+                        });
+
+                        if (availableForCurtailment > 0) {
+                            [...INFLEXIBLE_SOURCES, ...VRE_SOURCES].forEach(tech => {
+                                const proportion = finalGeneration[tech][i] / availableForCurtailment;
+                                const totalReduction = (chargeForThisHour + curtailmentForThisHour) * proportion;
                                 
-                                finalGeneration[`${tech}ToStorage`][i] = chargeAttribution;
-                                curtailmentBySource[tech][i] = curtailAttribution;
+                                if (VRE_SOURCES.includes(tech)) {
+                                    const chargeAttribution = chargeForThisHour * proportion;
+                                    finalGeneration[`${tech}ToStorage`][i] = chargeAttribution;
+                                }
                                 
-                                finalGeneration[tech][i] -= (chargeAttribution + curtailAttribution);
-                                // Ensure generation doesn't go negative
+                                finalGeneration[tech][i] -= totalReduction;
                                 finalGeneration[tech][i] = Math.max(0, finalGeneration[tech][i]);
                             });
                         }
                     }
                 }
                 
-                // --- 6. DISPATCH TO MEET REMAINING NET LOAD ---
                 const totalDailyHydroEnergy = hydroCapacity * hydroCF * 24;
                 const baseloadHydroEnergy = totalDailyHydroEnergy * 0.40;
                 let flexibleHydroEnergy = totalDailyHydroEnergy * 0.60;
@@ -1416,7 +1401,6 @@
                     }
                 }
                 
-                // --- 7. CALCULATE FINAL RESULTS ---
                 const newEmissions = calculateEmissions(finalGeneration, inputs.capacity.dac);
                 const newSystemCost = calculateTotalAnnualSystemCost(finalGeneration, inputs.capacity, inputs.incentives, finalGeneration.curtailment, currentCountryInstalledCapacity, baselineStorageGWh);
                 
