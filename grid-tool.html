@@ -1207,6 +1207,7 @@
                     const annualized_capex = COST_DATA.capex.naturalGas * totalNGCapacityKW * crf;
                     const annual_fom = COST_DATA.fixed_om.naturalGas * totalNGCapacityKW;
                     
+                    // The VOM for gas is now calculated based on the hourly dispatch cost
                     const annual_vom_ng = (gasGenDetails.ccgt.cost + gasGenDetails.ct.cost) * 365;
 
                     totalAnnualCost += annualized_capex + annual_fom + annual_vom_ng;
@@ -1449,86 +1450,88 @@
                     if (dischargedThisCycle < 0.001) break;
                 }
 
-                // --- NEW: Natural Gas Dispatch Logic ---
+                // *** DISPATCH LOGIC CHANGE START ***
+                // This section is rewritten to dispatch thermal plants (gas, coal)
+                // in a strict merit order for each hour independently.
+
                 const gasGenDetails = {
                     ccgt: { generation: 0, cost: 0 },
                     ct: { generation: 0, cost: 0 }
                 };
+                const hourlyMarginalPrice = Array(24).fill(0);
                 const totalNGCapacity = (currentCountryInstalledCapacity.naturalGas || 0) + (inputs.capacity.naturalGas || 0);
                 const ccgtCapacity = totalNGCapacity * 0.7;
                 const ctCapacity = totalNGCapacity * 0.3;
 
-                // 1. Dispatch CTs for peaks
-                const sortedNetLoad = [...netLoad].map((load, hour) => ({ load, hour })).sort((a, b) => b.load - a.load);
-                
-                for (const item of sortedNetLoad) {
-                    const i = item.hour;
-                    if (netLoad[i] > 0.01) {
-                        const ctToDispatch = Math.min(netLoad[i], ctCapacity);
-                        if (ctToDispatch > 0) {
-                            finalGeneration.naturalGas[i] += ctToDispatch;
-                            gasGenByType.ct[i] += ctToDispatch;
-                            netLoad[i] -= ctToDispatch;
-
-                            const costStart = COST_DATA.variable_om.naturalGasCT.start;
-                            const costEnd = COST_DATA.variable_om.naturalGasCT.end;
-                            const avgCost = (costStart + (costStart + (costEnd - costStart) * (ctToDispatch / ctCapacity))) / 2;
-                            gasGenDetails.ct.cost += ctToDispatch * 1000 * avgCost;
-                            gasGenDetails.ct.generation += ctToDispatch * 1000;
-                        }
-                    }
-                }
-
-                // 2. Dispatch CCGTs for remaining load
                 for (let i = 0; i < 24; i++) {
-                    if (netLoad[i] > 0.01) {
-                        const ccgtToDispatch = Math.min(netLoad[i], ccgtCapacity);
+                    let remainingLoad = netLoad[i];
+                    let hourlyPrice = 0;
+
+                    // If there's curtailment, the price is the export price (can be negative).
+                    if (finalGeneration.curtailment[i] > 0.01) {
+                        hourlyMarginalPrice[i] = inputs.incentives.exportPrice;
+                        continue; // Move to next hour
+                    }
+
+                    // If storage was dispatched, it sets an initial price floor.
+                    if (finalGeneration.storage[i] > 0) {
+                       hourlyPrice = COST_DATA.variable_om.storage;
+                    }
+
+                    if (remainingLoad <= 0.01) {
+                        hourlyMarginalPrice[i] = hourlyPrice;
+                        continue;
+                    }
+
+                    // 1. Dispatch CCGT (cheaper gas)
+                    if (ccgtCapacity > 0) {
+                        const ccgtToDispatch = Math.min(remainingLoad, ccgtCapacity);
                         if (ccgtToDispatch > 0) {
                             finalGeneration.naturalGas[i] += ccgtToDispatch;
                             gasGenByType.ccgt[i] += ccgtToDispatch;
-                            netLoad[i] -= ccgtToDispatch;
+                            remainingLoad -= ccgtToDispatch;
 
                             const costStart = COST_DATA.variable_om.naturalGasCCGT.start;
                             const costEnd = COST_DATA.variable_om.naturalGasCCGT.end;
-                            const avgCost = (costStart + (costStart + (costEnd - costStart) * (ccgtToDispatch / ccgtCapacity))) / 2;
+                            const priceAtDispatch = costStart + (costEnd - costStart) * (ccgtToDispatch / ccgtCapacity);
+                            hourlyPrice = Math.max(hourlyPrice, priceAtDispatch);
+                            
+                            const avgCost = (costStart + priceAtDispatch) / 2;
                             gasGenDetails.ccgt.cost += ccgtToDispatch * 1000 * avgCost;
                             gasGenDetails.ccgt.generation += ccgtToDispatch * 1000;
                         }
                     }
-                }
 
+                    // 2. Dispatch CT (expensive gas peakers)
+                    if (remainingLoad > 0.01 && ctCapacity > 0) {
+                        const ctToDispatch = Math.min(remainingLoad, ctCapacity);
+                        if (ctToDispatch > 0) {
+                            finalGeneration.naturalGas[i] += ctToDispatch;
+                            gasGenByType.ct[i] += ctToDispatch;
+                            remainingLoad -= ctToDispatch;
 
-                // 3. Dispatch Coal for any remaining load
-                for (let i = 0; i < 24; i++) {
-                    if (netLoad[i] > 0.01) {
-                        const coalCapacity = currentPotential.coal[i];
-                        const coalToDispatch = Math.min(netLoad[i], coalCapacity);
+                            const costStart = COST_DATA.variable_om.naturalGasCT.start;
+                            const costEnd = COST_DATA.variable_om.naturalGasCT.end;
+                            const priceAtDispatch = costStart + (costEnd - costStart) * (ctToDispatch / ctCapacity);
+                            hourlyPrice = Math.max(hourlyPrice, priceAtDispatch);
+
+                            const avgCost = (costStart + priceAtDispatch) / 2;
+                            gasGenDetails.ct.cost += ctToDispatch * 1000 * avgCost;
+                            gasGenDetails.ct.generation += ctToDispatch * 1000;
+                        }
+                    }
+                    
+                    // 3. Dispatch Coal (last resort)
+                    if (remainingLoad > 0.01 && currentPotential.coal[i] > 0) {
+                        const coalToDispatch = Math.min(remainingLoad, currentPotential.coal[i]);
                         finalGeneration.coal[i] += coalToDispatch;
-                        netLoad[i] -= coalToDispatch;
+                        remainingLoad -= coalToDispatch;
+                        hourlyPrice = Math.max(hourlyPrice, COST_DATA.variable_om.coal);
                     }
+
+                    hourlyMarginalPrice[i] = hourlyPrice;
                 }
-                
-                // --- NEW: Calculate Hourly Marginal Price ---
-                const hourlyMarginalPrice = Array(24).fill(0);
-                for (let i = 0; i < 24; i++) {
-                    if (finalGeneration.curtailment[i] > 0) {
-                        hourlyMarginalPrice[i] = inputs.incentives.exportPrice;
-                    } else if (finalGeneration.coal[i] > 0) {
-                        hourlyMarginalPrice[i] = COST_DATA.variable_om.coal;
-                    } else if (gasGenByType.ct[i] > 0) {
-                        const costStart = COST_DATA.variable_om.naturalGasCT.start;
-                        const costEnd = COST_DATA.variable_om.naturalGasCT.end;
-                        hourlyMarginalPrice[i] = costStart + (costEnd - costStart) * (gasGenByType.ct[i] / ctCapacity);
-                    } else if (gasGenByType.ccgt[i] > 0) {
-                        const costStart = COST_DATA.variable_om.naturalGasCCGT.start;
-                        const costEnd = COST_DATA.variable_om.naturalGasCCGT.end;
-                        hourlyMarginalPrice[i] = costStart + (costEnd - costStart) * (gasGenByType.ccgt[i] / ccgtCapacity);
-                    } else if (finalGeneration.storage[i] > 0) {
-                        hourlyMarginalPrice[i] = COST_DATA.variable_om.storage;
-                    } else {
-                        hourlyMarginalPrice[i] = 0; // Price set by price-takers
-                    }
-                }
+                // *** DISPATCH LOGIC CHANGE END ***
 
                 const newEmissions = calculateEmissions(finalGeneration, inputs.capacity.dac);
                 const newSystemCost = calculateTotalAnnualSystemCost(finalGeneration, inputs.capacity, inputs.incentives, finalGeneration.curtailment, currentCountryInstalledCapacity, baselineStorageGWh, gasGenDetails);
@@ -1539,7 +1542,7 @@
                     systemCost: newSystemCost,
                     demand: modifiedDemand,
                     curtailmentBySource: curtailmentBySource,
-                    hourlyMarginalPrice: hourlyMarginalPrice // NEW
+                    hourlyMarginalPrice: hourlyMarginalPrice 
                 };
             }
 
