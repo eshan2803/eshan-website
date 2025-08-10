@@ -191,14 +191,14 @@
     <main class="container mx-auto px-8 pb-16">
         <div class="glass-card rounded-2xl p-8 shadow-xl">
             <section class="documentation-content">
-                <h2 class="text-center text-4xl font-bold text-gray-800 mb-8 font-lora">Grid Decarbonization Simulator: Documentation</h2>
+                <h2 class="text-center text-4xl font-bold text-gray-800 mb-8 font-lora">Grid Simulator: Documentation</h2>
 
                 <h3>1. Introduction</h3>
                 <p>
-                    The Grid Decarbonization Simulator is an educational tool designed to provide a simplified yet powerful look into the challenge of transitioning an electricity grid to 100% clean energy. It allows users to act as policymakers, adding new clean energy sources, energy storage, and other technologies to a baseline grid. The goal is to understand the complex trade-offs between cost, reliability, and emissions.
+                    The Grid Simulator is an educational tool designed to provide a simplified yet powerful look into the challenge of operating a modern electricity grid. It allows users to act as policymakers, adding new clean energy sources, energy storage, and other technologies to a baseline grid. The goal is to understand the complex trade-offs between cost, reliability, and emissions.
                 </p>
                 <p>
-                    The model simulates a 24-hour period of grid operation, showing how different technologies work together to meet a fluctuating electricity demand. Users can immediately see the impact of their decisions on hourly generation, CO2 emissions, and two key financial metrics: the change in electricity bills and the "Abatement Cost." This documentation explains the core logic behind the simulation, including how resources are dispatched, how costs are calculated, and what key assumptions are made.
+                    The model simulates a 24-hour period of grid operation, showing how different technologies work together to meet a fluctuating electricity demand. Users can immediately see the impact of their decisions on hourly generation, CO2 emissions, wholesale electricity prices, and two key financial metrics: the change in electricity bills and the "Abatement Cost." This documentation explains the core logic behind the simulation, including how resources are dispatched, how costs are calculated, and what key assumptions are made.
                 </p>
 
                 <h3>2. Key Features and Controls</h3>
@@ -229,31 +229,40 @@
                 
                 <h3>3. Methodology: How the Simulation Works</h3>
                 <p>
-                    The simulator operates on an hourly time-step over a 24-hour day. The core of the model is a <strong>dispatch algorithm</strong>, which decides which power plants should run in each hour to meet the electricity demand at the lowest possible cost while respecting the limitations of each technology.
+                    The simulator operates on an hourly time-step over a 24-hour day. The core of the model is a <strong>dispatch algorithm</strong>, which decides which power plants should run in each hour to meet the electricity demand at the lowest possible cost while respecting the limitations of each technology. This process determines not only the generation mix but also the hourly <strong>marginal price</strong> of electricity.
                 </p>
 
                 <h4>3.1. The Dispatch Logic: A Step-by-Step Guide</h4>
                 <p>
-                    Imagine you are a grid operator. Your primary job is to make sure there is always exactly enough electricity being generated to meet what everyone is using (the "demand"). The model follows a logical "merit order" to decide which power plants to turn on.
+                    The model follows a sophisticated sequence to balance the grid each hour, closely mimicking how real-world markets operate.
                 </p>
                 <ol>
                     <li>
-                        <strong>Calculate Initial Balance:</strong> The model first determines the hourly generation from "must-run" clean sources (Nuclear, Geothermal, Biomass) and "variable" renewables (Solar, Onshore Wind, Offshore Wind). It compares this initial generation to the hourly demand to see if there is an energy surplus or a deficit.
+                        <strong>Calculate Net Load:</strong> The model first determines the hourly generation from "must-run" clean sources (Nuclear, Geothermal, Biomass) and "variable" renewables (Solar, Wind). This generation is subtracted from the total demand to calculate the <strong>Net Load</strong>—the remaining demand that must be met by flexible, dispatchable power plants.
                     </li>
                     <li>
-                        <strong>Smart Hydro Dispatch:</strong> Hydroelectric power is dispatched strategically. A portion is used as a steady "baseload" resource. The rest is used flexibly to meet the highest-priority needs, specifically targeting hours with the largest energy deficits and the steepest ramps in demand. The model caps the maximum hourly output at 32% of total installed hydro capacity to simulate real-world operational limits.
+                        <strong>Economic Battery Dispatch (Arbitrage):</strong> This is the most complex step. The model dispatches batteries based on economic signals to minimize costs. It performs an iterative loop:
+                        <ul>
+                            <li>It first calculates a 24-hour price forecast based on what it would cost for thermal plants (gas, coal) to meet the net load.</li>
+                            <li>It then checks if a profitable arbitrage opportunity exists. The condition is: <code>(Highest Price * 0.85) - Lowest Price > $20</code>. This means the potential revenue from selling power, after accounting for an 85% round-trip efficiency loss, must be at least $20/MWh higher than the cost of buying power.</li>
+                            <li>If the condition is met, the model dispatches a small "piece" of energy (0.1 GWh), charging the battery in the cheapest hour and discharging it in the most expensive hour, respecting the battery's power (GW) and energy (GWh) limits.</li>
+                            <li>Crucially, it then recalculates the net load and the 24-hour price forecast and repeats the process. This loop continues until no more profitable trades are available.</li>
+                        </ul>
                     </li>
                     <li>
-                        <strong>Charge Storage with Excess Energy:</strong> If there's a surplus of clean energy in any hour, the model uses it to charge the different types of battery storage (4-hour, 8-hour, etc.), accounting for an 85% charging efficiency.
+                        <strong>Strategic Hydro Dispatch:</strong> After storage has been dispatched, hydroelectric power is used. A portion is used as a steady "baseload" resource, while the rest is used flexibly to meet the highest remaining peaks in the net load.
                     </li>
                     <li>
-                        <strong>Discharge Storage to Meet Deficits:</strong> If there is an energy deficit, the model discharges the batteries to cover the gap. It uses a "peak shaving" logic, dispatching in small increments of 0.1 GWh to the hour with the greatest remaining need until the batteries are empty.
+                        <strong>Thermal Merit Order Dispatch:</strong> If a deficit still remains, the model turns on the thermal power plants in a strict "merit order" from cheapest to most expensive:
+                        <ol type="a">
+                            <li>First, the cheaper and more efficient Combined-Cycle Gas Turbines (CCGT) are dispatched.</li>
+                            <li>Next, the more expensive "peaker" Combustion Turbines (CT) are used.</li>
+                            <li>Finally, Coal plants are dispatched as a last resort.</li>
+                        </ol>
+                        The cost of the very last generator turned on in any given hour sets the <strong>Marginal Price</strong> for that hour.
                     </li>
                     <li>
-                        <strong>Use Fossil Fuels as a Last Resort:</strong> If a deficit still remains after hydro and storage have been used, the model turns on the fossil fuel plants (first Coal, then Natural Gas) to meet the final demand.
-                    </li>
-                    <li>
-                        <strong>Curtailment and Exports:</strong> If there is excess renewable energy but all the batteries are full, that extra energy has nowhere to go and is "curtailed." However, if you set a positive "Export Price," this curtailed energy can be sold to neighboring grids, generating revenue.
+                        <strong>Curtailment and Exports:</strong> If, after all these steps, there is still an excess of renewable energy (a negative net load), that energy is "curtailed" (wasted). If an export price is set, this curtailed energy is sold, and the marginal price for that hour becomes the export price.
                     </li>
                 </ol>
                 
@@ -267,7 +276,7 @@
                         <code>CRF = (d * (1 + d)^n) / ((1 + d)^n - 1)</code>, where 'n' is the lifetime of the plant in years.
                     </li>
                     <li><strong>Fixed O&M Costs:</strong> These are the costs to keep a plant ready, even if it's not generating electricity (e.g., staff salaries, rent). This is calculated per kilowatt of capacity.</li>
-                    <li><strong>Variable O&M Costs:</strong> These are the costs that depend on how much electricity is generated (e.g., fuel for natural gas plants, routine maintenance). This is calculated per megawatt-hour of generation.</li>
+                    <li><strong>Variable O&M Costs:</strong> These are the costs that depend on how much electricity is generated (e.g., fuel for natural gas plants, routine maintenance). This is calculated per megawatt-hour of generation. For natural gas, this cost is calculated based on the dispatch price of each plant type (CCGT vs. CT).</li>
                     <li><strong>Government Incentives:</strong> The model includes several policy levers that affect cost:
                         <ul>
                             <li><strong>Production Tax Credits (PTC):</strong> A subsidy ($/MWh) that reduces the operating cost of clean energy sources like solar and wind.</li>
@@ -280,12 +289,12 @@
                 <h4>3.3. Financial Metrics Explained</h4>
                 <ul>
                     <li>
-                        <strong>Impact on Bills:</strong> This metric shows the percentage change in the average cost of electricity ($/MWh) compared to a baseline scenario. The baseline is either the initial grid mix or a new baseline set by the user with the "Make Default" button. A positive value means your new grid is more expensive, and bills would go up.
+                        <strong>Impact on Bills:</strong> This metric shows the percentage change in the <strong>demand-weighted average marginal price</strong> of electricity compared to a baseline scenario. In a real market, the marginal price sets the wholesale price for all electricity sold in a given hour. This metric calculates the average of those hourly prices, weighted by how much electricity was consumed, to provide a realistic estimate of the impact on consumer bills.
                         <br>
-                        <code>Impact = ((New Cost per MWh - Baseline Cost per MWh) / Baseline Cost per MWh) * 100%</code>
+                        <code>Impact = ((New Avg. Price - Baseline Avg. Price) / Baseline Avg. Price) * 100%</code>
                     </li>
                     <li>
-                        <strong>Abatement Cost:</strong> This is the extra cost to avoid one ton of CO2 emissions. It's calculated by taking the total increase in the grid's annual cost and dividing it by the total tons of CO2 emissions that were avoided compared to the baseline. If the Abatement Cost is negative, it means you are actually saving money while also reducing emissions!
+                        <strong>Abatement Cost:</strong> This is the extra cost to avoid one ton of CO2 emissions. It's calculated by taking the total increase in the grid's annual system cost and dividing it by the total tons of CO2 emissions that were avoided compared to the baseline. If the Abatement Cost is negative, it means you are actually saving money while also reducing emissions!
                         <br>
                         <code>Abatement Cost = (New Annual Cost - Baseline Annual Cost) / (Baseline CO2 Tons - New CO2 Tons)</code>
                     </li>
@@ -314,15 +323,16 @@
                         <tr><td>Nuclear</td><td>7,242</td><td>140</td><td>10</td><td>60</td></tr>
                         <tr><td>Geothermal</td><td>3,329</td><td>120</td><td>5</td><td>30</td></tr>
                         <tr><td>Biomass</td><td>3,500</td><td>100</td><td>10</td><td>25</td></tr>
-                        <tr><td>Natural Gas</td><td>1,300</td><td>20</td><td>40 (fuel)</td><td>30</td></tr>
-                        <tr><td>Coal</td><td>4,407</td><td>40</td><td>30 (fuel)</td><td>40</td></tr>
+                        <tr><td>Natural Gas (CCGT)</td><td>1,300</td><td>20</td><td>$35 - $80</td><td>30</td></tr>
+                        <tr><td>Natural Gas (CT)</td><td>1,300</td><td>20</td><td>$100 - $150</td><td>30</td></tr>
+                        <tr><td>Coal</td><td>4,407</td><td>40</td><td>30</td><td>40</td></tr>
                         <tr><td>4-hr Battery</td><td>350 ($/kWh)</td><td>15</td><td>0</td><td>15</td></tr>
                         <tr><td>8-hr Battery</td><td>300 ($/kWh)</td><td>15</td><td>2</td><td>15</td></tr>
                         <tr><td>Long Duration Storage</td><td>300 ($/kWh)</td><td>60</td><td>1</td><td>25</td></tr>
                         <tr><td>Direct Air Capture</td><td>1000 ($/t/yr)</td><td>20 ($/t/yr)</td><td>400 ($/t)</td><td>25</td></tr>
                     </tbody>
                 </table>
-                <p><em>Note: Battery and DAC costs are based on their respective units (kWh and tons), not power capacity (kW).</em></p>
+                <p><em>Note: Battery and DAC costs are based on their respective units (kWh and tons), not power capacity (kW). Natural Gas VOM represents a supply curve.</em></p>
 
                 <h4>4.2. Emissions and Capacity Factors</h4>
                 <table class="parameter-table">
@@ -441,10 +451,9 @@
                     Transparency is key to understanding the simulator's results. While powerful, the model is a simplification of a real-world grid and has several important limitations:
                 </p>
                 <ul>
-                    <li><strong>Single-Day Simulation:</strong> The model simulates a single, representative 24-hour period for a given season. It does not capture seasonal variations, long-term weather patterns, or multi-day storage dynamics (often called "seasonal storage"). The model gets around this limitation partially by wrapping around the battery discharge from end of the day to the start of the day.</li>
-                    <li><strong>No Transmission Constraints:</strong> The model assumes a "copper plate" grid, meaning there are no bottlenecks or congestion in the transmission network. In reality, getting power from where it's generated to where it's needed is a major challenge and cost. Importantly, a significant chunk of renewable curtailment occurs not from overgeneration, but from congestion along transmission lines.</li>
-                    <li><strong>Simplified Market Dynamics:</strong> The simulation uses a merit-order dispatch but does not model complex market behaviors like price bidding, ancillary services (e.g., frequency regulation), or capacity markets.</li>
-                    <li><strong>Simplified Billing:</strong> The simulation calculates the bill based on average cost of dispatch. In most regions across the globe, the plant on the margin dictates the price, and not the average of all plants. A simplified version of such marginal cost based billing is under work. </li>
+                    <li><strong>Single-Day Simulation:</strong> The model simulates a single, representative 24-hour period for a given season. It does not capture seasonal variations, long-term weather patterns, or multi-day storage dynamics (often called "seasonal storage").</li>
+                    <li><strong>No Transmission Constraints:</strong> The model assumes a "copper plate" grid, meaning there are no bottlenecks or congestion in the transmission network. In reality, getting power from where it's generated to where it's needed is a major challenge and cost.</li>
+                    <li><strong>Simplified Market Dynamics:</strong> The simulation uses a realistic marginal pricing and economic dispatch model but does not include more complex market products like ancillary services (e.g., frequency regulation) or capacity markets, which are additional revenue streams for generators and storage.</li>
                     <li><strong>Perfect Foresight:</strong> The model knows the demand and renewable generation for all 24 hours in advance, allowing it to optimize perfectly. Real-world grid operators must contend with uncertainty and forecasting errors.</li>
                     <li><strong>Generic Cost Data:</strong> The capital and operational costs are based on regional or national averages (primarily from U.S. sources like NREL and EIA) and do not capture all local site-specific cost variations.</li>
                 </ul>
@@ -613,6 +622,3 @@
 
 </body>
 </html>
-
-
-
