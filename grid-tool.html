@@ -300,6 +300,11 @@
                         </div>
                         <canvas id="generationMixChart"></canvas>
                     </div>
+                    <!-- NEW: Marginal Price Chart -->
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly Marginal Price ($/MWh)</h2>
+                        <canvas id="marginalPriceChart"></canvas>
+                    </div>
                     <div class="mb-8">
                         <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly CO2 Emissions (Metric Tons)</h2>
                         <canvas id="co2EmissionsChart"></canvas>
@@ -803,9 +808,12 @@
             },
             variable_om: { 
                 solar: 0, wind: 1, offshoreWind: 0, nuclear: 10, geothermal: 5, biomass: 10, // $/MWh
-                naturalGas: 40, hydro: 5, coal: 30, // $/MWh 
+                naturalGasCCGT: { start: 35, end: 80 }, // NEW: $/MWh
+                naturalGasCT: { start: 100, end: 150 }, // NEW: $/MWh
+                hydro: 5, coal: 30, // $/MWh 
                 battery4hr: 0, battery8hr: 2, longduration: 1,
-                dac: 400 // $/ton
+                dac: 400, // $/ton
+                storage: 30 // $/MWh - an assumed opportunity cost for dispatching storage
             },
             lifetime: {
                 solar: 30, wind: 30, offshoreWind: 30, nuclear: 60, geothermal: 30, biomass: 25,
@@ -886,6 +894,7 @@
             let userDefaultState = {};
             let systemDefaultState = {};
             let customBaselineSystemCost = 0;
+            let customBaselineConsumerCost = 0; // NEW
             let customBaselineTotalAnnualCO2 = 0;
             let enabledTechnologies = {};
             let defaultCapacityMix = {};
@@ -910,6 +919,7 @@
 
             // --- CHARTING SETUP ---
             const generationCtx = document.getElementById('generationMixChart').getContext('2d');
+            const marginalPriceCtx = document.getElementById('marginalPriceChart').getContext('2d'); // NEW
             const co2Ctx = document.getElementById('co2EmissionsChart').getContext('2d');
             const capacityFactorCtx = document.getElementById('capacityFactorChart').getContext('2d');
             
@@ -921,7 +931,8 @@
                 geothermal: 'rgba(120, 40, 40, 0.8)',
                 biomass: 'rgba(101, 67, 33, 0.8)',
                 storage: 'rgba(168, 85, 247, 0.8)', demand: 'rgba(17, 24, 39, 1)',
-                curtailment: 'rgba(253, 186, 116, 0.8)', coal: 'rgba(0, 0, 0, 0.8)'
+                curtailment: 'rgba(253, 186, 116, 0.8)', coal: 'rgba(0, 0, 0, 0.8)',
+                price: 'rgba(79, 70, 229, 1)' // NEW for price chart
             };
 
             // Helper function to create a patterned fill for "to Storage" generation
@@ -1047,6 +1058,27 @@
                     }
                 }
             };
+            const marginalPriceChartConfig = { // NEW
+                type: 'line',
+                data: {
+                    labels: HOURS,
+                    datasets: [{
+                        label: 'Marginal Price', data: [],
+                        borderColor: COLORS.price, backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        fill: true, tension: 0.3, pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true, animation: { duration: 0 },
+                    scales: {
+                         x: { title: { display: true, text: 'Hour of Day' } },
+                        y: { title: { display: true, text: 'Price ($/MWh)' } }
+                    },
+                    plugins: { 
+                        legend: { display: false }
+                    }
+                }
+            };
             const co2ChartConfig = {
                 type: 'line',
                 data: {
@@ -1126,16 +1158,19 @@
             };
 
             const generationChart = new Chart(generationCtx, generationChartConfig);
+            const marginalPriceChart = new Chart(marginalPriceCtx, marginalPriceChartConfig); // NEW
             const co2Chart = new Chart(co2Ctx, co2ChartConfig);
             const capacityFactorChart = new Chart(capacityFactorCtx, capacityFactorChartConfig);
 
 
             // --- COST CALCULATION ---
-            function calculateTotalAnnualSystemCost(generation, capacity, currentIncentives, curtailedEnergy, baselineCapacity, baselineStorage) {
+            function calculateTotalAnnualSystemCost(generation, capacity, currentIncentives, curtailedEnergy, baselineCapacity, baselineStorage, gasGenDetails) {
                 let totalAnnualCost = 0;
                 const d = COST_DATA.discount_rate;
 
                 for (const tech in COST_DATA.capacity_factor) {
+                    if (tech === 'naturalGas') continue; // Skip NG here, will be calculated separately
+
                     const techData = COST_DATA;
                     if (!techData.lifetime[tech]) continue;
                     const n = techData.lifetime[tech];
@@ -1160,6 +1195,23 @@
                         totalAnnualCost += annualized_capex + annual_fom + annual_vom - annual_ptc;
                     }
                 }
+                
+                // --- NEW: Natural Gas Cost Calculation ---
+                const baselineNGCapacityGW = baselineCapacity.naturalGas || 0;
+                const newNGCapacityGW = capacity.naturalGas || 0;
+                const totalNGCapacityKW = (baselineNGCapacityGW + newNGCapacityGW) * 1000000;
+
+                if (totalNGCapacityKW > 0) {
+                    const n = COST_DATA.lifetime.naturalGas;
+                    const crf = (d * Math.pow(1 + d, n)) / (Math.pow(1 + d, n) - 1);
+                    const annualized_capex = COST_DATA.capex.naturalGas * totalNGCapacityKW * crf;
+                    const annual_fom = COST_DATA.fixed_om.naturalGas * totalNGCapacityKW;
+                    
+                    const annual_vom_ng = (gasGenDetails.ccgt.cost + gasGenDetails.ct.cost) * 365;
+
+                    totalAnnualCost += annualized_capex + annual_fom + annual_vom_ng;
+                }
+
 
                 for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
                     if (!enabledTechnologies[type]) continue; // Skip disabled storage
@@ -1208,6 +1260,16 @@
 
                 return totalAnnualCost;
             }
+            
+            // NEW: Function to calculate consumer cost based on marginal price
+            function calculateAnnualConsumerCost(hourlyMarginalPrice, demand) {
+                let totalCost = 0;
+                for (let i = 0; i < 24; i++) {
+                    totalCost += hourlyMarginalPrice[i] * demand[i] * 1000; // price is $/MWh, demand is GWh
+                }
+                return totalCost * 365;
+            }
+
 
             // --- REWRITTEN DISPATCH LOGIC ---
             function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProfile, potentialGen, baselineStorageGWh = {}, hydroCF, countryName) {
@@ -1222,6 +1284,7 @@
                     storage: Array(24).fill(0), curtailment: Array(24).fill(0),
                     solarToStorage: Array(24).fill(0), windToStorage: Array(24).fill(0), offshoreWindToStorage: Array(24).fill(0)
                 };
+                let gasGenByType = { ccgt: Array(24).fill(0), ct: Array(24).fill(0) }; // track gas gen for marginal price
                 let curtailmentBySource = { solar: Array(24).fill(0), wind: Array(24).fill(0), offshoreWind: Array(24).fill(0) };
 
                 let modifiedDemand = [...currentDemand];
@@ -1386,13 +1449,57 @@
                     if (dischargedThisCycle < 0.001) break;
                 }
 
+                // --- NEW: Natural Gas Dispatch Logic ---
+                const gasGenDetails = {
+                    ccgt: { generation: 0, cost: 0 },
+                    ct: { generation: 0, cost: 0 }
+                };
+                const totalNGCapacity = (currentCountryInstalledCapacity.naturalGas || 0) + (inputs.capacity.naturalGas || 0);
+                const ccgtCapacity = totalNGCapacity * 0.7;
+                const ctCapacity = totalNGCapacity * 0.3;
+
+                // 1. Dispatch CTs for peaks
+                const sortedNetLoad = [...netLoad].map((load, hour) => ({ load, hour })).sort((a, b) => b.load - a.load);
+                
+                for (const item of sortedNetLoad) {
+                    const i = item.hour;
+                    if (netLoad[i] > 0.01) {
+                        const ctToDispatch = Math.min(netLoad[i], ctCapacity);
+                        if (ctToDispatch > 0) {
+                            finalGeneration.naturalGas[i] += ctToDispatch;
+                            gasGenByType.ct[i] += ctToDispatch;
+                            netLoad[i] -= ctToDispatch;
+
+                            const costStart = COST_DATA.variable_om.naturalGasCT.start;
+                            const costEnd = COST_DATA.variable_om.naturalGasCT.end;
+                            const avgCost = (costStart + (costStart + (costEnd - costStart) * (ctToDispatch / ctCapacity))) / 2;
+                            gasGenDetails.ct.cost += ctToDispatch * 1000 * avgCost;
+                            gasGenDetails.ct.generation += ctToDispatch * 1000;
+                        }
+                    }
+                }
+
+                // 2. Dispatch CCGTs for remaining load
                 for (let i = 0; i < 24; i++) {
                     if (netLoad[i] > 0.01) {
-                        const ngCapacity = currentPotential.naturalGas[i];
-                        const ngToDispatch = Math.min(netLoad[i], ngCapacity);
-                        finalGeneration.naturalGas[i] += ngToDispatch;
-                        netLoad[i] -= ngToDispatch;
+                        const ccgtToDispatch = Math.min(netLoad[i], ccgtCapacity);
+                        if (ccgtToDispatch > 0) {
+                            finalGeneration.naturalGas[i] += ccgtToDispatch;
+                            gasGenByType.ccgt[i] += ccgtToDispatch;
+                            netLoad[i] -= ccgtToDispatch;
+
+                            const costStart = COST_DATA.variable_om.naturalGasCCGT.start;
+                            const costEnd = COST_DATA.variable_om.naturalGasCCGT.end;
+                            const avgCost = (costStart + (costStart + (costEnd - costStart) * (ccgtToDispatch / ccgtCapacity))) / 2;
+                            gasGenDetails.ccgt.cost += ccgtToDispatch * 1000 * avgCost;
+                            gasGenDetails.ccgt.generation += ccgtToDispatch * 1000;
+                        }
                     }
+                }
+
+
+                // 3. Dispatch Coal for any remaining load
+                for (let i = 0; i < 24; i++) {
                     if (netLoad[i] > 0.01) {
                         const coalCapacity = currentPotential.coal[i];
                         const coalToDispatch = Math.min(netLoad[i], coalCapacity);
@@ -1401,8 +1508,30 @@
                     }
                 }
                 
+                // --- NEW: Calculate Hourly Marginal Price ---
+                const hourlyMarginalPrice = Array(24).fill(0);
+                for (let i = 0; i < 24; i++) {
+                    if (finalGeneration.curtailment[i] > 0) {
+                        hourlyMarginalPrice[i] = inputs.incentives.exportPrice;
+                    } else if (finalGeneration.coal[i] > 0) {
+                        hourlyMarginalPrice[i] = COST_DATA.variable_om.coal;
+                    } else if (gasGenByType.ct[i] > 0) {
+                        const costStart = COST_DATA.variable_om.naturalGasCT.start;
+                        const costEnd = COST_DATA.variable_om.naturalGasCT.end;
+                        hourlyMarginalPrice[i] = costStart + (costEnd - costStart) * (gasGenByType.ct[i] / ctCapacity);
+                    } else if (gasGenByType.ccgt[i] > 0) {
+                        const costStart = COST_DATA.variable_om.naturalGasCCGT.start;
+                        const costEnd = COST_DATA.variable_om.naturalGasCCGT.end;
+                        hourlyMarginalPrice[i] = costStart + (costEnd - costStart) * (gasGenByType.ccgt[i] / ccgtCapacity);
+                    } else if (finalGeneration.storage[i] > 0) {
+                        hourlyMarginalPrice[i] = COST_DATA.variable_om.storage;
+                    } else {
+                        hourlyMarginalPrice[i] = 0; // Price set by price-takers
+                    }
+                }
+
                 const newEmissions = calculateEmissions(finalGeneration, inputs.capacity.dac);
-                const newSystemCost = calculateTotalAnnualSystemCost(finalGeneration, inputs.capacity, inputs.incentives, finalGeneration.curtailment, currentCountryInstalledCapacity, baselineStorageGWh);
+                const newSystemCost = calculateTotalAnnualSystemCost(finalGeneration, inputs.capacity, inputs.incentives, finalGeneration.curtailment, currentCountryInstalledCapacity, baselineStorageGWh, gasGenDetails);
                 
                 return {
                     generation: finalGeneration,
@@ -1410,6 +1539,7 @@
                     systemCost: newSystemCost,
                     demand: modifiedDemand,
                     curtailmentBySource: curtailmentBySource,
+                    hourlyMarginalPrice: hourlyMarginalPrice // NEW
                 };
             }
 
@@ -1468,14 +1598,17 @@
                 );
                 const totalDailyCO2 = result.emissions.reduce((a, b) => a + b, 0);
                 
+                // --- NEW: Bill Impact based on Marginal Price ---
+                const newConsumerCost = calculateAnnualConsumerCost(result.hourlyMarginalPrice, result.demand);
                 const totalAnnualDemandMWh = result.demand.reduce((a,b) => a+b, 0) * 1000 * 365;
-                const newCostPerMWh = totalAnnualDemandMWh > 0 ? result.systemCost / totalAnnualDemandMWh : 0;
+                const newAvgMarginalPrice = totalAnnualDemandMWh > 0 ? newConsumerCost / totalAnnualDemandMWh : 0;
 
                 const baselineTotalAnnualDemandMWh = currentDemand.reduce((a,b) => a+b, 0) * 1000 * 365;
-                const baselineCostPerMWh = baselineTotalAnnualDemandMWh > 0 ? customBaselineSystemCost / baselineTotalAnnualDemandMWh : 0;
+                const baselineAvgMarginalPrice = baselineTotalAnnualDemandMWh > 0 ? customBaselineConsumerCost / baselineTotalAnnualDemandMWh : 0;
                 
-                const costPercentageChange = baselineCostPerMWh > 0 ? ((newCostPerMWh - baselineCostPerMWh) / baselineCostPerMWh) * 100 : 0;
+                const costPercentageChange = baselineAvgMarginalPrice > 0 ? ((newAvgMarginalPrice - baselineAvgMarginalPrice) / baselineAvgMarginalPrice) * 100 : 0;
 
+                // Abatement cost still uses total system cost
                 const newTotalAnnualCO2 = result.emissions.reduce((a, b) => a + b, 0) * 365;
                 const co2Avoided = customBaselineTotalAnnualCO2 - newTotalAnnualCO2;
                 const costDifference = result.systemCost - customBaselineSystemCost;
@@ -1485,7 +1618,7 @@
                     greenPremium = costDifference / co2Avoided;
                 }
 
-                updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile);
+                updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile, result.hourlyMarginalPrice);
                 updateGridMixSlider(currentCountryInstalledCapacity, defaultCapacityMix);
                 updateGenerationMixSlider(result.generation, defaultGenerationMix, result.curtailmentBySource);
                 billImpactEl.textContent = `${costPercentageChange.toFixed(0)}%`;
@@ -1542,7 +1675,7 @@
                 return co2;
             }
 
-            function updateCharts(generation, emissions, demand, totalCO2, solarProfile, windProfile, offshoreWindProfile) {
+            function updateCharts(generation, emissions, demand, totalCO2, solarProfile, windProfile, offshoreWindProfile, hourlyMarginalPrice) {
                 const chartData = generationChart.data.datasets;
                 
                 const techMap = {
@@ -1560,6 +1693,10 @@
                 chartData[14].data = demand;
 
                 generationChart.update('none');
+                
+                // NEW: Update marginal price chart
+                marginalPriceChart.data.datasets[0].data = hourlyMarginalPrice;
+                marginalPriceChart.update('none');
 
                 co2Chart.data.datasets[0].data = emissions;
                 co2Chart.options.plugins.annotation.annotations.totalCO2.content = `Total Daily CO2: ${totalCO2.toLocaleString(undefined, {maximumFractionDigits: 0})} tons`;
@@ -1973,6 +2110,53 @@
                 }
                 capacityFactorChart.update();
             }
+            
+            // --- NEW: Function to set the baseline from the current state ---
+            function setNewBaselineFromCurrentState() {
+                const currentValues = {};
+                for (const key in sliders) {
+                    currentValues[key] = parseFloat(sliders[key].value);
+                }
+                
+                let activePotentialGeneration = JSON.parse(JSON.stringify(BASELINE_POTENTIAL_GENERATION));
+                for (const tech in enabledTechnologies) {
+                    if (!enabledTechnologies[tech]) {
+                        activePotentialGeneration[tech] = Array(24).fill(0);
+                    }
+                }
+
+                const newBaselineResult = getSimulationResult(
+                    {
+                        capacity: {
+                            solar: currentValues.solar, wind: currentValues.wind, offshoreWind: currentValues.offshoreWind,
+                            geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
+                            biomass: currentValues.biomass,
+                            battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
+                            longduration: currentValues.longduration, dac: currentValues.dac,
+                            demandflex: currentValues.demandflex,
+                        },
+                        incentives: {
+                            solar: currentValues.solarIncentive, wind: currentValues.windIncentive, offshoreWind: currentValues.offshoreWindIncentive,
+                            geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
+                            biomass: currentValues.biomassIncentive,
+                            storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
+                            carbonTax: currentValues.carbonTax,
+                            exportPrice: currentValues.exportPrice,
+                        }
+                    },
+                    currentSolarCFProfile,
+                    currentWindCFProfile,
+                    currentOffshoreWindCFProfile,
+                    activePotentialGeneration,
+                    currentBaselineStorage,
+                    currentHydroCF,
+                    countrySelect.value
+                );
+                
+                customBaselineSystemCost = newBaselineResult.systemCost;
+                customBaselineConsumerCost = calculateAnnualConsumerCost(newBaselineResult.hourlyMarginalPrice, newBaselineResult.demand);
+                customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
+            }
 
             // --- EVENT LISTENERS ---
             function updateUndoRedoButtons() {
@@ -2009,22 +2193,45 @@
                     const slider = sliders[key];
                     const input = inputs[key];
 
-                    slider.addEventListener('input', () => {
-                        syncInputs(slider, input);
-                        runSimulation();
-                    });
-                    
-                    input.addEventListener('input', () => {
-                        let value = parseFloat(input.value);
-                        const min = parseFloat(slider.min);
-                        const max = parseFloat(slider.max);
-                        if (isNaN(value)) value = min;
-                        if (value > max) value = max;
-                        if (value < min) value = min;
-                        input.value = value;
-                        syncInputs(input, slider);
-                        runSimulation();
-                    });
+                    // --- MODIFICATION: Special handling for carbon tax ---
+                    if (key === 'carbonTax') {
+                         slider.addEventListener('input', () => {
+                            syncInputs(slider, input);
+                            setNewBaselineFromCurrentState(); // Recalculate baseline on change
+                            runSimulation();
+                        });
+                        
+                        input.addEventListener('input', () => {
+                            let value = parseFloat(input.value);
+                            const min = parseFloat(slider.min);
+                            const max = parseFloat(slider.max);
+                            if (isNaN(value)) value = min;
+                            if (value > max) value = max;
+                            if (value < min) value = min;
+                            input.value = value;
+                            syncInputs(input, slider);
+                            setNewBaselineFromCurrentState(); // Recalculate baseline on change
+                            runSimulation();
+                        });
+                    } else {
+                        // Original behavior for all other sliders
+                        slider.addEventListener('input', () => {
+                            syncInputs(slider, input);
+                            runSimulation();
+                        });
+                        
+                        input.addEventListener('input', () => {
+                            let value = parseFloat(input.value);
+                            const min = parseFloat(slider.min);
+                            const max = parseFloat(slider.max);
+                            if (isNaN(value)) value = min;
+                            if (value > max) value = max;
+                            if (value < min) value = min;
+                            input.value = value;
+                            syncInputs(input, slider);
+                            runSimulation();
+                        });
+                    }
 
                     slider.addEventListener('change', saveState);
                     input.addEventListener('change', saveState);
@@ -2150,48 +2357,8 @@
                 userDefaultState.cfProfileName = currentCFProfileName;
                 userDefaultState.hydroCF = currentHydroCF;
 
-                const currentValues = {};
-                for (const key in sliders) {
-                    currentValues[key] = parseFloat(sliders[key].value);
-                }
+                setNewBaselineFromCurrentState(); // Use the new function
                 
-                let activePotentialGeneration = JSON.parse(JSON.stringify(BASELINE_POTENTIAL_GENERATION));
-                for (const tech in enabledTechnologies) {
-                    if (!enabledTechnologies[tech]) {
-                        activePotentialGeneration[tech] = Array(24).fill(0);
-                    }
-                }
-
-                const newBaselineResult = getSimulationResult(
-                    {
-                        capacity: {
-                            solar: currentValues.solar, wind: currentValues.wind, offshoreWind: currentValues.offshoreWind,
-                            geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
-                            biomass: currentValues.biomass,
-                            battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
-                            longduration: currentValues.longduration, dac: currentValues.dac,
-                            demandflex: currentValues.demandflex,
-                        },
-                        incentives: {
-                            solar: currentValues.solarIncentive, wind: currentValues.windIncentive, offshoreWind: currentValues.offshoreWindIncentive,
-                            geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
-                            biomass: currentValues.biomassIncentive,
-                            storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
-                            carbonTax: currentValues.carbonTax,
-                            exportPrice: currentValues.exportPrice,
-                        }
-                    },
-                    currentSolarCFProfile,
-                    currentWindCFProfile,
-                    currentOffshoreWindCFProfile,
-                    activePotentialGeneration,
-                    currentBaselineStorage,
-                    currentHydroCF,
-                    countrySelect.value
-                );
-                
-                customBaselineSystemCost = newBaselineResult.systemCost;
-                customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
                 userDefaultState.baselineCost = customBaselineSystemCost;
                 userDefaultState.baselineCO2 = customBaselineTotalAnnualCO2;
 
@@ -2382,6 +2549,7 @@
                     countryName
                 );
                 customBaselineSystemCost = baselineResult.systemCost;
+                customBaselineConsumerCost = calculateAnnualConsumerCost(baselineResult.hourlyMarginalPrice, baselineResult.demand); // NEW
                 customBaselineTotalAnnualCO2 = baselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
                 
                 systemDefaultState = {};
