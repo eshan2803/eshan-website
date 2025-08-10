@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grid Decarbonization Simulator | Dr. Eshan Singh</title>
+    <title>Grid Simulator | Dr. Eshan Singh</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
@@ -247,7 +247,7 @@
         <div class="container mx-auto p-4 md:p-8 pt-0">
 
             <section id="tutorial-step-1" class="text-center mb-12">
-                <h1 class="font-lora text-5xl md:text-6xl font-medium leading-tight text-gray-900">Grid Decarbonization Simulator</h1>
+                <h1 class="font-lora text-5xl md:text-6xl font-medium leading-tight text-gray-900">Grid Simulator</h1>
                 <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
                     Your challenge: Use policy levers for clean energy and direct air capture to eliminate CO2 emissions from the electricity grid, while minimizing the impact on customer bill.
                 </p>
@@ -299,6 +299,11 @@
                             </div>
                         </div>
                         <canvas id="generationMixChart"></canvas>
+                    </div>
+                    <!-- NEW: Marginal Price Chart -->
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly Marginal Price ($/MWh)</h2>
+                        <canvas id="marginalPriceChart"></canvas>
                     </div>
                     <div class="mb-8">
                         <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly CO2 Emissions (Metric Tons)</h2>
@@ -491,7 +496,7 @@
                                     </div>
                                 </div>
                                  <div>
-                                    <label for="export-price-slider" class="block text-sm font-medium text-gray-700">Curtailment (-) Export (+) Price</label>
+                                    <label for="export-price-slider" class="block text-sm font-medium text-gray-700">Export Price</label>
                                     <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="export-price-slider" min="-100" max="100" value="20" class="w-full form-input thumb-neutral">
                                         <input type="number" id="export-price-input" min="-100" max="100" value="20" class="value-input">
@@ -803,9 +808,12 @@
             },
             variable_om: { 
                 solar: 0, wind: 1, offshoreWind: 0, nuclear: 10, geothermal: 5, biomass: 10, // $/MWh
-                naturalGas: 40, hydro: 5, coal: 30, // $/MWh 
+                naturalGasCCGT: { start: 35, end: 80 }, // NEW: $/MWh
+                naturalGasCT: { start: 100, end: 150 }, // NEW: $/MWh
+                hydro: 5, coal: 30, // $/MWh 
                 battery4hr: 0, battery8hr: 2, longduration: 1,
-                dac: 400 // $/ton
+                dac: 400, // $/ton
+                storage: 30 // $/MWh - an assumed opportunity cost for dispatching storage
             },
             lifetime: {
                 solar: 30, wind: 30, offshoreWind: 30, nuclear: 60, geothermal: 30, biomass: 25,
@@ -886,6 +894,7 @@
             let userDefaultState = {};
             let systemDefaultState = {};
             let customBaselineSystemCost = 0;
+            let customBaselineConsumerCost = 0; // NEW
             let customBaselineTotalAnnualCO2 = 0;
             let enabledTechnologies = {};
             let defaultCapacityMix = {};
@@ -910,6 +919,7 @@
 
             // --- CHARTING SETUP ---
             const generationCtx = document.getElementById('generationMixChart').getContext('2d');
+            const marginalPriceCtx = document.getElementById('marginalPriceChart').getContext('2d'); // NEW
             const co2Ctx = document.getElementById('co2EmissionsChart').getContext('2d');
             const capacityFactorCtx = document.getElementById('capacityFactorChart').getContext('2d');
             
@@ -921,7 +931,8 @@
                 geothermal: 'rgba(120, 40, 40, 0.8)',
                 biomass: 'rgba(101, 67, 33, 0.8)',
                 storage: 'rgba(168, 85, 247, 0.8)', demand: 'rgba(17, 24, 39, 1)',
-                curtailment: 'rgba(253, 186, 116, 0.8)', coal: 'rgba(0, 0, 0, 0.8)'
+                curtailment: 'rgba(253, 186, 116, 0.8)', coal: 'rgba(0, 0, 0, 0.8)',
+                price: 'rgba(79, 70, 229, 1)' // NEW for price chart
             };
 
             // Helper function to create a patterned fill for "to Storage" generation
@@ -1047,6 +1058,32 @@
                     }
                 }
             };
+            const marginalPriceChartConfig = { // NEW
+                type: 'line',
+                data: {
+                    labels: HOURS,
+                    datasets: [{
+                        label: 'Marginal Price (with Storage)', data: [],
+                        borderColor: COLORS.price, backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        fill: true, tension: 0.3, pointRadius: 0
+                    }, {
+                        label: 'Marginal Price (without Storage)', data: [],
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        borderDash: [5, 5],
+                        fill: false, tension: 0.3, pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true, animation: { duration: 0 },
+                    scales: {
+                         x: { title: { display: true, text: 'Hour of Day' } },
+                        y: { title: { display: true, text: 'Price ($/MWh)' } }
+                    },
+                    plugins: { 
+                        legend: { display: true }
+                    }
+                }
+            };
             const co2ChartConfig = {
                 type: 'line',
                 data: {
@@ -1126,16 +1163,19 @@
             };
 
             const generationChart = new Chart(generationCtx, generationChartConfig);
+            const marginalPriceChart = new Chart(marginalPriceCtx, marginalPriceChartConfig); // NEW
             const co2Chart = new Chart(co2Ctx, co2ChartConfig);
             const capacityFactorChart = new Chart(capacityFactorCtx, capacityFactorChartConfig);
 
 
             // --- COST CALCULATION ---
-            function calculateTotalAnnualSystemCost(generation, capacity, currentIncentives, curtailedEnergy, baselineCapacity, baselineStorage) {
+            function calculateTotalAnnualSystemCost(generation, capacity, currentIncentives, curtailedEnergy, baselineCapacity, baselineStorage, gasGenDetails) {
                 let totalAnnualCost = 0;
                 const d = COST_DATA.discount_rate;
 
                 for (const tech in COST_DATA.capacity_factor) {
+                    if (tech === 'naturalGas') continue; // Skip NG here, will be calculated separately
+
                     const techData = COST_DATA;
                     if (!techData.lifetime[tech]) continue;
                     const n = techData.lifetime[tech];
@@ -1160,6 +1200,24 @@
                         totalAnnualCost += annualized_capex + annual_fom + annual_vom - annual_ptc;
                     }
                 }
+                
+                // --- NEW: Natural Gas Cost Calculation ---
+                const baselineNGCapacityGW = baselineCapacity.naturalGas || 0;
+                const newNGCapacityGW = capacity.naturalGas || 0;
+                const totalNGCapacityKW = (baselineNGCapacityGW + newNGCapacityGW) * 1000000;
+
+                if (totalNGCapacityKW > 0) {
+                    const n = COST_DATA.lifetime.naturalGas;
+                    const crf = (d * Math.pow(1 + d, n)) / (Math.pow(1 + d, n) - 1);
+                    const annualized_capex = COST_DATA.capex.naturalGas * totalNGCapacityKW * crf;
+                    const annual_fom = COST_DATA.fixed_om.naturalGas * totalNGCapacityKW;
+                    
+                    // The VOM for gas is now calculated based on the hourly dispatch cost
+                    const annual_vom_ng = (gasGenDetails.ccgt.cost + gasGenDetails.ct.cost) * 365;
+
+                    totalAnnualCost += annualized_capex + annual_fom + annual_vom_ng;
+                }
+
 
                 for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
                     if (!enabledTechnologies[type]) continue; // Skip disabled storage
@@ -1208,9 +1266,19 @@
 
                 return totalAnnualCost;
             }
+            
+            // NEW: Function to calculate consumer cost based on marginal price
+            function calculateAnnualConsumerCost(hourlyMarginalPrice, demand) {
+                let totalCost = 0;
+                for (let i = 0; i < 24; i++) {
+                    totalCost += hourlyMarginalPrice[i] * demand[i] * 1000; // price is $/MWh, demand is GWh
+                }
+                return totalCost * 365;
+            }
+
 
             // --- REWRITTEN DISPATCH LOGIC ---
-            function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProfile, potentialGen, baselineStorageGWh = {}, hydroCF, countryName) {
+            function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProfile, potentialGen, baselineStorageGWh = {}, hydroCF, countryName, storageOverrideDisabled = false) {
                 const VRE_SOURCES = ['solar', 'wind', 'offshoreWind'];
                 const INFLEXIBLE_SOURCES = ['nuclear', 'geothermal', 'biomass'];
                 
@@ -1222,6 +1290,7 @@
                     storage: Array(24).fill(0), curtailment: Array(24).fill(0),
                     solarToStorage: Array(24).fill(0), windToStorage: Array(24).fill(0), offshoreWindToStorage: Array(24).fill(0)
                 };
+                
                 let curtailmentBySource = { solar: Array(24).fill(0), wind: Array(24).fill(0), offshoreWind: Array(24).fill(0) };
 
                 let modifiedDemand = [...currentDemand];
@@ -1253,78 +1322,64 @@
                     currentPotential.biomass[i] += inputs.capacity.biomass * COST_DATA.capacity_factor.biomass;
                 }
                 const hydroCapacity = (currentCountryInstalledCapacity.hydro || 0) + (inputs.capacity.hydro || 0);
-                // FIX: Apply hydro cap only for California
                 const maxHourlyHydroOutput = countryName === 'California' ? hydroCapacity * 0.32 : hydroCapacity;
-
-                const storageTypes = ['battery4hr', 'battery8hr', 'longduration'];
-                const storageCapacities = {};
-                const storageChargeRates = {};
-                const storageDischargeRates = {};
-                storageTypes.forEach(type => {
-                    if (enabledTechnologies[type]) {
-                        storageCapacities[type] = (baselineStorageGWh[type] || 0) + inputs.capacity[type];
-                        const duration = type === 'longduration' ? 24 : parseInt(type.match(/\d+/)[0]);
-                        storageChargeRates[type] = storageCapacities[type] / duration;
-                        storageDischargeRates[type] = storageCapacities[type] / duration;
-                    } else {
-                        storageCapacities[type] = 0;
-                        storageChargeRates[type] = 0;
-                        storageDischargeRates[type] = 0;
-                    }
-                });
-
-                const storageEfficiency = 0.85;
-                let storageLevels = { battery4hr: 0, battery8hr: 0, longduration: 0 };
 
                 let netLoad = Array(24).fill(0);
                 for (let i = 0; i < 24; i++) {
-                    let totalPotentialGenThisHour = 0;
+                    let vreAndInflexibleGen = 0;
                     [...INFLEXIBLE_SOURCES, ...VRE_SOURCES].forEach(tech => {
                         const potential = currentPotential[tech][i];
                         finalGeneration[tech][i] = potential; 
-                        totalPotentialGenThisHour += potential;
+                        vreAndInflexibleGen += potential;
                     });
-                    netLoad[i] = modifiedDemand[i] - totalPotentialGenThisHour;
+                    netLoad[i] = modifiedDemand[i] - vreAndInflexibleGen;
                 }
+                
+                if (!storageOverrideDisabled) {
+                    const storageDispatch = dispatchStorageEconomically(netLoad, inputs, baselineStorageGWh, currentPotential);
+                    finalGeneration.storage = storageDispatch.discharge;
+                    
+                    for (let i = 0; i < 24; i++) {
+                        netLoad[i] += storageDispatch.charge[i];
+                        netLoad[i] -= storageDispatch.discharge[i];
+                        
+                        if (storageDispatch.charge[i] > 0) {
+                            let totalVrePotential = finalGeneration.solar[i] + finalGeneration.wind[i] + finalGeneration.offshoreWind[i];
+                            if (totalVrePotential > 0) {
+                                let solarCharge = (finalGeneration.solar[i] / totalVrePotential) * storageDispatch.charge[i];
+                                let windCharge = (finalGeneration.wind[i] / totalVrePotential) * storageDispatch.charge[i];
+                                let offshoreCharge = (finalGeneration.offshoreWind[i] / totalVrePotential) * storageDispatch.charge[i];
+                                
+                                finalGeneration.solarToStorage[i] = solarCharge;
+                                finalGeneration.windToStorage[i] = windCharge;
+                                finalGeneration.offshoreWindToStorage[i] = offshoreCharge;
 
+                                finalGeneration.solar[i] -= solarCharge;
+                                finalGeneration.wind[i] -= windCharge;
+                                finalGeneration.offshoreWind[i] -= offshoreCharge;
+                            }
+                        }
+                    }
+                }
+                
                 for (let i = 0; i < 24; i++) {
                     if (netLoad[i] < 0) {
-                        let excessToDistribute = -netLoad[i];
-                        let chargeForThisHour = 0;
-                        storageTypes.forEach(type => {
-                            if (!enabledTechnologies[type]) return;
-                            const chargeAmount = Math.min(excessToDistribute, storageCapacities[type] - storageLevels[type], storageChargeRates[type]);
-                            if (chargeAmount > 0) {
-                                storageLevels[type] += chargeAmount * storageEfficiency;
-                                excessToDistribute -= chargeAmount;
-                                chargeForThisHour += chargeAmount;
-                            }
-                        });
-
-                        const curtailmentForThisHour = excessToDistribute;
-                        finalGeneration.curtailment[i] = curtailmentForThisHour;
-                        
+                        finalGeneration.curtailment[i] = -netLoad[i];
                         let availableForCurtailment = 0;
                         [...INFLEXIBLE_SOURCES, ...VRE_SOURCES].forEach(tech => {
                             availableForCurtailment += finalGeneration[tech][i];
                         });
-
-                        if (availableForCurtailment > 0) {
+                         if (availableForCurtailment > 0) {
                             [...INFLEXIBLE_SOURCES, ...VRE_SOURCES].forEach(tech => {
                                 const proportion = finalGeneration[tech][i] / availableForCurtailment;
-                                const totalReduction = (chargeForThisHour + curtailmentForThisHour) * proportion;
-                                
-                                if (VRE_SOURCES.includes(tech)) {
-                                    const chargeAttribution = chargeForThisHour * proportion;
-                                    finalGeneration[`${tech}ToStorage`][i] = chargeAttribution;
-                                }
-                                
-                                finalGeneration[tech][i] -= totalReduction;
-                                finalGeneration[tech][i] = Math.max(0, finalGeneration[tech][i]);
+                                const reduction = finalGeneration.curtailment[i] * proportion;
+                                finalGeneration[tech][i] -= reduction;
                             });
                         }
+                        netLoad[i] = 0;
                     }
                 }
+                
                 
                 const totalDailyHydroEnergy = hydroCapacity * hydroCF * 24;
                 const baseloadHydroEnergy = totalDailyHydroEnergy * 0.40;
@@ -1357,52 +1412,19 @@
                     netLoad[maxPriorityHour] -= hydroToDispatch;
                     flexibleHydroEnergy -= hydroToDispatch;
                 }
-
-                let totalEnergyInStorage = Object.values(storageLevels).reduce((a, b) => a + b, 0);
-                while (totalEnergyInStorage > 0.01) {
-                    let maxDeficit = 0, maxDeficitHour = -1;
-                    for (let i = 0; i < 24; i++) {
-                        if (netLoad[i] > maxDeficit) {
-                            maxDeficit = netLoad[i];
-                            maxDeficitHour = i;
-                        }
-                    }
-                    if (maxDeficitHour === -1 || maxDeficit < 0.01) break;
-
-                    let dischargedThisCycle = 0;
-                    storageTypes.forEach(type => {
-                        if (!enabledTechnologies[type] || dischargedThisCycle > 0) return;
-                        if (storageLevels[type] > 0.01) {
-                            const amountToDischarge = Math.min(0.1, netLoad[maxDeficitHour], storageLevels[type], storageDischargeRates[type]);
-                            if (amountToDischarge > 0) {
-                                finalGeneration.storage[maxDeficitHour] += amountToDischarge;
-                                storageLevels[type] -= amountToDischarge;
-                                netLoad[maxDeficitHour] -= amountToDischarge;
-                                totalEnergyInStorage -= amountToDischarge;
-                                dischargedThisCycle += amountToDischarge;
-                            }
-                        }
-                    });
-                    if (dischargedThisCycle < 0.001) break;
-                }
-
-                for (let i = 0; i < 24; i++) {
-                    if (netLoad[i] > 0.01) {
-                        const ngCapacity = currentPotential.naturalGas[i];
-                        const ngToDispatch = Math.min(netLoad[i], ngCapacity);
-                        finalGeneration.naturalGas[i] += ngToDispatch;
-                        netLoad[i] -= ngToDispatch;
-                    }
-                    if (netLoad[i] > 0.01) {
-                        const coalCapacity = currentPotential.coal[i];
-                        const coalToDispatch = Math.min(netLoad[i], coalCapacity);
-                        finalGeneration.coal[i] += coalToDispatch;
-                        netLoad[i] -= coalToDispatch;
-                    }
-                }
                 
+                const { gasGenDetails, hourlyMarginalPrice, thermalGeneration } = calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential);
+                finalGeneration.naturalGas = thermalGeneration.naturalGas;
+                finalGeneration.coal = thermalGeneration.coal;
+                
+                for (let i = 0; i < 24; i++) {
+                    if (finalGeneration.curtailment[i] > 0.01) {
+                        hourlyMarginalPrice[i] = inputs.incentives.exportPrice;
+                    }
+                }
+
                 const newEmissions = calculateEmissions(finalGeneration, inputs.capacity.dac);
-                const newSystemCost = calculateTotalAnnualSystemCost(finalGeneration, inputs.capacity, inputs.incentives, finalGeneration.curtailment, currentCountryInstalledCapacity, baselineStorageGWh);
+                const newSystemCost = calculateTotalAnnualSystemCost(finalGeneration, inputs.capacity, inputs.incentives, finalGeneration.curtailment, currentCountryInstalledCapacity, baselineStorageGWh, gasGenDetails);
                 
                 return {
                     generation: finalGeneration,
@@ -1410,7 +1432,146 @@
                     systemCost: newSystemCost,
                     demand: modifiedDemand,
                     curtailmentBySource: curtailmentBySource,
+                    hourlyMarginalPrice: hourlyMarginalPrice 
                 };
+            }
+            
+            function calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential) {
+                const gasGenDetails = { ccgt: { generation: 0, cost: 0 }, ct: { generation: 0, cost: 0 } };
+                const hourlyMarginalPrice = Array(24).fill(0);
+                const thermalGeneration = { naturalGas: Array(24).fill(0), coal: Array(24).fill(0) };
+                
+                const totalNGCapacity = (currentCountryInstalledCapacity.naturalGas || 0) + (inputs.capacity.naturalGas || 0);
+                const ccgtCapacity = totalNGCapacity * 0.7;
+                const ctCapacity = totalNGCapacity * 0.3;
+
+                for (let i = 0; i < 24; i++) {
+                    let remainingLoad = netLoad[i];
+                    let hourlyPrice = 0;
+
+                    if (remainingLoad <= 0.01) {
+                        hourlyMarginalPrice[i] = 0;
+                        continue;
+                    }
+
+                    if (ccgtCapacity > 0) {
+                        const ccgtToDispatch = Math.min(remainingLoad, ccgtCapacity);
+                        if (ccgtToDispatch > 0) {
+                            thermalGeneration.naturalGas[i] += ccgtToDispatch;
+                            remainingLoad -= ccgtToDispatch;
+                            const costStart = COST_DATA.variable_om.naturalGasCCGT.start;
+                            const costEnd = COST_DATA.variable_om.naturalGasCCGT.end;
+                            const priceAtDispatch = costStart + (costEnd - costStart) * (ccgtToDispatch / ccgtCapacity);
+                            hourlyPrice = Math.max(hourlyPrice, priceAtDispatch);
+                            const avgCost = (costStart + priceAtDispatch) / 2;
+                            gasGenDetails.ccgt.cost += ccgtToDispatch * 1000 * avgCost;
+                        }
+                    }
+
+                    if (remainingLoad > 0.01 && ctCapacity > 0) {
+                        const ctToDispatch = Math.min(remainingLoad, ctCapacity);
+                        if (ctToDispatch > 0) {
+                            thermalGeneration.naturalGas[i] += ctToDispatch;
+                            remainingLoad -= ctToDispatch;
+                            const costStart = COST_DATA.variable_om.naturalGasCT.start;
+                            const costEnd = COST_DATA.variable_om.naturalGasCT.end;
+                            const priceAtDispatch = costStart + (costEnd - costStart) * (ctToDispatch / ctCapacity);
+                            hourlyPrice = Math.max(hourlyPrice, priceAtDispatch);
+                            const avgCost = (costStart + priceAtDispatch) / 2;
+                            gasGenDetails.ct.cost += ctToDispatch * 1000 * avgCost;
+                        }
+                    }
+                    
+                    if (remainingLoad > 0.01 && currentPotential.coal[i] > 0) {
+                        const coalToDispatch = Math.min(remainingLoad, currentPotential.coal[i]);
+                        thermalGeneration.coal[i] += coalToDispatch;
+                        remainingLoad -= coalToDispatch;
+                        hourlyPrice = Math.max(hourlyPrice, COST_DATA.variable_om.coal);
+                    }
+                    hourlyMarginalPrice[i] = hourlyPrice;
+                }
+                return { gasGenDetails, hourlyMarginalPrice, thermalGeneration };
+            }
+
+            function dispatchStorageEconomically(initialNetLoad, inputs, baselineStorageGWh, currentPotential) {
+                const storageTypes = ['battery4hr', 'battery8hr', 'longduration'];
+                const storageCapacityGWh = {};
+                const storagePowerGW = {};
+                let totalStorageEnergyGWh = 0;
+
+                storageTypes.forEach(type => {
+                    if (enabledTechnologies[type]) {
+                        const capacity = (baselineStorageGWh[type] || 0) + inputs.capacity[type];
+                        storageCapacityGWh[type] = capacity;
+                        totalStorageEnergyGWh += capacity;
+                        const duration = type === 'longduration' ? 24 : parseInt(type.match(/\d+/)[0]);
+                        storagePowerGW[type] = capacity / duration;
+                    } else {
+                        storageCapacityGWh[type] = 0;
+                        storagePowerGW[type] = 0;
+                    }
+                });
+
+                if (totalStorageEnergyGWh === 0) {
+                    return { charge: Array(24).fill(0), discharge: Array(24).fill(0) };
+                }
+
+                let netLoad = [...initialNetLoad];
+                let hourlyCharge = Array(24).fill(0);
+                let hourlyDischarge = Array(24).fill(0);
+                let totalChargedGWh = 0;
+                const storageEfficiency = 0.85;
+                const DISPATCH_INCREMENT = 0.1; // GWh
+                const PROFIT_THRESHOLD = 20; // $20/MWh
+
+                while (true) {
+                    const { hourlyMarginalPrice } = calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential);
+                    
+                    let maxPrice = -Infinity, minPrice = Infinity;
+                    let maxPriceHour = -1, minPriceHour = -1;
+
+                    for (let i = 0; i < 24; i++) {
+                        if (hourlyMarginalPrice[i] > maxPrice) {
+                            maxPrice = hourlyMarginalPrice[i];
+                            maxPriceHour = i;
+                        }
+                        if (hourlyMarginalPrice[i] < minPrice) {
+                            minPrice = hourlyMarginalPrice[i];
+                            minPriceHour = i;
+                        }
+                    }
+
+                    if ((maxPrice * storageEfficiency) - minPrice <= PROFIT_THRESHOLD || maxPriceHour === -1 || minPriceHour === -1) {
+                        break;
+                    }
+
+                    let availableChargePower = 0;
+                    let availableDischargePower = 0;
+                    storageTypes.forEach(type => {
+                        availableChargePower += storagePowerGW[type];
+                        availableDischargePower += storagePowerGW[type];
+                    });
+
+                    const chargeHeadroom = availableChargePower - hourlyCharge[minPriceHour];
+                    const dischargeHeadroom = availableDischargePower - hourlyDischarge[maxPriceHour];
+                    const energyHeadroom = totalStorageEnergyGWh - totalChargedGWh;
+
+                    const dispatchAmount = Math.min(DISPATCH_INCREMENT, chargeHeadroom, dischargeHeadroom, energyHeadroom);
+
+                    if (dispatchAmount < 0.01) {
+                        break; 
+                    }
+
+                    const chargeAmount = dispatchAmount / storageEfficiency;
+                    hourlyCharge[minPriceHour] += chargeAmount;
+                    hourlyDischarge[maxPriceHour] += dispatchAmount;
+                    totalChargedGWh += chargeAmount;
+                    
+                    netLoad[minPriceHour] += chargeAmount;
+                    netLoad[maxPriceHour] -= dispatchAmount;
+                }
+
+                return { charge: hourlyCharge, discharge: hourlyDischarge };
             }
 
 
@@ -1438,44 +1599,52 @@
                         activePotentialGeneration[tech] = Array(24).fill(0);
                     }
                 }
+                
+                const inputsForSim = {
+                    capacity: {
+                        solar: currentValues.solar, wind: currentValues.wind, offshoreWind: currentValues.offshoreWind,
+                        geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
+                        biomass: currentValues.biomass,
+                        battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
+                        longduration: currentValues.longduration, dac: currentValues.dac,
+                        demandflex: currentValues.demandflex,
+                    },
+                    incentives: {
+                        solar: currentValues.solarIncentive, wind: currentValues.windIncentive, offshoreWind: currentValues.offshoreWindIncentive,
+                        geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
+                        biomass: currentValues.biomassIncentive,
+                        storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
+                        carbonTax: currentValues.carbonTax,
+                        exportPrice: currentValues.exportPrice,
+                    }
+                };
 
                 const result = getSimulationResult(
-                    {
-                        capacity: {
-                            solar: currentValues.solar, wind: currentValues.wind, offshoreWind: currentValues.offshoreWind,
-                            geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
-                            biomass: currentValues.biomass,
-                            battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
-                            longduration: currentValues.longduration, dac: currentValues.dac,
-                            demandflex: currentValues.demandflex,
-                        },
-                        incentives: {
-                            solar: currentValues.solarIncentive, wind: currentValues.windIncentive, offshoreWind: currentValues.offshoreWindIncentive,
-                            geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
-                            biomass: currentValues.biomassIncentive,
-                            storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
-                            carbonTax: currentValues.carbonTax,
-                            exportPrice: currentValues.exportPrice,
-                        }
-                    },
-                    seasonalSolarProfile,
-                    seasonalWindProfile,
-                    seasonalOffshoreWindProfile,
-                    activePotentialGeneration,
-                    currentBaselineStorage,
-                    currentHydroCF,
-                    selectedCountry // Pass country name to simulation
+                    inputsForSim,
+                    seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
+                    activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry
                 );
+
+                const resultWithoutStorage = getSimulationResult(
+                    inputsForSim,
+                    seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
+                    activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry,
+                    true // storageOverrideDisabled = true
+                );
+
                 const totalDailyCO2 = result.emissions.reduce((a, b) => a + b, 0);
                 
+                // --- NEW: Bill Impact based on Marginal Price ---
+                const newConsumerCost = calculateAnnualConsumerCost(result.hourlyMarginalPrice, result.demand);
                 const totalAnnualDemandMWh = result.demand.reduce((a,b) => a+b, 0) * 1000 * 365;
-                const newCostPerMWh = totalAnnualDemandMWh > 0 ? result.systemCost / totalAnnualDemandMWh : 0;
+                const newAvgMarginalPrice = totalAnnualDemandMWh > 0 ? newConsumerCost / totalAnnualDemandMWh : 0;
 
                 const baselineTotalAnnualDemandMWh = currentDemand.reduce((a,b) => a+b, 0) * 1000 * 365;
-                const baselineCostPerMWh = baselineTotalAnnualDemandMWh > 0 ? customBaselineSystemCost / baselineTotalAnnualDemandMWh : 0;
+                const baselineAvgMarginalPrice = baselineTotalAnnualDemandMWh > 0 ? customBaselineConsumerCost / baselineTotalAnnualDemandMWh : 0;
                 
-                const costPercentageChange = baselineCostPerMWh > 0 ? ((newCostPerMWh - baselineCostPerMWh) / baselineCostPerMWh) * 100 : 0;
+                const costPercentageChange = baselineAvgMarginalPrice > 0 ? ((newAvgMarginalPrice - baselineAvgMarginalPrice) / baselineAvgMarginalPrice) * 100 : 0;
 
+                // Abatement cost still uses total system cost
                 const newTotalAnnualCO2 = result.emissions.reduce((a, b) => a + b, 0) * 365;
                 const co2Avoided = customBaselineTotalAnnualCO2 - newTotalAnnualCO2;
                 const costDifference = result.systemCost - customBaselineSystemCost;
@@ -1485,7 +1654,7 @@
                     greenPremium = costDifference / co2Avoided;
                 }
 
-                updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile);
+                updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile, result.hourlyMarginalPrice, resultWithoutStorage.hourlyMarginalPrice);
                 updateGridMixSlider(currentCountryInstalledCapacity, defaultCapacityMix);
                 updateGenerationMixSlider(result.generation, defaultGenerationMix, result.curtailmentBySource);
                 billImpactEl.textContent = `${costPercentageChange.toFixed(0)}%`;
@@ -1542,7 +1711,7 @@
                 return co2;
             }
 
-            function updateCharts(generation, emissions, demand, totalCO2, solarProfile, windProfile, offshoreWindProfile) {
+            function updateCharts(generation, emissions, demand, totalCO2, solarProfile, windProfile, offshoreWindProfile, hourlyMarginalPrice, priceWithoutStorage) {
                 const chartData = generationChart.data.datasets;
                 
                 const techMap = {
@@ -1560,6 +1729,11 @@
                 chartData[14].data = demand;
 
                 generationChart.update('none');
+                
+                // NEW: Update marginal price chart
+                marginalPriceChart.data.datasets[0].data = hourlyMarginalPrice;
+                marginalPriceChart.data.datasets[1].data = priceWithoutStorage;
+                marginalPriceChart.update('none');
 
                 co2Chart.data.datasets[0].data = emissions;
                 co2Chart.options.plugins.annotation.annotations.totalCO2.content = `Total Daily CO2: ${totalCO2.toLocaleString(undefined, {maximumFractionDigits: 0})} tons`;
@@ -2017,6 +2191,7 @@
                 );
                 
                 customBaselineSystemCost = newBaselineResult.systemCost;
+                customBaselineConsumerCost = calculateAnnualConsumerCost(newBaselineResult.hourlyMarginalPrice, newBaselineResult.demand);
                 customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
             }
 
@@ -2411,6 +2586,7 @@
                     countryName
                 );
                 customBaselineSystemCost = baselineResult.systemCost;
+                customBaselineConsumerCost = calculateAnnualConsumerCost(baselineResult.hourlyMarginalPrice, baselineResult.demand); // NEW
                 customBaselineTotalAnnualCO2 = baselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
                 
                 systemDefaultState = {};
@@ -2728,5 +2904,4 @@
         });
     </script>
 </body>
-</html>
-
+</html
