@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grid Decarbonization Simulator | Dr. Eshan Singh</title>
+    <title>Grid Simulator | Dr. Eshan Singh</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
@@ -247,7 +247,7 @@
         <div class="container mx-auto p-4 md:p-8 pt-0">
 
             <section id="tutorial-step-1" class="text-center mb-12">
-                <h1 class="font-lora text-5xl md:text-6xl font-medium leading-tight text-gray-900">Grid Decarbonization Simulator</h1>
+                <h1 class="font-lora text-5xl md:text-6xl font-medium leading-tight text-gray-900">Grid Simulator</h1>
                 <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
                     Your challenge: Use policy levers for clean energy and direct air capture to eliminate CO2 emissions from the electricity grid, while minimizing the impact on customer bill.
                 </p>
@@ -1343,7 +1343,6 @@
                         netLoad[i] += storageDispatch.charge[i];
                         netLoad[i] -= storageDispatch.discharge[i];
                         
-                        // FIX 1: Subtract charged amount from VRE sources for correct visual accounting
                         if (storageDispatch.charge[i] > 0) {
                             let totalVrePotential = finalGeneration.solar[i] + finalGeneration.wind[i] + finalGeneration.offshoreWind[i];
                             if (totalVrePotential > 0) {
@@ -1418,7 +1417,6 @@
                 finalGeneration.naturalGas = thermalGeneration.naturalGas;
                 finalGeneration.coal = thermalGeneration.coal;
                 
-                // FIX 2: Override price with export price during curtailment hours
                 for (let i = 0; i < 24; i++) {
                     if (finalGeneration.curtailment[i] > 0.01) {
                         hourlyMarginalPrice[i] = inputs.incentives.exportPrice;
@@ -1524,6 +1522,7 @@
                 let totalChargedGWh = 0;
                 const storageEfficiency = 0.85;
                 const DISPATCH_INCREMENT = 0.1; // GWh
+                const PROFIT_THRESHOLD = 20; // $20/MWh
 
                 while (true) {
                     const { hourlyMarginalPrice } = calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential);
@@ -1542,7 +1541,7 @@
                         }
                     }
 
-                    if (maxPrice - minPrice < 10 || maxPriceHour === -1 || minPriceHour === -1) {
+                    if ((maxPrice * storageEfficiency) - minPrice <= PROFIT_THRESHOLD || maxPriceHour === -1 || minPriceHour === -1) {
                         break;
                     }
 
@@ -2905,4 +2904,4 @@
         });
     </script>
 </body>
-</html>
+</html
