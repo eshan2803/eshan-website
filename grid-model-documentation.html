@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grid Model Documentation | Dr. Eshan Singh</title>
+    <title>Grid Simulator Documentation | Dr. Eshan Singh</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -198,7 +198,7 @@
                     The Grid Simulator is an educational tool designed to provide a simplified yet powerful look into the challenge of operating a modern electricity grid. It allows users to act as policymakers, adding new clean energy sources, energy storage, and other technologies to a baseline grid. The goal is to understand the complex trade-offs between cost, reliability, and emissions.
                 </p>
                 <p>
-                    The model simulates a 24-hour period of grid operation, showing how different technologies work together to meet a fluctuating electricity demand. Users can immediately see the impact of their decisions on hourly generation, CO2 emissions, wholesale electricity prices, and two key financial metrics: the change in electricity bills and the "Abatement Cost." This documentation explains the core logic behind the simulation, including how resources are dispatched, how costs are calculated, and what key assumptions are made.
+                    The model simulates a 24-hour period of grid operation, showing how different technologies work together to meet a fluctuating electricity demand. Users can immediately see the impact of their decisions on hourly generation, CO2 emissions, wholesale electricity prices, and key financial metrics that distinguish between consumer costs and total system costs. This documentation explains the core logic behind the simulation, including how resources are dispatched, how costs are calculated, and what key assumptions are made.
                 </p>
 
                 <h3>2. Key Features and Controls</h3>
@@ -241,28 +241,28 @@
                         <strong>Calculate Net Load:</strong> The model first determines the hourly generation from "must-run" clean sources (Nuclear, Geothermal, Biomass) and "variable" renewables (Solar, Wind). This generation is subtracted from the total demand to calculate the <strong>Net Load</strong>—the remaining demand that must be met by flexible, dispatchable power plants.
                     </li>
                     <li>
-                        <strong>Economic Battery Dispatch (Arbitrage):</strong> This is the most complex step. The model dispatches batteries based on economic signals to minimize costs. It performs an iterative loop:
+                        <strong>Economic Battery Dispatch (Arbitrage):</strong> This is the most complex and realistic step. The model dispatches batteries based on economic signals to minimize costs. It performs an iterative loop:
                         <ul>
-                            <li>It first calculates a 24-hour price forecast based on what it would cost for thermal plants (gas, coal) to meet the net load.</li>
-                            <li>It then checks if a profitable arbitrage opportunity exists. The condition is: <code>(Highest Price * 0.85) - Lowest Price > $20</code>. This means the potential revenue from selling power, after accounting for an 85% round-trip efficiency loss, must be at least $20/MWh higher than the cost of buying power.</li>
-                            <li>If the condition is met, the model dispatches a small "piece" of energy (0.1 GWh), charging the battery in the cheapest hour and discharging it in the most expensive hour, respecting the battery's power (GW) and energy (GWh) limits.</li>
-                            <li>Crucially, it then recalculates the net load and the 24-hour price forecast and repeats the process. This loop continues until no more profitable trades are available.</li>
+                            <li>It first calculates a 24-hour price forecast based on what it would cost for thermal plants (gas, coal) to meet the current net load.</li>
+                            <li>It then checks if a profitable arbitrage opportunity exists. The model uses a realistic formula to determine profitability: <code>(Highest Price * 0.85) - Lowest Price > $20</code>. This means the potential revenue from selling power, after accounting for a 15% energy loss (85% round-trip efficiency), must be at least $20/MWh higher than the cost of buying power. This $20 threshold represents a "hurdle rate" to account for other operational costs like battery degradation.</li>
+                            <li>If a profitable opportunity exists, the model dispatches a small "piece" of energy (0.1 GWh), charging the battery in the cheapest hour and discharging it in the most expensive hour. This dispatch is capped by the battery's power rating (GW) and its total energy capacity (GWh).</li>
+                            <li>Crucially, it then recalculates the net load (which has changed due to the battery action) and the 24-hour price forecast, and then repeats the process. This loop continues until no more profitable trades are available.</li>
                         </ul>
                     </li>
                     <li>
                         <strong>Strategic Hydro Dispatch:</strong> After storage has been dispatched, hydroelectric power is used. A portion is used as a steady "baseload" resource, while the rest is used flexibly to meet the highest remaining peaks in the net load.
                     </li>
                     <li>
-                        <strong>Thermal Merit Order Dispatch:</strong> If a deficit still remains, the model turns on the thermal power plants in a strict "merit order" from cheapest to most expensive:
+                        <strong>Thermal Merit Order Dispatch & Marginal Pricing:</strong> If a deficit still remains, the model turns on the thermal power plants in a strict "merit order" from cheapest to most expensive. This is where the hourly price is set.
                         <ol type="a">
-                            <li>First, the cheaper and more efficient Combined-Cycle Gas Turbines (CCGT) are dispatched.</li>
-                            <li>Next, the more expensive "peaker" Combustion Turbines (CT) are used.</li>
-                            <li>Finally, Coal plants are dispatched as a last resort.</li>
+                            <li>First, cheaper and more efficient <strong>Combined-Cycle Gas Turbines (CCGT)</strong> are dispatched. The model assumes these plants have a variable cost that rises from $35/MWh to $80/MWh as more of the fleet is used.</li>
+                            <li>Next, more expensive and less efficient "peaker" <strong>Combustion Turbines (CT)</strong> are used. These have a higher cost, from $100/MWh to $150/MWh.</li>
+                            <li>Finally, <strong>Coal</strong> plants are dispatched as a last resort at a fixed cost.</li>
                         </ol>
-                        The cost of the very last generator turned on in any given hour sets the <strong>Marginal Price</strong> for that hour.
+                        The variable cost of the very last generator turned on in any given hour sets the <strong>Marginal Price</strong> for that hour. This price is what all generators are paid.
                     </li>
                     <li>
-                        <strong>Curtailment and Exports:</strong> If, after all these steps, there is still an excess of renewable energy (a negative net load), that energy is "curtailed" (wasted). If an export price is set, this curtailed energy is sold, and the marginal price for that hour becomes the export price.
+                        <strong>Curtailment and Exports:</strong> If, after all these steps, there is still an excess of renewable energy (a negative net load), that energy is "curtailed" (wasted). If an export price is set, this curtailed energy is sold, and the marginal price for that hour becomes the export price (which can be negative).
                     </li>
                 </ol>
                 
@@ -287,18 +287,20 @@
                 </ul>
 
                 <h4>3.3. Financial Metrics Explained</h4>
+                <p>The simulator presents two primary financial metrics to help you understand the economic trade-offs of your decisions. These metrics distinguish between the price consumers see and the overall cost to the system.</p>
                 <ul>
                     <li>
-                        <strong>Impact on Bills:</strong> This metric shows the percentage change in the <strong>demand-weighted average marginal price</strong> of electricity compared to a baseline scenario. In a real market, the marginal price sets the wholesale price for all electricity sold in a given hour. This metric calculates the average of those hourly prices, weighted by how much electricity was consumed, to provide a realistic estimate of the impact on consumer bills.
+                        <strong>Impact on Bill:</strong> This metric shows the percentage change in the <strong>demand-weighted average marginal price</strong> of electricity compared to a baseline scenario. In a real market, the marginal price sets the wholesale price for all electricity sold in a given hour. This metric calculates the average of those hourly prices, weighted by how much electricity was consumed, to provide a realistic estimate of the impact on consumer bills.
                         <br>
                         <code>Impact = ((New Avg. Price - Baseline Avg. Price) / Baseline Avg. Price) * 100%</code>
                     </li>
                     <li>
-                        <strong>Abatement Cost:</strong> This is the extra cost to avoid one ton of CO2 emissions. It's calculated by taking the total increase in the grid's annual system cost and dividing it by the total tons of CO2 emissions that were avoided compared to the baseline. If the Abatement Cost is negative, it means you are actually saving money while also reducing emissions!
+                        <strong>Change in System Cost:</strong> This metric shows the percentage change in the <strong>total annualized cost</strong> to build and operate the entire grid. It includes all capital, fixed, and variable costs, as well as taxes and subsidies. This metric represents the overall cost to the utility or society, which may be different from the immediate price impact seen by consumers.
                         <br>
-                        <code>Abatement Cost = (New Annual Cost - Baseline Annual Cost) / (Baseline CO2 Tons - New CO2 Tons)</code>
+                        <code>Change = ((New Annual Cost - Baseline Annual Cost) / Baseline Annual Cost) * 100%</code>
                     </li>
                 </ul>
+                <p>Below these main metrics, the model also calculates the <strong>Abatement Cost</strong>. This is the extra system cost required to avoid one ton of CO2 emissions. It is displayed alongside the total CO2 avoided to provide context on the cost-effectiveness of your decarbonization strategy.</p>
 
                 <h3>4. Model Parameters and Assumptions</h3>
                 <p>
@@ -621,4 +623,4 @@
     </script>
 
 </body>
-</html>
+</ht
