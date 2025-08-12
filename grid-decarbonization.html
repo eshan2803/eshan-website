@@ -251,9 +251,14 @@
                 <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
                     Your challenge: Use policy levers for clean energy and direct air capture to eliminate CO2 emissions from the electricity grid, while minimizing the impact on customer bill.
                 </p>
-                 <a href="grid-model-documentation.html" class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors text-sm font-medium mt-4">
-                    📖 View Documentation
-                </a>
+                <div class="flex justify-center items-center space-x-4 mt-4">
+                    <a href="grid-model-documentation.html" class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors text-sm font-medium">
+                        📖 View Documentation
+                    </a>
+                    <button id="start-tutorial-btn" class="inline-flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors text-sm font-medium">
+                        🚀 Show Tutorial
+                    </button>
+                </div>
                 <p class="mt-4 text-sm text-gray-600">
                     Send your queries at <a href="mailto:hello@eshansingh.xyz" class="text-blue-600 hover:underline">hello@eshansingh.xyz</a>
                 </p>
@@ -872,6 +877,7 @@
             const generationMixSlidersContainer = document.getElementById('generation-mix-sliders');
             const countrySelect = document.getElementById('country-select');
             const hoverTooltip = document.getElementById('hover-tooltip');
+            const startTutorialBtn = document.getElementById('start-tutorial-btn');
             
             const currentDemandProfileText = document.getElementById('current-demand-profile-text');
             const editDemandBtn = document.getElementById('edit-demand-btn');
@@ -1659,8 +1665,8 @@
                 updateGridMixSlider(currentCountryInstalledCapacity, defaultCapacityMix);
                 updateGenerationMixSlider(result.generation, defaultGenerationMix, result.curtailmentBySource);
                 
-                billImpactEl.textContent = `${billPercentageChange.toFixed(0)}%`;
-                systemCostImpactEl.textContent = `${systemCostPercentageChange.toFixed(0)}%`;
+                billImpactEl.textContent = `${billPercentageChange > 0 ? '+' : ''}${billPercentageChange.toFixed(0)}%`;
+                systemCostImpactEl.textContent = `${systemCostPercentageChange > 0 ? '+' : ''}${systemCostPercentageChange.toFixed(0)}%`;
 
                 // Update colors based on positive/negative change
                 [billImpactEl, systemCostImpactEl].forEach((el, index) => {
@@ -2854,6 +2860,11 @@
             });
 
             skipBtn.addEventListener('click', endTutorial);
+            
+            startTutorialBtn.addEventListener('click', () => {
+                localStorage.removeItem('gridSimulatorTutorialSeen');
+                startTutorial();
+            });
 
 
             // --- MAIN INITIALIZATION FUNCTION ---
@@ -2899,5 +2910,3 @@
     </script>
 </body>
 </html>
-
-
