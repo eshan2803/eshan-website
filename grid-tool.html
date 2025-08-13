@@ -1200,6 +1200,7 @@
             function calculateTotalAnnualSystemCost(generation, capacity, currentIncentives, curtailedEnergy, baselineCapacity, baselineStorage, gasGenDetails) {
                 let totalAnnualCost = 0;
                 const d = COST_DATA.discount_rate;
+                const carbonTax = currentIncentives.carbonTax || 0;
 
                 for (const tech in COST_DATA.capacity_factor) {
                     if (tech === 'naturalGas') continue; // Skip NG here, will be calculated separately
@@ -1218,7 +1219,12 @@
                         const annual_fom = techData.fixed_om[tech] * totalCapacityKW;
                         
                         const annual_generation_mwh = (generation[tech] || []).reduce((a, b) => a + b, 0) * 1000 * 365;
-                        const annual_vom = techData.variable_om[tech] * annual_generation_mwh;
+                        let annual_vom = techData.variable_om[tech] * annual_generation_mwh;
+                        
+                        if (EMISSION_FACTORS[tech] > 0) {
+                            const carbon_cost = (EMISSION_FACTORS[tech] / 1000) * carbonTax * annual_generation_mwh;
+                            annual_vom += carbon_cost;
+                        }
 
                         let annual_ptc = 0;
                         if (currentIncentives[tech]) {
@@ -1286,9 +1292,6 @@
                     totalAnnualCost += (annualizedDacCapex + annualDacFom + dacVariableCost - dacIncentiveValue);
                 }
                 
-                const totalAnnualCO2 = calculateEmissions(generation, 0).reduce((a, b) => a + b, 0) * 365;
-                totalAnnualCost += totalAnnualCO2 * currentIncentives.carbonTax;
-
                 const annualExportRevenue = curtailedEnergy.reduce((a, b) => a + b, 0) * 1000 * 365 * currentIncentives.exportPrice;
                 totalAnnualCost -= annualExportRevenue;
 
@@ -1385,6 +1388,11 @@
                                 let windCharge = (finalGeneration.wind[i] / totalVrePotential) * storageDispatch.charge[i];
                                 let offshoreCharge = (finalGeneration.offshoreWind[i] / totalVrePotential) * storageDispatch.charge[i];
                                 
+                                // Capping to prevent negative generation
+                                solarCharge = Math.min(solarCharge, finalGeneration.solar[i]);
+                                windCharge = Math.min(windCharge, finalGeneration.wind[i]);
+                                offshoreCharge = Math.min(offshoreCharge, finalGeneration.offshoreWind[i]);
+
                                 finalGeneration.solarToStorage[i] = solarCharge;
                                 finalGeneration.windToStorage[i] = windCharge;
                                 finalGeneration.offshoreWindToStorage[i] = offshoreCharge;
@@ -1505,6 +1513,10 @@
             }
             
             function calculateFullMeritOrderDispatchAndPrice(netLoad, inputs, currentPotential, hydroCF, countryName, batteryDischargeEnergy) {
+                const carbonTax = inputs.incentives.carbonTax || 0;
+                const carbonCostCoal = (EMISSION_FACTORS.coal / 1000) * carbonTax;
+                const carbonCostNG = (EMISSION_FACTORS.naturalGas / 1000) * carbonTax;
+
                 const meritOrder = [
                     { tech: 'wind', cost: COST_DATA.variable_om.wind },
                     { tech: 'offshoreWind', cost: COST_DATA.variable_om.offshoreWind },
@@ -1513,10 +1525,10 @@
                     { tech: 'geothermal', cost: COST_DATA.variable_om.geothermal },
                     { tech: 'biomass', cost: COST_DATA.variable_om.biomass },
                     { tech: 'nuclear', cost: COST_DATA.variable_om.nuclear },
-                    { tech: 'storage', cost: COST_DATA.variable_om.storage }, // ADDED
-                    { tech: 'coal', cost: COST_DATA.variable_om.coal },
-                    { tech: 'naturalGasCCGT', cost: COST_DATA.variable_om.naturalGasCCGT.start },
-                    { tech: 'naturalGasCT', cost: COST_DATA.variable_om.naturalGasCT.start }
+                    { tech: 'storage', cost: COST_DATA.variable_om.storage },
+                    { tech: 'coal', cost: COST_DATA.variable_om.coal + carbonCostCoal },
+                    { tech: 'naturalGasCCGT', cost: COST_DATA.variable_om.naturalGasCCGT.start + carbonCostNG },
+                    { tech: 'naturalGasCT', cost: COST_DATA.variable_om.naturalGasCT.start + carbonCostNG }
                 ].sort((a, b) => a.cost - b.cost);
 
                 const finalGeneration = { naturalGas: Array(24).fill(0), coal: Array(24).fill(0), hydro: Array(24).fill(0), biomass: Array(24).fill(0), storage: Array(24).fill(0) };
@@ -1586,8 +1598,8 @@
                                 dispatchAmount = Math.min(remainingLoad, availableGen);
                                 if (dispatchAmount > 0) {
                                     finalGeneration.naturalGas[i] += dispatchAmount;
-                                    const costStart = COST_DATA.variable_om.naturalGasCCGT.start;
-                                    const costEnd = COST_DATA.variable_om.naturalGasCCGT.end;
+                                    const costStart = COST_DATA.variable_om.naturalGasCCGT.start + carbonCostNG;
+                                    const costEnd = COST_DATA.variable_om.naturalGasCCGT.end + carbonCostNG;
                                     const priceAtDispatch = costStart + (costEnd - costStart) * (dispatchAmount / ccgtCapacity);
                                     hourlyMarginalPrice[i] = Math.max(hourlyMarginalPrice[i], priceAtDispatch);
                                     const avgCost = (costStart + priceAtDispatch) / 2;
@@ -1600,8 +1612,8 @@
                                 dispatchAmount = Math.min(remainingLoad, availableGen);
                                  if (dispatchAmount > 0) {
                                     finalGeneration.naturalGas[i] += dispatchAmount;
-                                    const costStart = COST_DATA.variable_om.naturalGasCT.start;
-                                    const costEnd = COST_DATA.variable_om.naturalGasCT.end;
+                                    const costStart = COST_DATA.variable_om.naturalGasCT.start + carbonCostNG;
+                                    const costEnd = COST_DATA.variable_om.naturalGasCT.end + carbonCostNG;
                                     const priceAtDispatch = costStart + (costEnd - costStart) * (dispatchAmount / ctCapacity);
                                     hourlyMarginalPrice[i] = Math.max(hourlyMarginalPrice[i], priceAtDispatch);
                                     const avgCost = (costStart + priceAtDispatch) / 2;
@@ -1630,6 +1642,10 @@
                 const totalNGCapacity = (currentCountryInstalledCapacity.naturalGas || 0) + (inputs.capacity.naturalGas || 0);
                 const ccgtCapacity = totalNGCapacity * 0.7;
                 const ctCapacity = totalNGCapacity * 0.3;
+                
+                const carbonTax = inputs.incentives.carbonTax || 0;
+                const carbonCostCoal = (EMISSION_FACTORS.coal / 1000) * carbonTax;
+                const carbonCostNG = (EMISSION_FACTORS.naturalGas / 1000) * carbonTax;
 
                 for (let i = 0; i < 24; i++) {
                     let remainingLoad = netLoad[i];
@@ -1645,8 +1661,8 @@
                         if (ccgtToDispatch > 0) {
                             thermalGeneration.naturalGas[i] += ccgtToDispatch;
                             remainingLoad -= ccgtToDispatch;
-                            const costStart = COST_DATA.variable_om.naturalGasCCGT.start;
-                            const costEnd = COST_DATA.variable_om.naturalGasCCGT.end;
+                            const costStart = COST_DATA.variable_om.naturalGasCCGT.start + carbonCostNG;
+                            const costEnd = COST_DATA.variable_om.naturalGasCCGT.end + carbonCostNG;
                             const priceAtDispatch = costStart + (costEnd - costStart) * (ccgtToDispatch / ccgtCapacity);
                             hourlyPrice = Math.max(hourlyPrice, priceAtDispatch);
                             const avgCost = (costStart + priceAtDispatch) / 2;
@@ -1659,8 +1675,8 @@
                         if (ctToDispatch > 0) {
                             thermalGeneration.naturalGas[i] += ctToDispatch;
                             remainingLoad -= ctToDispatch;
-                            const costStart = COST_DATA.variable_om.naturalGasCT.start;
-                            const costEnd = COST_DATA.variable_om.naturalGasCT.end;
+                            const costStart = COST_DATA.variable_om.naturalGasCT.start + carbonCostNG;
+                            const costEnd = COST_DATA.variable_om.naturalGasCT.end + carbonCostNG;
                             const priceAtDispatch = costStart + (costEnd - costStart) * (ctToDispatch / ctCapacity);
                             hourlyPrice = Math.max(hourlyPrice, priceAtDispatch);
                             const avgCost = (costStart + priceAtDispatch) / 2;
@@ -1672,7 +1688,7 @@
                         const coalToDispatch = Math.min(remainingLoad, currentPotential.coal[i]);
                         thermalGeneration.coal[i] += coalToDispatch;
                         remainingLoad -= coalToDispatch;
-                        hourlyPrice = Math.max(hourlyPrice, COST_DATA.variable_om.coal);
+                        hourlyPrice = Math.max(hourlyPrice, COST_DATA.variable_om.coal + carbonCostCoal);
                     }
                     hourlyMarginalPrice[i] = hourlyPrice;
                 }
