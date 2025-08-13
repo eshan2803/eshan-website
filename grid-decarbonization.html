@@ -1388,6 +1388,9 @@
                             [...INFLEXIBLE_SOURCES, ...VRE_SOURCES].forEach(tech => {
                                 const proportion = finalGeneration[tech][i] / availableForCurtailment;
                                 const reduction = finalGeneration.curtailment[i] * proportion;
+                                if (curtailmentBySource.hasOwnProperty(tech)) {
+                                    curtailmentBySource[tech][i] += reduction;
+                                }                                
                                 finalGeneration[tech][i] -= reduction;
                             });
                         }
@@ -2919,6 +2922,7 @@
     </script>
 </body>
 </html>
+
 
 
 
