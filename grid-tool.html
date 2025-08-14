@@ -380,7 +380,7 @@
                     <div id="tutorial-step-5" class="glass-card rounded-lg sticky top-6 z-10">
                         <div class="grid grid-cols-2 gap-4 text-center">
                             <div title="Based on the average wholesale price of electricity&#10;Assuming natural gas plant on the margin drives the price">
-                                <h3 class="text-xl font-lora font-semibold text-gray-800">Marginal Price</h3>
+                                <h3 class="text-xl font-lora font-semibold text-gray-800">Impact on Bill</h3>
                                 <p id="bill-impact" class="text-5xl font-bold text-blue-600 mt-2">0%</p>
                             </div>
                             <div title="Based on the total annualized cost to operate the grid">
@@ -839,7 +839,11 @@
                 hydro: 5, coal: 30, // $/MWh 
                 battery4hr: 0, battery8hr: 2, longduration: 1,
                 dac: 400, // $/ton
-                storage: 20 // $/MWh - CHANGED
+                storage: {
+                    tranche1: 20,
+                    tranche2: 40,
+                    tranche3: 60
+                }
             },
             lifetime: {
                 solar: 30, wind: 30, offshoreWind: 30, nuclear: 60, geothermal: 30, biomass: 25,
@@ -1525,8 +1529,10 @@
                     { tech: 'geothermal', cost: COST_DATA.variable_om.geothermal },
                     { tech: 'biomass', cost: COST_DATA.variable_om.biomass },
                     { tech: 'nuclear', cost: COST_DATA.variable_om.nuclear },
-                    { tech: 'storage', cost: COST_DATA.variable_om.storage },
+                    { tech: 'storage_tranche1', cost: COST_DATA.variable_om.storage.tranche1 },
                     { tech: 'coal', cost: COST_DATA.variable_om.coal + carbonCostCoal },
+                    { tech: 'storage_tranche2', cost: COST_DATA.variable_om.storage.tranche2 },
+                    { tech: 'storage_tranche3', cost: COST_DATA.variable_om.storage.tranche3 },
                     { tech: 'naturalGasCCGT', cost: COST_DATA.variable_om.naturalGasCCGT.start + carbonCostNG },
                     { tech: 'naturalGasCT', cost: COST_DATA.variable_om.naturalGasCT.start + carbonCostNG }
                 ].sort((a, b) => a.cost - b.cost);
@@ -1543,7 +1549,6 @@
                 const totalDailyHydroEnergy = hydroCapacity * hydroCF * 24;
                 let remainingDailyHydro = totalDailyHydroEnergy;
                 
-                let totalBatteryEnergyToDispatch = batteryDischargeEnergy.reduce((a, b) => a + b, 0);
                 const storagePowerGW = {};
                 ['battery4hr', 'battery8hr', 'longduration'].forEach(type => {
                     const capacity = (currentBaselineStorage[type] || 0) + inputs.capacity[type];
@@ -1551,6 +1556,11 @@
                     storagePowerGW[type] = capacity / duration;
                 });
                 const totalStoragePower = Object.values(storagePowerGW).reduce((a, b) => a + b, 0);
+                const tranchePower = totalStoragePower / 3;
+
+                let remainingBatteryEnergyTranche1 = batteryDischargeEnergy.map(e => e / 3);
+                let remainingBatteryEnergyTranche2 = batteryDischargeEnergy.map(e => e / 3);
+                let remainingBatteryEnergyTranche3 = batteryDischargeEnergy.map(e => e / 3);
 
 
                 for (let i = 0; i < 24; i++) {
@@ -1581,10 +1591,23 @@
                                 finalGeneration.biomass[i] += dispatchAmount;
                                 break;
 
-                            case 'storage':
-                                availableGen = Math.min(totalStoragePower, batteryDischargeEnergy[i]);
+                            case 'storage_tranche1':
+                                availableGen = Math.min(tranchePower, remainingBatteryEnergyTranche1[i]);
                                 dispatchAmount = Math.min(remainingLoad, availableGen);
                                 finalGeneration.storage[i] += dispatchAmount;
+                                remainingBatteryEnergyTranche1[i] -= dispatchAmount;
+                                break;
+                            case 'storage_tranche2':
+                                availableGen = Math.min(tranchePower, remainingBatteryEnergyTranche2[i]);
+                                dispatchAmount = Math.min(remainingLoad, availableGen);
+                                finalGeneration.storage[i] += dispatchAmount;
+                                remainingBatteryEnergyTranche2[i] -= dispatchAmount;
+                                break;
+                            case 'storage_tranche3':
+                                availableGen = Math.min(tranchePower, remainingBatteryEnergyTranche3[i]);
+                                dispatchAmount = Math.min(remainingLoad, availableGen);
+                                finalGeneration.storage[i] += dispatchAmount;
+                                remainingBatteryEnergyTranche3[i] -= dispatchAmount;
                                 break;
 
                             case 'coal':
@@ -1834,6 +1857,9 @@
                 let hourlyDischarge = Array(24).fill(0);
                 let totalEnergyToDispatch = totalChargedGWh * storageEfficiency;
                 let netLoadForDischarging = [...initialNetLoad];
+                 for(let i=0; i<24; i++) {
+                    netLoadForDischarging[i] += hourlyCharge[i];
+                }
                 
                 // Iteratively decide discharge hours based on profit
                 while (totalEnergyToDispatch > 0.01) {
