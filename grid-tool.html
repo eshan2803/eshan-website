@@ -129,6 +129,8 @@
         .thumb-neutral::-moz-range-thumb { background-color: rgba(107, 114, 128, 1); }
         .thumb-biomass::-webkit-slider-thumb { background-color: rgba(101, 67, 33, 1); } /* Brown color for biomass */
         .thumb-biomass::-moz-range-thumb { background-color: rgba(101, 67, 33, 1); }
+        .thumb-rng::-webkit-slider-thumb { background-color: rgba(132, 204, 22, 1); } /* Lime green for RNG */
+        .thumb-rng::-moz-range-thumb { background-color: rgba(132, 204, 22, 1); }
         
         /* Rainbow Border Animation */
         @keyframes rainbow-border {
@@ -465,6 +467,15 @@
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="biomass-unit">GW</span>
                                     </div>
                                 </div>
+                                <!-- NEW: RNG (Biogas) Slider -->
+                                <div>
+                                    <label for="rng-slider" class="block text-md font-medium text-gray-700">New RNG (Biogas) Capacity</label>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="rng-slider" min="0" max="50" value="0" class="w-full form-input thumb-rng">
+                                        <input type="number" id="rng-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="rng-unit">GW</span>
+                                    </div>
+                                </div>
                                 <div class="border-t border-gray-300 pt-6">
                                     <label for="battery4hr-slider" class="block text-md font-medium text-gray-700">4-hr Battery Storage</label>
                                     <div class="flex items-center space-x-2 mt-2">
@@ -568,6 +579,15 @@
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="biomass-incentive-unit">$/MWh</span>
                                     </div>
                                 </div>
+                                <!-- NEW: RNG (Biogas) Incentive Slider -->
+                                <div>
+                                    <label for="rng-incentive-slider" class="block text-sm font-medium text-gray-700">RNG (Biogas) (PTC)</label>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="rng-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-rng">
+                                        <input type="number" id="rng-incentive-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="rng-incentive-unit">$/MWh</span>
+                                    </div>
+                                </div>
                                 <div>
                                     <label for="storage-incentive-slider" class="block text-sm font-medium text-gray-700">Storage (ITC)</label>
                                     <div class="flex items-center space-x-2 mt-2">
@@ -632,125 +652,125 @@
             "California": { 
                 totalCapacityMW: 89223, 
                 peakLoadsMW: { summer: 52061, winter: 47500, fall: 46000, spring: 41000 },
-                mix: { coal: 0.1, naturalGas: 43.4, hydro: 15.7, wind: 7.1, offshoreWind: 0, solar: 26.1, nuclear: 2.7, geothermal: 3.0, biomass: 1.4 },
+                mix: { coal: 0.1, naturalGas: 43.4, hydro: 15.7, wind: 7.1, offshoreWind: 0, solar: 26.1, nuclear: 2.7, geothermal: 3.0, biomass: 1.0, rng: 0.4 },
                 storageGWh: { battery4hr: 53.0 },
                 defaultExportPrice: -20
             },
             "China": { 
                 totalCapacityMW: 3400000, 
                 peakLoadsMW: { summer: 1340000, winter: 1206000, fall: 1179200, spring: 1072000 },
-                mix: { coal: 40.0, naturalGas: 8.0, hydro: 12.5, wind: 14.0, offshoreWind: 1.6, solar: 20.0, nuclear: 2.5, geothermal: 0.1, biomass: 1.3 },
+                mix: { coal: 40.0, naturalGas: 8.0, hydro: 12.5, wind: 14.0, offshoreWind: 1.6, solar: 20.0, nuclear: 2.5, geothermal: 0.1, biomass: 1.0, rng: 0.3 },
                 storageGWh: { battery4hr: 222 }
             },
             "United States": { 
                 totalCapacityMW: 1275000, 
                 peakLoadsMW: { summer: 800000, winter: 720000, fall: 704000, spring: 640000 },
-                mix: { coal: 15.0, naturalGas: 48.0, hydro: 7.8, wind: 11.5, offshoreWind: 0.2, solar: 9.0, nuclear: 8.0, geothermal: 0.3, biomass: 1.2 },
+                mix: { coal: 15.0, naturalGas: 48.0, hydro: 7.8, wind: 11.5, offshoreWind: 0.2, solar: 9.0, nuclear: 8.0, geothermal: 0.3, biomass: 1.0, rng: 0.2 },
                 storageGWh: { battery4hr: 95 }
             },
             "India": { 
                 totalCapacityMW: 476000, 
                 peakLoadsMW: { summer: 243000, winter: 206550, fall: 213840, spring: 194400 },
-                mix: { coal: 50.0, naturalGas: 6.0, hydro: 10.0, wind: 9.5, offshoreWind: 0, solar: 18.0, nuclear: 1.8, geothermal: 0.0, biomass: 2.7 },
+                mix: { coal: 50.0, naturalGas: 6.0, hydro: 10.0, wind: 9.5, offshoreWind: 0, solar: 18.0, nuclear: 1.8, geothermal: 0.0, biomass: 2.0, rng: 0.7 },
                 storageGWh: { battery4hr: 1 }
             },
             "Japan": { 
                 totalCapacityMW: 295000, 
                 peakLoadsMW: { summer: 181000, winter: 162900, fall: 159280, spring: 144800 },
-                mix: { coal: 20.0, naturalGas: 35.0, hydro: 17.0, wind: 1.6, offshoreWind: 0.1, solar: 15.5, nuclear: 10.5, geothermal: 0.2, biomass: 1.6 },
+                mix: { coal: 20.0, naturalGas: 35.0, hydro: 17.0, wind: 1.6, offshoreWind: 0.1, solar: 15.5, nuclear: 10.5, geothermal: 0.2, biomass: 1.2, rng: 0.4 },
                 storageGWh: { battery4hr: 1.2 }
             },
             "Russia": { 
                 totalCapacityMW: 248000, 
                 peakLoadsMW: { winter: 160000, summer: 144000, fall: 140800, spring: 128000 },
-                mix: { coal: 15.0, naturalGas: 52.0, hydro: 20.0, wind: 0.9, offshoreWind: 0, solar: 0.8, nuclear: 11.3, geothermal: 0.0, biomass: 0.2 } 
+                mix: { coal: 15.0, naturalGas: 52.0, hydro: 20.0, wind: 0.9, offshoreWind: 0, solar: 0.8, nuclear: 11.3, geothermal: 0.0, biomass: 0.2, rng: 0.0 } 
             },
             "Brazil": { 
                 totalCapacityMW: 180000, 
                 peakLoadsMW: { summer: 101860, winter: 91674, fall: 89637, spring: 81488 },
-                mix: { coal: 2.0, naturalGas: 18.0, hydro: 59.0, wind: 10.5, offshoreWind: 0, solar: 9.5, nuclear: 1.0, geothermal: 0.0, biomass: 8.0 } 
+                mix: { coal: 2.0, naturalGas: 18.0, hydro: 59.0, wind: 10.5, offshoreWind: 0, solar: 9.5, nuclear: 1.0, geothermal: 0.0, biomass: 6.0, rng: 2.0 } 
             },
             "Germany": { 
                 totalCapacityMW: 210000, 
                 peakLoadsMW: { winter: 84000, summer: 75600, fall: 73920, spring: 67200 },
-                mix: { coal: 14.0, naturalGas: 38.0, hydro: 4.0, wind: 22.0, offshoreWind: 4.0, solar: 12.0, nuclear: 5.0, geothermal: 0.0, biomass: 6.0 },
+                mix: { coal: 14.0, naturalGas: 38.0, hydro: 4.0, wind: 22.0, offshoreWind: 4.0, solar: 12.0, nuclear: 5.0, geothermal: 0.0, biomass: 4.0, rng: 2.0 },
                 storageGWh: { battery4hr: 22.1 }
             },
             "Canada": { 
                 totalCapacityMW: 165000, 
                 peakLoadsMW: { winter: 140000, summer: 126000, fall: 123200, spring: 112000 },
-                mix: { coal: 4.5, naturalGas: 13.5, hydro: 57.0, wind: 8.5, offshoreWind: 0, solar: 2.5, nuclear: 14.0, geothermal: 0.0, biomass: 2.0 },
+                mix: { coal: 4.5, naturalGas: 13.5, hydro: 57.0, wind: 8.5, offshoreWind: 0, solar: 2.5, nuclear: 14.0, geothermal: 0.0, biomass: 1.5, rng: 0.5 },
                 storageGWh: { battery4hr: 1 }
             },
             "South Korea": { 
                 totalCapacityMW: 125000, 
                 peakLoadsMW: { summer: 93000, winter: 83700, fall: 81840, spring: 74400 },
-                mix: { coal: 34.0, naturalGas: 20.0, hydro: 5.0, wind: 1.4, offshoreWind: 0.1, solar: 12.5, nuclear: 27.0, geothermal: 0.0, biomass: 1.0 },
+                mix: { coal: 34.0, naturalGas: 20.0, hydro: 5.0, wind: 1.4, offshoreWind: 0.1, solar: 12.5, nuclear: 27.0, geothermal: 0.0, biomass: 0.8, rng: 0.2 },
                 storageGWh: { battery4hr: 9 }
             },
             "France": { 
                 totalCapacityMW: 115000, 
                 peakLoadsMW: { winter: 102000, summer: 91800, fall: 89760, spring: 81600 },
-                mix: { coal: 1.0, naturalGas: 10.0, hydro: 10.0, wind: 8.0, offshoreWind: 0.5, solar: 6.0, nuclear: 64.0, geothermal: 0.0, biomass: 0.5 },
+                mix: { coal: 1.0, naturalGas: 10.0, hydro: 10.0, wind: 8.0, offshoreWind: 0.5, solar: 6.0, nuclear: 64.0, geothermal: 0.0, biomass: 0.4, rng: 0.1 },
                 storageGWh: { battery4hr: 1.0 }
             },
             "United Kingdom": { 
                 totalCapacityMW: 78000, 
                 peakLoadsMW: { winter: 60000, summer: 54000, fall: 52800, spring: 48000 },
-                mix: { coal: 1.0, naturalGas: 38.0, hydro: 2.0, wind: 15.0, offshoreWind: 14.0, solar: 19.0, nuclear: 9.0, geothermal: 0.0, biomass: 6.0 },
+                mix: { coal: 1.0, naturalGas: 38.0, hydro: 2.0, wind: 15.0, offshoreWind: 14.0, solar: 19.0, nuclear: 9.0, geothermal: 0.0, biomass: 4.0, rng: 2.0 },
                  storageGWh: { battery4hr: 16.0 }
             },
             "Australia": { 
                 totalCapacityMW: 65000, 
                 peakLoadsMW: { summer: 47000, winter: 42300, fall: 41360, spring: 37600 },
-                mix: { coal: 45.0, naturalGas: 18.0, hydro: 13.0, wind: 10.0, offshoreWind: 0, solar: 13.0, nuclear: 0.0, geothermal: 0.0, biomass: 1.0 },
+                mix: { coal: 45.0, naturalGas: 18.0, hydro: 13.0, wind: 10.0, offshoreWind: 0, solar: 13.0, nuclear: 0.0, geothermal: 0.0, biomass: 0.8, rng: 0.2 },
                 storageGWh: { battery4hr: 5.6 }
             },
             "Spain": { 
                 totalCapacityMW: 120000, 
                 peakLoadsMW: { summer: 45000, winter: 40500, fall: 39600, spring: 36000 },
-                mix: { coal: 2.0, naturalGas: 22.0, hydro: 17.0, wind: 27.5, offshoreWind: 0, solar: 21.5, nuclear: 7.0, geothermal: 0.0, biomass: 1.5 },
+                mix: { coal: 2.0, naturalGas: 22.0, hydro: 17.0, wind: 27.5, offshoreWind: 0, solar: 21.5, nuclear: 7.0, geothermal: 0.0, biomass: 1.2, rng: 0.3 },
                 storageGWh: { battery4hr: 1.7 }
             },
             "Italy": { 
                 totalCapacityMW: 122000, 
                 peakLoadsMW: { summer: 60000, winter: 54000, fall: 52800, spring: 48000 },
-                mix: { coal: 4.0, naturalGas: 47.0, hydro: 18.0, wind: 10.0, offshoreWind: 0, solar: 19.0, nuclear: 0.0, geothermal: 1.0, biomass: 2.0 },
+                mix: { coal: 4.0, naturalGas: 47.0, hydro: 18.0, wind: 10.0, offshoreWind: 0, solar: 19.0, nuclear: 0.0, geothermal: 1.0, biomass: 1.5, rng: 0.5 },
                 storageGWh: { battery4hr: 6 }
             },
             "Indonesia": { 
                 totalCapacityMW: 75000, 
                 peakLoadsMW: { summer: 50000, winter: 45000, fall: 44000, spring: 40000 },
-                mix: { coal: 48.0, naturalGas: 28.0, hydro: 9.0, wind: 0.2, offshoreWind: 0, solar: 2.8, nuclear: 0.0, geothermal: 3.0, biomass: 1.0 } 
+                mix: { coal: 48.0, naturalGas: 28.0, hydro: 9.0, wind: 0.2, offshoreWind: 0, solar: 2.8, nuclear: 0.0, geothermal: 3.0, biomass: 0.8, rng: 0.2 } 
             },
             "South Africa": { 
                 totalCapacityMW: 60000, 
                 peakLoadsMW: { winter: 34000, summer: 30600, fall: 29920, spring: 27200 },
-                mix: { coal: 78.0, naturalGas: 6.0, hydro: 6.0, wind: 5.5, offshoreWind: 0, solar: 3.5, nuclear: 0.0, geothermal: 0.0, biomass: 0.5 },
+                mix: { coal: 78.0, naturalGas: 6.0, hydro: 6.0, wind: 5.5, offshoreWind: 0, solar: 3.5, nuclear: 0.0, geothermal: 0.0, biomass: 0.4, rng: 0.1 },
                 storageGWh: { battery4hr: 2 }
             },
             "Mexico": { 
                 totalCapacityMW: 88000, 
                 peakLoadsMW: { summer: 50000, winter: 45000, fall: 44000, spring: 40000 },
-                mix: { coal: 5.0, naturalGas: 58.0, hydro: 15.0, wind: 9.0, offshoreWind: 0, solar: 11.0, nuclear: 1.0, geothermal: 1.0, biomass: 0.5 } ,
+                mix: { coal: 5.0, naturalGas: 58.0, hydro: 15.0, wind: 9.0, offshoreWind: 0, solar: 11.0, nuclear: 1.0, geothermal: 1.0, biomass: 0.4, rng: 0.1 } ,
                 storageGWh: { battery4hr: 0.6 }
             },
             "Norway": { 
                 totalCapacityMW: 39000, 
                 peakLoadsMW: { winter: 25000, summer: 22500, fall: 22000, spring: 20000 },
-                mix: { coal: 0.0, naturalGas: 0.0, hydro: 91.0, wind: 8.5, offshoreWind: 0, solar: 0.5, nuclear: 0.0, geothermal: 0.0, biomass: 0.0 } ,
+                mix: { coal: 0.0, naturalGas: 0.0, hydro: 91.0, wind: 8.5, offshoreWind: 0, solar: 0.5, nuclear: 0.0, geothermal: 0.0, biomass: 0.0, rng: 0.0 } ,
                 storageGWh: { battery4hr: 0.2 }
             },
             "New Zealand": { 
                 totalCapacityMW: 9800, 
                 peakLoadsMW: { winter: 7000, summer: 6300, fall: 6160, spring: 5600 },
-                mix: { coal: 0.0, naturalGas: 14.0, hydro: 56.0, wind: 7.5, offshoreWind: 0, solar: 1.5, nuclear: 0.0, geothermal: 20.0, biomass: 1.0 },
+                mix: { coal: 0.0, naturalGas: 14.0, hydro: 56.0, wind: 7.5, offshoreWind: 0, solar: 1.5, nuclear: 0.0, geothermal: 20.0, biomass: 0.8, rng: 0.2 },
                 storageGWh: { battery4hr: 0.4 } 
             },
             "Vietnam": { 
                 totalCapacityMW: 80000, 
                 peakLoadsMW: { summer: 45000, winter: 40500, fall: 39600, spring: 36000 },
-                mix: { coal: 32.0, naturalGas: 9.0, hydro: 28.0, wind: 6.0, offshoreWind: 0, solar: 24.0, nuclear: 0.0, geothermal: 0.0, biomass: 1.0 },
+                mix: { coal: 32.0, naturalGas: 9.0, hydro: 28.0, wind: 6.0, offshoreWind: 0, solar: 24.0, nuclear: 0.0, geothermal: 0.0, biomass: 0.8, rng: 0.2 },
                 storageGWh: { battery4hr: 0.1 } 
             }
         };
@@ -817,23 +837,23 @@
                 offshoreWind: OFFSHORE_WIND_CF_PROFILE
             }
         };
-        const EMISSION_FACTORS = { naturalGas: 395, hydro: 0, nuclear: 0, solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, coal: 850, biomass: 0 };
+        const EMISSION_FACTORS = { naturalGas: 395, hydro: 0, nuclear: 0, solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, coal: 850, biomass: 0, rng: 0 };
         
         const COST_DATA = {
             capex: { 
-                solar: 1200, wind: 1500, offshoreWind: 5000, nuclear: 7242, geothermal: 3329, biomass: 3500,
+                solar: 1200, wind: 1500, offshoreWind: 5000, nuclear: 7242, geothermal: 3329, biomass: 3500, rng: 3000,
                 naturalGas: 1300, hydro: 3336, coal: 4407,
                 battery4hr: 350, battery8hr: 300, longduration: 300, // $/kWh
                 dac: 1000 // $/ton/year
             },
             fixed_om: {
-                solar: 15, wind: 35, offshoreWind: 100, nuclear: 140, geothermal: 120, biomass: 100, // $/kW-year
+                solar: 15, wind: 35, offshoreWind: 100, nuclear: 140, geothermal: 120, biomass: 100, rng: 95, // $/kW-year
                 naturalGas: 20, hydro: 20, coal: 40,
                 battery4hr: 15, battery8hr: 15, longduration: 60, // $/kW-year
                 dac: 20 // $/ton/year
             },
             variable_om: { 
-                solar: 0, wind: 1, offshoreWind: 0, nuclear: 10, geothermal: 5, biomass: 10, // $/MWh
+                solar: 0, wind: 1, offshoreWind: 0, nuclear: 10, geothermal: 5, biomass: 10, rng: 25, // $/MWh
                 naturalGasCCGT: { start: 35, end: 80 }, // NEW: $/MWh
                 naturalGasCT: { start: 100, end: 150 }, // NEW: $/MWh
                 hydro: 5, coal: 30, // $/MWh 
@@ -846,12 +866,12 @@
                 }
             },
             lifetime: {
-                solar: 30, wind: 30, offshoreWind: 30, nuclear: 60, geothermal: 30, biomass: 25,
+                solar: 30, wind: 30, offshoreWind: 30, nuclear: 60, geothermal: 30, biomass: 25, rng: 25,
                 naturalGas: 30, hydro: 80, coal: 40,
                 battery4hr: 15, battery8hr: 15, longduration: 25, dac: 25
             },
             capacity_factor: {
-                solar: 0.25, wind: 0.35, offshoreWind: 0.50, nuclear: 0.9, geothermal: 0.9, biomass: 0.85,
+                solar: 0.25, wind: 0.35, offshoreWind: 0.50, nuclear: 0.9, geothermal: 0.9, biomass: 0.85, rng: 0.85,
                 naturalGas: 0.55, hydro: 0.45, coal: 0.6
             },
             discount_rate: 0.07
@@ -864,13 +884,14 @@
             const sliders = {
                 solar: document.getElementById('solar-slider'), wind: document.getElementById('wind-slider'), offshoreWind: document.getElementById('offshoreWind-slider'),
                 geothermal: document.getElementById('geothermal-slider'), nuclear: document.getElementById('nuclear-slider'),
-                biomass: document.getElementById('biomass-slider'),
+                biomass: document.getElementById('biomass-slider'), rng: document.getElementById('rng-slider'),
                 battery4hr: document.getElementById('battery4hr-slider'), battery8hr: document.getElementById('battery8hr-slider'),
                 longduration: document.getElementById('longduration-slider'), demandflex: document.getElementById('demandflex-slider'),
                 dac: document.getElementById('dac-slider'), solarIncentive: document.getElementById('solar-incentive-slider'),
                 windIncentive: document.getElementById('wind-incentive-slider'), offshoreWindIncentive: document.getElementById('offshoreWind-incentive-slider'),
                 geothermalIncentive: document.getElementById('geothermal-incentive-slider'),
                 nuclearIncentive: document.getElementById('nuclear-incentive-slider'), biomassIncentive: document.getElementById('biomass-incentive-slider'),
+                rngIncentive: document.getElementById('rng-incentive-slider'),
                 storageIncentive: document.getElementById('storage-incentive-slider'),
                 dacIncentive: document.getElementById('dac-incentive-slider'), carbonTax: document.getElementById('carbon-tax-slider'),
                 exportPrice: document.getElementById('export-price-slider'),
@@ -878,13 +899,14 @@
             const inputs = {
                 solar: document.getElementById('solar-input'), wind: document.getElementById('wind-input'), offshoreWind: document.getElementById('offshoreWind-input'),
                 geothermal: document.getElementById('geothermal-input'), nuclear: document.getElementById('nuclear-input'),
-                biomass: document.getElementById('biomass-input'),
+                biomass: document.getElementById('biomass-input'), rng: document.getElementById('rng-input'),
                 battery4hr: document.getElementById('battery4hr-input'), battery8hr: document.getElementById('battery8hr-input'),
                 longduration: document.getElementById('longduration-input'), demandflex: document.getElementById('demandflex-input'),
                 dac: document.getElementById('dac-input'), solarIncentive: document.getElementById('solar-incentive-input'),
                 windIncentive: document.getElementById('wind-incentive-input'), offshoreWindIncentive: document.getElementById('offshoreWind-incentive-slider'),
                 geothermalIncentive: document.getElementById('geothermal-incentive-input'),
                 nuclearIncentive: document.getElementById('nuclear-incentive-input'), biomassIncentive: document.getElementById('biomass-incentive-input'),
+                rngIncentive: document.getElementById('rng-incentive-input'),
                 storageIncentive: document.getElementById('storage-incentive-input'),
                 dacIncentive: document.getElementById('dac-incentive-input'), carbonTax: document.getElementById('carbon-tax-input'),
                 exportPrice: document.getElementById('export-price-input'),
@@ -962,6 +984,7 @@
                 offshoreWind: 'rgba(12, 148, 103, 0.8)', 
                 geothermal: 'rgba(120, 40, 40, 0.8)',
                 biomass: 'rgba(101, 67, 33, 0.8)',
+                rng: 'rgba(132, 204, 22, 0.8)', // Lime green for RNG
                 storage: 'rgba(168, 85, 247, 0.8)', demand: 'rgba(17, 24, 39, 1)',
                 curtailment: 'rgba(253, 186, 116, 0.8)', coal: 'rgba(0, 0, 0, 0.8)',
                 price: 'rgba(79, 70, 229, 1)' // NEW for price chart
@@ -998,6 +1021,7 @@
                 coalToStorage: createPattern(COLORS.coal, COLORS.storage),
                 naturalGasToStorage: createPattern(COLORS.naturalGas, COLORS.storage),
                 biomassToStorage: createPattern(COLORS.biomass, COLORS.storage),
+                rngToStorage: createPattern(COLORS.rng, COLORS.storage),
             };
             
             const generationChartConfig = {
@@ -1008,6 +1032,7 @@
                         { label: 'Nuclear', data: [], backgroundColor: COLORS.nuclear, stack: 'generators', dragData: false },
                         { label: 'Geothermal', data: [], backgroundColor: COLORS.geothermal, stack: 'generators', dragData: false },
                         { label: 'Biomass', data: [], backgroundColor: COLORS.biomass, stack: 'generators', dragData: false },
+                        { label: 'RNG (Biogas)', data: [], backgroundColor: COLORS.rng, stack: 'generators', dragData: false },
                         { label: 'Hydro', data: [], backgroundColor: COLORS.hydro, stack: 'generators', dragData: false },
                         { label: 'Onshore Wind', data: [], backgroundColor: COLORS.wind, stack: 'generators', dragData: false },
                         { label: 'Offshore Wind', data: [], backgroundColor: COLORS.offshoreWind, stack: 'generators', dragData: false },
@@ -1059,7 +1084,7 @@
                                     });
 
                                     const lines = [];
-                                    const tooltipOrder = ['Coal', 'Natural Gas', 'Hydro', 'Geothermal', 'Biomass', 'Nuclear', 'Solar', 'Onshore Wind', 'Offshore Wind', 'Storage', 'Curtailment', 'Solar (to Storage)', 'Onshore Wind (to Storage)', 'Offshore Wind (to Storage)', 'Demand'];
+                                    const tooltipOrder = ['Coal', 'Natural Gas', 'Hydro', 'Geothermal', 'Biomass', 'RNG (Biogas)', 'Nuclear', 'Solar', 'Onshore Wind', 'Offshore Wind', 'Storage', 'Curtailment', 'Solar (to Storage)', 'Onshore Wind (to Storage)', 'Offshore Wind (to Storage)', 'Demand'];
                                     tooltipOrder.forEach(label => {
                                         if (totals[label] > 0.01) { 
                                             lines.push(`${label}: ${totals[label].toFixed(2)}`);
@@ -1314,12 +1339,12 @@
             // --- REWRITTEN DISPATCH LOGIC ---
             function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProfile, potentialGen, baselineStorageGWh = {}, hydroCF, countryName, storageOverrideDisabled = false, forceMeritOrder = false) {
                 const VRE_SOURCES = ['solar', 'wind', 'offshoreWind'];
-                const INFLEXIBLE_SOURCES = ['nuclear', 'geothermal']; 
+                const INFLEXIBLE_SOURCES = ['nuclear', 'geothermal', 'biomass']; 
                 
                 let finalGeneration = {
                     coal: Array(24).fill(0), naturalGas: Array(24).fill(0),
                     hydro: Array(24).fill(0), nuclear: Array(24).fill(0),
-                    geothermal: Array(24).fill(0), biomass: Array(24).fill(0),
+                    geothermal: Array(24).fill(0), biomass: Array(24).fill(0), rng: Array(24).fill(0),
                     solar: Array(24).fill(0), wind: Array(24).fill(0), offshoreWind: Array(24).fill(0),
                     storage: Array(24).fill(0), curtailment: Array(24).fill(0),
                     solarToStorage: Array(24).fill(0), windToStorage: Array(24).fill(0), offshoreWindToStorage: Array(24).fill(0)
@@ -1354,6 +1379,7 @@
                     currentPotential.nuclear[i] += inputs.capacity.nuclear * COST_DATA.capacity_factor.nuclear;
                     currentPotential.geothermal[i] += inputs.capacity.geothermal * COST_DATA.capacity_factor.geothermal;
                     currentPotential.biomass[i] += inputs.capacity.biomass * COST_DATA.capacity_factor.biomass;
+                    currentPotential.rng[i] += inputs.capacity.rng * COST_DATA.capacity_factor.rng;
                 }
 
                 let netLoad = Array(24).fill(0);
@@ -1434,8 +1460,10 @@
                 finalGeneration.naturalGas = dispatchResult.generation.naturalGas;
                 finalGeneration.coal = dispatchResult.generation.coal;
                 finalGeneration.hydro = dispatchResult.generation.hydro;
-                finalGeneration.biomass = dispatchResult.generation.biomass;
+                finalGeneration.rng = dispatchResult.generation.rng;
+                
                 if (forceMeritOrder) {
+                    finalGeneration.biomass = dispatchResult.generation.biomass;
                     finalGeneration.storage = dispatchResult.generation.storage;
                 }
                 
@@ -1508,7 +1536,8 @@
                             naturalGas: thermalResult.thermalGeneration.naturalGas,
                             coal: thermalResult.thermalGeneration.coal,
                             hydro: hydroGeneration,
-                            biomass: Array(24).fill(0) 
+                            rng: thermalResult.thermalGeneration.rng,
+                            biomass: Array(24).fill(0) // Biomass is not dispatchable in this model, so it returns 0.
                         },
                         hourlyMarginalPrice: thermalResult.hourlyMarginalPrice,
                         gasGenDetails: thermalResult.gasGenDetails
@@ -1530,6 +1559,7 @@
                     { tech: 'biomass', cost: COST_DATA.variable_om.biomass },
                     { tech: 'nuclear', cost: COST_DATA.variable_om.nuclear },
                     { tech: 'storage_tranche1', cost: COST_DATA.variable_om.storage.tranche1 },
+                    { tech: 'rng', cost: COST_DATA.variable_om.rng },
                     { tech: 'coal', cost: COST_DATA.variable_om.coal + carbonCostCoal },
                     { tech: 'storage_tranche2', cost: COST_DATA.variable_om.storage.tranche2 },
                     { tech: 'storage_tranche3', cost: COST_DATA.variable_om.storage.tranche3 },
@@ -1537,7 +1567,7 @@
                     { tech: 'naturalGasCT', cost: COST_DATA.variable_om.naturalGasCT.start + carbonCostNG }
                 ].sort((a, b) => a.cost - b.cost);
 
-                const finalGeneration = { naturalGas: Array(24).fill(0), coal: Array(24).fill(0), hydro: Array(24).fill(0), biomass: Array(24).fill(0), storage: Array(24).fill(0) };
+                const finalGeneration = { naturalGas: Array(24).fill(0), coal: Array(24).fill(0), hydro: Array(24).fill(0), biomass: Array(24).fill(0), rng: Array(24).fill(0), storage: Array(24).fill(0) };
                 const gasGenDetails = { ccgt: { generation: 0, cost: 0 }, ct: { generation: 0, cost: 0 } };
                 const hourlyMarginalPrice = Array(24).fill(0);
 
@@ -1589,6 +1619,12 @@
                                 availableGen = currentPotential.biomass[i];
                                 dispatchAmount = Math.min(remainingLoad, availableGen);
                                 finalGeneration.biomass[i] += dispatchAmount;
+                                break;
+
+                            case 'rng':
+                                availableGen = currentPotential.rng[i];
+                                dispatchAmount = Math.min(remainingLoad, availableGen);
+                                finalGeneration.rng[i] += dispatchAmount;
                                 break;
 
                             case 'storage_tranche1':
@@ -1660,7 +1696,7 @@
             function calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential) {
                 const gasGenDetails = { ccgt: { generation: 0, cost: 0 }, ct: { generation: 0, cost: 0 } };
                 const hourlyMarginalPrice = Array(24).fill(0);
-                const thermalGeneration = { naturalGas: Array(24).fill(0), coal: Array(24).fill(0) };
+                const thermalGeneration = { naturalGas: Array(24).fill(0), coal: Array(24).fill(0), rng: Array(24).fill(0) };
                 
                 const totalNGCapacity = (currentCountryInstalledCapacity.naturalGas || 0) + (inputs.capacity.naturalGas || 0);
                 const ccgtCapacity = totalNGCapacity * 0.7;
@@ -1678,8 +1714,18 @@
                         hourlyMarginalPrice[i] = 0;
                         continue;
                     }
+                    
+                    // Dispatch RNG first as it's cheaper than NG
+                    if (currentPotential.rng[i] > 0) {
+                        const rngToDispatch = Math.min(remainingLoad, currentPotential.rng[i]);
+                        if (rngToDispatch > 0) {
+                            thermalGeneration.rng[i] += rngToDispatch;
+                            remainingLoad -= rngToDispatch;
+                            hourlyPrice = Math.max(hourlyPrice, COST_DATA.variable_om.rng);
+                        }
+                    }
 
-                    if (ccgtCapacity > 0) {
+                    if (remainingLoad > 0.01 && ccgtCapacity > 0) {
                         const ccgtToDispatch = Math.min(remainingLoad, ccgtCapacity);
                         if (ccgtToDispatch > 0) {
                             thermalGeneration.naturalGas[i] += ccgtToDispatch;
@@ -1906,7 +1952,7 @@
                     capacity: {
                         solar: currentValues.solar, wind: currentValues.wind, offshoreWind: currentValues.offshoreWind,
                         geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
-                        biomass: currentValues.biomass,
+                        biomass: currentValues.biomass, rng: currentValues.rng,
                         battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
                         longduration: currentValues.longduration, dac: currentValues.dac,
                         demandflex: currentValues.demandflex,
@@ -1914,7 +1960,7 @@
                     incentives: {
                         solar: currentValues.solarIncentive, wind: currentValues.windIncentive, offshoreWind: currentValues.offshoreWindIncentive,
                         geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
-                        biomass: currentValues.biomassIncentive,
+                        biomass: currentValues.biomassIncentive, rng: currentValues.rngIncentive,
                         storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
                         carbonTax: currentValues.carbonTax,
                         exportPrice: currentValues.exportPrice,
@@ -2020,7 +2066,7 @@
                     activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry, storageOverride, false
                 );
 
-                const flexibleRenewableSources = ['solar', 'wind', 'offshoreWind', 'hydro', 'biomass', 'geothermal'];
+                const flexibleRenewableSources = ['solar', 'wind', 'offshoreWind', 'hydro', 'biomass', 'rng', 'geothermal'];
                 let totalDailyEnergy = 0;
                 let flexibleRenewableDailyEnergy = 0;
 
@@ -2060,10 +2106,10 @@
                 const chartData = generationChart.data.datasets;
                 
                 const techMap = {
-                    nuclear: 0, geothermal: 1, biomass: 2, hydro: 3, 
-                    wind: 4, offshoreWind: 5, solar: 6, 
-                    naturalGas: 7, coal: 8, storage: 9, curtailment: 10,
-                    solarToStorage: 11, windToStorage: 12, offshoreWindToStorage: 13
+                    nuclear: 0, geothermal: 1, biomass: 2, rng: 3, hydro: 4, 
+                    wind: 5, offshoreWind: 6, solar: 7, 
+                    naturalGas: 8, coal: 9, storage: 10, curtailment: 11,
+                    solarToStorage: 12, windToStorage: 13, offshoreWindToStorage: 14
                 };
 
                 for (const tech in techMap) {
@@ -2071,7 +2117,7 @@
                         chartData[techMap[tech]].data = generation[tech];
                     }
                 }
-                chartData[14].data = demand;
+                chartData[15].data = demand;
 
                 generationChart.update('none');
                 
@@ -2138,11 +2184,12 @@
             }
             
             function createGridMixSliders() {
-                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass'];
+                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass', 'rng'];
                 techOrder.forEach(tech => {
                     let name = tech.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
                     if (tech === 'wind') name = 'Onshore Wind';
                     if (tech === 'offshoreWind') name = 'Offshore Wind';
+                    if (tech === 'rng') name = 'RNG (Biogas)';
 
                     const color = COLORS[tech] || '#ccc';
 
@@ -2246,7 +2293,7 @@
                 dailyGenerationTotalsGWh = {}; // Clear previous totals
                 let totalGeneration = 0;
 
-                const gridTechs = ['coal', 'naturalGas', 'hydro', 'geothermal', 'biomass', 'nuclear', 'solar', 'wind', 'offshoreWind', 'storage'];
+                const gridTechs = ['coal', 'naturalGas', 'hydro', 'geothermal', 'biomass', 'rng', 'nuclear', 'solar', 'wind', 'offshoreWind', 'storage'];
                 gridTechs.forEach(tech => {
                     const techTotal = (generation[tech] || []).reduce((a, b) => a + b, 0);
                     dailyGenerationTotalsGWh[tech] = techTotal;
@@ -2322,11 +2369,12 @@
             }
 
             function createGenerationMixSliders() {
-                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass', 'storage'];
+                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass', 'rng', 'storage'];
                 techOrder.forEach(tech => {
                     let name = tech.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
                     if (tech === 'wind') name = 'Onshore Wind';
                     if (tech === 'offshoreWind') name = 'Offshore Wind';
+                    if (tech === 'rng') name = 'RNG (Biogas)';
                     const color = COLORS[tech] || '#ccc';
 
                     const wrapper = document.createElement('div');
@@ -2511,7 +2559,7 @@
                     capacity: {
                         solar: currentValues.solar, wind: currentValues.wind, offshoreWind: currentValues.offshoreWind,
                         geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
-                        biomass: currentValues.biomass,
+                        biomass: currentValues.biomass, rng: currentValues.rng,
                         battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
                         longduration: currentValues.longduration, dac: currentValues.dac,
                         demandflex: currentValues.demandflex,
@@ -2519,7 +2567,7 @@
                     incentives: {
                         solar: currentValues.solarIncentive, wind: currentValues.windIncentive, offshoreWind: currentValues.offshoreWindIncentive,
                         geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
-                        biomass: currentValues.biomassIncentive,
+                        biomass: currentValues.biomassIncentive, rng: currentValues.rngIncentive,
                         storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
                         carbonTax: currentValues.carbonTax,
                         exportPrice: currentValues.exportPrice,
@@ -2911,8 +2959,8 @@
                 });
                 
                 const inputsForBaseline = { 
-                    capacity: { solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, nuclear: 0, biomass: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
-                    incentives: { solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, nuclear: 0, biomass: 0, storage: 0, dac: 0, carbonTax: newCarbonTax, exportPrice: newExportPrice }
+                    capacity: { solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, nuclear: 0, biomass: 0, rng: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
+                    incentives: { solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, nuclear: 0, biomass: 0, rng: 0, storage: 0, dac: 0, carbonTax: newCarbonTax, exportPrice: newExportPrice }
                 };
                 
                 const { result: baselineResult } = runTwoPassSimulation(inputsForBaseline);
