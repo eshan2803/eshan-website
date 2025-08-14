@@ -1382,16 +1382,42 @@
                     currentPotential.rng[i] += inputs.capacity.rng * COST_DATA.capacity_factor.rng;
                 }
 
+                // --- BUG FIX STARTS HERE ---
+                // This loop calculates the "net load" that dispatchable generators need to meet.
+                // The logic is now conditional based on whether we're in the "Thermal Margin" model
+                // or the "Renewable Margin" (full merit order) model.
                 let netLoad = Array(24).fill(0);
                 for (let i = 0; i < 24; i++) {
                     let mustRunGen = 0;
-                    [...INFLEXIBLE_SOURCES, ...VRE_SOURCES].forEach(tech => {
-                        const potential = currentPotential[tech][i];
-                        finalGeneration[tech][i] = potential; 
-                        mustRunGen += potential;
+                    
+                    // VRE (Solar, Wind) and truly inflexible sources (Nuclear, Geothermal) are always subtracted first.
+                    const sourcesToSubtract = [...VRE_SOURCES, 'nuclear', 'geothermal'];
+                    
+                    sourcesToSubtract.forEach(tech => {
+                        if (currentPotential[tech]) {
+                            const potential = currentPotential[tech][i];
+                            finalGeneration[tech][i] = potential; 
+                            mustRunGen += potential;
+                        }
                     });
+
+                    // In the thermal margin model, biomass is also treated as must-run.
+                    // In the full merit order model, it's dispatchable, so we DON'T subtract it here.
+                    if (!forceMeritOrder) {
+                        if(currentPotential.biomass) {
+                            const biomassPotential = currentPotential.biomass[i];
+                            finalGeneration.biomass[i] = biomassPotential;
+                            mustRunGen += biomassPotential;
+                        }
+                    } else {
+                        // If using the full merit order, we must clear any pre-set biomass generation
+                        // so it can be correctly dispatched based on its cost later.
+                        finalGeneration.biomass[i] = 0;
+                    }
+                    
                     netLoad[i] = modifiedDemand[i] - mustRunGen;
                 }
+                // --- BUG FIX ENDS HERE ---
                 
                 let batteryDischargeEnergy = Array(24).fill(0);
 
@@ -1463,7 +1489,8 @@
                 finalGeneration.rng = dispatchResult.generation.rng;
                 
                 if (forceMeritOrder) {
-                    finalGeneration.biomass = dispatchResult.generation.biomass;
+                    // When using merit order, biomass is dispatched, so we add its result here.
+                    finalGeneration.biomass.forEach((val, i) => finalGeneration.biomass[i] += dispatchResult.generation.biomass[i]);
                     finalGeneration.storage = dispatchResult.generation.storage;
                 }
                 
