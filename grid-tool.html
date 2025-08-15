@@ -2215,15 +2215,18 @@
             // --- NEW: Centralized Two-Pass Simulation Logic ---
             function runTwoPassSimulation(inputs, storageOverride = false) {
                 const selectedCountry = countrySelect.value;
-                const baseSolarProfile = (countryProfiles[selectedCountry] || countryProfiles.default).solar;
-                const baseWindProfile = (countryProfiles[selectedCountry] || countryProfiles.default).wind;
-                const baseOffshoreWindProfile = (countryProfiles[selectedCountry] || countryProfiles.default).offshoreWind;
                 const baseSeason = currentDemandProfileName.split(' ')[0].toLowerCase();
                 const seasonalMultipliers = SEASONAL_MULTIPLIERS[baseSeason] || { solar: 1.0, wind: 1.0, offshoreWind: 1.0 };
-                const seasonalSolarProfile = currentSolarCFProfile.length > 0 ? currentSolarCFProfile : baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
-                const seasonalWindProfile = currentWindCFProfile.length > 0 ? currentWindCFProfile : baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
-                const seasonalOffshoreWindProfile = currentOffshoreWindCFProfile.length > 0 ? currentOffshoreWindCFProfile : baseOffshoreWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.offshoreWind));
-                
+                const countryProfile = countryProfiles[selectedCountry] || countryProfiles.default;
+
+                // Correctly select the seasonal array before mapping
+                const baseSolarProfileForSeason = (countryProfile.solar || countryProfiles.default.solar)[baseSeason];
+                const baseWindProfileForSeason = (countryProfile.wind || countryProfiles.default.wind)[baseSeason];
+                const baseOffshoreWindProfileForSeason = (countryProfile.offshoreWind || countryProfiles.default.offshoreWind)[baseSeason];
+
+                const seasonalSolarProfile = currentSolarCFProfile.length > 0 ? currentSolarCFProfile : baseSolarProfileForSeason.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
+                const seasonalWindProfile = currentWindCFProfile.length > 0 ? currentWindCFProfile : baseWindProfileForSeason.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
+                const seasonalOffshoreWindProfile = currentOffshoreWindCFProfile.length > 0 ? currentOffshoreWindCFProfile : baseOffshoreWindProfileForSeason.map(cf => Math.min(1, cf * seasonalMultipliers.offshoreWind));                
                 let activePotentialGeneration = JSON.parse(JSON.stringify(BASELINE_POTENTIAL_GENERATION));
                 for (const tech in enabledTechnologies) {
                     if (!enabledTechnologies[tech]) {
@@ -2852,7 +2855,8 @@
                 // Apply seasonal multipliers to the (now guaranteed to exist) profile arrays.
                 currentSolarCFProfile = baseSolarProfileForSeason.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
                 currentWindCFProfile = baseWindProfileForSeason.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
-                currentOffshoreWindProfile = baseOffshoreWindProfileForSeason.map(cf => Math.min(1, cf * seasonalMultipliers.offshoreWind));                currentCFProfileName = cfProfileDisplayName;
+                currentOffshoreWindProfile = baseOffshoreWindProfileForSeason.map(cf => Math.min(1, cf * seasonalMultipliers.offshoreWind));                
+                currentCFProfileName = cfProfileDisplayName;
                 currentCFProfileText.textContent = currentCFProfileName;
 
                 updateBaselineForCountry(countrySelect.value, profileName); 
