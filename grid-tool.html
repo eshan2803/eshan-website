@@ -810,33 +810,155 @@
             fall: { solar: 0.8, wind: 1.0, offshoreWind: 1.0 },
             winter: { solar: 0.6, wind: 1.1, offshoreWind: 1.1 }
         };
-        const countryProfiles = {
-            "California": { // Using default CA profile
-                solar: SOLAR_CF_PROFILE,
-                wind: WIND_CF_PROFILE,
-                offshoreWind: OFFSHORE_WIND_CF_PROFILE
-            },
-            "Germany": {
-                solar: [0,0,0,0,0,0.02,0.1,0.25,0.45,0.6,0.7,0.75,0.7,0.6,0.4,0.15,0.05,0,0,0,0,0,0,0],
-                wind: [0.5,0.52,0.55,0.56,0.55,0.5,0.45,0.4,0.35,0.3,0.3,0.3,0.35,0.4,0.45,0.5,0.6,0.7,0.75,0.7,0.65,0.6,0.55,0.5],
-                offshoreWind: [0.6,0.62,0.65,0.66,0.65,0.6,0.55,0.5,0.45,0.4,0.4,0.4,0.45,0.5,0.55,0.6,0.7,0.8,0.85,0.8,0.75,0.7,0.65,0.6]
-            },
-            "United Kingdom": {
-                solar: [0,0,0,0,0,0.01,0.08,0.2,0.4,0.55,0.65,0.7,0.65,0.55,0.35,0.1,0.02,0,0,0,0,0,0,0],
-                wind: [0.6,0.62,0.65,0.68,0.66,0.6,0.55,0.5,0.45,0.4,0.4,0.4,0.45,0.5,0.55,0.6,0.7,0.8,0.85,0.8,0.75,0.7,0.65,0.6],
-                offshoreWind: [0.7,0.72,0.75,0.78,0.76,0.7,0.65,0.6,0.55,0.5,0.5,0.5,0.55,0.6,0.65,0.7,0.8,0.9,0.95,0.9,0.85,0.8,0.75,0.7]
-            },
-            "Australia": {
-                solar: [0,0,0,0,0,0.08,0.2,0.4,0.6,0.8,0.9,0.95,0.9,0.8,0.6,0.3,0.1,0,0,0,0,0,0,0],
-                wind: [0.3,0.3,0.3,0.25,0.2,0.2,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.45,0.4,0.35,0.3,0.3,0.3,0.35,0.4,0.4,0.35,0.3],
-                offshoreWind: [0.4,0.4,0.4,0.35,0.3,0.3,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.55,0.5,0.45,0.4,0.4,0.4,0.45,0.5,0.5,0.45,0.4]
-            },
-            "default": {
-                solar: SOLAR_CF_PROFILE,
-                wind: WIND_CF_PROFILE,
-                offshoreWind: OFFSHORE_WIND_CF_PROFILE
-            }
-        };
+                // New structure: countryProfiles[country][generator][season] = [24 values]
+                const countryProfiles = {
+                    Germany: {
+                        solar: {
+                            spring: [0, 0, 0, 0, 0, 0.03, 0.12, 0.25, 0.38, 0.48, 0.55, 0.58, 0.57, 0.51, 0.42, 0.30, 0.15, 0.04, 0, 0, 0, 0, 0, 0],
+                            summer: [0, 0, 0, 0, 0, 0.05, 0.18, 0.33, 0.47, 0.58, 0.65, 0.68, 0.67, 0.61, 0.52, 0.38, 0.21, 0.06, 0, 0, 0, 0, 0, 0],
+                            fall:   [0, 0, 0, 0, 0, 0.01, 0.05, 0.12, 0.18, 0.22, 0.24, 0.25, 0.23, 0.19, 0.13, 0.06, 0.01, 0, 0, 0, 0, 0, 0, 0],
+                            winter: [0, 0, 0, 0, 0, 0, 0.01, 0.04, 0.08, 0.11, 0.13, 0.14, 0.12, 0.09, 0.05, 0.01, 0, 0, 0, 0, 0, 0, 0, 0]
+                        },
+                        wind: {
+                            spring: [0.38, 0.37, 0.36, 0.35, 0.34, 0.33, 0.31, 0.29, 0.27, 0.25, 0.24, 0.23, 0.24, 0.26, 0.29, 0.32, 0.35, 0.37, 0.38, 0.39, 0.40, 0.40, 0.39, 0.38],
+                            summer: [0.25, 0.24, 0.23, 0.22, 0.21, 0.20, 0.19, 0.18, 0.17, 0.16, 0.16, 0.16, 0.17, 0.19, 0.21, 0.24, 0.26, 0.27, 0.28, 0.28, 0.27, 0.26, 0.26, 0.25],
+                            fall:   [0.45, 0.46, 0.46, 0.45, 0.44, 0.43, 0.41, 0.39, 0.37, 0.35, 0.34, 0.33, 0.34, 0.36, 0.39, 0.42, 0.45, 0.47, 0.48, 0.49, 0.49, 0.48, 0.47, 0.46],
+                            winter: [0.52, 0.53, 0.53, 0.52, 0.51, 0.50, 0.48, 0.46, 0.44, 0.42, 0.41, 0.40, 0.41, 0.43, 0.46, 0.49, 0.52, 0.54, 0.55, 0.56, 0.56, 0.55, 0.54, 0.53]
+                        },
+                        offshoreWind: {
+                            spring: [0.55, 0.54, 0.53, 0.52, 0.51, 0.50, 0.48, 0.46, 0.45, 0.44, 0.43, 0.43, 0.44, 0.46, 0.49, 0.52, 0.55, 0.57, 0.58, 0.59, 0.60, 0.59, 0.58, 0.56],
+                            summer: [0.40, 0.39, 0.38, 0.37, 0.36, 0.35, 0.34, 0.33, 0.32, 0.31, 0.31, 0.31, 0.32, 0.34, 0.36, 0.39, 0.41, 0.42, 0.43, 0.43, 0.42, 0.41, 0.41, 0.40],
+                            fall:   [0.65, 0.66, 0.66, 0.65, 0.64, 0.63, 0.61, 0.59, 0.57, 0.55, 0.54, 0.53, 0.54, 0.56, 0.59, 0.62, 0.65, 0.67, 0.68, 0.69, 0.69, 0.68, 0.67, 0.66],
+                            winter: [0.75, 0.76, 0.76, 0.75, 0.74, 0.73, 0.71, 0.69, 0.67, 0.65, 0.64, 0.63, 0.64, 0.66, 0.69, 0.72, 0.75, 0.77, 0.78, 0.79, 0.79, 0.78, 0.77, 0.76]
+                        }
+                    },
+                    UnitedKingdom: {
+                        solar: {
+                            spring: [0, 0, 0, 0, 0, 0.04, 0.15, 0.28, 0.41, 0.50, 0.56, 0.59, 0.58, 0.52, 0.43, 0.31, 0.17, 0.05, 0, 0, 0, 0, 0, 0],
+                            summer: [0, 0, 0, 0, 0, 0.06, 0.20, 0.36, 0.50, 0.61, 0.67, 0.70, 0.69, 0.63, 0.54, 0.40, 0.23, 0.07, 0, 0, 0, 0, 0, 0],
+                            fall: [0, 0, 0, 0, 0, 0.01, 0.06, 0.14, 0.21, 0.25, 0.27, 0.28, 0.26, 0.21, 0.15, 0.07, 0.01, 0, 0, 0, 0, 0, 0, 0],
+                            winter: [0, 0, 0.01, 0.05, 0.10, 0.13, 0.15, 0.16, 0.14, 0.10, 0.06, 0.01, 0, 0, 0, 0, 0, 0, 0, 0]
+                        },
+                        wind: {
+                            spring: [0.42, 0.41, 0.40, 0.39, 0.38, 0.36, 0.34, 0.32, 0.30, 0.28, 0.27, 0.26, 0.27, 0.29, 0.32, 0.35, 0.38, 0.40, 0.42, 0.43, 0.44, 0.43, 0.43, 0.42],
+                            summer: [0.28, 0.27, 0.26, 0.25, 0.24, 0.23, 0.21, 0.20, 0.19, 0.18, 0.18, 0.18, 0.19, 0.21, 0.23, 0.26, 0.28, 0.30, 0.31, 0.31, 0.30, 0.29, 0.29, 0.28],
+                            fall: [0.50, 0.51, 0.51, 0.50, 0.49, 0.47, 0.45, 0.43, 0.41, 0.39, 0.38, 0.37, 0.38, 0.40, 0.43, 0.46, 0.49, 0.51, 0.53, 0.54, 0.54, 0.53, 0.52, 0.51],
+                            winter: [0.58, 0.59, 0.59, 0.58, 0.57, 0.55, 0.53, 0.51, 0.49, 0.47, 0.46, 0.45, 0.46, 0.48, 0.51, 0.54, 0.57, 0.59, 0.61, 0.62, 0.62, 0.61, 0.60, 0.59]
+                        },
+                        offshoreWind: {
+                            spring: [0.60, 0.59, 0.58, 0.57, 0.55, 0.53, 0.51, 0.49, 0.47, 0.45, 0.44, 0.43, 0.44, 0.46, 0.50, 0.54, 0.58, 0.61, 0.63, 0.64, 0.64, 0.63, 0.62, 0.61],
+                            summer: [0.45, 0.44, 0.43, 0.42, 0.40, 0.38, 0.36, 0.34, 0.33, 0.32, 0.32, 0.32, 0.33, 0.35, 0.38, 0.42, 0.46, 0.48, 0.50, 0.50, 0.49, 0.48, 0.47, 0.46],
+                            fall: [0.70, 0.71, 0.71, 0.70, 0.69, 0.67, 0.65, 0.63, 0.61, 0.59, 0.58, 0.57, 0.58, 0.60, 0.63, 0.66, 0.69, 0.71, 0.73, 0.74, 0.74, 0.73, 0.72, 0.71],
+                            winter: [0.80, 0.81, 0.81, 0.80, 0.79, 0.77, 0.75, 0.73, 0.71, 0.69, 0.68, 0.67, 0.68, 0.70, 0.73, 0.76, 0.79, 0.81, 0.83, 0.84, 0.84, 0.83, 0.82, 0.81]
+                        }
+                    },
+                    Australia: {
+                        solar: {
+                            spring: [0, 0, 0, 0, 0, 0.06, 0.22, 0.40, 0.55, 0.66, 0.72, 0.75, 0.73, 0.67, 0.57, 0.42, 0.25, 0.07, 0, 0, 0, 0, 0, 0],
+                            summer: [0, 0, 0, 0, 0, 0.08, 0.26, 0.45, 0.62, 0.73, 0.80, 0.83, 0.81, 0.75, 0.65, 0.50, 0.30, 0.09, 0, 0, 0, 0, 0, 0],
+                            fall: [0, 0, 0, 0, 0, 0.03, 0.15, 0.30, 0.45, 0.55, 0.60, 0.62, 0.60, 0.53, 0.43, 0.28, 0.12, 0.02, 0, 0, 0, 0, 0, 0],
+                            winter: [0, 0, 0, 0, 0, 0.01, 0.08, 0.20, 0.32, 0.40, 0.45, 0.47, 0.44, 0.38, 0.28, 0.15, 0.04, 0, 0, 0, 0, 0, 0, 0]
+                        },
+                        wind: {
+                            spring: [0.35, 0.36, 0.37, 0.36, 0.35, 0.33, 0.31, 0.29, 0.28, 0.27, 0.27, 0.28, 0.30, 0.33, 0.36, 0.39, 0.41, 0.42, 0.41, 0.40, 0.38, 0.37, 0.36, 0.35],
+                            summer: [0.30, 0.31, 0.32, 0.31, 0.30, 0.28, 0.26, 0.24, 0.23, 0.22, 0.22, 0.23, 0.25, 0.28, 0.31, 0.34, 0.36, 0.37, 0.36, 0.35, 0.33, 0.32, 0.31, 0.30],
+                            fall: [0.32, 0.31, 0.30, 0.29, 0.29, 0.28, 0.27, 0.27, 0.28, 0.29, 0.30, 0.31, 0.32, 0.33, 0.34, 0.35, 0.35, 0.35, 0.34, 0.34, 0.33, 0.33, 0.32, 0.32],
+                            winter: [0.40, 0.39, 0.38, 0.38, 0.39, 0.39, 0.38, 0.38, 0.39, 0.40, 0.41, 0.42, 0.43, 0.44, 0.45, 0.45, 0.44, 0.43, 0.42, 0.41, 0.41, 0.40, 0.40, 0.40]
+                        },
+                        offshoreWind: {}
+                    },
+                    UnitedStates: {
+                        solar: {
+                            spring: [0, 0, 0, 0, 0, 0.02, 0.10, 0.25, 0.45, 0.60, 0.70, 0.75, 0.73, 0.65, 0.50, 0.30, 0.10, 0.01, 0, 0, 0, 0, 0, 0],
+                            summer: [0, 0, 0, 0, 0, 0.03, 0.15, 0.35, 0.55, 0.70, 0.80, 0.85, 0.83, 0.75, 0.60, 0.40, 0.18, 0.02, 0, 0, 0, 0, 0, 0],
+                            fall: [0, 0, 0, 0, 0, 0.01, 0.08, 0.20, 0.38, 0.52, 0.60, 0.63, 0.60, 0.50, 0.35, 0.18, 0.05, 0, 0, 0, 0, 0, 0, 0],
+                            winter: [0, 0, 0, 0, 0, 0, 0.04, 0.15, 0.30, 0.42, 0.50, 0.53, 0.50, 0.40, 0.25, 0.10, 0.02, 0, 0, 0, 0, 0, 0, 0]
+                        },
+                        wind: {
+                            spring: [0.48, 0.49, 0.49, 0.48, 0.47, 0.45, 0.42, 0.38, 0.35, 0.32, 0.30, 0.29, 0.30, 0.33, 0.37, 0.41, 0.45, 0.48, 0.50, 0.51, 0.51, 0.50, 0.49, 0.48],
+                            summer: [0.30, 0.29, 0.28, 0.27, 0.26, 0.25, 0.24, 0.23, 0.22, 0.21, 0.20, 0.20, 0.21, 0.24, 0.27, 0.30, 0.33, 0.35, 0.36, 0.35, 0.34, 0.33, 0.32, 0.31],
+                            fall: [0.45, 0.46, 0.47, 0.47, 0.46, 0.44, 0.41, 0.38, 0.35, 0.32, 0.30, 0.29, 0.30, 0.33, 0.37, 0.41, 0.45, 0.48, 0.50, 0.50, 0.49, 0.48, 0.47, 0.46],
+                            winter: [0.55, 0.56, 0.56, 0.55, 0.54, 0.52, 0.49, 0.46, 0.43, 0.40, 0.38, 0.37, 0.38, 0.41, 0.45, 0.49, 0.53, 0.56, 0.58, 0.59, 0.59, 0.58, 0.57, 0.56]
+                        },
+                        offshoreWind: {
+                            spring: [0.60, 0.61, 0.61, 0.60, 0.59, 0.57, 0.55, 0.52, 0.50, 0.48, 0.47, 0.46, 0.47, 0.50, 0.54, 0.58, 0.62, 0.64, 0.65, 0.66, 0.65, 0.64, 0.62, 0.61],
+                            summer: [0.45, 0.44, 0.43, 0.42, 0.41, 0.40, 0.38, 0.36, 0.35, 0.34, 0.33, 0.33, 0.34, 0.36, 0.39, 0.43, 0.47, 0.49, 0.50, 0.51, 0.50, 0.49, 0.47, 0.46],
+                            fall: [0.65, 0.66, 0.67, 0.67, 0.66, 0.64, 0.61, 0.58, 0.55, 0.52, 0.50, 0.49, 0.50, 0.53, 0.57, 0.61, 0.65, 0.68, 0.70, 0.70, 0.69, 0.68, 0.67, 0.66],
+                            winter: [0.75, 0.76, 0.76, 0.75, 0.74, 0.72, 0.69, 0.66, 0.63, 0.60, 0.58, 0.57, 0.58, 0.61, 0.65, 0.69, 0.73, 0.76, 0.78, 0.79, 0.79, 0.78, 0.77, 0.76]
+                        }
+                    },
+                    France: {
+                        solar: {
+                            spring: [0, 0, 0, 0, 0, 0.04, 0.16, 0.30, 0.43, 0.53, 0.59, 0.62, 0.61, 0.55, 0.46, 0.33, 0.18, 0.05, 0, 0, 0, 0, 0, 0],
+                            summer: [0, 0, 0, 0, 0, 0.06, 0.21, 0.38, 0.52, 0.62, 0.68, 0.71, 0.70, 0.64, 0.55, 0.41, 0.24, 0.07, 0, 0, 0, 0, 0, 0],
+                            fall: [0, 0, 0, 0, 0, 0.01, 0.07, 0.16, 0.24, 0.29, 0.32, 0.33, 0.31, 0.26, 0.18, 0.09, 0.02, 0, 0, 0, 0, 0, 0, 0],
+                            winter: [0, 0, 0, 0, 0, 0, 0.02, 0.06, 0.12, 0.16, 0.18, 0.19, 0.17, 0.13, 0.08, 0.02, 0, 0, 0, 0, 0, 0, 0, 0]
+                        },
+                        wind: {
+                            spring: [0.36, 0.35, 0.34, 0.33, 0.32, 0.31, 0.29, 0.27, 0.25, 0.24, 0.23, 0.22, 0.23, 0.25, 0.28, 0.31, 0.34, 0.36, 0.37, 0.38, 0.38, 0.38, 0.37, 0.36],
+                            summer: [0.22, 0.21, 0.20, 0.20, 0.19, 0.18, 0.17, 0.16, 0.15, 0.15, 0.14, 0.14, 0.15, 0.17, 0.19, 0.21, 0.23, 0.24, 0.25, 0.25, 0.24, 0.23, 0.23, 0.22],
+                            fall: [0.40, 0.41, 0.41, 0.40, 0.39, 0.38, 0.36, 0.34, 0.32, 0.30, 0.29, 0.28, 0.29, 0.31, 0.34, 0.37, 0.40, 0.42, 0.43, 0.44, 0.44, 0.43, 0.42, 0.41],
+                            winter: [0.49, 0.50, 0.50, 0.49, 0.48, 0.47, 0.45, 0.43, 0.41, 0.39, 0.38, 0.37, 0.38, 0.40, 0.43, 0.46, 0.49, 0.51, 0.52, 0.53, 0.53, 0.52, 0.51, 0.50]
+                        },
+                        offshoreWind: {
+                            spring: [0.52, 0.51, 0.50, 0.49, 0.48, 0.46, 0.44, 0.42, 0.40, 0.39, 0.38, 0.37, 0.38, 0.40, 0.43, 0.46, 0.49, 0.51, 0.53, 0.54, 0.54, 0.53, 0.53, 0.52],
+                            summer: [0.38, 0.37, 0.36, 0.35, 0.34, 0.33, 0.32, 0.31, 0.30, 0.30, 0.29, 0.29, 0.30, 0.32, 0.34, 0.36, 0.38, 0.39, 0.40, 0.40, 0.39, 0.39, 0.38, 0.38],
+                            fall: [0.60, 0.61, 0.61, 0.60, 0.59, 0.58, 0.56, 0.54, 0.52, 0.50, 0.49, 0.48, 0.49, 0.51, 0.54, 0.57, 0.60, 0.62, 0.63, 0.64, 0.64, 0.63, 0.62, 0.61],
+                            winter: [0.72, 0.73, 0.73, 0.72, 0.71, 0.70, 0.68, 0.66, 0.64, 0.62, 0.61, 0.60, 0.61, 0.63, 0.66, 0.69, 0.72, 0.74, 0.75, 0.76, 0.76, 0.75, 0.74, 0.73]
+                        }
+                    },
+                    Spain: {
+                        solar: {
+                            spring: [0, 0, 0, 0, 0, 0.05, 0.20, 0.38, 0.54, 0.66, 0.73, 0.76, 0.75, 0.69, 0.59, 0.44, 0.25, 0.06, 0, 0, 0, 0, 0, 0],
+                            summer: [0, 0, 0, 0, 0, 0.07, 0.25, 0.45, 0.62, 0.74, 0.81, 0.84, 0.82, 0.76, 0.66, 0.50, 0.29, 0.08, 0, 0, 0, 0, 0, 0],
+                            fall: [0, 0, 0, 0, 0, 0.02, 0.12, 0.28, 0.43, 0.54, 0.60, 0.62, 0.59, 0.51, 0.40, 0.25, 0.10, 0.01, 0, 0, 0, 0, 0, 0],
+                            winter: [0, 0, 0, 0, 0, 0.01, 0.08, 0.22, 0.36, 0.46, 0.52, 0.54, 0.51, 0.44, 0.33, 0.18, 0.05, 0, 0, 0, 0, 0, 0, 0]
+                        },
+                        wind: {
+                            spring: [0.33, 0.32, 0.31, 0.30, 0.29, 0.28, 0.26, 0.24, 0.23, 0.22, 0.21, 0.21, 0.22, 0.24, 0.27, 0.30, 0.33, 0.35, 0.36, 0.37, 0.36, 0.35, 0.34, 0.33],
+                            summer: [0.20, 0.19, 0.18, 0.18, 0.17, 0.16, 0.15, 0.15, 0.14, 0.14, 0.14, 0.15, 0.16, 0.18, 0.20, 0.22, 0.24, 0.25, 0.25, 0.24, 0.23, 0.22, 0.21, 0.20],
+                            fall: [0.38, 0.39, 0.39, 0.38, 0.37, 0.35, 0.33, 0.31, 0.29, 0.27, 0.26, 0.25, 0.26, 0.28, 0.31, 0.34, 0.37, 0.39, 0.41, 0.42, 0.42, 0.41, 0.40, 0.39],
+                            winter: [0.45, 0.46, 0.46, 0.45, 0.44, 0.43, 0.41, 0.39, 0.37, 0.35, 0.34, 0.33, 0.34, 0.36, 0.39, 0.42, 0.45, 0.47, 0.48, 0.49, 0.49, 0.48, 0.47, 0.46]
+                        },
+                        offshoreWind: {}
+                    },
+                    Italy: {
+                        solar: {
+                            spring: [0, 0, 0, 0, 0, 0.04, 0.18, 0.35, 0.50, 0.62, 0.69, 0.72, 0.71, 0.65, 0.55, 0.40, 0.22, 0.05, 0, 0, 0, 0, 0, 0],
+                            summer: [0, 0, 0, 0, 0, 0.06, 0.23, 0.42, 0.59, 0.71, 0.78, 0.81, 0.79, 0.73, 0.63, 0.48, 0.27, 0.07, 0, 0, 0, 0, 0, 0],
+                            fall: [0, 0, 0, 0, 0, 0.02, 0.10, 0.25, 0.39, 0.49, 0.54, 0.56, 0.53, 0.46, 0.35, 0.20, 0.08, 0.01, 0, 0, 0, 0, 0, 0],
+                            winter: [0, 0, 0, 0, 0, 0, 0.05, 0.18, 0.30, 0.39, 0.44, 0.46, 0.43, 0.36, 0.26, 0.13, 0.03, 0, 0, 0, 0, 0, 0, 0]
+                        },
+                        wind: {
+                            spring: [0.28, 0.27, 0.26, 0.25, 0.24, 0.23, 0.22, 0.21, 0.20, 0.20, 0.20, 0.21, 0.22, 0.24, 0.26, 0.28, 0.30, 0.31, 0.31, 0.30, 0.29, 0.29, 0.28, 0.28],
+                            summer: [0.18, 0.17, 0.16, 0.16, 0.15, 0.15, 0.14, 0.14, 0.14, 0.14, 0.15, 0.16, 0.17, 0.18, 0.20, 0.21, 0.22, 0.22, 0.21, 0.20, 0.19, 0.19, 0.18, 0.18],
+                            fall: [0.32, 0.33, 0.33, 0.32, 0.31, 0.30, 0.29, 0.28, 0.27, 0.26, 0.26, 0.27, 0.28, 0.30, 0.32, 0.34, 0.35, 0.36, 0.36, 0.35, 0.34, 0.33, 0.33, 0.32],
+                            winter: [0.40, 0.41, 0.41, 0.40, 0.39, 0.38, 0.37, 0.36, 0.35, 0.34, 0.34, 0.35, 0.36, 0.38, 0.40, 0.41, 0.42, 0.43, 0.43, 0.42, 0.41, 0.41, 0.40, 0.40]
+                        },
+                        offshoreWind: {}
+                    },
+                    California: {
+                        solar: {
+                            spring: [0, 0, 0, 0, 0, 0.05, 0.20, 0.40, 0.60, 0.75, 0.85, 0.90, 0.88, 0.80, 0.65, 0.45, 0.25, 0.05, 0, 0, 0, 0, 0, 0],
+                            summer: [0, 0, 0, 0, 0, 0.07, 0.25, 0.48, 0.68, 0.82, 0.90, 0.94, 0.92, 0.85, 0.72, 0.55, 0.35, 0.10, 0, 0, 0, 0, 0, 0],
+                            fall: [0, 0, 0, 0, 0, 0.03, 0.15, 0.35, 0.55, 0.70, 0.80, 0.84, 0.82, 0.74, 0.60, 0.40, 0.20, 0.03, 0, 0, 0, 0, 0, 0],
+                            winter: [0, 0, 0, 0, 0, 0.01, 0.10, 0.28, 0.45, 0.58, 0.65, 0.68, 0.66, 0.58, 0.45, 0.28, 0.10, 0.01, 0, 0, 0, 0, 0, 0]
+                        },
+                        wind: {
+                            spring: [0.45, 0.47, 0.48, 0.47, 0.45, 0.42, 0.38, 0.33, 0.28, 0.25, 0.23, 0.22, 0.24, 0.28, 0.35, 0.42, 0.50, 0.55, 0.58, 0.60, 0.58, 0.55, 0.50, 0.47],
+                            summer: [0.50, 0.52, 0.53, 0.52, 0.50, 0.47, 0.42, 0.37, 0.32, 0.28, 0.25, 0.24, 0.26, 0.32, 0.40, 0.50, 0.60, 0.65, 0.68, 0.70, 0.68, 0.64, 0.58, 0.53],
+                            fall: [0.35, 0.36, 0.37, 0.36, 0.34, 0.31, 0.28, 0.25, 0.23, 0.21, 0.20, 0.20, 0.22, 0.25, 0.30, 0.35, 0.40, 0.45, 0.48, 0.49, 0.47, 0.44, 0.40, 0.37],
+                            winter: [0.30, 0.32, 0.33, 0.32, 0.30, 0.28, 0.26, 0.24, 0.22, 0.20, 0.19, 0.19, 0.20, 0.23, 0.27, 0.31, 0.35, 0.38, 0.40, 0.41, 0.39, 0.37, 0.34, 0.31]
+                        },
+                        offshoreWind: {}
+                    },                    
+                    // Add other countries/regions here in the same format
+                    default: {
+                        solar: { spring: SOLAR_CF_PROFILE, summer: SOLAR_CF_PROFILE, fall: SOLAR_CF_PROFILE, winter: SOLAR_CF_PROFILE },
+                        wind: { spring: WIND_CF_PROFILE, summer: WIND_CF_PROFILE, fall: WIND_CF_PROFILE, winter: WIND_CF_PROFILE },
+                        offshoreWind: { spring: OFFSHORE_WIND_CF_PROFILE, summer: OFFSHORE_WIND_CF_PROFILE, fall: OFFSHORE_WIND_CF_PROFILE, winter: OFFSHORE_WIND_CF_PROFILE }
+                    }
+                };
         const EMISSION_FACTORS = { naturalGas: 395, hydro: 0, nuclear: 0, solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, coal: 850, biomass: 0, rng: 0 };
         
         const COST_DATA = {
@@ -2022,14 +2144,35 @@
                 }
 
                 const selectedCountry = countrySelect.value;
-                const baseSolarProfile = (countryProfiles[selectedCountry] || countryProfiles.default).solar;
-                const baseWindProfile = (countryProfiles[selectedCountry] || countryProfiles.default).wind;
-                const baseOffshoreWindProfile = (countryProfiles[selectedCountry] || countryProfiles.default).offshoreWind;
                 const baseSeason = currentDemandProfileName.split(' ')[0].toLowerCase();
+                // Solar
+                let baseSolarProfile = countryProfiles[selectedCountry]?.solar?.[baseSeason];
+                if (!baseSolarProfile || baseSolarProfile.length !== 24) {
+                    baseSolarProfile = countryProfiles.default.solar[baseSeason];
+                }
+                if (!baseSolarProfile || baseSolarProfile.length !== 24) {
+                    baseSolarProfile = SOLAR_CF_PROFILE;
+                }
+                // Wind (onshore)
+                let baseWindProfile = countryProfiles[selectedCountry]?.wind?.[baseSeason];
+                if (!baseWindProfile || baseWindProfile.length !== 24) {
+                    baseWindProfile = countryProfiles.default.wind[baseSeason];
+                }
+                if (!baseWindProfile || baseWindProfile.length !== 24) {
+                    baseWindProfile = WIND_CF_PROFILE;
+                }
+                // Offshore wind
+                let baseOffshoreWindProfile = countryProfiles[selectedCountry]?.offshoreWind?.[baseSeason];
+                if (!baseOffshoreWindProfile || baseOffshoreWindProfile.length !== 24) {
+                    baseOffshoreWindProfile = countryProfiles.default.offshoreWind[baseSeason];
+                }
+                if (!baseOffshoreWindProfile || baseOffshoreWindProfile.length !== 24) {
+                    baseOffshoreWindProfile = OFFSHORE_WIND_CF_PROFILE;
+                }
                 const seasonalMultipliers = SEASONAL_MULTIPLIERS[baseSeason] || { solar: 1.0, wind: 1.0, offshoreWind: 1.0 };
-                const seasonalSolarProfile = currentSolarCFProfile.length > 0 ? currentSolarCFProfile : baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
-                const seasonalWindProfile = currentWindCFProfile.length > 0 ? currentWindCFProfile : baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
-                const seasonalOffshoreWindProfile = currentOffshoreWindCFProfile.length > 0 ? currentOffshoreWindCFProfile : baseOffshoreWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.offshoreWind));
+                const seasonalSolarProfile = currentSolarCFProfile.length === 24 ? currentSolarCFProfile : baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
+                const seasonalWindProfile = currentWindCFProfile.length === 24 ? currentWindCFProfile : baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
+                const seasonalOffshoreWindProfile = currentOffshoreWindCFProfile.length === 24 ? currentOffshoreWindCFProfile : baseOffshoreWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.offshoreWind));
 
 
                 updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile, result.hourlyMarginalPrice, resultWithoutStorage.hourlyMarginalPrice);
@@ -2698,14 +2841,14 @@
                 currentDemandProfileText.textContent = currentDemandProfileName;
 
                 const cfProfileDisplayName = baseSeason.charAt(0).toUpperCase() + baseSeason.slice(1);
+                const countryProfile = countryProfiles[countrySelect.value] || countryProfiles.default;
                 const seasonalMultipliers = SEASONAL_MULTIPLIERS[baseSeason];
-                const baseSolarProfile = (countryProfiles[countrySelect.value] || countryProfiles.default).solar;
-                const baseWindProfile = (countryProfiles[countrySelect.value] || countryProfiles.default).wind;
-                const baseOffshoreWindProfile = (countryProfiles[countrySelect.value] || countryProfiles.default).offshoreWind;
-                currentSolarCFProfile = baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
-                currentWindCFProfile = baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
-                currentOffshoreWindCFProfile = baseOffshoreWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.offshoreWind));
-                currentHydroCF = SEASONAL_HYDRO_CF[baseSeason];
+                const baseSolarProfileForSeason = countryProfile.solar[baseSeason];
+                const baseWindProfileForSeason = countryProfile.wind[baseSeason];
+                const baseOffshoreWindProfileForSeason = countryProfile.offshoreWind[baseSeason];
+                currentSolarCFProfile = baseSolarProfileForSeason.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
+                currentWindCFProfile = baseWindProfileForSeason.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
+                currentOffshoreWindProfile = baseOffshoreWindProfileForSeason.map(cf => Math.min(1, cf * seasonalMultipliers.offshoreWind));                currentHydroCF = SEASONAL_HYDRO_CF[baseSeason];
                 currentCFProfileName = cfProfileDisplayName;
                 currentCFProfileText.textContent = currentCFProfileName;
 
