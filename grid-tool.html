@@ -2841,15 +2841,18 @@
                 currentDemandProfileText.textContent = currentDemandProfileName;
 
                 const cfProfileDisplayName = baseSeason.charAt(0).toUpperCase() + baseSeason.slice(1);
-                const countryProfile = countryProfiles[countrySelect.value] || countryProfiles.default;
                 const seasonalMultipliers = SEASONAL_MULTIPLIERS[baseSeason];
-                const baseSolarProfileForSeason = countryProfile.solar[baseSeason];
-                const baseWindProfileForSeason = countryProfile.wind[baseSeason];
-                const baseOffshoreWindProfileForSeason = countryProfile.offshoreWind[baseSeason];
+                const countryProfile = countryProfiles[countrySelect.value] || countryProfiles.default;
+
+                // Get the country-specific seasonal profile, or safely fall back to the default profile if it's missing.
+                const baseSolarProfileForSeason = (countryProfile.solar || countryProfiles.default.solar)[baseSeason];
+                const baseWindProfileForSeason = (countryProfile.wind || countryProfiles.default.wind)[baseSeason];
+                const baseOffshoreWindProfileForSeason = (countryProfile.offshoreWind || countryProfiles.default.offshoreWind)[baseSeason];
+
+                // Apply seasonal multipliers to the (now guaranteed to exist) profile arrays.
                 currentSolarCFProfile = baseSolarProfileForSeason.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
                 currentWindCFProfile = baseWindProfileForSeason.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
-                currentOffshoreWindProfile = baseOffshoreWindProfileForSeason.map(cf => Math.min(1, cf * seasonalMultipliers.offshoreWind));                currentHydroCF = SEASONAL_HYDRO_CF[baseSeason];
-                currentCFProfileName = cfProfileDisplayName;
+                currentOffshoreWindProfile = baseOffshoreWindProfileForSeason.map(cf => Math.min(1, cf * seasonalMultipliers.offshoreWind));                currentCFProfileName = cfProfileDisplayName;
                 currentCFProfileText.textContent = currentCFProfileName;
 
                 updateBaselineForCountry(countrySelect.value, profileName); 
