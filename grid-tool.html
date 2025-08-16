@@ -206,7 +206,7 @@
             border-radius: 9999px;
             font-weight: 500;
             transition: all 0.3s ease-in-out;
-            cursor: help;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -319,9 +319,7 @@
                           Hourly Marginal Price ($/MWh)
                         </h2>
                     
-                        <!-- Tooltip container -->
                         <div class="relative flex items-center justify-center">
-                          <!-- Hover target -->
                           <div id="pricing-model-indicator"
                                data-tooltip-text="The pricing model switches based on the daily renewable generation share."
                                class="peer w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer">
@@ -333,11 +331,10 @@
                             </svg>
                           </div>
                     
-                          <!-- Tooltip itself -->
+                          <!-- Tooltip -->
                           <div class="absolute bottom-8 left-1/2 -translate-x-1/2 
                                       hidden peer-hover:block px-3 py-1.5 rounded-md 
                                       bg-gray-800 text-white text-xs whitespace-nowrap z-50">
-                            <!-- Pulls text from the attribute dynamically via Alpine.js or a small script -->
                             The pricing model switches based on the daily renewable generation share.
                           </div>
                         </div>
@@ -345,7 +342,6 @@
                     
                       <canvas id="marginalPriceChart"></canvas>
                     </div>
-
                     <div class="mb-8">
                         <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly CO2 Emissions (Metric Tons)</h2>
                         <canvas id="co2EmissionsChart"></canvas>
