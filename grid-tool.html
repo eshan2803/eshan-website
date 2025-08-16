@@ -208,6 +208,9 @@
             transition: all 0.3s ease-in-out;
             cursor: pointer;
         }
+        #pricing-model-indicator:hover + .tooltip {
+          display: block;
+        }
     </style>
 </head>
 <body class="antialiased">
@@ -320,23 +323,16 @@
                         </h2>
                     
                         <div class="relative flex items-center justify-center">
-                          <div id="pricing-model-indicator"
-                               data-tooltip-text="The pricing model switches based on the daily renewable generation share."
-                               class="peer w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer">
-                            <!-- Info icon -->
+                          <div id="pricing-model-indicator" class="cursor-pointer">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
                                  viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                               <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M13 16h-1v-4h-1m1-4h.01M12 18.5a6.5 6.5 0 110-13 6.5 6.5 0 010 13z" />
                             </svg>
                           </div>
-                    
-                          <!-- Tooltip -->
-                          <div class="absolute bottom-8 left-1/2 -translate-x-1/2 
-                                      hidden peer-hover:block px-3 py-1.5 rounded-md 
-                                      bg-gray-800 text-white text-xs whitespace-nowrap z-50">
+                          <div class="tooltip hidden absolute bottom-8 left-1/2 -translate-x-1/2">
                             The pricing model switches based on the daily renewable generation share.
-                          </div>
+                          </div>                    
                         </div>
                       </div>
                     
