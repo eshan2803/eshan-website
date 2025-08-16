@@ -208,33 +208,6 @@
             transition: all 0.3s ease-in-out;
             cursor: help;
         }
-        #pricing-model-indicator:hover::after {
-          content: attr(data-tooltip-text);
-          position: absolute;
-          bottom: 125%; /* above the icon */
-          left: 50%;
-          transform: translateX(-50%);
-          background-color: rgba(31, 41, 55, 0.95); /* Tailwind gray-800 with opacity */
-          color: #fff;
-          padding: 0.5rem 0.75rem;
-          border-radius: 0.375rem; /* rounded-md */
-          font-size: 0.75rem; /* text-xs */
-          line-height: 1rem;
-          white-space: nowrap;
-          z-index: 50;
-          opacity: 1;
-        }
-        
-        #pricing-model-indicator:hover::before {
-          content: '';
-          position: absolute;
-          bottom: 115%;
-          left: 50%;
-          transform: translateX(-50%);
-          border-width: 6px;
-          border-style: solid;
-          border-color: rgba(31, 41, 55, 0.95) transparent transparent transparent;
-        }
     </style>
 </head>
 <body class="antialiased">
@@ -345,18 +318,34 @@
                         <h2 class="text-2xl font-lora font-semibold text-gray-800">
                           Hourly Marginal Price ($/MWh)
                         </h2>
-                        <div id="pricing-model-indicator"
-                             data-tooltip-text="The pricing model switches based on the daily renewable generation share."
-                             class="relative group flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer">
-                          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
-                               viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                  d="M13 16h-1v-4h-1m1-4h.01M12 18.5a6.5 6.5 0 110-13 6.5 6.5 0 010 13z" />
-                          </svg>
+                    
+                        <!-- Tooltip container -->
+                        <div class="relative flex items-center justify-center">
+                          <!-- Hover target -->
+                          <div id="pricing-model-indicator"
+                               data-tooltip-text="The pricing model switches based on the daily renewable generation share."
+                               class="peer w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-pointer">
+                            <!-- Info icon -->
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M13 16h-1v-4h-1m1-4h.01M12 18.5a6.5 6.5 0 110-13 6.5 6.5 0 010 13z" />
+                            </svg>
+                          </div>
+                    
+                          <!-- Tooltip itself -->
+                          <div class="absolute bottom-8 left-1/2 -translate-x-1/2 
+                                      hidden peer-hover:block px-3 py-1.5 rounded-md 
+                                      bg-gray-800 text-white text-xs whitespace-nowrap z-50">
+                            <!-- Pulls text from the attribute dynamically via Alpine.js or a small script -->
+                            The pricing model switches based on the daily renewable generation share.
+                          </div>
                         </div>
                       </div>
+                    
                       <canvas id="marginalPriceChart"></canvas>
                     </div>
+
                     <div class="mb-8">
                         <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly CO2 Emissions (Metric Tons)</h2>
                         <canvas id="co2EmissionsChart"></canvas>
