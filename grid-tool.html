@@ -206,11 +206,9 @@
             border-radius: 9999px;
             font-weight: 500;
             transition: all 0.3s ease-in-out;
-            cursor: pointer;
+            cursor: help;
         }
-        #pricing-model-indicator:hover + .tooltip {
-          display: block;
-        }
+
     </style>
 </head>
 <body class="antialiased">
@@ -316,26 +314,16 @@
                         </div>
                         <canvas id="generationMixChart"></canvas>
                     </div>
+                    <!-- NEW: Marginal Price Chart -->
                     <div class="mb-8">
-                      <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-2xl font-lora font-semibold text-gray-800">
-                          Hourly Marginal Price ($/MWh)
-                        </h2>
-                    
-                        <div class="relative flex items-center justify-center">
-                        <div id="pricing-model-indicator"
-                             title="The pricing model switches based on the daily renewable generation share.">
-                          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
-                               viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                  d="M13 16h-1v-4h-1m1-4h.01
-                                     M12 18.5a6.5 6.5 0 110-13
-                                     6.5 6.5 0 010 13z" />
-                          </svg>
+                        <div class="flex justify-between items-center mb-4">
+                             <h2 class="text-2xl font-lora font-semibold text-gray-800">Hourly Marginal Price ($/MWh)</h2>
+                             <div id="pricing-model-indicator" 
+                                 data-tooltip-text="The pricing model switches based on the daily renewable generation share.">
+                                 <!-- Content will be set by JS -->
+                             </div>
                         </div>
-                      </div>
-                    
-                      <canvas id="marginalPriceChart"></canvas>
+                        <canvas id="marginalPriceChart"></canvas>
                     </div>
                     <div class="mb-8">
                         <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly CO2 Emissions (Metric Tons)</h2>
