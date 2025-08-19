@@ -1569,7 +1569,111 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                     };
                 }
             }
-            
+
+            /**
+             * Plans a full charge/discharge schedule by iteratively finding the best arbitrage opportunity,
+             * dispatching a small batch, and recalculating market prices after each step.
+             * @returns {object} An object containing the final { charge: [...], discharge: [...] } schedules.
+             */
+            function planArbitrageScheduleIteratively(initialNetLoad, inputs, potentialGen, hydroCF, countryName, demand, baselineStorageGWh) {
+                // --- Initialize schedules and storage parameters ---
+                let chargeSchedule = Array(24).fill(0);
+                let dischargeSchedule = Array(24).fill(0);
+                const storageEfficiency = 0.85;
+                const DISPATCH_INCREMENT = 0.1; // GWh batch size
+
+                // --- Calculate total storage energy and power capacity ---
+                const storageTypes = ['battery4hr', 'battery8hr', 'longduration'];
+                let totalStorageEnergyGWh = 0;
+                let totalStoragePowerGW = 0;
+
+                storageTypes.forEach(type => {
+                    if (enabledTechnologies[type]) {
+                        const capacity = (baselineStorageGWh[type] || 0) + inputs.capacity[type];
+                        totalStorageEnergyGWh += capacity;
+                        const duration = type === 'longduration' ? 24 : parseInt(type.match(/\d+/)[0]);
+                        totalStoragePowerGW += capacity / duration;
+                    }
+                });
+
+                if (totalStorageEnergyGWh === 0 || totalStoragePowerGW === 0) {
+                    return { charge: chargeSchedule, discharge: dischargeSchedule };
+                }
+
+                let energyCycledGWh = 0; // Tracks total energy discharged
+                const maxEnergyToCycle = totalStorageEnergyGWh * storageEfficiency;
+                let currentNetLoad = [...initialNetLoad];
+
+                // --- Main iterative loop ---
+                // This loop continues as long as there is energy to cycle and profitable opportunities exist.
+                while (energyCycledGWh < maxEnergyToCycle) {
+
+                    // STEP 1: Recalculate prices based on the current state of the grid
+                    const { hourlyMarginalPrice } = calculateFullMeritOrderDispatchAndPrice(currentNetLoad, inputs, potentialGen, hydroCF, countryName, dischargeSchedule);
+
+                    // STEP 2: Find the best hours to charge (lowest score) and discharge (highest score)
+                    let bestChargeHour = -1, bestDischargeHour = -1;
+                    let minScore = Infinity, maxScore = -Infinity;
+
+                    for (let i = 0; i < 24; i++) {
+                        // Score is price * demand. High score is good for discharging, low is good for charging.
+                        const score = hourlyMarginalPrice[i] * demand[i];
+
+                        // Check if there is headroom to discharge more in this hour
+                        if (dischargeSchedule[i] < totalStoragePowerGW && score > maxScore) {
+                            maxScore = score;
+                            bestDischargeHour = i;
+                        }
+                        // Check if there is headroom to charge more in this hour
+                        if (chargeSchedule[i] < totalStoragePowerGW && score < minScore) {
+                            minScore = score;
+                            bestChargeHour = i;
+                        }
+                    }
+
+                    // STEP 3: Check for profitability and exit if no opportunity exists
+                    if (bestChargeHour === -1 || bestDischargeHour === -1 || bestChargeHour === bestDischargeHour) {
+                        break; // No valid pair of hours found
+                    }
+
+                    const dischargePrice = hourlyMarginalPrice[bestDischargeHour];
+                    const chargePrice = hourlyMarginalPrice[bestChargeHour];
+
+                    // If the best discharge price (after efficiency loss) isn't higher than the charge price, stop.
+                    if ((dischargePrice * storageEfficiency) <= chargePrice) {
+                        break;
+                    }
+
+                    // STEP 4: Determine the batch size for this iteration
+                    const chargePowerHeadroom = totalStoragePowerGW - chargeSchedule[bestChargeHour];
+                    const dischargePowerHeadroom = totalStoragePowerGW - dischargeSchedule[bestDischargeHour];
+                    const energyHeadroom = maxEnergyToCycle - energyCycledGWh;
+                    
+                    const dispatchAmount = Math.min(DISPATCH_INCREMENT, dischargePowerHeadroom, energyHeadroom);
+                    const chargeAmount = dispatchAmount / storageEfficiency;
+
+                    // Ensure we don't exceed the charging power limit with this batch
+                    if (chargeAmount > chargePowerHeadroom) {
+                        break; // Can't charge this batch without violating power limits
+                    }
+                    if (dispatchAmount < 0.001) {
+                         break; // Amount is too small, stop iterating
+                    }
+
+                    // STEP 5: Apply the batch to the schedules and the net load for the *next* iteration
+                    dischargeSchedule[bestDischargeHour] += dispatchAmount;
+                    chargeSchedule[bestChargeHour] += chargeAmount;
+                    
+                    energyCycledGWh += dispatchAmount; // Increment the total energy we've decided to discharge
+
+                    // Update the net load for the next price calculation
+                    currentNetLoad[bestDischargeHour] -= dispatchAmount;
+                    currentNetLoad[bestChargeHour] += chargeAmount;
+                }
+
+                return { charge: chargeSchedule, discharge: dischargeSchedule };
+            }            
+
             function calculateFullMeritOrderDispatchAndPrice(netLoad, inputs, currentPotential, hydroCF, countryName, batteryDischargeEnergy) {
                 const carbonTax = inputs.incentives.carbonTax || 0;
                 const carbonCostCoal = (EMISSION_FACTORS.coal / 1000) * carbonTax;
@@ -2160,63 +2264,37 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                 const useFullMeritOrder = actualRenewableShare > 0.70;
 
                 if (useFullMeritOrder && !storageOverride) {
-                    // --- RENEWABLE MARGIN: Use new iterative co-optimization model ---
+                    // --- RENEWABLE MARGIN: Use new iterative arbitrage model ---
 
-                    let chargeSchedule = Array(24).fill(0);
-                    let dischargeSchedule = Array(24).fill(0);
-                    let finalSimResult = {};
-                    const MAX_ITERATIONS = 5; // Iterate a few times to find a stable solution
-
-                    for (let i = 0; i < MAX_ITERATIONS; i++) {
-                        // Step A: Run a full simulation pass using the charge/discharge schedules from the previous iteration.
-                        const passResult = getSimulationResult(
-                            inputs, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
-                            activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry,
-                            false, true, { charge: chargeSchedule, discharge: dischargeSchedule }
-                        );
-
-                        // Step B: Extract the resulting market prices for this pass.
-                        const hourlyPrices = passResult.hourlyMarginalPrice;
-                        const storageEfficiency = 0.85;
-
-                        // --- START: CORRECTED LOGIC ---
-
-                        // Step C: Determine the total energy capacity of all enabled storage systems.
-                        // This gives the model a clear goal for how much energy to cycle.
-                        const storageTypes = ['battery4hr', 'battery8hr', 'longduration'];
-                        let totalStorageEnergyGWh = 0;
-                        storageTypes.forEach(type => {
-                            if (enabledTechnologies[type]) {
-                                totalStorageEnergyGWh += (currentBaselineStorage[type] || 0) + inputs.capacity[type];
+                    // Step 1: Calculate the initial net load BEFORE any storage is dispatched.
+                    // This is the load that the iterative planner will try to smooth out.
+                    let initialNetLoad = Array(24).fill(0);
+                    for (let i = 0; i < 24; i++) {
+                        let mustRunGen = 0;
+                        const sourcesToSubtract = ['solar', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass'];
+                        sourcesToSubtract.forEach(tech => {
+                            if (activePotentialGeneration[tech]) {
+                                mustRunGen += (activePotentialGeneration[tech][i] || 0) + (inputs.capacity[tech] || 0) * (tech === 'solar' ? seasonalSolarProfile[i] : (tech === 'wind' ? seasonalWindProfile[i] : (tech === 'offshoreWind' ? seasonalOffshoreWindProfile[i] : COST_DATA.capacity_factor[tech])));
                             }
                         });
-                        
-                        // Step D: Proactively plan the discharge for the *next* iteration, assuming a full cycle.
-                        const totalEnergyToDispatch = totalStorageEnergyGWh * storageEfficiency;
-                        const nextDischargeSchedule = planDischargingSchedule(totalEnergyToDispatch, hourlyPrices, passResult.demand, inputs, currentBaselineStorage);
-
-                        // Step E: Based on that planned discharge, plan the corresponding charge for the *next* iteration.
-                        const totalDischargedInNextSchedule = nextDischargeSchedule.reduce((a, b) => a + b, 0);
-                        const requiredChargeGWh = totalDischargedInNextSchedule / storageEfficiency;
-                        const nextChargeSchedule = planChargingSchedule(requiredChargeGWh, hourlyPrices, passResult.demand, inputs, currentBaselineStorage);
-
-                        // --- END: CORRECTED LOGIC ---
-
-                        // Step F: Check if the solution has stabilized by comparing the schedules.
-                        const scheduleDifference = chargeSchedule.reduce((sum, val, idx) => sum + Math.abs(val - nextChargeSchedule[idx]), 0);
-
-                        // Update schedules for the next loop
-                        chargeSchedule = nextChargeSchedule; 
-                        dischargeSchedule = nextDischargeSchedule;
-                        finalSimResult = passResult; // Store this iteration's result
-
-                        if (scheduleDifference < 0.1) {
-                            // If the schedules have barely changed, consider it stable and exit.
-                            break;
-                        }
+                        initialNetLoad[i] = currentDemand[i] - mustRunGen;
                     }
 
+                    // Step 2: Call the iterative planner ONCE. It will perform all the batching and 
+                    // price recalculations internally to find the optimal schedule.
+                    const optimalSchedule = planArbitrageScheduleIteratively(
+                        initialNetLoad, inputs, activePotentialGeneration, currentHydroCF, selectedCountry, currentDemand, currentBaselineStorage
+                    );
+
+                    // Step 3: Run the final simulation using the optimized schedule to get the final grid state.
+                    const finalSimResult = getSimulationResult(
+                        inputs, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
+                        activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry,
+                        false, true, optimalSchedule
+                    );
+                    
                     return { result: finalSimResult, useFullMeritOrder, actualRenewableShare };
+   
                 } else {
                     // --- THERMAL MARGIN (or storage-disabled run): Use the original "price taker" model ---
                     return { result: firstPassResult, useFullMeritOrder, actualRenewableShare };
