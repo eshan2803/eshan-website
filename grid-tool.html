@@ -1569,7 +1569,7 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                     };
                 }
             }
-            
+
             function calculateFullMeritOrderDispatchAndPrice(netLoad, inputs, currentPotential, hydroCF, countryName, batteryDischargeEnergy) {
                 const carbonTax = inputs.incentives.carbonTax || 0;
                 const carbonCostCoal = (EMISSION_FACTORS.coal / 1000) * carbonTax;
@@ -1604,6 +1604,7 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                 const totalDailyHydroEnergy = hydroCapacity * hydroCF * 24;
                 let remainingDailyHydro = totalDailyHydroEnergy;
                 
+                // --- START: CORRECTED STORAGE VARIABLE SETUP ---
                 const storagePowerGW = {};
                 ['battery4hr', 'battery8hr', 'longduration'].forEach(type => {
                     const capacity = (currentBaselineStorage[type] || 0) + inputs.capacity[type];
@@ -1611,7 +1612,6 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                     storagePowerGW[type] = capacity / duration;
                 });
                 const totalStoragePower = Object.values(storagePowerGW).reduce((a, b) => a + b, 0);
-                const tranchePower = totalStoragePower / 3;
 
                 let totalStorageEnergyGWh = 0;
                 ['battery4hr', 'battery8hr', 'longduration'].forEach(type => {
@@ -1621,6 +1621,7 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                 });
                 const storageEfficiency = 0.85;
                 let remainingBatteryEnergy = totalStorageEnergyGWh * storageEfficiency;
+                // --- END: CORRECTED STORAGE VARIABLE SETUP ---
 
                 for (let i = 0; i < 24; i++) {
                     let remainingLoad = netLoad[i];
@@ -1656,16 +1657,19 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                                 finalGeneration.rng[i] += dispatchAmount;
                                 break;
 
+                            // --- START: CORRECTED STORAGE DISPATCH LOGIC ---
                             case 'storage_tranche1':
                             case 'storage_tranche2':
                             case 'storage_tranche3':
-                                availableGen = Math.min(totalStoragePower, remainingBatteryEnergy);
+                                // Available generation is limited by total power and total remaining energy
+                                availableGen = Math.min(totalStoragePower - finalGeneration.storage[i], remainingBatteryEnergy);
                                 dispatchAmount = Math.min(remainingLoad, availableGen);
-                                if(dispatchAmount > 0){
+                                if(dispatchAmount > 0.001){
                                     finalGeneration.storage[i] += dispatchAmount;
                                     remainingBatteryEnergy -= dispatchAmount;
                                 }
                                 break;
+                            // --- END: CORRECTED STORAGE DISPATCH LOGIC ---
 
                             case 'coal':
                                 availableGen = currentPotential.coal[i];
@@ -1712,7 +1716,7 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                 }
                 const totalDischarged = finalGeneration.storage.reduce((a, b) => a + b, 0);
                 return { generation: finalGeneration, hourlyMarginalPrice, gasGenDetails, totalDischarged };
-            }
+            }            
 
             function calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential) {
                 const gasGenDetails = { ccgt: { generation: 0, cost: 0 }, ct: { generation: 0, cost: 0 } };
