@@ -1226,7 +1226,7 @@
 
 
             // --- COST CALCULATION ---
-            function calculateTotalAnnualSystemCost(generation, capacity, currentIncentives, curtailedEnergy, baselineCapacity, baselineStorage, gasGenDetails) {
+            function calculateTotalAnnualSystemCost(generation, capacity, currentIncentives, curtailedEnergy, baselineCapacity, baselineStorage, gasGenDetails, useFullMeritOrder = false) {
                 let totalAnnualCost = 0;
                 const d = COST_DATA.discount_rate;
                 const carbonTax = currentIncentives.carbonTax || 0;
@@ -1281,7 +1281,6 @@
                     totalAnnualCost += annualized_capex + annual_fom + annual_vom_ng;
                 }
 
-
                 for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
                     if (!enabledTechnologies[type]) continue; // Skip disabled storage
                     const baseline_gwh = baselineStorage[type] || 0;
@@ -1300,11 +1299,17 @@
 
                         const annualized_capex = capex_per_kwh * total_kwh * crf;
                         const annual_fom = COST_DATA.fixed_om[type] * total_kw;
-                        
                         const annual_discharge_mwh = generation.storage.reduce((a, b) => a + b, 0) * 1000 * 365;
-                        const annual_vom = COST_DATA.variable_om[type] * annual_discharge_mwh;
                         
-                        totalAnnualCost += annualized_capex + annual_fom + annual_vom;
+                        // --- START: MODIFIED VOM LOGIC ---
+                        let vom_rate = COST_DATA.variable_om[type]; // Get the default VOM
+                        if (useFullMeritOrder) {
+                            vom_rate = 40; // If in Renewable Margin, override the VOM to $40/MWh
+                        }
+                        const annual_vom = vom_rate * annual_discharge_mwh;
+                        // --- END: MODIFIED VOM LOGIC ---
+                        
+                        totalAnnualCost += annualized_capex + annual_fom + annual_vom;                        
                     }
                 }
                 
@@ -1336,7 +1341,7 @@
                 return totalCost * 365;
             }
 
-function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProfile, potentialGen, baselineStorageGWh = {}, hydroCF, countryName, storageOverrideDisabled = false, forceMeritOrder = false, predefinedBatterySchedule = null) {
+            function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProfile, potentialGen, baselineStorageGWh = {}, hydroCF, countryName, storageOverrideDisabled = false, forceMeritOrder = false, predefinedBatterySchedule = null, useFullMeritOrder = false) {
                 const VRE_SOURCES = ['solar', 'wind', 'offshoreWind'];
                 const INFLEXIBLE_SOURCES = ['nuclear', 'geothermal', 'biomass']; 
                 
@@ -1501,8 +1506,7 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                 }
 
                 const newEmissions = calculateEmissions(finalGeneration, inputs.capacity.dac);
-                const newSystemCost = calculateTotalAnnualSystemCost(finalGeneration, inputs.capacity, inputs.incentives, finalGeneration.curtailment, currentCountryInstalledCapacity, baselineStorageGWh, dispatchResult.gasGenDetails);
-                
+                const newSystemCost = calculateTotalAnnualSystemCost(finalGeneration, inputs.capacity, inputs.incentives, finalGeneration.curtailment, currentCountryInstalledCapacity, baselineStorageGWh, dispatchResult.gasGenDetails, useFullMeritOrder);                
                 return {
                     generation: finalGeneration,
                     emissions: newEmissions,
@@ -2292,9 +2296,8 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                     const finalSimResult = getSimulationResult(
                         inputs, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
                         activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry,
-                        false, true, optimalSchedule
-                    );
-                    
+                        false, true, optimalSchedule, useFullMeritOrder
+                    );                    
                     return { result: finalSimResult, useFullMeritOrder, actualRenewableShare };
    
                 } else {
