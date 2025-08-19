@@ -1730,16 +1730,6 @@
                 for (let i = 0; i < 24; i++) {
                     let remainingLoad = netLoad[i];
                     
-                    // --- START: THIS IS THE FIX ---
-                    // Apply the pre-planned battery discharge for this hour.
-                    const plannedDischarge = batteryDischargeEnergy[i] || 0;
-                    if (plannedDischarge > 0) {
-                        const actualDischarge = Math.min(remainingLoad, plannedDischarge);
-                        finalGeneration.storage[i] = actualDischarge;
-                        remainingLoad -= actualDischarge;
-                    }
-                    // --- END: THIS IS THE FIX ---
-
                     if (remainingLoad <= 0.01) {
                         // If battery met all the load, the price is the battery's marginal cost.
                         // We can set it to a representative value or the cost of the last generator.
