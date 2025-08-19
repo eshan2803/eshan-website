@@ -622,7 +622,7 @@
         </div>
     </div>
     
-<script type="module">
+    <script type="module">
         // --- FIREBASE IMPORTS ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -1335,8 +1335,8 @@
                 }
                 return totalCost * 365;
             }
-            
-            function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProfile, potentialGen, baselineStorageGWh = {}, hydroCF, countryName, storageOverrideDisabled = false, forceMeritOrder = false, predefinedBatterySchedule = null) {
+
+function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProfile, potentialGen, baselineStorageGWh = {}, hydroCF, countryName, storageOverrideDisabled = false, forceMeritOrder = false, predefinedBatterySchedule = null) {
                 const VRE_SOURCES = ['solar', 'wind', 'offshoreWind'];
                 const INFLEXIBLE_SOURCES = ['nuclear', 'geothermal', 'biomass']; 
                 
@@ -1408,23 +1408,34 @@
                 }
                 
                 let batteryDischargeEnergy = Array(24).fill(0);
+
+                // --- START: MODIFIED STORAGE LOGIC ---
                 let storageDispatch = { charge: Array(24).fill(0), discharge: Array(24).fill(0) };
 
                 if (predefinedBatterySchedule) {
+                    // Use the externally calculated arbitrage schedule passed from runTwoPassSimulation
                     storageDispatch = predefinedBatterySchedule;
                 } else if (!storageOverrideDisabled) {
+                    // This is the original logic path, now used only by the Thermal Margin model.
                     if (forceMeritOrder) {
+                        // This call to dispatchStorageAsGenerator is part of the old logic. The new arbitrage flow bypasses this entirely.
                         storageDispatch = dispatchStorageAsGenerator(netLoad, inputs, baselineStorageGWh, currentPotential, modifiedDemand, hydroCF, countryName);
                     } else {
                         storageDispatch = dispatchStorageEconomically(netLoad, inputs, baselineStorageGWh, currentPotential);
                     }
                 }
+                // If storageOverrideDisabled is true and no predefined schedule, storageDispatch correctly remains all zeros for the preliminary run.
                 
-                // This logic is now unified for all paths
+                finalGeneration.storage = storageDispatch.discharge;
                 batteryDischargeEnergy = storageDispatch.discharge;
-                
+                // --- END: MODIFIED STORAGE LOGIC ---
+
                 for (let i = 0; i < 24; i++) {
+                    // This logic correctly applies the chosen storage actions to the netLoad
                     netLoad[i] += storageDispatch.charge[i];
+                    if (!forceMeritOrder) {
+                        netLoad[i] -= storageDispatch.discharge[i];
+                    }
                     
                     if (storageDispatch.charge[i] > 0) {
                         let totalVrePotential = finalGeneration.solar[i] + finalGeneration.wind[i] + finalGeneration.offshoreWind[i];
@@ -1477,12 +1488,8 @@
                 
                 if (forceMeritOrder) {
                     finalGeneration.biomass.forEach((val, i) => finalGeneration.biomass[i] += dispatchResult.generation.biomass[i]);
-                    // *** THIS IS THE CRITICAL FIX ***
-                    // The result from the merit order dispatch is the source of truth for storage generation.
+                    // Storage generation is already set from storageDispatch, but we affirm it here from the dispatch result if needed.
                     finalGeneration.storage = dispatchResult.generation.storage;
-                } else {
-                    // For the thermal model, storage is treated as reducing net load, not as a generator.
-                    finalGeneration.storage = storageDispatch.discharge;
                 }
                 
                 const hourlyMarginalPrice = dispatchResult.hourlyMarginalPrice;
@@ -1494,7 +1501,7 @@
                 }
 
                 const newEmissions = calculateEmissions(finalGeneration, inputs.capacity.dac);
-                const newSystemCost = calculateTotalAnnualSystemCost(finalGeneration, capacity, inputs.incentives, finalGeneration.curtailment, currentCountryInstalledCapacity, baselineStorageGWh, dispatchResult.gasGenDetails);
+                const newSystemCost = calculateTotalAnnualSystemCost(finalGeneration, inputs.capacity, inputs.incentives, finalGeneration.curtailment, currentCountryInstalledCapacity, baselineStorageGWh, dispatchResult.gasGenDetails);
                 
                 return {
                     generation: finalGeneration,
@@ -1562,7 +1569,7 @@
                     };
                 }
             }
-
+            
             function calculateFullMeritOrderDispatchAndPrice(netLoad, inputs, currentPotential, hydroCF, countryName, batteryDischargeEnergy) {
                 const carbonTax = inputs.incentives.carbonTax || 0;
                 const carbonCostCoal = (EMISSION_FACTORS.coal / 1000) * carbonTax;
@@ -1597,7 +1604,6 @@
                 const totalDailyHydroEnergy = hydroCapacity * hydroCF * 24;
                 let remainingDailyHydro = totalDailyHydroEnergy;
                 
-                // --- START: CORRECTED STORAGE VARIABLE SETUP ---
                 const storagePowerGW = {};
                 ['battery4hr', 'battery8hr', 'longduration'].forEach(type => {
                     const capacity = (currentBaselineStorage[type] || 0) + inputs.capacity[type];
@@ -1605,6 +1611,7 @@
                     storagePowerGW[type] = capacity / duration;
                 });
                 const totalStoragePower = Object.values(storagePowerGW).reduce((a, b) => a + b, 0);
+                const tranchePower = totalStoragePower / 3;
 
                 let totalStorageEnergyGWh = 0;
                 ['battery4hr', 'battery8hr', 'longduration'].forEach(type => {
@@ -1614,7 +1621,6 @@
                 });
                 const storageEfficiency = 0.85;
                 let remainingBatteryEnergy = totalStorageEnergyGWh * storageEfficiency;
-                // --- END: CORRECTED STORAGE VARIABLE SETUP ---
 
                 for (let i = 0; i < 24; i++) {
                     let remainingLoad = netLoad[i];
@@ -1650,19 +1656,16 @@
                                 finalGeneration.rng[i] += dispatchAmount;
                                 break;
 
-                            // --- START: CORRECTED STORAGE DISPATCH LOGIC ---
                             case 'storage_tranche1':
                             case 'storage_tranche2':
                             case 'storage_tranche3':
-                                // Available generation is limited by total power and total remaining energy
-                                availableGen = Math.min(totalStoragePower - finalGeneration.storage[i], remainingBatteryEnergy);
+                                availableGen = Math.min(totalStoragePower, remainingBatteryEnergy);
                                 dispatchAmount = Math.min(remainingLoad, availableGen);
-                                if(dispatchAmount > 0.001){
+                                if(dispatchAmount > 0){
                                     finalGeneration.storage[i] += dispatchAmount;
                                     remainingBatteryEnergy -= dispatchAmount;
                                 }
                                 break;
-                            // --- END: CORRECTED STORAGE DISPATCH LOGIC ---
 
                             case 'coal':
                                 availableGen = currentPotential.coal[i];
@@ -1707,9 +1710,9 @@
                         }
                     }
                 }
-                const totalDischarged = finalGeneration.storage.reduce((a, b) => a + b, 0);
-                return { generation: finalGeneration, hourlyMarginalPrice, gasGenDetails, totalDischarged };
-            }            
+
+                return { generation: finalGeneration, hourlyMarginalPrice, gasGenDetails };
+            }
 
             function calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential) {
                 const gasGenDetails = { ccgt: { generation: 0, cost: 0 }, ct: { generation: 0, cost: 0 } };
@@ -1880,49 +1883,84 @@
                 if (totalStorageEnergyGWh === 0) {
                     return { charge: Array(24).fill(0), discharge: Array(24).fill(0) };
                 }
-                
-                // This function simulates the market to decide discharge, then plans the charge accordingly.
-                // It's a self-contained optimization instead of a site-wide loop.
 
-                // 1. Determine discharge by running a merit order dispatch on the initial net load
-                const tempNetLoad = [...initialNetLoad];
-                const dispatchResult = calculateFullMeritOrderDispatchAndPrice(tempNetLoad, inputs, currentPotential, hydroCF, countryName, []);
-                const dischargeSchedule = dispatchResult.generation.storage;
-                const totalDischargedGWh = dischargeSchedule.reduce((a,b)=> a+b, 0);
-
-                // 2. Calculate required charge based on actual discharge
+                let netLoadForCharging = [...initialNetLoad];
+                let hourlyCharge = Array(24).fill(0);
+                let totalChargedGWh = 0;
                 const storageEfficiency = 0.85;
-                const totalRequiredChargeGWh = totalDischargedGWh / storageEfficiency;
+                const DISPATCH_INCREMENT = 0.1;
 
-                // 3. Plan the charge schedule based on the prices from that initial dispatch
-                let chargeSchedule = Array(24).fill(0);
-                let chargedGWh = 0;
-                const CHARGE_INCREMENT = 0.1;
+                // Iteratively charge the battery based on price/demand score
+                while (totalChargedGWh < totalStorageEnergyGWh) {
+                    const priceResult = calculateFullMeritOrderDispatchAndPrice(netLoadForCharging, inputs, currentPotential, hydroCF, countryName, Array(24).fill(0));
+                    const hourlyPrice = priceResult.hourlyMarginalPrice;
 
-                if (totalRequiredChargeGWh > 0) {
-                    const hourlyPrices = dispatchResult.hourlyMarginalPrice;
-                    while (chargedGWh < totalRequiredChargeGWh) {
-                        let bestHour = -1;
-                        let minScore = Infinity;
-                        for (let i = 0; i < 24; i++) {
-                            if (chargeSchedule[i] < totalStoragePowerGW) {
-                                const score = hourlyPrices[i] * demand[i];
-                                if (score < minScore) {
-                                    minScore = score;
-                                    bestHour = i;
-                                }
+                    let bestScore = Infinity;
+                    let bestHour = -1;
+
+                    for (let i = 0; i < 24; i++) {
+                        if (hourlyCharge[i] < totalStoragePowerGW) { // Check power capacity headroom
+                            const score = demand[i] > 0 ? hourlyPrice[i] / demand[i] : (hourlyPrice[i] === 0 ? -Infinity : hourlyPrice[i]);
+                            if (score < bestScore) {
+                                bestScore = score;
+                                bestHour = i;
                             }
                         }
-                        if (bestHour === -1) break;
-
-                        const chargeAmount = Math.min(CHARGE_INCREMENT, totalRequiredChargeGWh - chargedGWh, totalStoragePowerGW - chargeSchedule[bestHour]);
-                        chargeSchedule[bestHour] += chargeAmount;
-                        chargedGWh += chargeAmount;
                     }
+
+                    if (bestHour === -1) break; 
+                    
+                    const chargeHeadroom = totalStoragePowerGW - hourlyCharge[bestHour];
+                    const energyHeadroom = totalStorageEnergyGWh - totalChargedGWh;
+                    const chargeAmount = Math.min(DISPATCH_INCREMENT, chargeHeadroom, energyHeadroom);
+
+                    if (chargeAmount < 0.001) break;
+
+                    hourlyCharge[bestHour] += chargeAmount;
+                    totalChargedGWh += chargeAmount;
+                    netLoadForCharging[bestHour] += chargeAmount;
                 }
                 
-                return { charge: chargeSchedule, discharge: dischargeSchedule };
+                let hourlyDischarge = Array(24).fill(0);
+                let totalEnergyToDispatch = totalChargedGWh * storageEfficiency;
+                let netLoadForDischarging = [...initialNetLoad];
+                 for(let i=0; i<24; i++) {
+                    netLoadForDischarging[i] += hourlyCharge[i];
+                }
+                
+                // Iteratively decide discharge hours based on profit
+                while (totalEnergyToDispatch > 0.01) {
+                    const priceResult = calculateFullMeritOrderDispatchAndPrice(netLoadForDischarging, inputs, currentPotential, hydroCF, countryName, hourlyDischarge);
+                    const hourlyPrice = priceResult.hourlyMarginalPrice;
+
+                    let bestScore = -Infinity;
+                    let bestHour = -1;
+
+                    for (let i = 0; i < 24; i++) {
+                        if (hourlyDischarge[i] < totalStoragePowerGW) { // Check power capacity headroom
+                            const score = hourlyPrice[i] * demand[i];
+                            if (score > bestScore) {
+                                bestScore = score;
+                                bestHour = i;
+                            }
+                        }
+                    }
+                    
+                    if (bestHour === -1) break;
+
+                    const dischargeHeadroom = totalStoragePowerGW - hourlyDischarge[bestHour];
+                    const dischargeAmount = Math.min(DISPATCH_INCREMENT, dischargeHeadroom, totalEnergyToDispatch);
+
+                    if (dischargeAmount < 0.001) break;
+
+                    hourlyDischarge[bestHour] += dischargeAmount;
+                    totalEnergyToDispatch -= dischargeAmount;
+                    netLoadForDischarging[bestHour] -= dischargeAmount;
+                }
+
+                return { charge: hourlyCharge, discharge: hourlyDischarge };
             }
+
 
             // --- UPDATED SIMULATION RUNNER ---
             function runSimulation() {
@@ -2025,7 +2063,7 @@
                 }
             }
             
-            // --- FINAL, OPTIMIZED SIMULATION RUNNER ---
+            // --- NEW: Centralized Two-Pass Simulation Logic ---
             function runTwoPassSimulation(inputs, storageOverride = false) {
                 const selectedCountry = countrySelect.value;
                 const baseSolarProfile = (countryProfiles[selectedCountry] || countryProfiles.default).solar;
@@ -2044,9 +2082,8 @@
                     }
                 }
 
-                // This first pass ALWAYS determines the grid's state using the thermal model
                 const firstPassResult = getSimulationResult(
-                    inputs, seasonalSolarProfile, seasonalWindProfile, offshoreWindProfile,
+                    inputs, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
                     activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry, storageOverride, false
                 );
 
@@ -2065,19 +2102,815 @@
                 const actualRenewableShare = totalDailyEnergy > 0 ? (flexibleRenewableDailyEnergy / totalDailyEnergy) : 0;
                 const useFullMeritOrder = actualRenewableShare > 0.70;
 
-                if (useFullMeritOrder && !storageOverride) {
-                    // --- RENEWABLE MARGIN: Call the full merit order simulation directly ---
-                    // The co-optimization is handled inside dispatchStorageAsGenerator
-                    const result = getSimulationResult(
-                        inputs, seasonalSolarProfile, seasonalWindProfile, offshoreWindProfile,
-                        activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry,
-                        false, true // forceMeritOrder = true
+                if (useFullMeritOrder) {
+                    // --- RENEWABLE MARGIN: Use dynamic arbitrage model ---
+
+                    // 1. Preliminary Run: Get price signals without any storage intervention.
+                    const preliminaryResult = getSimulationResult(
+                        inputs, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
+                        activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry, true, true // storageOverrideDisabled = true
                     );
-                    return { result, useFullMeritOrder, actualRenewableShare };
+                    const baselinePrices = preliminaryResult.hourlyMarginalPrice;
+
+                    // 2. Plan Arbitrage: Calculate the optimal charge/discharge schedule based on price signals.
+                    const batterySchedule = planArbitrageDispatch(baselinePrices, inputs, currentBaselineStorage);
+
+                    // 3. Final Run: Execute the simulation with the battery's actions predetermined.
+                    const finalResult = getSimulationResult(
+                        inputs, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
+                        activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry, false, true, batterySchedule // Pass in the predefined schedule
+                    );
+
+                    return { result: finalResult, useFullMeritOrder, actualRenewableShare };
+
                 } else {
-                    // --- THERMAL MARGIN (or storage-disabled run): Use the initial result ---
+                    // --- THERMAL MARGIN: Use the original "price taker" model ---
                     return { result: firstPassResult, useFullMeritOrder, actualRenewableShare };
                 }
+            }
+
+            function calculateEmissions(generation, dacRate) {
+                const co2 = [];
+                for (let i = 0; i < 24; i++) {
+                    let hourlyEmission = 0;
+                    hourlyEmission += (generation.naturalGas[i] || 0) * EMISSION_FACTORS.naturalGas;
+                    hourlyEmission += (generation.coal[i] || 0) * EMISSION_FACTORS.coal;
+                    hourlyEmission += (generation.biomass[i] || 0) * EMISSION_FACTORS.biomass; // Added biomass
+                    hourlyEmission -= dacRate;
+                    co2.push(Math.max(0, hourlyEmission));
+                }
+                return co2;
+            }
+
+            function updateCharts(generation, emissions, demand, totalCO2, solarProfile, windProfile, offshoreWindProfile, hourlyMarginalPrice, priceWithoutStorage) {
+                const chartData = generationChart.data.datasets;
+                
+                const techMap = {
+                    nuclear: 0, geothermal: 1, biomass: 2, rng: 3, hydro: 4, 
+                    wind: 5, offshoreWind: 6, solar: 7, 
+                    naturalGas: 8, coal: 9, storage: 10, curtailment: 11,
+                    solarToStorage: 12, windToStorage: 13, offshoreWindToStorage: 14
+                };
+
+                for (const tech in techMap) {
+                    if (generation[tech]) {
+                        chartData[techMap[tech]].data = generation[tech];
+                    }
+                }
+                chartData[15].data = demand;
+
+                generationChart.update('none');
+                
+                // NEW: Update marginal price chart
+                marginalPriceChart.data.datasets[0].data = hourlyMarginalPrice;
+                marginalPriceChart.data.datasets[1].data = priceWithoutStorage;
+                marginalPriceChart.update('none');
+
+                co2Chart.data.datasets[0].data = emissions;
+                co2Chart.options.plugins.annotation.annotations.totalCO2.content = `Total Daily CO2: ${totalCO2.toLocaleString(undefined, {maximumFractionDigits: 0})} tons`;
+                co2Chart.update('none');
+
+                capacityFactorChart.data.datasets[0].data = solarProfile;
+                capacityFactorChart.data.datasets[1].data = windProfile;
+                capacityFactorChart.data.datasets[2].data = offshoreWindProfile;
+                capacityFactorChart.update('none');
+            }
+
+            function updateGridMixSlider(installedCapacity, defaultMix) {
+                const capacities = {};
+                let totalCapacity = 0;
+
+                for (const tech in COST_DATA.capacity_factor) {
+                    const baselineCapacity = installedCapacity[tech] || 0;
+                    let newCapacity = 0;
+                    if (sliders[tech]) {
+                        newCapacity = parseFloat(sliders[tech].value);
+                    }
+                    capacities[tech] = baselineCapacity + newCapacity;
+                    totalCapacity += capacities[tech];
+                }
+
+                if (totalCapacity > 0) {
+                    for (const tech in capacities) {
+                        if (COST_DATA.capacity_factor[tech]) { // Only for generators
+                            const percentage = (capacities[tech] / totalCapacity) * 100;
+                            const fillEl = document.getElementById(`mix-fill-${tech}`);
+                            const valueEl = document.getElementById(`mix-value-${tech}`);
+                            const outlineEl = document.getElementById(`mix-default-outline-${tech}`);
+                            
+                            if (fillEl && valueEl) {
+                                fillEl.style.width = `${percentage}%`;
+                                valueEl.textContent = `${percentage.toFixed(1)}%`;
+                            }
+                            if (outlineEl && defaultMix[tech] !== undefined) {
+                                outlineEl.style.width = `${defaultMix[tech]}%`;
+                            }
+                        }
+                    }
+                }
+
+                // Update storage display
+                ['battery4hr', 'battery8hr', 'longduration'].forEach(type => {
+                    const baselineGWh = currentBaselineStorage[type] || 0;
+                    const newGWh = parseFloat(sliders[type].value);
+                    const totalGWh = baselineGWh + newGWh;
+                    const duration = type === 'longduration' ? 24 : parseInt(type.match(/\d+/)[0]);
+                    const totalGW = totalGWh / duration;
+                    const displayEl = document.getElementById(`storage-capacity-${type}`);
+                    if (displayEl) {
+                        displayEl.textContent = `${totalGW.toFixed(2)} GW / ${totalGWh.toFixed(2)} GWh`;
+                    }
+                });
+            }
+            
+            function createGridMixSliders() {
+                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass', 'rng'];
+                techOrder.forEach(tech => {
+                    let name = tech.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                    if (tech === 'wind') name = 'Onshore Wind';
+                    if (tech === 'offshoreWind') name = 'Offshore Wind';
+                    if (tech === 'rng') name = 'RNG (Biogas)';
+
+                    const color = COLORS[tech] || '#ccc';
+
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'grid grid-cols-6 gap-2 items-center mix-slider-row';
+                    wrapper.dataset.tech = tech;
+
+                    const checkboxContainer = document.createElement('div');
+                    checkboxContainer.className = "flex items-center justify-center";
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `toggle-${tech}`;
+                    checkbox.checked = true;
+                    checkbox.className = "form-checkbox h-5 w-5 text-blue-600 rounded";
+                    checkbox.addEventListener('change', () => {
+                        enabledTechnologies[tech] = checkbox.checked;
+                        runSimulation();
+                        saveState();
+                    });
+                    checkboxContainer.appendChild(checkbox);
+                    wrapper.appendChild(checkboxContainer);
+
+                    const label = document.createElement('label');
+                    label.textContent = name;
+                    label.className = 'col-span-1 text-sm font-medium text-gray-700';
+                    wrapper.appendChild(label);
+
+                    const sliderContainer = document.createElement('div');
+                    sliderContainer.className = 'col-span-3';
+                    const track = document.createElement('div');
+                    track.className = 'mix-slider-track';
+                    const fill = document.createElement('div');
+                    fill.id = `mix-fill-${tech}`;
+                    fill.className = 'mix-slider-fill';
+                    fill.style.backgroundColor = color;
+                    const outline = document.createElement('div');
+                    outline.id = `mix-default-outline-${tech}`;
+                    outline.className = 'mix-slider-default-outline';
+                    track.appendChild(fill);
+                    track.appendChild(outline);
+                    sliderContainer.appendChild(track);
+                    wrapper.appendChild(sliderContainer);
+
+                    const value = document.createElement('span');
+                    value.id = `mix-value-${tech}`;
+                    value.className = 'col-span-1 text-sm font-semibold text-right';
+                    value.textContent = '0.0%';
+                    wrapper.appendChild(value);
+
+                    gridMixSlidersContainer.appendChild(wrapper);
+                });
+
+                // Create storage section
+                const storageHeader = document.createElement('h3');
+                storageHeader.className = 'text-lg font-lora font-semibold mt-6 mb-2 text-gray-800';
+                storageHeader.textContent = 'Installed Storage Capacity';
+                storageCapacityDisplayContainer.appendChild(storageHeader);
+
+                const storageTypes = [
+                    { id: 'battery4hr', name: '4-hr Battery' },
+                    { id: 'battery8hr', name: '8-hr Battery' },
+                    { id: 'longduration', name: '24-hr Storage' }
+                ];
+
+                storageTypes.forEach(type => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'grid grid-cols-6 gap-2 items-center';
+                    
+                    const checkboxContainer = document.createElement('div');
+                    checkboxContainer.className = "flex items-center justify-center";
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `toggle-${type.id}`;
+                    checkbox.checked = true;
+                    checkbox.className = "form-checkbox h-5 w-5 text-blue-600 rounded";
+                    checkbox.addEventListener('change', () => {
+                        enabledTechnologies[type.id] = checkbox.checked;
+                        runSimulation();
+                        saveState();
+                    });
+                    checkboxContainer.appendChild(checkbox);
+                    wrapper.appendChild(checkboxContainer);
+
+                    const label = document.createElement('label');
+                    label.textContent = type.name;
+                    label.className = 'col-span-2 text-sm font-medium text-gray-700';
+                    wrapper.appendChild(label);
+
+                    const value = document.createElement('span');
+                    value.id = `storage-capacity-${type.id}`;
+                    value.className = 'col-span-3 text-sm font-semibold text-right';
+                    value.textContent = '0.00 GW / 0.00 GWh';
+                    wrapper.appendChild(value);
+
+                    storageCapacityDisplayContainer.appendChild(wrapper);
+                });
+            }
+
+            // --- GENERATION MIX SLIDER ---
+            function updateGenerationMixSlider(generation, defaultMix, curtailmentBySource) {
+                dailyGenerationTotalsGWh = {}; // Clear previous totals
+                let totalGeneration = 0;
+
+                const gridTechs = ['coal', 'naturalGas', 'hydro', 'geothermal', 'biomass', 'rng', 'nuclear', 'solar', 'wind', 'offshoreWind', 'storage'];
+                gridTechs.forEach(tech => {
+                    const techTotal = (generation[tech] || []).reduce((a, b) => a + b, 0);
+                    dailyGenerationTotalsGWh[tech] = techTotal;
+                    totalGeneration += techTotal;
+                });
+
+                if (totalGeneration > 0) {
+                    gridTechs.forEach(tech => {
+                        const percentage = (dailyGenerationTotalsGWh[tech] / totalGeneration) * 100;
+                        const fillEl = document.getElementById(`gen-mix-fill-${tech}`);
+                        const valueEl = document.getElementById(`gen-mix-value-${tech}`);
+                        const outlineEl = document.getElementById(`gen-mix-default-outline-${tech}`);
+
+                        if (fillEl && valueEl) {
+                            fillEl.style.width = `${percentage}%`;
+                            valueEl.textContent = `${percentage.toFixed(1)}%`;
+                        }
+                        if (outlineEl && defaultMix[tech] !== undefined) {
+                            outlineEl.style.width = `${defaultMix[tech]}%`;
+                        }
+                    });
+                } else { 
+                     gridTechs.forEach(tech => {
+                        const fillEl = document.getElementById(`gen-mix-fill-${tech}`);
+                        const valueEl = document.getElementById(`gen-mix-value-${tech}`);
+                        if(fillEl && valueEl) {
+                            fillEl.style.width = '0%';
+                            valueEl.textContent = '0.0%';
+                        }
+                    });
+                }
+
+                const curtailmentTrack = document.getElementById('gen-mix-track-curtailment');
+                const curtailmentValue = document.getElementById('gen-mix-value-curtailment');
+                curtailmentTrack.innerHTML = ''; 
+
+                let totalCurtailed = (generation.curtailment || []).reduce((a, b) => a + b, 0);
+                dailyGenerationTotalsGWh['curtailment'] = totalCurtailed;
+                let totalPotentialGeneration = totalGeneration + totalCurtailed + (generation.solarToStorage || []).reduce((a,b)=>a+b,0) + (generation.windToStorage || []).reduce((a,b)=>a+b,0) + (generation.offshoreWindToStorage || []).reduce((a,b)=>a+b,0);
+                
+                if (totalPotentialGeneration > 0) {
+                    const overallCurtailmentPercent = (totalCurtailed / totalPotentialGeneration) * 100;
+                    curtailmentValue.textContent = `${overallCurtailmentPercent.toFixed(1)}%`;
+
+                    if (totalCurtailed > 0) {
+                        const solarCurtail = (curtailmentBySource.solar || []).reduce((a,b)=>a+b,0) || 0;
+                        const windCurtail = (curtailmentBySource.wind || []).reduce((a,b)=>a+b,0) || 0;
+                        const offshoreWindCurtail = (curtailmentBySource.offshoreWind || []).reduce((a,b)=>a+b,0) || 0;
+
+                        const techWithCurtailment = [{tech: 'solar', val: solarCurtail}, {tech: 'wind', val: windCurtail}, {tech: 'offshoreWind', val: offshoreWindCurtail}];
+
+                        techWithCurtailment.forEach(item => {
+                             if (item.val > 0) {
+                                const contributionPercent = (item.val / totalCurtailed);
+                                const segmentWidth = 100 * contributionPercent; 
+
+                                const segment = document.createElement('div');
+                                segment.className = 'h-full';
+                                segment.style.backgroundColor = COLORS[item.tech];
+                                segment.style.width = `${segmentWidth}%`;
+                                segment.style.float = 'left';
+                                curtailmentTrack.appendChild(segment);
+                            }
+                        });
+                        curtailmentTrack.parentElement.style.width = `${overallCurtailmentPercent}%`;
+                    } else {
+                        curtailmentTrack.parentElement.style.width = `0%`;
+                    }
+                } else {
+                    curtailmentValue.textContent = '0.0%';
+                    curtailmentTrack.parentElement.style.width = `0%`;
+                }
+            }
+
+            function createGenerationMixSliders() {
+                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass', 'rng', 'storage'];
+                techOrder.forEach(tech => {
+                    let name = tech.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                    if (tech === 'wind') name = 'Onshore Wind';
+                    if (tech === 'offshoreWind') name = 'Offshore Wind';
+                    if (tech === 'rng') name = 'RNG (Biogas)';
+                    const color = COLORS[tech] || '#ccc';
+
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'grid grid-cols-5 gap-2 items-center mix-slider-row';
+                    wrapper.dataset.tech = tech;
+
+                    const label = document.createElement('label');
+                    label.textContent = name;
+                    label.className = 'col-span-1 text-sm font-medium text-gray-700';
+                    wrapper.appendChild(label);
+
+                    const sliderContainer = document.createElement('div');
+                    sliderContainer.className = 'col-span-3';
+                    const track = document.createElement('div');
+                    track.className = 'mix-slider-track';
+                    const fill = document.createElement('div');
+                    fill.id = `gen-mix-fill-${tech}`;
+                    fill.className = 'mix-slider-fill';
+                    fill.style.backgroundColor = color;
+                    const outline = document.createElement('div');
+                    outline.id = `gen-mix-default-outline-${tech}`;
+                    outline.className = 'mix-slider-default-outline';
+                    track.appendChild(fill);
+                    track.appendChild(outline);
+                    sliderContainer.appendChild(track);
+                    wrapper.appendChild(sliderContainer);
+
+                    const value = document.createElement('span');
+                    value.id = `gen-mix-value-${tech}`;
+                    value.className = 'col-span-1 text-sm font-semibold text-right';
+                    value.textContent = '0.0%';
+                    wrapper.appendChild(value);
+
+                    generationMixSlidersContainer.appendChild(wrapper);
+                });
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'grid grid-cols-5 gap-2 items-center mix-slider-row';
+                wrapper.dataset.tech = 'curtailment';
+                const label = document.createElement('label');
+                label.textContent = 'Curtailment';
+                label.className = 'col-span-1 text-sm font-medium text-gray-700';
+                wrapper.appendChild(label);
+                const sliderContainer = document.createElement('div');
+                sliderContainer.className = 'col-span-3';
+                const outerTrack = document.createElement('div');
+                outerTrack.className = 'mix-slider-track';
+                const innerTrack = document.createElement('div');
+                innerTrack.id = 'gen-mix-track-curtailment';
+                innerTrack.className = 'h-full w-full';
+                outerTrack.appendChild(innerTrack);
+                sliderContainer.appendChild(outerTrack);
+                wrapper.appendChild(sliderContainer);
+                const value = document.createElement('span');
+                value.id = `gen-mix-value-curtailment`;
+                value.className = 'col-span-1 text-sm font-semibold text-right';
+                value.textContent = '0.0%';
+                wrapper.appendChild(value);
+                generationMixSlidersContainer.appendChild(wrapper);
+            }
+
+            // --- DEMAND EDIT MODE ---
+            function setDemandEditMode(enabled) {
+                isDemandEditMode = enabled;
+                const demandDatasetIndex = generationChart.data.datasets.findIndex(ds => ds.label === 'Demand');
+
+                if (enabled) {
+                    editDemandBtn.classList.add('hidden');
+                    confirmDemandBtn.classList.remove('hidden');
+                    revertDemandBtn.classList.remove('hidden');
+                    demandPresetsDiv.classList.remove('hidden');
+
+                    document.querySelectorAll('#demand-presets button').forEach(btn => {
+                        btn.classList.remove('preset-active');
+                        if (btn.id === `preset-demand-${currentDemandProfileName.toLowerCase().replace(' ', '-')}`) {
+                            btn.classList.add('preset-active');
+                        }
+                    });
+
+                    generationChart.data.datasets.forEach((dataset, index) => {
+                        if (index !== demandDatasetIndex) {
+                            dataset.hidden = true;
+                        } else {
+                            dataset.borderWidth = 4;
+                            dataset.pointRadius = 6;
+                            dataset.pointHoverRadius = 8;
+                            dataset.pointBackgroundColor = 'rgba(17, 24, 39, 1)';
+                            dataset.pointBorderColor = 'white';
+                            dataset.pointBorderWidth = 2;
+                        }
+                    });
+
+                    generationChart.options.plugins.dragData = {
+                        round: 1,
+                        showTooltip: true,
+                        onDragEnd: function(e, datasetIndex, index, value) {
+                            generationChart.update('none');
+                        }
+                    };
+                    generationChart.options.plugins.dragData.enabled = true;
+                    generationChart.options.scales.y.stacked = false;
+                    generationChart.update();
+
+                } else {
+                    editDemandBtn.classList.remove('hidden');
+                    confirmDemandBtn.classList.add('hidden');
+                    revertDemandBtn.classList.add('hidden');
+                    demandPresetsDiv.classList.add('hidden');
+
+                    generationChart.data.datasets.forEach((dataset, index) => {
+                        dataset.hidden = false;
+                        if (index === demandDatasetIndex) {
+                            dataset.borderWidth = 3;
+                            dataset.pointRadius = 0;
+                            dataset.pointHoverRadius = 0;
+                        }
+                    });
+
+                    if (generationChart.options.plugins.dragData) {
+                        generationChart.options.plugins.dragData.enabled = false;
+                        generationChart.options.plugins.dragData.onDragEnd = null;
+                    }
+                    generationChart.options.scales.y.stacked = true;
+                    generationChart.update();
+                }
+            }
+
+            // --- CF EDIT MODE ---
+            function setCFEditMode(enabled) {
+                isCFEditMode = enabled;
+                
+                if (enabled) {
+                    editCFBtn.classList.add('hidden');
+                    confirmCFBtn.classList.remove('hidden');
+                    revertCFBtn.classList.remove('hidden');
+                    cfPresetsDiv.classList.remove('hidden');
+
+                    document.querySelectorAll('#cf-presets button').forEach(btn => {
+                        btn.classList.remove('preset-active');
+                        if (btn.id === `preset-cf-${currentCFProfileName.toLowerCase()}`) {
+                            btn.classList.add('preset-active');
+                        }
+                    });
+
+                    capacityFactorChart.data.datasets.forEach(dataset => {
+                        dataset.pointRadius = 6;
+                        dataset.pointHoverRadius = 8;
+                        dataset.pointBorderColor = 'white';
+                        dataset.pointBorderWidth = 2;
+                        dataset.dragData = true;
+                    });
+
+                } else {
+                    editCFBtn.classList.remove('hidden');
+                    confirmCFBtn.classList.add('hidden');
+                    revertCFBtn.classList.add('hidden');
+                    cfPresetsDiv.classList.add('hidden');
+                    
+                    capacityFactorChart.data.datasets.forEach(dataset => {
+                        dataset.pointRadius = 0;
+                        dataset.dragData = false;
+                    });
+                }
+                capacityFactorChart.update();
+            }
+            
+            // --- NEW: Function to set the baseline from the current state ---
+            function setNewBaselineFromCurrentState() {
+                const currentValues = {};
+                for (const key in sliders) {
+                    currentValues[key] = parseFloat(sliders[key].value);
+                }
+                
+                let activePotentialGeneration = JSON.parse(JSON.stringify(BASELINE_POTENTIAL_GENERATION));
+                for (const tech in enabledTechnologies) {
+                    if (!enabledTechnologies[tech]) {
+                        activePotentialGeneration[tech] = Array(24).fill(0);
+                    }
+                }
+                
+                const inputsForBaseline = {
+                    capacity: {
+                        solar: currentValues.solar, wind: currentValues.wind, offshoreWind: currentValues.offshoreWind,
+                        geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
+                        biomass: currentValues.biomass, rng: currentValues.rng,
+                        battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
+                        longduration: currentValues.longduration, dac: currentValues.dac,
+                        demandflex: currentValues.demandflex,
+                    },
+                    incentives: {
+                        solar: currentValues.solarIncentive, wind: currentValues.windIncentive, offshoreWind: currentValues.offshoreWindIncentive,
+                        geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
+                        biomass: currentValues.biomassIncentive, rng: currentValues.rngIncentive,
+                        storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
+                        carbonTax: currentValues.carbonTax,
+                        exportPrice: currentValues.exportPrice,
+                    }
+                };
+                
+                const { result: newBaselineResult } = runTwoPassSimulation(inputsForBaseline);
+                
+                customBaselineSystemCost = newBaselineResult.systemCost;
+                customBaselineConsumerCost = calculateAnnualConsumerCost(newBaselineResult.hourlyMarginalPrice, newBaselineResult.demand);
+                customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
+            }
+
+            // --- EVENT LISTENERS ---
+            function updateUndoRedoButtons() {
+                undoButton.disabled = historyIndex <= 0;
+                redoButton.disabled = historyIndex >= stateHistory.length - 1;
+            }
+
+            function saveState() {
+                const currentState = {};
+                for (const key in sliders) {
+                    currentState[key] = sliders[key].value;
+                }
+                currentState.enabledTech = { ...enabledTechnologies };
+                currentState.demandProfile = [...currentDemand];
+                currentState.solarCFProfile = [...currentSolarCFProfile];
+                currentState.windCFProfile = [...currentWindCFProfile];
+                currentState.offshoreWindCFProfile = [...currentOffshoreWindCFProfile];
+                currentState.demandProfileName = currentDemandProfileName;
+                currentState.cfProfileName = currentCFProfileName;
+                currentState.hydroCF = currentHydroCF;
+
+                stateHistory = stateHistory.slice(0, historyIndex + 1);
+                stateHistory.push(currentState);
+                historyIndex++;
+                updateUndoRedoButtons();
+            }
+            
+            function syncInputs(sourceElement, targetElement) {
+                targetElement.value = sourceElement.value;
+            }
+
+            function setupInputSyncing() {
+                for (const key in sliders) {
+                    const slider = sliders[key];
+                    const input = inputs[key];
+
+                    // --- MODIFICATION: Special handling for carbon tax ---
+                    if (key === 'carbonTax') {
+                         slider.addEventListener('input', () => {
+                            syncInputs(slider, input);
+                            setNewBaselineFromCurrentState(); // Recalculate baseline on change
+                            runSimulation();
+                        });
+                        
+                        input.addEventListener('input', () => {
+                            let value = parseFloat(input.value);
+                            const min = parseFloat(slider.min);
+                            const max = parseFloat(slider.max);
+                            if (isNaN(value)) value = min;
+                            if (value > max) value = max;
+                            if (value < min) value = min;
+                            input.value = value;
+                            syncInputs(input, slider);
+                            setNewBaselineFromCurrentState(); // Recalculate baseline on change
+                            runSimulation();
+                        });
+                    } else {
+                        // Original behavior for all other sliders
+                        slider.addEventListener('input', () => {
+                            syncInputs(slider, input);
+                            runSimulation();
+                        });
+                        
+                        input.addEventListener('input', () => {
+                            let value = parseFloat(input.value);
+                            const min = parseFloat(slider.min);
+                            const max = parseFloat(slider.max);
+                            if (isNaN(value)) value = min;
+                            if (value > max) value = max;
+                            if (value < min) value = min;
+                            input.value = value;
+                            syncInputs(input, slider);
+                            runSimulation();
+                        });
+                    }
+
+                    slider.addEventListener('change', saveState);
+                    input.addEventListener('change', saveState);
+                }
+            }
+
+            function applySeason(profileName) {
+                currentSystemDefaultProfileName = profileName;
+                const nameParts = profileName.split('-');
+                const baseSeason = nameParts[0];
+                const profileDisplayName = nameParts.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+
+                currentDemandProfileName = profileDisplayName;
+                currentDemandProfileText.textContent = currentDemandProfileName;
+
+                const cfProfileDisplayName = baseSeason.charAt(0).toUpperCase() + baseSeason.slice(1);
+                const seasonalMultipliers = SEASONAL_MULTIPLIERS[baseSeason];
+                const baseSolarProfile = (countryProfiles[countrySelect.value] || countryProfiles.default).solar;
+                const baseWindProfile = (countryProfiles[countrySelect.value] || countryProfiles.default).wind;
+                const baseOffshoreWindProfile = (countryProfiles[countrySelect.value] || countryProfiles.default).offshoreWind;
+                currentSolarCFProfile = baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
+                currentWindCFProfile = baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
+                currentOffshoreWindCFProfile = baseOffshoreWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.offshoreWind));
+                currentHydroCF = SEASONAL_HYDRO_CF[baseSeason];
+                currentCFProfileName = cfProfileDisplayName;
+                currentCFProfileText.textContent = currentCFProfileName;
+
+                updateBaselineForCountry(countrySelect.value, profileName); 
+                
+                setDemandEditMode(false);
+                setCFEditMode(false);
+                saveState();
+            }
+
+            editDemandBtn.addEventListener('click', () => {
+                originalDemandBeforeEdit = [...currentDemand];
+                setDemandEditMode(true);
+            });
+
+            revertDemandBtn.addEventListener('click', () => {
+                generationChart.data.datasets.find(ds => ds.label === 'Demand').data = [...originalDemandBeforeEdit];
+                generationChart.update('none');
+            });
+
+            confirmDemandBtn.addEventListener('click', () => {
+                currentDemand = [...generationChart.data.datasets.find(ds => ds.label === 'Demand').data];
+                currentDemandProfileName = "User Defined";
+                currentDemandProfileText.textContent = currentDemandProfileName;
+                setDemandEditMode(false);
+                runSimulation();
+                saveState();
+            });
+            
+            const demandProfiles = [
+                'spring-typical', 'spring-high', 'summer-typical', 'summer-high', 
+                'fall-typical', 'fall-high', 'winter-typical', 'winter-high'
+            ];
+            demandProfiles.forEach(profile => {
+                document.getElementById(`preset-demand-${profile}`).addEventListener('click', () => applySeason(profile));
+            });
+
+            ['spring', 'summer', 'fall', 'winter'].forEach(season => {
+                document.getElementById(`preset-cf-${season}`).addEventListener('click', () => {
+                    applySeason(`${season}-typical`);
+                });
+            });
+
+            editCFBtn.addEventListener('click', () => {
+                originalSolarCFBeforeEdit = [...capacityFactorChart.data.datasets[0].data];
+                originalWindCFBeforeEdit = [...capacityFactorChart.data.datasets[1].data];
+                originalOffshoreWindCFBeforeEdit = [...capacityFactorChart.data.datasets[2].data];
+                setCFEditMode(true);
+            });
+
+            revertCFBtn.addEventListener('click', () => {
+                capacityFactorChart.data.datasets[0].data = [...originalSolarCFBeforeEdit];
+                capacityFactorChart.data.datasets[1].data = [...originalWindCFBeforeEdit];
+                capacityFactorChart.data.datasets[2].data = [...originalOffshoreWindCFBeforeEdit];
+                capacityFactorChart.update('none');
+            });
+
+            confirmCFBtn.addEventListener('click', () => {
+                currentSolarCFProfile = [...capacityFactorChart.data.datasets[0].data];
+                currentWindCFProfile = [...capacityFactorChart.data.datasets[1].data];
+                currentOffshoreWindCFProfile = [...capacityFactorChart.data.datasets[2].data];
+                currentCFProfileName = "User Defined";
+                currentCFProfileText.textContent = currentCFProfileName;
+                
+                const lastDemandProfile = currentDemandProfileName.toLowerCase().replace(' ', '-');
+                updateBaselineForCountry(countrySelect.value, lastDemandProfile);
+
+                setCFEditMode(false);
+                runSimulation();
+                saveState();
+            });
+
+
+            resetToZeroButton.addEventListener('click', () => {
+                Object.keys(sliders).forEach(key => {
+                    if (key === 'exportPrice') {
+                         sliders[key].value = 20;
+                         inputs[key].value = 20;
+                    } else {
+                        sliders[key].value = 0;
+                        inputs[key].value = 0;
+                    }
+                });
+                runSimulation();
+                saveState();
+            });
+            
+            makeDefaultButton.addEventListener('click', () => {
+                userDefaultState = {};
+                for (const key in sliders) {
+                    userDefaultState[key] = sliders[key].value;
+                }
+                userDefaultState.enabledTech = { ...enabledTechnologies };
+                userDefaultState.demandProfile = [...currentDemand];
+                userDefaultState.solarCFProfile = [...currentSolarCFProfile];
+                userDefaultState.windCFProfile = [...currentWindCFProfile];
+                userDefaultState.offshoreWindCFProfile = [...currentOffshoreWindCFProfile];
+                userDefaultState.demandProfileName = currentDemandProfileName;
+                userDefaultState.cfProfileName = currentCFProfileName;
+                userDefaultState.hydroCF = currentHydroCF;
+
+                setNewBaselineFromCurrentState(); // Use the new function
+                
+                userDefaultState.baselineCost = customBaselineSystemCost;
+                userDefaultState.baselineCO2 = customBaselineTotalAnnualCO2;
+
+                runSimulation();
+                
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50';
+                modal.innerHTML = `
+                    <div class="bg-white p-6 rounded-lg shadow-2xl text-center">
+                        <p class="text-lg font-semibold text-gray-800">Current settings saved as user default.</p>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                setTimeout(() => modal.remove(), 2000);
+            });
+
+            resetToDefaultButton.addEventListener('click', () => {
+                const isUserDefaultAvailable = Object.keys(userDefaultState).length > 0;
+
+                if (isUserDefaultAvailable) {
+                    restoreState(userDefaultState);
+                    saveState();
+                } else {
+                    applySeason(currentSystemDefaultProfileName);
+                }
+            });
+
+            function restoreState(state) {
+                currentDemand = [...state.demandProfile];
+                currentSolarCFProfile = [...state.solarCFProfile];
+                currentWindCFProfile = [...state.windCFProfile];
+                currentOffshoreWindCFProfile = [...state.offshoreWindCFProfile];
+                currentDemandProfileName = state.demandProfileName;
+                currentCFProfileName = state.cfProfileName;
+                currentHydroCF = state.hydroCF;
+                currentDemandProfileText.textContent = currentDemandProfileName;
+                currentCFProfileText.textContent = currentCFProfileName;
+
+                for (const key in state) {
+                    if (sliders[key] && inputs[key]) {
+                        sliders[key].value = state[key];
+                        inputs[key].value = state[key];
+                    }
+                }
+                if (state.enabledTech) {
+                    for (const tech in state.enabledTech) {
+                        const checkbox = document.getElementById(`toggle-${tech}`);
+                        if (checkbox) {
+                            checkbox.checked = state.enabledTech[tech];
+                            enabledTechnologies[tech] = state.enabledTech[tech];
+                        }
+                    }
+                }
+                runSimulation();
+                updateUndoRedoButtons();
+            }
+
+            undoButton.addEventListener('click', () => {
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    restoreState(stateHistory[historyIndex]);
+                }
+            });
+
+            redoButton.addEventListener('click', () => {
+                if (historyIndex < stateHistory.length - 1) {
+                    historyIndex++;
+                    restoreState(stateHistory[historyIndex]);
+                }
+            });
+            
+            // --- INITIALIZATION & DYNAMIC CONTENT ---
+
+            function populateCountryDropdown() {
+                countrySelect.innerHTML = '';
+                const caOption = document.createElement('option');
+                caOption.value = "California";
+                caOption.textContent = "California";
+                countrySelect.appendChild(caOption);
+
+                for(const country in countryGridMixData) {
+                    if (country !== "California") {
+                        const option = document.createElement('option');
+                        option.value = country;
+                        option.textContent = country;
+                        countrySelect.appendChild(option);
+                    }
+                }
+                countrySelect.value = "California";
             }
 
             function updateBaselineForCountry(countryName, profileName) { 
@@ -2406,6 +3239,66 @@
                 popoverEl.style.transform = 'none';
                 popoverEl.style.visibility = 'visible';
             }
+
+            /**
+             * Creates a 24-hour charging schedule based on iteratively finding the hours with the lowest value score.
+             * @param {number} totalRequiredChargeGWh - The total energy that needs to be charged.
+             * @param {number[]} hourlyPrices - The 24-hour marginal price forecast.
+             * @param {number[]} hourlyDemand - The 24-hour demand profile.
+             * @param {object} inputs - The main simulation inputs object.
+             * @param {object} baselineStorageGWh - The baseline storage capacity.
+             * @returns {number[]} A 24-hour array representing the charging schedule.
+             */
+            function planChargingSchedule(totalRequiredChargeGWh, hourlyPrices, hourlyDemand, inputs, baselineStorageGWh) {
+                let chargeSchedule = Array(24).fill(0);
+                if (totalRequiredChargeGWh <= 0) return chargeSchedule;
+
+                let chargedGWh = 0;
+                const CHARGE_INCREMENT = 0.1;
+
+                // Calculate total battery power capacity for charging
+                const storageTypes = ['battery4hr', 'battery8hr', 'longduration'];
+                let totalStoragePowerGW = 0;
+                storageTypes.forEach(type => {
+                    if (enabledTechnologies[type]) {
+                        const capacity = (baselineStorageGWh[type] || 0) + inputs.capacity[type];
+                        const duration = type === 'longduration' ? 24 : parseInt(type.match(/\d+/)[0]);
+                        totalStoragePowerGW += capacity / duration;
+                    }
+                });
+
+                if (totalStoragePowerGW === 0) return chargeSchedule;
+
+                // This loop plans the entire charge schedule based on one set of prices.
+                // Re-calculating prices after every 0.1 GWh is too computationally intensive.
+                while (chargedGWh < totalRequiredChargeGWh) {
+                    let bestHour = -1;
+                    let minScore = Infinity;
+
+                    for (let i = 0; i < 24; i++) {
+                        // Only consider hours that have charging headroom below the power limit
+                        if (chargeSchedule[i] < totalStoragePowerGW) {
+                            // The score is low when price and demand are low.
+                            const score = hourlyPrices[i] * hourlyDemand[i];
+                            if (score < minScore) {
+                                minScore = score;
+                                bestHour = i;
+                            }
+                        }
+                    }
+
+                    if (bestHour === -1) {
+                        // No available hour to charge, break to prevent an infinite loop.
+                        break;
+                    }
+
+                    const chargeAmount = Math.min(CHARGE_INCREMENT, totalRequiredChargeGWh - chargedGWh, totalStoragePowerGW - chargeSchedule[bestHour]);
+                    chargeSchedule[bestHour] += chargeAmount;
+                    chargedGWh += chargeAmount;
+                }
+
+                return chargeSchedule;
+            }            
 
             function showTutorialStep(stepIndex) {
                 if (stepIndex < 0 || stepIndex >= tutorialSteps.length) {
