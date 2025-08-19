@@ -1336,8 +1336,7 @@
                 return totalCost * 365;
             }
 
-            // --- REWRITTEN DISPATCH LOGIC ---
-            function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProfile, potentialGen, baselineStorageGWh = {}, hydroCF, countryName, storageOverrideDisabled = false, forceMeritOrder = false) {
+function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProfile, potentialGen, baselineStorageGWh = {}, hydroCF, countryName, storageOverrideDisabled = false, forceMeritOrder = false, predefinedBatterySchedule = null) {
                 const VRE_SOURCES = ['solar', 'wind', 'offshoreWind'];
                 const INFLEXIBLE_SOURCES = ['nuclear', 'geothermal', 'biomass']; 
                 
@@ -1381,16 +1380,10 @@
                     currentPotential.biomass[i] += inputs.capacity.biomass * COST_DATA.capacity_factor.biomass;
                     currentPotential.rng[i] += inputs.capacity.rng * COST_DATA.capacity_factor.rng;
                 }
-
-                // --- BUG FIX STARTS HERE ---
-                // This loop calculates the "net load" that dispatchable generators need to meet.
-                // The logic is now conditional based on whether we're in the "Thermal Margin" model
-                // or the "Renewable Margin" (full merit order) model.
+                
                 let netLoad = Array(24).fill(0);
                 for (let i = 0; i < 24; i++) {
                     let mustRunGen = 0;
-                    
-                    // VRE (Solar, Wind) and truly inflexible sources (Nuclear, Geothermal) are always subtracted first.
                     const sourcesToSubtract = [...VRE_SOURCES, 'nuclear', 'geothermal'];
                     
                     sourcesToSubtract.forEach(tech => {
@@ -1401,8 +1394,6 @@
                         }
                     });
 
-                    // In the thermal margin model, biomass is also treated as must-run.
-                    // In the full merit order model, it's dispatchable, so we DON'T subtract it here.
                     if (!forceMeritOrder) {
                         if(currentPotential.biomass) {
                             const biomassPotential = currentPotential.biomass[i];
@@ -1410,53 +1401,60 @@
                             mustRunGen += biomassPotential;
                         }
                     } else {
-                        // If using the full merit order, we must clear any pre-set biomass generation
-                        // so it can be correctly dispatched based on its cost later.
                         finalGeneration.biomass[i] = 0;
                     }
                     
                     netLoad[i] = modifiedDemand[i] - mustRunGen;
                 }
-                // --- BUG FIX ENDS HERE ---
                 
                 let batteryDischargeEnergy = Array(24).fill(0);
 
-                if (!storageOverrideDisabled) {
-                    let storageDispatch;
+                // --- START: MODIFIED STORAGE LOGIC ---
+                let storageDispatch = { charge: Array(24).fill(0), discharge: Array(24).fill(0) };
+
+                if (predefinedBatterySchedule) {
+                    // Use the externally calculated arbitrage schedule passed from runTwoPassSimulation
+                    storageDispatch = predefinedBatterySchedule;
+                } else if (!storageOverrideDisabled) {
+                    // This is the original logic path, now used only by the Thermal Margin model.
                     if (forceMeritOrder) {
+                        // This call to dispatchStorageAsGenerator is part of the old logic. The new arbitrage flow bypasses this entirely.
                         storageDispatch = dispatchStorageAsGenerator(netLoad, inputs, baselineStorageGWh, currentPotential, modifiedDemand, hydroCF, countryName);
-                        batteryDischargeEnergy = storageDispatch.discharge; // This will be used later
                     } else {
                         storageDispatch = dispatchStorageEconomically(netLoad, inputs, baselineStorageGWh, currentPotential);
-                        finalGeneration.storage = storageDispatch.discharge;
+                    }
+                }
+                // If storageOverrideDisabled is true and no predefined schedule, storageDispatch correctly remains all zeros for the preliminary run.
+                
+                finalGeneration.storage = storageDispatch.discharge;
+                batteryDischargeEnergy = storageDispatch.discharge;
+                // --- END: MODIFIED STORAGE LOGIC ---
+
+                for (let i = 0; i < 24; i++) {
+                    // This logic correctly applies the chosen storage actions to the netLoad
+                    netLoad[i] += storageDispatch.charge[i];
+                    if (!forceMeritOrder) {
+                        netLoad[i] -= storageDispatch.discharge[i];
                     }
                     
-                    for (let i = 0; i < 24; i++) {
-                        netLoad[i] += storageDispatch.charge[i];
-                        if (!forceMeritOrder) {
-                            netLoad[i] -= storageDispatch.discharge[i];
-                        }
-                        
-                        if (storageDispatch.charge[i] > 0) {
-                            let totalVrePotential = finalGeneration.solar[i] + finalGeneration.wind[i] + finalGeneration.offshoreWind[i];
-                            if (totalVrePotential > 0) {
-                                let solarCharge = (finalGeneration.solar[i] / totalVrePotential) * storageDispatch.charge[i];
-                                let windCharge = (finalGeneration.wind[i] / totalVrePotential) * storageDispatch.charge[i];
-                                let offshoreCharge = (finalGeneration.offshoreWind[i] / totalVrePotential) * storageDispatch.charge[i];
-                                
-                                // Capping to prevent negative generation
-                                solarCharge = Math.min(solarCharge, finalGeneration.solar[i]);
-                                windCharge = Math.min(windCharge, finalGeneration.wind[i]);
-                                offshoreCharge = Math.min(offshoreCharge, finalGeneration.offshoreWind[i]);
+                    if (storageDispatch.charge[i] > 0) {
+                        let totalVrePotential = finalGeneration.solar[i] + finalGeneration.wind[i] + finalGeneration.offshoreWind[i];
+                        if (totalVrePotential > 0) {
+                            let solarCharge = (finalGeneration.solar[i] / totalVrePotential) * storageDispatch.charge[i];
+                            let windCharge = (finalGeneration.wind[i] / totalVrePotential) * storageDispatch.charge[i];
+                            let offshoreCharge = (finalGeneration.offshoreWind[i] / totalVrePotential) * storageDispatch.charge[i];
+                            
+                            solarCharge = Math.min(solarCharge, finalGeneration.solar[i]);
+                            windCharge = Math.min(windCharge, finalGeneration.wind[i]);
+                            offshoreCharge = Math.min(offshoreCharge, finalGeneration.offshoreWind[i]);
 
-                                finalGeneration.solarToStorage[i] = solarCharge;
-                                finalGeneration.windToStorage[i] = windCharge;
-                                finalGeneration.offshoreWindToStorage[i] = offshoreCharge;
+                            finalGeneration.solarToStorage[i] = solarCharge;
+                            finalGeneration.windToStorage[i] = windCharge;
+                            finalGeneration.offshoreWindToStorage[i] = offshoreCharge;
 
-                                finalGeneration.solar[i] -= solarCharge;
-                                finalGeneration.wind[i] -= windCharge;
-                                finalGeneration.offshoreWind[i] -= offshoreCharge;
-                            }
+                            finalGeneration.solar[i] -= solarCharge;
+                            finalGeneration.wind[i] -= windCharge;
+                            finalGeneration.offshoreWind[i] -= offshoreCharge;
                         }
                     }
                 }
@@ -1489,8 +1487,8 @@
                 finalGeneration.rng = dispatchResult.generation.rng;
                 
                 if (forceMeritOrder) {
-                    // When using merit order, biomass is dispatched, so we add its result here.
                     finalGeneration.biomass.forEach((val, i) => finalGeneration.biomass[i] += dispatchResult.generation.biomass[i]);
+                    // Storage generation is already set from storageDispatch, but we affirm it here from the dispatch result if needed.
                     finalGeneration.storage = dispatchResult.generation.storage;
                 }
                 
@@ -1514,7 +1512,7 @@
                     hourlyMarginalPrice: hourlyMarginalPrice 
                 };
             }
-            
+
             function calculateDispatchableGenerationAndPrice(netLoad, inputs, currentPotential, useFullMeritOrder, hydroCF, countryName, batteryDischargeEnergy = Array(24).fill(0)) {
                 if (useFullMeritOrder) {
                     return calculateFullMeritOrderDispatchAndPrice(netLoad, inputs, currentPotential, hydroCF, countryName, batteryDischargeEnergy);
@@ -1615,10 +1613,14 @@
                 const totalStoragePower = Object.values(storagePowerGW).reduce((a, b) => a + b, 0);
                 const tranchePower = totalStoragePower / 3;
 
-                let remainingBatteryEnergyTranche1 = batteryDischargeEnergy.map(e => e / 3);
-                let remainingBatteryEnergyTranche2 = batteryDischargeEnergy.map(e => e / 3);
-                let remainingBatteryEnergyTranche3 = batteryDischargeEnergy.map(e => e / 3);
-
+                let totalStorageEnergyGWh = 0;
+                ['battery4hr', 'battery8hr', 'longduration'].forEach(type => {
+                    if (enabledTechnologies[type]) {
+                        totalStorageEnergyGWh += (currentBaselineStorage[type] || 0) + inputs.capacity[type];
+                    }
+                });
+                const storageEfficiency = 0.85;
+                let remainingBatteryEnergy = totalStorageEnergyGWh * storageEfficiency;
 
                 for (let i = 0; i < 24; i++) {
                     let remainingLoad = netLoad[i];
@@ -1655,22 +1657,14 @@
                                 break;
 
                             case 'storage_tranche1':
-                                availableGen = Math.min(tranchePower, remainingBatteryEnergyTranche1[i]);
-                                dispatchAmount = Math.min(remainingLoad, availableGen);
-                                finalGeneration.storage[i] += dispatchAmount;
-                                remainingBatteryEnergyTranche1[i] -= dispatchAmount;
-                                break;
                             case 'storage_tranche2':
-                                availableGen = Math.min(tranchePower, remainingBatteryEnergyTranche2[i]);
-                                dispatchAmount = Math.min(remainingLoad, availableGen);
-                                finalGeneration.storage[i] += dispatchAmount;
-                                remainingBatteryEnergyTranche2[i] -= dispatchAmount;
-                                break;
                             case 'storage_tranche3':
-                                availableGen = Math.min(tranchePower, remainingBatteryEnergyTranche3[i]);
+                                availableGen = Math.min(totalStoragePower, remainingBatteryEnergy);
                                 dispatchAmount = Math.min(remainingLoad, availableGen);
-                                finalGeneration.storage[i] += dispatchAmount;
-                                remainingBatteryEnergyTranche3[i] -= dispatchAmount;
+                                if(dispatchAmount > 0){
+                                    finalGeneration.storage[i] += dispatchAmount;
+                                    remainingBatteryEnergy -= dispatchAmount;
+                                }
                                 break;
 
                             case 'coal':
@@ -1716,8 +1710,8 @@
                         }
                     }
                 }
-
-                return { generation: finalGeneration, hourlyMarginalPrice, gasGenDetails };
+                const totalDischarged = finalGeneration.storage.reduce((a, b) => a + b, 0);
+                return { generation: finalGeneration, hourlyMarginalPrice, gasGenDetails, totalDischarged };
             }
 
             function calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential) {
@@ -2107,13 +2101,49 @@
                 }
                 const actualRenewableShare = totalDailyEnergy > 0 ? (flexibleRenewableDailyEnergy / totalDailyEnergy) : 0;
                 const useFullMeritOrder = actualRenewableShare > 0.70;
-                
-                const result = useFullMeritOrder ? getSimulationResult(
-                    inputs, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
-                    activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry, storageOverride, true
-                ) : firstPassResult;
+                if (useFullMeritOrder && !storageOverride) {
+                    // --- RENEWABLE MARGIN: Use new iterative co-optimization model ---
 
-                return { result, useFullMeritOrder, actualRenewableShare };
+                    let chargeSchedule = Array(24).fill(0);
+                    let finalSimResult = {};
+                    const MAX_ITERATIONS = 4; // Iterate a few times to find a stable solution
+
+                    for (let i = 0; i < MAX_ITERATIONS; i++) {
+                        // Step A: Run a full simulation pass using the charge schedule from the previous iteration.
+                        const passResult = getSimulationResult(
+                            inputs, seasonalSolarProfile, seasonalWindProfile, offshoreWindProfile,
+                            activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry,
+                            false, true, { charge: chargeSchedule, discharge: [] } // Pass in charge schedule
+                        );
+
+                        // Step B: Extract the actual discharge amount and resulting market prices.
+                        const totalDischargedGWh = passResult.generation.storage.reduce((a, b) => a + b, 0);
+                        const hourlyPrices = passResult.hourlyMarginalPrice;
+
+                        // Step C: Based on the discharge, calculate the required charge for the *next* iteration.
+                        const storageEfficiency = 0.85;
+                        const requiredChargeGWh = totalDischargedGWh / storageEfficiency;
+                        const nextChargeSchedule = planChargingSchedule(requiredChargeGWh, hourlyPrices, passResult.demand, inputs, currentBaselineStorage);
+
+                        // Step D: Check if the solution has stabilized.
+                        const totalChargeThisIteration = chargeSchedule.reduce((a, b) => a + b, 0);
+                        const totalChargeNextIteration = nextChargeSchedule.reduce((a, b) => a + b, 0);
+
+                        chargeSchedule = nextChargeSchedule; // Update the schedule for the next loop
+                        finalSimResult = passResult; // Store this iteration's result
+
+                        if (Math.abs(totalChargeThisIteration - totalChargeNextIteration) < 0.1) {
+                            // If the total charge amount changed by less than 0.1 GWh, consider it stable and exit.
+                            break;
+                        }
+                    }
+
+                    return { result: finalSimResult, useFullMeritOrder, actualRenewableShare };
+
+                } else {
+                    // --- THERMAL MARGIN (or storage-disabled run): Use the original "price taker" model ---
+                    return { result: firstPassResult, useFullMeritOrder, actualRenewableShare };
+                }
             }
 
             function calculateEmissions(generation, dacRate) {
@@ -3226,6 +3256,66 @@
                 popoverEl.style.transform = 'none';
                 popoverEl.style.visibility = 'visible';
             }
+
+            /**
+             * Creates a 24-hour charging schedule based on iteratively finding the hours with the lowest value score.
+             * @param {number} totalRequiredChargeGWh - The total energy that needs to be charged.
+             * @param {number[]} hourlyPrices - The 24-hour marginal price forecast.
+             * @param {number[]} hourlyDemand - The 24-hour demand profile.
+             * @param {object} inputs - The main simulation inputs object.
+             * @param {object} baselineStorageGWh - The baseline storage capacity.
+             * @returns {number[]} A 24-hour array representing the charging schedule.
+             */
+            function planChargingSchedule(totalRequiredChargeGWh, hourlyPrices, hourlyDemand, inputs, baselineStorageGWh) {
+                let chargeSchedule = Array(24).fill(0);
+                if (totalRequiredChargeGWh <= 0) return chargeSchedule;
+
+                let chargedGWh = 0;
+                const CHARGE_INCREMENT = 0.1;
+
+                // Calculate total battery power capacity for charging
+                const storageTypes = ['battery4hr', 'battery8hr', 'longduration'];
+                let totalStoragePowerGW = 0;
+                storageTypes.forEach(type => {
+                    if (enabledTechnologies[type]) {
+                        const capacity = (baselineStorageGWh[type] || 0) + inputs.capacity[type];
+                        const duration = type === 'longduration' ? 24 : parseInt(type.match(/\d+/)[0]);
+                        totalStoragePowerGW += capacity / duration;
+                    }
+                });
+
+                if (totalStoragePowerGW === 0) return chargeSchedule;
+
+                // This loop plans the entire charge schedule based on one set of prices.
+                // Re-calculating prices after every 0.1 GWh is too computationally intensive.
+                while (chargedGWh < totalRequiredChargeGWh) {
+                    let bestHour = -1;
+                    let minScore = Infinity;
+
+                    for (let i = 0; i < 24; i++) {
+                        // Only consider hours that have charging headroom below the power limit
+                        if (chargeSchedule[i] < totalStoragePowerGW) {
+                            // The score is low when price and demand are low.
+                            const score = hourlyPrices[i] * hourlyDemand[i];
+                            if (score < minScore) {
+                                minScore = score;
+                                bestHour = i;
+                            }
+                        }
+                    }
+
+                    if (bestHour === -1) {
+                        // No available hour to charge, break to prevent an infinite loop.
+                        break;
+                    }
+
+                    const chargeAmount = Math.min(CHARGE_INCREMENT, totalRequiredChargeGWh - chargedGWh, totalStoragePowerGW - chargeSchedule[bestHour]);
+                    chargeSchedule[bestHour] += chargeAmount;
+                    chargedGWh += chargeAmount;
+                }
+
+                return chargeSchedule;
+            }            
 
             function showTutorialStep(stepIndex) {
                 if (stepIndex < 0 || stepIndex >= tutorialSteps.length) {
