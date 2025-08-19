@@ -1335,8 +1335,8 @@
                 }
                 return totalCost * 365;
             }
-
-function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProfile, potentialGen, baselineStorageGWh = {}, hydroCF, countryName, storageOverrideDisabled = false, forceMeritOrder = false, predefinedBatterySchedule = null) {
+            
+            function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProfile, potentialGen, baselineStorageGWh = {}, hydroCF, countryName, storageOverrideDisabled = false, forceMeritOrder = false, predefinedBatterySchedule = null) {
                 const VRE_SOURCES = ['solar', 'wind', 'offshoreWind'];
                 const INFLEXIBLE_SOURCES = ['nuclear', 'geothermal', 'biomass']; 
                 
@@ -1408,34 +1408,23 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                 }
                 
                 let batteryDischargeEnergy = Array(24).fill(0);
-
-                // --- START: MODIFIED STORAGE LOGIC ---
                 let storageDispatch = { charge: Array(24).fill(0), discharge: Array(24).fill(0) };
 
                 if (predefinedBatterySchedule) {
-                    // Use the externally calculated arbitrage schedule passed from runTwoPassSimulation
                     storageDispatch = predefinedBatterySchedule;
                 } else if (!storageOverrideDisabled) {
-                    // This is the original logic path, now used only by the Thermal Margin model.
                     if (forceMeritOrder) {
-                        // This call to dispatchStorageAsGenerator is part of the old logic. The new arbitrage flow bypasses this entirely.
                         storageDispatch = dispatchStorageAsGenerator(netLoad, inputs, baselineStorageGWh, currentPotential, modifiedDemand, hydroCF, countryName);
                     } else {
                         storageDispatch = dispatchStorageEconomically(netLoad, inputs, baselineStorageGWh, currentPotential);
                     }
                 }
-                // If storageOverrideDisabled is true and no predefined schedule, storageDispatch correctly remains all zeros for the preliminary run.
                 
-                finalGeneration.storage = storageDispatch.discharge;
+                // This logic is now unified for all paths
                 batteryDischargeEnergy = storageDispatch.discharge;
-                // --- END: MODIFIED STORAGE LOGIC ---
-
+                
                 for (let i = 0; i < 24; i++) {
-                    // This logic correctly applies the chosen storage actions to the netLoad
                     netLoad[i] += storageDispatch.charge[i];
-                    if (!forceMeritOrder) {
-                        netLoad[i] -= storageDispatch.discharge[i];
-                    }
                     
                     if (storageDispatch.charge[i] > 0) {
                         let totalVrePotential = finalGeneration.solar[i] + finalGeneration.wind[i] + finalGeneration.offshoreWind[i];
@@ -1488,8 +1477,12 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                 
                 if (forceMeritOrder) {
                     finalGeneration.biomass.forEach((val, i) => finalGeneration.biomass[i] += dispatchResult.generation.biomass[i]);
-                    // Storage generation is already set from storageDispatch, but we affirm it here from the dispatch result if needed.
+                    // *** THIS IS THE CRITICAL FIX ***
+                    // The result from the merit order dispatch is the source of truth for storage generation.
                     finalGeneration.storage = dispatchResult.generation.storage;
+                } else {
+                    // For the thermal model, storage is treated as reducing net load, not as a generator.
+                    finalGeneration.storage = storageDispatch.discharge;
                 }
                 
                 const hourlyMarginalPrice = dispatchResult.hourlyMarginalPrice;
@@ -1930,7 +1923,7 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                 
                 return { charge: chargeSchedule, discharge: dischargeSchedule };
             }
-            
+
             // --- UPDATED SIMULATION RUNNER ---
             function runSimulation() {
                 const currentValues = {};
