@@ -2240,11 +2240,10 @@
                 const flexibleRenewableSources = ['solar', 'wind', 'offshoreWind', 'hydro', 'biomass', 'rng', 'geothermal'];
                 let totalDailyEnergy = 0;
                 let flexibleRenewableDailyEnergy = 0;
-
                 for(const tech in firstPassResult.generation) {
-                    if (tech.includes('ToStorage') || tech === 'curtailment') continue;
+                    if (tech.includes('ToStorage') || tech === 'curtailment' || tech === 'storage') continue;
                     const dailyTotal = firstPassResult.generation[tech].reduce((a, b) => a + b, 0);
-                    totalDailyEnergy += dailyTotal;
+                    totalDailyEnergy += dailyTotal; 
                     if (flexibleRenewableSources.includes(tech)) {
                         flexibleRenewableDailyEnergy += dailyTotal;
                     }
