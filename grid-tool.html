@@ -1695,8 +1695,7 @@
                     { tech: 'nuclear', cost: COST_DATA.variable_om.nuclear },
                     { tech: 'rng', cost: COST_DATA.variable_om.rng },
                     { tech: 'coal', cost: COST_DATA.variable_om.coal + carbonCostCoal },
-                    { tech: 'naturalGasCCGT', cost: COST_DATA.variable_om.naturalGasCCGT.start + carbonCostNG },
-                    { tech: 'naturalGasCT', cost: COST_DATA.variable_om.naturalGasCT.start + carbonCostNG }
+                    { tech: 'naturalGas', cost: 80 + carbonCostNG }
                 ].sort((a, b) => a.cost - b.cost);
                 const finalGeneration = { naturalGas: Array(24).fill(0), coal: Array(24).fill(0), hydro: Array(24).fill(0), biomass: Array(24).fill(0), rng: Array(24).fill(0), storage: Array(24).fill(0) };
                 const gasGenDetails = { ccgt: { generation: 0, cost: 0 }, ct: { generation: 0, cost: 0 } };
@@ -1780,34 +1779,18 @@
                                 dispatchAmount = Math.min(remainingLoad, availableGen);
                                 finalGeneration.coal[i] += dispatchAmount;
                                 break;
-                            
-                            case 'naturalGasCCGT':
-                                availableGen = ccgtCapacity;
+                            case 'naturalGas':
+                                // Combines CCGT and CT capacity for dispatch at a flat rate
+                                availableGen = ccgtCapacity + ctCapacity;
                                 dispatchAmount = Math.min(remainingLoad, availableGen);
+
                                 if (dispatchAmount > 0) {
                                     finalGeneration.naturalGas[i] += dispatchAmount;
-                                    const costStart = COST_DATA.variable_om.naturalGasCCGT.start + carbonCostNG;
-                                    const costEnd = COST_DATA.variable_om.naturalGasCCGT.end + carbonCostNG;
-                                    const priceAtDispatch = costStart + (costEnd - costStart) * (dispatchAmount / ccgtCapacity);
-                                    hourlyMarginalPrice[i] = Math.max(hourlyMarginalPrice[i], priceAtDispatch);
-                                    const avgCost = (costStart + priceAtDispatch) / 2;
-                                    gasGenDetails.ccgt.cost += dispatchAmount * 1000 * avgCost;
+                                    // Use the simple, flat cost for accounting
+                                    const flatCost = 80 + carbonCostNG;
+                                    gasGenDetails.ccgt.cost += dispatchAmount * 1000 * flatCost;
                                 }
-                                break;
-
-                            case 'naturalGasCT':
-                                availableGen = ctCapacity;
-                                dispatchAmount = Math.min(remainingLoad, availableGen);
-                                 if (dispatchAmount > 0) {
-                                    finalGeneration.naturalGas[i] += dispatchAmount;
-                                    const costStart = COST_DATA.variable_om.naturalGasCT.start + carbonCostNG;
-                                    const costEnd = COST_DATA.variable_om.naturalGasCT.end + carbonCostNG;
-                                    const priceAtDispatch = costStart + (costEnd - costStart) * (dispatchAmount / ctCapacity);
-                                    hourlyMarginalPrice[i] = Math.max(hourlyMarginalPrice[i], priceAtDispatch);
-                                    const avgCost = (costStart + priceAtDispatch) / 2;
-                                    gasGenDetails.ct.cost += dispatchAmount * 1000 * avgCost;
-                                }
-                                break;
+                                break;                            
                         }
                         
                         if (dispatchAmount > 0) {
