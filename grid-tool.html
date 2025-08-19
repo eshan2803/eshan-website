@@ -2111,9 +2111,9 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                     for (let i = 0; i < MAX_ITERATIONS; i++) {
                         // Step A: Run a full simulation pass using the charge schedule from the previous iteration.
                         const passResult = getSimulationResult(
-                            inputs, seasonalSolarProfile, seasonalWindProfile, offshoreWindProfile,
+                            inputs, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile, // <--- CORRECTED
                             activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry,
-                            false, true, { charge: chargeSchedule, discharge: [] } // Pass in charge schedule
+                            false, true, { charge: chargeSchedule, discharge: [] }
                         );
 
                         // Step B: Extract the actual discharge amount and resulting market prices.
