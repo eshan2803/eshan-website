@@ -1620,11 +1620,24 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
 
                 for (let i = 0; i < 24; i++) {
                     let remainingLoad = netLoad[i];
+                    
+                    // --- START: THIS IS THE FIX ---
+                    // Apply the pre-planned battery discharge for this hour.
+                    const plannedDischarge = batteryDischargeEnergy[i] || 0;
+                    if (plannedDischarge > 0) {
+                        const actualDischarge = Math.min(remainingLoad, plannedDischarge);
+                        finalGeneration.storage[i] = actualDischarge;
+                        remainingLoad -= actualDischarge;
+                    }
+                    // --- END: THIS IS THE FIX ---
+
                     if (remainingLoad <= 0.01) {
-                        hourlyMarginalPrice[i] = 0;
+                        // If battery met all the load, the price is the battery's marginal cost.
+                        // We can set it to a representative value or the cost of the last generator.
+                        // For simplicity, if load is met, we often see prices drop. Let's use 0 for now.
+                        hourlyMarginalPrice[i] = 0; 
                         continue;
                     }
-
                     for (const source of meritOrder) {
                         if (remainingLoad <= 0.01) break;
                         
