@@ -2063,7 +2063,6 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                 }
             }
             
-            // --- NEW: Centralized Two-Pass Simulation Logic ---
             function runTwoPassSimulation(inputs, storageOverride = false) {
                 const selectedCountry = countrySelect.value;
                 const baseSolarProfile = (countryProfiles[selectedCountry] || countryProfiles.default).solar;
@@ -2082,8 +2081,9 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                     }
                 }
 
+                // This first pass determines the grid's state (thermal vs. renewable margin)
                 const firstPassResult = getSimulationResult(
-                    inputs, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
+                    inputs, seasonalSolarProfile, seasonalWindProfile, offshoreWindProfile,
                     activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry, storageOverride, false
                 );
 
@@ -2101,63 +2101,66 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                 }
                 const actualRenewableShare = totalDailyEnergy > 0 ? (flexibleRenewableDailyEnergy / totalDailyEnergy) : 0;
                 const useFullMeritOrder = actualRenewableShare > 0.70;
+
+                // --- START: CORRECTED LOGIC BLOCK ---
                 if (useFullMeritOrder && !storageOverride) {
-                        // --- RENEWABLE MARGIN: New piecewise, re-evaluating charge model ---
+                    // --- RENEWABLE MARGIN: New piecewise, re-evaluating charge model ---
 
-                        // 1. Initial Run: Run the simulation with ZERO charging to see how much the battery
-                        //    discharges based on merit order competition.
-                        const initialPassResult = getSimulationResult(
-                            inputs, seasonalSolarProfile, seasonalWindProfile, offshoreWindProfile,
-                            activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry,
-                            false, true, { charge: Array(24).fill(0), discharge: [] } // Start with no charging
-                        );
+                    // 1. Initial Run: Determine discharge with zero initial charging.
+                    const initialPassResult = getSimulationResult(
+                        inputs, seasonalSolarProfile, seasonalWindProfile, offshoreWindProfile,
+                        activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry,
+                        false, true, { charge: Array(24).fill(0), discharge: [] }
+                    );
 
-                        // 2. Calculate Total Charge Needed: Based on the actual discharge from the initial run.
-                        const totalDischargedGWh = initialPassResult.generation.storage.reduce((a, b) => a + b, 0);
-                        const storageEfficiency = 0.85;
-                        const totalRequiredChargeGWh = totalDischargedGWh / storageEfficiency;
+                    // 2. Calculate Total Charge Needed based on actual discharge.
+                    const totalDischargedGWh = initialPassResult.generation.storage.reduce((a, b) => a + b, 0);
+                    const storageEfficiency = 0.85;
+                    const totalRequiredChargeGWh = totalDischargedGWh / storageEfficiency;
 
-                        // 3. Iterative Charging Loop: Charge in 0.5 GWh pieces, re-calculating prices each time.
-                        let chargeSchedule = Array(24).fill(0);
-                        let chargedGWh = 0;
-                        const CHARGE_INCREMENT = 0.5; // Use 0.5 GWh pieces as you suggested
-                        let latestSimResult = initialPassResult;
+                    // 3. Iterative Charging Loop: Charge in pieces, re-calculating prices each time.
+                    let chargeSchedule = Array(24).fill(0);
+                    let chargedGWh = 0;
+                    const CHARGE_INCREMENT = 0.5;
+                    let latestSimResult = initialPassResult;
 
-                        while (chargedGWh < totalRequiredChargeGWh) {
-                            let hourlyPrices = latestSimResult.hourlyMarginalPrice;
-                            let hourlyDemand = latestSimResult.demand;
+                    while (chargedGWh < totalRequiredChargeGWh) {
+                        let hourlyPrices = latestSimResult.hourlyMarginalPrice;
+                        let hourlyDemand = latestSimResult.demand;
 
-                            // a. Find the single best hour to add the next piece of charge.
-                            let bestHour = -1;
-                            let minScore = Infinity;
-                            for (let i = 0; i < 24; i++) {
-                                const score = hourlyPrices[i] * hourlyDemand[i];
-                                if (score < minScore) {
-                                    minScore = score;
-                                    bestHour = i;
-                                }
+                        let bestHour = -1;
+                        let minScore = Infinity;
+                        for (let i = 0; i < 24; i++) {
+                            const score = hourlyPrices[i] * hourlyDemand[i];
+                            if (score < minScore) {
+                                minScore = score;
+                                bestHour = i;
                             }
-
-                            if (bestHour === -1) break; // Safety break
-
-                            // b. Add the next piece of charge to the schedule.
-                            const chargeAmount = Math.min(CHARGE_INCREMENT, totalRequiredChargeGWh - chargedGWh);
-                            chargeSchedule[bestHour] += chargeAmount;
-                            chargedGWh += chargeAmount;
-
-                            // c. Re-run the simulation with the updated charging schedule to get new prices.
-                            latestSimResult = getSimulationResult(
-                                inputs, seasonalSolarProfile, seasonalWindProfile, offshoreWindProfile,
-                                activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry,
-                                false, true, { charge: chargeSchedule, discharge: [] }
-                            );
                         }
 
-                        return { result: latestSimResult, useFullMeritOrder, actualRenewableShare };
+                        if (bestHour === -1) break;
 
-                    }                
+                        const chargeAmount = Math.min(CHARGE_INCREMENT, totalRequiredChargeGWh - chargedGWh);
+                        chargeSchedule[bestHour] += chargeAmount;
+                        chargedGWh += chargeAmount;
+
+                        // Re-run the simulation with the updated charging schedule to get new prices.
+                        latestSimResult = getSimulationResult(
+                            inputs, seasonalSolarProfile, seasonalWindProfile, offshoreWindProfile,
+                            activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry,
+                            false, true, { charge: chargeSchedule, discharge: [] }
+                        );
+                    }
+
+                    return { result: latestSimResult, useFullMeritOrder, actualRenewableShare };
+
+                } else {
+                    // --- THERMAL MARGIN (or storage-disabled run): Use the original "price taker" model ---
+                    // This block was missing, which caused the crash.
+                    return { result: firstPassResult, useFullMeritOrder, actualRenewableShare };
+                }
+                // --- END: CORRECTED LOGIC BLOCK ---
             }
-
             function calculateEmissions(generation, dacRate) {
                 const co2 = [];
                 for (let i = 0; i < 24; i++) {
