@@ -2213,7 +2213,6 @@
                 return dischargeSchedule;
             }
             
-            // --- NEW: Centralized Two-Pass Simulation Logic ---
             function runTwoPassSimulation(inputs, storageOverride = false) {
                 const selectedCountry = countrySelect.value;
                 const baseSolarProfile = (countryProfiles[selectedCountry] || countryProfiles.default).solar;
@@ -2232,6 +2231,7 @@
                     }
                 }
 
+                // We still run the first pass to determine the renewable share
                 const firstPassResult = getSimulationResult(
                     inputs, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
                     activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry, storageOverride, false
@@ -2252,39 +2252,49 @@
                 const actualRenewableShare = totalDailyEnergy > 0 ? (flexibleRenewableDailyEnergy / totalDailyEnergy) : 0;
                 const useFullMeritOrder = actualRenewableShare > 0.70;
 
-                if (useFullMeritOrder && !storageOverride) {
-                    // --- RENEWABLE MARGIN: Use new iterative arbitrage model ---
+                // --- CHANGED: Restructured the main logic block ---
+                if (useFullMeritOrder) {
+                    if (!storageOverride) {
+                        // CASE 1: Renewable Margin WITH Storage (Original logic, no changes here)
+                        let initialNetLoad = Array(24).fill(0);
+                        for (let i = 0; i < 24; i++) {
+                            let mustRunGen = 0;
+                            const sourcesToSubtract = ['solar', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass'];
+                            sourcesToSubtract.forEach(tech => {
+                                if (activePotentialGeneration[tech]) {
+                                    mustRunGen += (activePotentialGeneration[tech][i] || 0) + (inputs.capacity[tech] || 0) * (tech === 'solar' ? seasonalSolarProfile[i] : (tech === 'wind' ? seasonalWindProfile[i] : (tech === 'offshoreWind' ? seasonalOffshoreWindProfile[i] : COST_DATA.capacity_factor[tech])));
+                                }
+                            });
+                            initialNetLoad[i] = currentDemand[i] - mustRunGen;
+                        }
 
-                    // Step 1: Calculate the initial net load BEFORE any storage is dispatched.
-                    // This is the load that the iterative planner will try to smooth out.
-                    let initialNetLoad = Array(24).fill(0);
-                    for (let i = 0; i < 24; i++) {
-                        let mustRunGen = 0;
-                        const sourcesToSubtract = ['solar', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass'];
-                        sourcesToSubtract.forEach(tech => {
-                            if (activePotentialGeneration[tech]) {
-                                mustRunGen += (activePotentialGeneration[tech][i] || 0) + (inputs.capacity[tech] || 0) * (tech === 'solar' ? seasonalSolarProfile[i] : (tech === 'wind' ? seasonalWindProfile[i] : (tech === 'offshoreWind' ? seasonalOffshoreWindProfile[i] : COST_DATA.capacity_factor[tech])));
-                            }
-                        });
-                        initialNetLoad[i] = currentDemand[i] - mustRunGen;
+                        const optimalSchedule = planArbitrageScheduleIteratively(
+                            initialNetLoad, inputs, activePotentialGeneration, currentHydroCF, selectedCountry, currentDemand, currentBaselineStorage
+                        );
+
+                        const finalSimResult = getSimulationResult(
+                            inputs, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
+                            activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry,
+                            false, true, optimalSchedule, useFullMeritOrder
+                        );                    
+                        return { result: finalSimResult, useFullMeritOrder, actualRenewableShare };
+                    } else {
+                        // --- NEW BLOCK ---
+                        // CASE 2: Renewable Margin WITHOUT Storage (The Fix)
+                        // Rerun the simulation, forcing the full merit order but ensuring storage is disabled.
+                        const simResultWithoutStorage = getSimulationResult(
+                            inputs, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
+                            activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry,
+                            true, // storageOverrideDisabled = true
+                            true, // forceMeritOrder = true
+                            null,
+                            useFullMeritOrder
+                        );
+                        return { result: simResultWithoutStorage, useFullMeritOrder, actualRenewableShare };
                     }
-
-                    // Step 2: Call the iterative planner ONCE. It will perform all the batching and 
-                    // price recalculations internally to find the optimal schedule.
-                    const optimalSchedule = planArbitrageScheduleIteratively(
-                        initialNetLoad, inputs, activePotentialGeneration, currentHydroCF, selectedCountry, currentDemand, currentBaselineStorage
-                    );
-
-                    // Step 3: Run the final simulation using the optimized schedule to get the final grid state.
-                    const finalSimResult = getSimulationResult(
-                        inputs, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
-                        activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry,
-                        false, true, optimalSchedule, useFullMeritOrder
-                    );                    
-                    return { result: finalSimResult, useFullMeritOrder, actualRenewableShare };
-   
                 } else {
-                    // --- THERMAL MARGIN (or storage-disabled run): Use the original "price taker" model ---
+                    // CASE 3: Thermal Margin (with or without storage)
+                    // This now correctly only handles the Thermal Margin scenario.
                     return { result: firstPassResult, useFullMeritOrder, actualRenewableShare };
                 }
             }
