@@ -1710,8 +1710,8 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                         }
                     }
                 }
-
-                return { generation: finalGeneration, hourlyMarginalPrice, gasGenDetails };
+                const totalDischarged = finalGeneration.storage.reduce((a, b) => a + b, 0);
+                return { generation: finalGeneration, hourlyMarginalPrice, gasGenDetails, totalDischarged };
             }
 
             function calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential) {
@@ -2101,30 +2101,47 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                 }
                 const actualRenewableShare = totalDailyEnergy > 0 ? (flexibleRenewableDailyEnergy / totalDailyEnergy) : 0;
                 const useFullMeritOrder = actualRenewableShare > 0.70;
+                if (useFullMeritOrder && !storageOverride) {
+                    // --- RENEWABLE MARGIN: Use new iterative co-optimization model ---
 
-                if (useFullMeritOrder) {
-                    // --- RENEWABLE MARGIN: Use dynamic arbitrage model ---
+                    let chargeSchedule = Array(24).fill(0);
+                    let finalSimResult = {};
+                    const MAX_ITERATIONS = 4; // Iterate a few times to find a stable solution
 
-                    // 1. Preliminary Run: Get price signals without any storage intervention.
-                    const preliminaryResult = getSimulationResult(
-                        inputs, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
-                        activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry, true, true // storageOverrideDisabled = true
-                    );
-                    const baselinePrices = preliminaryResult.hourlyMarginalPrice;
+                    for (let i = 0; i < MAX_ITERATIONS; i++) {
+                        // Step A: Run a full simulation pass using the charge schedule from the previous iteration.
+                        const passResult = getSimulationResult(
+                            inputs, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile, // <--- CORRECTED
+                            activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry,
+                            false, true, { charge: chargeSchedule, discharge: [] }
+                        );
 
-                    // 2. Plan Arbitrage: Calculate the optimal charge/discharge schedule based on price signals.
-                    const batterySchedule = planArbitrageDispatch(baselinePrices, inputs, currentBaselineStorage);
+                        // Step B: Extract the actual discharge amount and resulting market prices.
+                        const totalDischargedGWh = passResult.generation.storage.reduce((a, b) => a + b, 0);
+                        const hourlyPrices = passResult.hourlyMarginalPrice;
 
-                    // 3. Final Run: Execute the simulation with the battery's actions predetermined.
-                    const finalResult = getSimulationResult(
-                        inputs, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
-                        activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry, false, true, batterySchedule // Pass in the predefined schedule
-                    );
+                        // Step C: Based on the discharge, calculate the required charge for the *next* iteration.
+                        const storageEfficiency = 0.85;
+                        const requiredChargeGWh = totalDischargedGWh / storageEfficiency;
+                        const nextChargeSchedule = planChargingSchedule(requiredChargeGWh, hourlyPrices, passResult.demand, inputs, currentBaselineStorage);
 
-                    return { result: finalResult, useFullMeritOrder, actualRenewableShare };
+                        // Step D: Check if the solution has stabilized.
+                        const totalChargeThisIteration = chargeSchedule.reduce((a, b) => a + b, 0);
+                        const totalChargeNextIteration = nextChargeSchedule.reduce((a, b) => a + b, 0);
+
+                        chargeSchedule = nextChargeSchedule; // Update the schedule for the next loop
+                        finalSimResult = passResult; // Store this iteration's result
+
+                        if (Math.abs(totalChargeThisIteration - totalChargeNextIteration) < 0.1) {
+                            // If the total charge amount changed by less than 0.1 GWh, consider it stable and exit.
+                            break;
+                        }
+                    }
+
+                    return { result: finalSimResult, useFullMeritOrder, actualRenewableShare };
 
                 } else {
-                    // --- THERMAL MARGIN: Use the original "price taker" model ---
+                    // --- THERMAL MARGIN (or storage-disabled run): Use the original "price taker" model ---
                     return { result: firstPassResult, useFullMeritOrder, actualRenewableShare };
                 }
             }
