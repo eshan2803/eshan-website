@@ -1619,13 +1619,15 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                         // Score is price * demand. High score is good for discharging, low is good for charging.
                         const score = hourlyMarginalPrice[i] * demand[i];
 
-                        // Check if there is headroom to discharge more in this hour
-                        if (dischargeSchedule[i] < totalStoragePowerGW && score > maxScore) {
+                        // Check for the best DISCHARGE hour
+                        // Add condition: Do NOT consider this hour if it already has a scheduled charge.
+                        if (dischargeSchedule[i] < totalStoragePowerGW && chargeSchedule[i] === 0 && score > maxScore) {
                             maxScore = score;
                             bestDischargeHour = i;
                         }
-                        // Check if there is headroom to charge more in this hour
-                        if (chargeSchedule[i] < totalStoragePowerGW && score < minScore) {
+                        // Check for the best CHARGE hour
+                        // Add condition: Do NOT consider this hour if it already has a scheduled discharge.
+                        if (chargeSchedule[i] < totalStoragePowerGW && dischargeSchedule[i] === 0 && score < minScore) {
                             minScore = score;
                             bestChargeHour = i;
                         }
