@@ -1398,7 +1398,32 @@
                     }
                 }
                 
-                
+                let netLoadRamp = Array(24).fill(0);
+                for (let i = 0; i < 24; i++) {
+                    // For the first hour, the previous hour is the last hour of the day (hour 23)
+                    const previousHourIndex = (i === 0) ? 23 : i - 1;
+                    const ramp = netLoad[i] - netLoad[previousHourIndex];
+
+                    // We only care about ramping UP, so we ignore negative ramps (ramping down)
+                    if (ramp > 0) {
+                        netLoadRamp[i] = ramp;
+                    }
+                }                
+                // Define the capacities based on the current state of the model
+                const totalNGCapacity = (currentCountryInstalledCapacity.naturalGas || 0) + (inputs.capacity.naturalGas || 0);
+                const ccgtCapacity = totalNGCapacity * 0.70;
+                const ctCapacity = totalNGCapacity * 0.30;
+                const ccgtRampLimitGW = ccgtCapacity * 0.08; // 8% of total CCGT capacity 
+                let thermalGeneration = { naturalGas: Array(24).fill(0), coal: Array(24).fill(0) };
+
+                for (let i = 0; i < 24; i++) {
+                    if (netLoadRamp[i] > ccgtRampLimitGW) {
+                        const excessRamp = netLoadRamp[i] - ccgtRampLimitGW;
+                        const ctDispatchForRamp = Math.min(excessRamp, ctCapacity);
+                        thermalGeneration.naturalGas[i] += ctDispatchForRamp;
+                        netLoad[i] -= ctDispatchForRamp;
+                    }
+                }                               
                 const totalDailyHydroEnergy = hydroCapacity * hydroCF * 24;
                 const baseloadHydroEnergy = totalDailyHydroEnergy * 0.40;
                 let flexibleHydroEnergy = totalDailyHydroEnergy * 0.60;
@@ -1412,52 +1437,29 @@
                         netLoad[i] -= hydroToDispatch;
                     });
                 }
-                    // Dispatch flexible hydro to mitigate the steepest load ramps, not just peak shaving.
-                    let remainingFlexibleHydro = flexibleHydroEnergy;
-                    while (remainingFlexibleHydro > 0.01) {
-                        let maxRamp = -Infinity;
-                        let rampHour = -1;
 
-                        // Calculate ramps and find the steepest ramp-up
-                        for (let i = 1; i < 24; i++) {
-                            // Ensure we only consider positive load values for ramp calculation
-                            const prevLoad = loadAfterHydro[i-1] > 0 ? loadAfterHydro[i-1] : 0;
-                            const currentRamp = loadAfterHydro[i] - prevLoad;
-                            if (currentRamp > maxRamp) {
-                                maxRamp = currentRamp;
-                                rampHour = i;
-                            }
+                while (flexibleHydroEnergy > 0.01) {
+                    let maxPriority = -Infinity, maxPriorityHour = -1;
+                    for (let i = 0; i < 24; i++) {
+                        if (netLoad[i] > 0.01 && netLoad[i] > maxPriority) {
+                            maxPriority = netLoad[i];
+                            maxPriorityHour = i;
                         }
-
-                        // If no more positive ramps to mitigate, break the loop
-                        if (rampHour === -1 || maxRamp <= 0.01) break;
-
-                        // To mitigate a ramp-up at `rampHour`, we add generation in the preceding hour.
-                        const dispatchHour = rampHour - 1;
-                        
-                        // Dispatch a small amount of hydro to the hour *before* the ramp
-                        const dispatchableAmount = Math.max(0, loadAfterHydro[dispatchHour]);
-                        const hydroToDispatch = Math.min(
-                            0.1, // Dispatch in small increments for smoothing
-                            remainingFlexibleHydro,
-                            maxHourlyHydroOutput - hydroGeneration[dispatchHour],
-                            dispatchableAmount // Can't generate more than the load in that hour, and can't be negative.
-                        );
-
-                        if (hydroToDispatch < 0.001) {
-                           // Cannot dispatch any more to this hour, mark ramp as "handled" to avoid infinite loops
-                           loadAfterHydro[rampHour] = loadAfterHydro[rampHour-1];
-                           continue;
-                        }
-
-                        hydroGeneration[dispatchHour] += hydroToDispatch;
-                        loadAfterHydro[dispatchHour] -= hydroToDispatch;
-                        remainingFlexibleHydro -= hydroToDispatch;
                     }
-                const { gasGenDetails, hourlyMarginalPrice, thermalGeneration } = calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential);
-                finalGeneration.naturalGas = thermalGeneration.naturalGas;
-                finalGeneration.coal = thermalGeneration.coal;
+                    if (maxPriorityHour === -1) break;
+
+                    const hydroToDispatch = Math.min(0.1, flexibleHydroEnergy, netLoad[maxPriorityHour], maxHourlyHydroOutput - finalGeneration.hydro[maxPriorityHour]);
+                    if (hydroToDispatch < 0.001) break;
+
+                    finalGeneration.hydro[maxPriorityHour] += hydroToDispatch;
+                    netLoad[maxPriorityHour] -= hydroToDispatch;
+                    flexibleHydroEnergy -= hydroToDispatch;
+                }
                 
+                const { gasGenDetails, hourlyMarginalPrice, thermalGeneration: finalThermalGeneration } = calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential, thermalGeneration);
+
+                finalGeneration.naturalGas = finalThermalGeneration.naturalGas;
+                finalGeneration.coal = finalThermalGeneration.coal;                
                 // FIX 2: Override price with export price during curtailment hours
                 for (let i = 0; i < 24; i++) {
                     if (finalGeneration.curtailment[i] > 0.01) {
@@ -1478,103 +1480,63 @@
                 };
             }
             
-            function calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential) {
+            function calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential, initialThermalGeneration) {
                 const gasGenDetails = { ccgt: { generation: 0, cost: 0 }, ct: { generation: 0, cost: 0 } };
-                const thermalGeneration = { naturalGas: Array(24).fill(0), coal: Array(24).fill(0) };
                 const hourlyMarginalPrice = Array(24).fill(0);
-                // Local arrays to track dispatch of different gas plant types
-                let ccgtGeneration = Array(24).fill(0);
-                let ctGeneration = Array(24).fill(0)
-                
+                const thermalGeneration = { 
+                    naturalGas: [...initialThermalGeneration.naturalGas], 
+                    coal: [...initialThermalGeneration.coal] 
+                };                
                 const totalNGCapacity = (currentCountryInstalledCapacity.naturalGas || 0) + (inputs.capacity.naturalGas || 0);
                 const ccgtCapacity = totalNGCapacity * 0.7;
                 const ctCapacity = totalNGCapacity * 0.3;
-                // Define a threshold for what constitutes a "high ramp" that requires peaker support.
-                // A value of 3000 MW/hr is a reasonable starting point for a large grid.
-                const PEAKER_RAMP_THRESHOLD_MW = 3000
-                const carbonTax = inputs.incentives.carbonTax || 0;
-                const carbonCostCoal = (EMISSION_FACTORS.coal / 1000) * carbonTax;
-                const carbonCostNG = (EMISSION_FACTORS.naturalGas / 1000) * carbonTax;
+
                 for (let i = 0; i < 24; i++) {
                     let remainingLoad = netLoad[i];
                     let hourlyPrice = 0;
 
                     if (remainingLoad <= 0.01) {
+                        hourlyMarginalPrice[i] = 0;
                         continue;
                     }
-                    // --- NEW: Ramp-based peaker dispatch logic ---
-                    const ramp = i > 0 ? netLoad[i] - netLoad[i-1] : 0;
-                    if (ramp > PEAKER_RAMP_THRESHOLD_MW && ctCapacity > 0) {
-                        // If ramp is high, dispatch peakers first to meet the ramp amount
-                        const ctForRamp = Math.min(remainingLoad, ctCapacity, ramp);
-                        if (ctForRamp > 0) {
-                            ctGeneration[i] += ctForRamp;
-                            remainingLoad -= ctForRamp;
-                            
-                            // Price is set by the peaker plant for this block of energy
-                            const costStart = COST_DATA.variable_om.naturalGasCT.start + carbonCostNG;
-                            const costEnd = COST_DATA.variable_om.naturalGasCT.end + carbonCostNG;
-                            const priceAtDispatch = costStart + (costEnd - costStart) * (ctGeneration[i] / ctCapacity);
+
+                    if (ccgtCapacity > 0) {
+                        const ccgtToDispatch = Math.min(remainingLoad, ccgtCapacity);
+                        if (ccgtToDispatch > 0) {
+                            thermalGeneration.naturalGas[i] += ccgtToDispatch;
+                            remainingLoad -= ccgtToDispatch;
+                            const costStart = COST_DATA.variable_om.naturalGasCCGT.start;
+                            const costEnd = COST_DATA.variable_om.naturalGasCCGT.end;
+                            const priceAtDispatch = costStart + (costEnd - costStart) * (ccgtToDispatch / ccgtCapacity);
                             hourlyPrice = Math.max(hourlyPrice, priceAtDispatch);
+                            const avgCost = (costStart + priceAtDispatch) / 2;
+                            gasGenDetails.ccgt.cost += ccgtToDispatch * 1000 * avgCost;
                         }
                     }
 
-                    // --- Standard Merit Order for remaining load ---
-                    // 1. CCGT dispatch
-                    if (remainingLoad > 0.01 && ccgtCapacity > 0) {
-                        const ccgtToDispatch = Math.min(remainingLoad, ccgtCapacity);
-                        if (ccgtToDispatch > 0) {
-                            ccgtGeneration[i] += ccgtToDispatch;                            
-                            remainingLoad -= ccgtToDispatch;
-                            const costStart = COST_DATA.variable_om.naturalGasCCGT.start + carbonCostNG;
-                            const costEnd = COST_DATA.variable_om.naturalGasCCGT.end + carbonCostNG;                            
-                            const priceAtDispatch = costStart + (costEnd - costStart) * (ccgtToDispatch / ccgtCapacity);
-                            hourlyPrice = Math.max(hourlyPrice, priceAtDispatch);
-                        }
-                    }
-                    // 2. CT (peaker) dispatch for any remaining load
-                    const remainingCtCapacity = ctCapacity - ctGeneration[i];
-                    if (remainingLoad > 0.01 && remainingCtCapacity > 0) {
-                        const ctToDispatch = Math.min(remainingLoad, remainingCtCapacity);
+                    if (remainingLoad > 0.01 && ctCapacity > 0) {
+                        const ctToDispatch = Math.min(remainingLoad, ctCapacity);
                         if (ctToDispatch > 0) {
-                            ctGeneration[i] += ctToDispatch;
+                            thermalGeneration.naturalGas[i] += ctToDispatch;
                             remainingLoad -= ctToDispatch;
-                            const costStart = COST_DATA.variable_om.naturalGasCT.start + carbonCostNG;
-                            const costEnd = COST_DATA.variable_om.naturalGasCT.end + carbonCostNG;
-                            // BUG FIX: The price must be based on the total CT generation in the hour (`ctGeneration[i]`), not just the marginal dispatch amount (`ctToDispatch`).
-                            const priceAtDispatch = costStart + (costEnd - costStart) * (ctGeneration[i] / ctCapacity);
+                            const costStart = COST_DATA.variable_om.naturalGasCT.start;
+                            const costEnd = COST_DATA.variable_om.naturalGasCT.end;
+                            const priceAtDispatch = costStart + (costEnd - costStart) * (ctToDispatch / ctCapacity);
                             hourlyPrice = Math.max(hourlyPrice, priceAtDispatch);
+                            const avgCost = (costStart + priceAtDispatch) / 2;
+                            gasGenDetails.ct.cost += ctToDispatch * 1000 * avgCost;
                         }
                     }
                     
-                    // 3. Coal dispatch as last resort
-                    // Add a check for `currentPotential.coal` to prevent errors if a country has no coal capacity.
-                    if (remainingLoad > 0.01 && (currentPotential.coal && currentPotential.coal[i] > 0)) {
+                    if (remainingLoad > 0.01 && currentPotential.coal[i] > 0) {
                         const coalToDispatch = Math.min(remainingLoad, currentPotential.coal[i]);
                         thermalGeneration.coal[i] += coalToDispatch;
+                        remainingLoad -= coalToDispatch;
+                        hourlyPrice = Math.max(hourlyPrice, COST_DATA.variable_om.coal);
                     }
                     hourlyMarginalPrice[i] = hourlyPrice;
                 }
-
-                // Calculate total daily costs for gas plants based on final hourly generation
-                for (let i = 0; i < 24; i++) {
-                    if (ccgtGeneration[i] > 0) {
-                        const costStart = COST_DATA.variable_om.naturalGasCCGT.start + carbonCostNG;
-                        const costEnd = COST_DATA.variable_om.naturalGasCCGT.end + carbonCostNG;
-                        const priceAtDispatch = costStart + (costEnd - costStart) * (ccgtGeneration[i] / ccgtCapacity);
-                        const avgCost = (costStart + priceAtDispatch) / 2;
-                        gasGenDetails.ccgt.cost += ccgtGeneration[i] * 1000 * avgCost;
-                    }
-                    if (ctGeneration[i] > 0) {
-                        const costStart = COST_DATA.variable_om.naturalGasCT.start + carbonCostNG;
-                        const costEnd = COST_DATA.variable_om.naturalGasCT.end + carbonCostNG;
-                        const priceAtDispatch = costStart + (costEnd - costStart) * (ctGeneration[i] / ctCapacity);
-                        const avgCost = (costStart + priceAtDispatch) / 2;
-                        gasGenDetails.ct.cost += ctGeneration[i] * 1000 * avgCost;
-                    }
-                    thermalGeneration.naturalGas[i] = ccgtGeneration[i] + ctGeneration[i];
-                }                        
-                    return { gasGenDetails, hourlyMarginalPrice, thermalGeneration };
+                return { gasGenDetails, hourlyMarginalPrice, thermalGeneration };
             }
 
             function dispatchStorageEconomically(initialNetLoad, inputs, baselineStorageGWh, currentPotential) {
@@ -2987,3 +2949,8 @@
     </script>
 </body>
 </html>
+
+
+
+
+
