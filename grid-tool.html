@@ -1415,6 +1415,7 @@
                 const ctCapacity = totalNGCapacity * 0.30;
                 const ccgtRampLimitGW = ccgtCapacity * 0.08; // 8% of total CCGT capacity 
                 let thermalGeneration = { naturalGas: Array(24).fill(0), coal: Array(24).fill(0) };
+                let rampPrice = Array(24).fill(0); // <-- ADD THIS LINE
 
                 for (let i = 0; i < 24; i++) {
                     if (netLoadRamp[i] > ccgtRampLimitGW) {
@@ -1422,8 +1423,18 @@
                         const ctDispatchForRamp = Math.min(excessRamp, ctCapacity);
                         thermalGeneration.naturalGas[i] += ctDispatchForRamp;
                         netLoad[i] -= ctDispatchForRamp;
+
+                        // --- ADD THIS BLOCK ---
+                        // If we dispatched a CT for the ramp, calculate its marginal price
+                        if (ctDispatchForRamp > 0) {
+                            const costStart = COST_DATA.variable_om.naturalGasCT.start; // e.g., $100
+                            const costEnd = COST_DATA.variable_om.naturalGasCT.end;     // e.g., $150
+                            const priceAtDispatch = costStart + (costEnd - costStart) * (ctDispatchForRamp / ctCapacity);
+                            rampPrice[i] = priceAtDispatch;
+                        }
+                        // --- END ADDED BLOCK ---
                     }
-                }                               
+                }
                 const totalDailyHydroEnergy = hydroCapacity * hydroCF * 24;
                 const baseloadHydroEnergy = totalDailyHydroEnergy * 0.40;
                 let flexibleHydroEnergy = totalDailyHydroEnergy * 0.60;
@@ -1456,8 +1467,7 @@
                     flexibleHydroEnergy -= hydroToDispatch;
                 }
                 
-                const { gasGenDetails, hourlyMarginalPrice, thermalGeneration: finalThermalGeneration } = calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential, thermalGeneration);
-
+                const { gasGenDetails, hourlyMarginalPrice, thermalGeneration: finalThermalGeneration } = calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential, thermalGeneration, rampPrice);
                 finalGeneration.naturalGas = finalThermalGeneration.naturalGas;
                 finalGeneration.coal = finalThermalGeneration.coal;                
                 // FIX 2: Override price with export price during curtailment hours
@@ -1479,8 +1489,7 @@
                     hourlyMarginalPrice: hourlyMarginalPrice 
                 };
             }
-            
-            function calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential, initialThermalGeneration) {
+            function calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential, initialThermalGeneration, rampPrice) {            
                 const gasGenDetails = { ccgt: { generation: 0, cost: 0 }, ct: { generation: 0, cost: 0 } };
                 const hourlyMarginalPrice = Array(24).fill(0);
                 const thermalGeneration = { 
@@ -1534,7 +1543,7 @@
                         remainingLoad -= coalToDispatch;
                         hourlyPrice = Math.max(hourlyPrice, COST_DATA.variable_om.coal);
                     }
-                    hourlyMarginalPrice[i] = hourlyPrice;
+                    hourlyMarginalPrice[i] = Math.max(hourlyPrice, rampPrice[i]);
                 }
                 return { gasGenDetails, hourlyMarginalPrice, thermalGeneration };
             }
