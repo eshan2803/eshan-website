@@ -1375,7 +1375,6 @@
 
                 // --- Step 6: Run Final Dispatch on the Storage-Adjusted Net Load ---
                 const finalDispatchResult = runCompleteDispatch(finalNetLoad, inputs, currentPotential, baselineStorageGWh, hydroCF, countryName);
-
                 // --- Step 7: Assemble Final Results ---
                 finalGeneration.naturalGas = finalDispatchResult.naturalGas;
                 finalGeneration.coal = finalDispatchResult.coal;
