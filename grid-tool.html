@@ -1584,8 +1584,9 @@
                         netLoad, 
                         inputs, 
                         currentPotential, 
-                        { naturalGas: Array(24).fill(0), coal: Array(24).fill(0) } // Add this empty object
-                    );                    
+                        { naturalGas: Array(24).fill(0), coal: Array(24).fill(0) },
+                        Array(24).fill(0) // <-- ADD THIS LINE for the 5th 'rampPrice' argument
+                    );
                     let maxPrice = -Infinity, minPrice = Infinity;
                     let maxPriceHour = -1, minPriceHour = -1;
 
