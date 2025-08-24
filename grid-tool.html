@@ -1571,8 +1571,12 @@
                 const PROFIT_THRESHOLD = 20; // $20/MWh
 
                 while (true) {
-                    const { hourlyMarginalPrice } = calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential);
-                    
+                    const { hourlyMarginalPrice } = calculateThermalDispatchAndPrice(
+                        netLoad, 
+                        inputs, 
+                        currentPotential, 
+                        { naturalGas: Array(24).fill(0), coal: Array(24).fill(0) } // Add this empty object
+                    );                    
                     let maxPrice = -Infinity, minPrice = Infinity;
                     let maxPriceHour = -1, minPriceHour = -1;
 
