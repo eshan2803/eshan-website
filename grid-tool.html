@@ -1666,7 +1666,7 @@
                 );
 
                 const totalDailyCO2 = result.emissions.reduce((a, b) => a + b, 0);
-                const newConsumerCost = calculateAnnualConsumerCost(result.priceWithStorage, result.demand);                
+                const newConsumerCost = calculateAnnualConsumerCost(result.priceWithStorage, result.demand);
                 const totalAnnualDemandMWh = result.demand.reduce((a,b) => a+b, 0) * 1000 * 365;
                 const newAvgMarginalPrice = totalAnnualDemandMWh > 0 ? newConsumerCost / totalAnnualDemandMWh : 0;
 
@@ -2621,7 +2621,7 @@
                     countryName
                 );
                 customBaselineSystemCost = baselineResult.systemCost;
-                customBaselineConsumerCost = calculateAnnualConsumerCost(baselineResult.hourlyMarginalPrice, baselineResult.demand); // NEW
+                customBaselineConsumerCost = calculateAnnualConsumerCost(baselineResult.priceWithStorage, baselineResult.demand);
                 customBaselineTotalAnnualCO2 = baselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
                 
                 systemDefaultState = {};
