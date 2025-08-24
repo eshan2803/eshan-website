@@ -1328,7 +1328,7 @@
                 }
 
                 // --- Step 2: Run Provisional Simulation to get Price WITHOUT Storage ---
-                const resultWithoutStorage = runCompleteDispatch(initialNetLoad, inputs, currentPotential, baselineStorageGWh, hydroCF, countryName);
+                const resultWithoutStorage = runCompleteDispatch(initialNetLoad, inputs, currentPotential, baselineStorageGWh, hydroCF, countryName, currentCountryInstalledCapacity);
                 const priceWithoutStorage = resultWithoutStorage.hourlyMarginalPrice;
 
                 // --- Step 3: Dispatch Storage Using the Accurate Price Forecast ---
@@ -1374,7 +1374,7 @@
                 }
 
                 // --- Step 6: Run Final Dispatch on the Storage-Adjusted Net Load ---
-                const finalDispatchResult = runCompleteDispatch(finalNetLoad, inputs, currentPotential, baselineStorageGWh, hydroCF, countryName);
+                const finalDispatchResult = runCompleteDispatch(finalNetLoad, inputs, currentPotential, baselineStorageGWh, hydroCF, countryName, currentCountryInstalledCapacity);
                 // --- Step 7: Assemble Final Results ---
                 finalGeneration.naturalGas = finalDispatchResult.naturalGas;
                 finalGeneration.coal = finalDispatchResult.coal;
@@ -1404,7 +1404,7 @@
                 };
             }            
 
-            function runCompleteDispatch(netLoadToMeet, inputs, currentPotential, baselineStorageGWh, hydroCF, countryName) {
+            function runCompleteDispatch(netLoadToMeet, inputs, currentPotential, baselineStorageGWh, hydroCF, countryName, currentCountryInstalledCapacity) {
                 let netLoad = [...netLoadToMeet]; // Work on a copy
 
                 // 1. RAMP RATE LOGIC (Copied from getSimulationResult)
@@ -1470,8 +1470,7 @@
                 }
 
                 // 3. THERMAL DISPATCH (Call the existing function)
-                const { gasGenDetails, hourlyMarginalPrice, thermalGeneration: finalThermalGeneration } = calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential, thermalGeneration, rampPrice);
-                
+                const { gasGenDetails, hourlyMarginalPrice, thermalGeneration: finalThermalGeneration } = calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential, thermalGeneration, rampPrice, currentCountryInstalledCapacity);                
                 // 4. RETURN THE RESULTS
                 return {
                     naturalGas: finalThermalGeneration.naturalGas,
@@ -1482,7 +1481,7 @@
                 };
             }
 
-            function calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential, initialThermalGeneration, rampPrice) {            
+            function calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential, initialThermalGeneration, rampPrice, currentCountryInstalledCapacity) {            
                 const gasGenDetails = { ccgt: { generation: 0, cost: 0 }, ct: { generation: 0, cost: 0 } };
                 const hourlyMarginalPrice = Array(24).fill(0);
                 const thermalGeneration = { 
