@@ -31,10 +31,10 @@
         }).addTo(map);
         baseLayer.getContainer().classList.add('grayscale');
 
-        // URLs for data
-        const transmissionUrl = 'https://cecgis-caenergy.opendata.arcgis.com/datasets/CAEnergy::california-electric-transmission-lines-1.geojson?outSR=%7B%22wkid%22%3A4326%7D';
-        const substationsUrl = 'https://cecgis-caenergy.opendata.arcgis.com/datasets/CAEnergy::california-electric-substations/geojson?outSR=%7B%22wkid%22%3A4326%7D';
-        const plantsUrl = 'https://cecgis-caenergy.opendata.arcgis.com/datasets/CAEnergy::california-power-plants.geojson?outSR=%7B%22wkid%22%3A4326%7D';
+        // URLs for local data
+        const transmissionUrl = './transmission.geojson';
+        const substationsUrl = './substations.geojson';
+        const plantsUrl = './plants.geojson';
 
         // Layers
         let transmissionLayer = L.layerGroup().addTo(map);
