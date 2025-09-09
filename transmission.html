@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>California Power Grid Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map { height: 800px; }
+        body { margin: 0; padding: 0; }
+        #controls { position: absolute; top: 10px; left: 10px; z-index: 1000; background: white; padding: 10px; }
+        .grayscale {
+            filter: grayscale(100%);
+            -webkit-filter: grayscale(100%);
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <p>Click on the map to add a generator. Click existing generators to toggle on/off.</p>
+    </div>
+    <div id="map"></div>
+    <script>
+        // Initialize the map centered on California
+        var map = L.map('map').setView([36.7783, -119.4179], 6);
+
+        // Add grayscale base tile layer using OpenStreetMap hot style with CSS filter
+        var baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        baseLayer.getContainer().classList.add('grayscale');
+
+        // URLs for data
+        const transmissionUrl = 'https://cecgis-caenergy.opendata.arcgis.com/datasets/CAEnergy::california-electric-transmission-lines-1.geojson?outSR=%7B%22wkid%22%3A4326%7D';
+        const substationsUrl = 'https://cecgis-caenergy.opendata.arcgis.com/datasets/CAEnergy::california-electric-substations/geojson?outSR=%7B%22wkid%22%3A4326%7D';
+        const plantsUrl = 'https://cecgis-caenergy.opendata.arcgis.com/datasets/CAEnergy::california-power-plants.geojson?outSR=%7B%22wkid%22%3A4326%7D';
+
+        // Layers
+        let transmissionLayer = L.layerGroup().addTo(map);
+        let substationsLayer = L.layerGroup().addTo(map);
+        let plantsLayer = L.layerGroup().addTo(map);
+        let customGenerators = L.layerGroup().addTo(map);
+
+        // Fetch transmission lines
+        fetch(transmissionUrl)
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch transmission lines');
+                return response.json();
+            })
+            .then(data => {
+                transmissionLayer = L.geoJSON(data, {
+                    style: { color: '#808080', weight: 2, opacity: 0.7 }
+                }).addTo(map);
+            })
+            .catch(error => {
+                console.error('Error loading transmission lines:', error);
+                alert('Failed to load transmission lines. Check console for details.');
+            });
+
+        // Fetch substations
+        fetch(substationsUrl)
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch substations');
+                return response.json();
+            })
+            .then(data => {
+                substationsLayer = L.geoJSON(data, {
+                    pointToLayer: function (feature, latlng) {
+                        return L.triangleMarker(latlng, {
+                            radius: 6,
+                            fillColor: '#000000',
+                            color: '#000',
+                            weight: 1,
+                            opacity: 1,
+                            fillOpacity: 0.7,
+                            rotation: 0
+                        });
+                    },
+                    onEachFeature: function (feature, layer) {
+                        const props = feature.properties || {};
+                        const name = props.SubstationName || 'Unknown Substation';
+                        layer.bindPopup(`<b>${name}</b>`);
+                    }
+                }).addTo(map);
+            })
+            .catch(error => {
+                console.error('Error loading substations:', error);
+                alert('Failed to load substations. Check console for details.');
+            });
+
+        // Fetch power plants
+        fetch(plantsUrl)
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch power plants');
+                return response.json();
+            })
+            .then(data => {
+                L.geoJSON(data, {
+                    pointToLayer: function (feature, latlng) {
+                        let color = '#808080';
+                        const fuel = feature.properties?.PrimaryFue || 'UNKNOWN';
+                        switch (fuel.toUpperCase()) {
+                            case 'SOLAR': color = '#FFD700'; break;
+                            case 'WIND': color = '#00FF00'; break;
+                            case 'NATURAL GAS': color = '#FF4500'; break;
+                        }
+                        return L.circleMarker(latlng, {
+                            radius: 8,
+                            fillColor: color,
+                            color: '#000',
+                            weight: 1,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        });
+                    },
+                    onEachFeature: function (feature, layer) {
+                        const props = feature.properties || {};
+                        const name = props.Name || 'Unknown Plant';
+                        const fuel = props.PrimaryFue || 'Unknown';
+                        const capacity = props.CapacityMW || 'Unknown';
+                        layer.bindPopup(`<b>${name}</b><br>Type: ${fuel}<br>Capacity: ${capacity} MW`);
+                        layer.isOn = false;
+                        layer.on('click', function () {
+                            layer.isOn = !layer.isOn;
+                            layer.setStyle({
+                                fillColor: layer.isOn ? '#FFFF00' : (
+                                    fuel.toUpperCase() === 'SOLAR' ? '#FFD700' :
+                                    fuel.toUpperCase() === 'WIND' ? '#00FF00' :
+                                    fuel.toUpperCase() === 'NATURAL GAS' ? '#FF4500' : '#808080'
+                                )
+                            });
+                        });
+                    }
+                }).addTo(plantsLayer);
+            })
+            .catch(error => {
+                console.error('Error loading power plants:', error);
+                alert('Failed to load power plants. Check console for details.');
+            });
+
+        // Allow user to place new generators
+        map.on('click', function (e) {
+            const type = prompt('Enter generator type (e.g., solar, wind, natural gas):');
+            if (type) {
+                const marker = L.circleMarker(e.latlng, {
+                    radius: 8,
+                    fillColor: '#808080',
+                    color: '#000',
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(customGenerators);
+                marker.bindPopup(`<b>Custom Generator</b><br>Type: ${type}`);
+                marker.isOn = false;
+                marker.on('click', function () {
+                    marker.isOn = !marker.isOn;
+                    marker.setStyle({
+                        fillColor: marker.isOn ? '#FFFF00' : '#808080'
+                    });
+                });
+            }
+        });
+
+        // Custom triangle marker
+        L.TriangleMarker = L.CircleMarker.extend({
+            options: { rotation: 0 }
+        });
+        L.triangleMarker = function (latlng, options) {
+            return new L.TriangleMarker(latlng, options);
+        };
+    </script>
+</body>
+</html>
