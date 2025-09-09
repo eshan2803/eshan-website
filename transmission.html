@@ -25,7 +25,7 @@
         // Initialize the map centered on California
         var map = L.map('map').setView([36.7783, -119.4179], 6);
 
-        // Add grayscale base tile layer using OpenStreetMap hot style with CSS filter
+        // Add grayscale base tile layer
         var baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
@@ -34,7 +34,7 @@
         // URLs for local data
         const transmissionUrl = './transmission.geojson';
         const substationsUrl = './substations.geojson';
-        const plantsUrl = './powerplant.geojson';
+        const plantsUrl = './plants.geojson';
 
         // Layers
         let transmissionLayer = L.layerGroup().addTo(map);
@@ -98,12 +98,14 @@
             .then(data => {
                 L.geoJSON(data, {
                     pointToLayer: function (feature, latlng) {
-                        let color = '#808080';
-                        const fuel = feature.properties?.PrimaryFue || 'UNKNOWN';
+                        let color = '#808080'; // Default gray
+                        const props = feature.properties || {};
+                        const fuel = props.PriEnergySource || 'UNKNOWN'; // Use the actual field name
                         switch (fuel.toUpperCase()) {
-                            case 'SOLAR': color = '#FFD700'; break;
-                            case 'WIND': color = '#00FF00'; break;
-                            case 'NATURAL GAS': color = '#FF4500'; break;
+                            case 'SUN': color = '#FFD700'; break; // Solar
+                            case 'WIND': color = '#00FF00'; break; // Wind
+                            case 'NG': color = '#FF4500'; break; // Natural Gas
+                            case 'PC': color = '#808080'; break; // Petroleum Coke (default gray)
                         }
                         return L.circleMarker(latlng, {
                             radius: 8,
@@ -116,18 +118,19 @@
                     },
                     onEachFeature: function (feature, layer) {
                         const props = feature.properties || {};
-                        const name = props.Name || 'Unknown Plant';
-                        const fuel = props.PrimaryFue || 'Unknown';
-                        const capacity = props.CapacityMW || 'Unknown';
+                        const name = props.PlantName || 'Unknown Plant';
+                        const fuel = props.PriEnergySource || 'Unknown';
+                        const capacity = props.Capacity_Latest !== undefined ? props.Capacity_Latest : 'Unknown';
                         layer.bindPopup(`<b>${name}</b><br>Type: ${fuel}<br>Capacity: ${capacity} MW`);
                         layer.isOn = false;
                         layer.on('click', function () {
                             layer.isOn = !layer.isOn;
                             layer.setStyle({
                                 fillColor: layer.isOn ? '#FFFF00' : (
-                                    fuel.toUpperCase() === 'SOLAR' ? '#FFD700' :
-                                    fuel.toUpperCase() === 'WIND' ? '#00FF00' :
-                                    fuel.toUpperCase() === 'NATURAL GAS' ? '#FF4500' : '#808080'
+                                    (props.PriEnergySource || '').toUpperCase() === 'SUN' ? '#FFD700' :
+                                    (props.PriEnergySource || '').toUpperCase() === 'WIND' ? '#00FF00' :
+                                    (props.PriEnergySource || '').toUpperCase() === 'NG' ? '#FF4500' :
+                                    (props.PriEnergySource || '').toUpperCase() === 'PC' ? '#808080' : '#808080'
                                 )
                             });
                         });
@@ -172,4 +175,3 @@
     </script>
 </body>
 </html>
-
