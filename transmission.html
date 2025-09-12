@@ -7,9 +7,23 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        #map { height: 800px; }
-        body { margin: 0; padding: 0; }
-        #controls { position: absolute; top: 10px; left: 10px; z-index: 1000; background: white; padding: 10px; }
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            height: 100vh; /* Full viewport height */
+            width: 100%; /* Full width */
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+        }
         .grayscale {
             filter: grayscale(100%);
             -webkit-filter: grayscale(100%);
