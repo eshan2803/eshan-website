@@ -96,19 +96,18 @@
             })
             .then(data => {
                 staticLinesLayer = L.geoJSON(data, { style: { color: '#39FF14', weight: 2, opacity: 0.7 } });
-                animatedLinesLayer = L.geoJSON(data, {
-                    onEachFeature: function (feature, layer) {
-                        const coords = feature.geometry.coordinates;
-                        L.polyline.antPath(coords, {
-                            color: '#39FF14', // Neon green flow
-                            weight: 3,
-                            opacity: 0.8,
-                            delay: 500,
-                            dashArray: [10, 20],
-                            pulseColor: '#FFFFFF',
-                            hardwareAccelerated: true
-                        }).addTo(animatedLinesLayer);
-                    }
+                animatedLinesLayer = L.layerGroup(); // Change to layerGroup
+                data.features.forEach(feature => {
+                    const coords = feature.geometry.coordinates;
+                    L.polyline.antPath(coords, {
+                        color: '#39FF14', // Neon green flow
+                        weight: 3,
+                        opacity: 0.8,
+                        delay: 500,
+                        dashArray: [10, 20],
+                        pulseColor: '#FFFFFF',
+                        hardwareAccelerated: true
+                    }).addTo(animatedLinesLayer);
                 });
                 staticLinesLayer.addTo(map); // Start with static lines
             })
