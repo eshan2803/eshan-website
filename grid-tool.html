@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata@2.2.1/dist/chartjs-plugin-dragdata.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata@2.2.1/dist/chartjs-plugin-dragdata.min.js"></script>e
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;700&display=swap" rel="stylesheet">
@@ -129,6 +129,8 @@
         .thumb-neutral::-moz-range-thumb { background-color: rgba(107, 114, 128, 1); }
         .thumb-biomass::-webkit-slider-thumb { background-color: rgba(101, 67, 33, 1); } /* Brown color for biomass */
         .thumb-biomass::-moz-range-thumb { background-color: rgba(101, 67, 33, 1); }
+        .thumb-rng::-webkit-slider-thumb { background-color: rgba(132, 204, 22, 1); } /* Lime green for RNG */
+        .thumb-rng::-moz-range-thumb { background-color: rgba(132, 204, 22, 1); }
         
         /* Rainbow Border Animation */
         @keyframes rainbow-border {
@@ -199,12 +201,19 @@
         .tutorial-highlight-active.rounded-lg {
              border-radius: 1rem;
         }
+        #pricing-model-indicator {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-weight: 500;
+            transition: all 0.3s ease-in-out;
+            cursor: help;
+        }
 
     </style>
 </head>
 <body class="antialiased">
     <!-- Tooltip element -->
-    <div id="hover-tooltip" class="absolute hidden bg-gray-800 text-white text-sm rounded-md px-2 py-1 z-50 pointer-events-none shadow-lg"></div>
+    <div id="hover-tooltip" class="absolute hidden bg-gray-800 text-white text-sm rounded-md px-2 py-1 z-50 pointer-events-none shadow-lg max-w-xs"></div>
 
     <!-- TUTORIAL HTML -->
     <div id="tutorial-overlay"></div>
@@ -307,7 +316,13 @@
                     </div>
                     <!-- NEW: Marginal Price Chart -->
                     <div class="mb-8">
-                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly Marginal Price ($/MWh)</h2>
+                        <div class="flex justify-between items-center mb-4">
+                             <h2 class="text-2xl font-lora font-semibold text-gray-800">Hourly Marginal Price ($/MWh)</h2>
+                             <div id="pricing-model-indicator" 
+                                 title="The pricing model switches based on the daily renewable generation share.">
+                                 <!-- Content will be set by JS -->
+                             </div>
+                        </div>
                         <canvas id="marginalPriceChart"></canvas>
                     </div>
                     <div class="mb-8">
@@ -366,7 +381,7 @@
                 <div class="lg:col-span-1 space-y-8">
                     <div id="tutorial-step-5" class="glass-card rounded-lg sticky top-6 z-10">
                         <div class="grid grid-cols-2 gap-4 text-center">
-                            <div title="Based on the average wholesale price of electricity&#10;Assuming natural gas plant on the margin drives the price">
+                            <div title="Based on the average wholesale price of electricity">
                                 <h3 class="text-xl font-lora font-semibold text-gray-800">Marginal Price</h3>
                                 <p id="bill-impact" class="text-5xl font-bold text-blue-600 mt-2">0%</p>
                             </div>
@@ -450,6 +465,15 @@
                                         <input type="range" id="biomass-slider" min="0" max="50" value="0" class="w-full form-input thumb-biomass">
                                         <input type="number" id="biomass-input" min="0" max="50" value="0" class="value-input">
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="biomass-unit">GW</span>
+                                    </div>
+                                </div>
+                                <!-- NEW: RNG (Biogas) Slider -->
+                                <div>
+                                    <label for="rng-slider" class="block text-md font-medium text-gray-700">New RNG (Biogas) Capacity</label>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="rng-slider" min="0" max="50" value="0" class="w-full form-input thumb-rng">
+                                        <input type="number" id="rng-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="rng-unit">GW</span>
                                     </div>
                                 </div>
                                 <div class="border-t border-gray-300 pt-6">
@@ -555,6 +579,15 @@
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="biomass-incentive-unit">$/MWh</span>
                                     </div>
                                 </div>
+                                <!-- NEW: RNG (Biogas) Incentive Slider -->
+                                <div>
+                                    <label for="rng-incentive-slider" class="block text-sm font-medium text-gray-700">RNG (Biogas) (PTC)</label>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="rng-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-rng">
+                                        <input type="number" id="rng-incentive-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="rng-incentive-unit">$/MWh</span>
+                                    </div>
+                                </div>
                                 <div>
                                     <label for="storage-incentive-slider" class="block text-sm font-medium text-gray-700">Storage (ITC)</label>
                                     <div class="flex items-center space-x-2 mt-2">
@@ -619,125 +652,125 @@
             "California": { 
                 totalCapacityMW: 89223, 
                 peakLoadsMW: { summer: 52061, winter: 47500, fall: 46000, spring: 41000 },
-                mix: { coal: 0.1, naturalGas: 43.4, hydro: 15.7, wind: 7.1, offshoreWind: 0, solar: 26.1, nuclear: 2.7, geothermal: 3.0, biomass: 1.4 },
+                mix: { coal: 0.1, naturalGas: 43.4, hydro: 15.7, wind: 7.1, offshoreWind: 0, solar: 26.1, nuclear: 2.7, geothermal: 3.0, biomass: 1.0, rng: 0.4 },
                 storageGWh: { battery4hr: 53.0 },
                 defaultExportPrice: -20
             },
             "China": { 
                 totalCapacityMW: 3400000, 
                 peakLoadsMW: { summer: 1340000, winter: 1206000, fall: 1179200, spring: 1072000 },
-                mix: { coal: 40.0, naturalGas: 8.0, hydro: 12.5, wind: 14.0, offshoreWind: 1.6, solar: 20.0, nuclear: 2.5, geothermal: 0.1, biomass: 1.3 },
+                mix: { coal: 40.0, naturalGas: 8.0, hydro: 12.5, wind: 14.0, offshoreWind: 1.6, solar: 20.0, nuclear: 2.5, geothermal: 0.1, biomass: 1.0, rng: 0.3 },
                 storageGWh: { battery4hr: 222 }
             },
             "United States": { 
                 totalCapacityMW: 1275000, 
                 peakLoadsMW: { summer: 800000, winter: 720000, fall: 704000, spring: 640000 },
-                mix: { coal: 15.0, naturalGas: 48.0, hydro: 7.8, wind: 11.5, offshoreWind: 0.2, solar: 9.0, nuclear: 8.0, geothermal: 0.3, biomass: 1.2 },
+                mix: { coal: 15.0, naturalGas: 48.0, hydro: 7.8, wind: 11.5, offshoreWind: 0.2, solar: 9.0, nuclear: 8.0, geothermal: 0.3, biomass: 1.0, rng: 0.2 },
                 storageGWh: { battery4hr: 95 }
             },
             "India": { 
                 totalCapacityMW: 476000, 
                 peakLoadsMW: { summer: 243000, winter: 206550, fall: 213840, spring: 194400 },
-                mix: { coal: 50.0, naturalGas: 6.0, hydro: 10.0, wind: 9.5, offshoreWind: 0, solar: 18.0, nuclear: 1.8, geothermal: 0.0, biomass: 2.7 },
+                mix: { coal: 50.0, naturalGas: 6.0, hydro: 10.0, wind: 9.5, offshoreWind: 0, solar: 18.0, nuclear: 1.8, geothermal: 0.0, biomass: 2.0, rng: 0.7 },
                 storageGWh: { battery4hr: 1 }
             },
             "Japan": { 
                 totalCapacityMW: 295000, 
                 peakLoadsMW: { summer: 181000, winter: 162900, fall: 159280, spring: 144800 },
-                mix: { coal: 20.0, naturalGas: 35.0, hydro: 17.0, wind: 1.6, offshoreWind: 0.1, solar: 15.5, nuclear: 10.5, geothermal: 0.2, biomass: 1.6 },
+                mix: { coal: 20.0, naturalGas: 35.0, hydro: 17.0, wind: 1.6, offshoreWind: 0.1, solar: 15.5, nuclear: 10.5, geothermal: 0.2, biomass: 1.2, rng: 0.4 },
                 storageGWh: { battery4hr: 1.2 }
             },
             "Russia": { 
                 totalCapacityMW: 248000, 
                 peakLoadsMW: { winter: 160000, summer: 144000, fall: 140800, spring: 128000 },
-                mix: { coal: 15.0, naturalGas: 52.0, hydro: 20.0, wind: 0.9, offshoreWind: 0, solar: 0.8, nuclear: 11.3, geothermal: 0.0, biomass: 0.2 } 
+                mix: { coal: 15.0, naturalGas: 52.0, hydro: 20.0, wind: 0.9, offshoreWind: 0, solar: 0.8, nuclear: 11.3, geothermal: 0.0, biomass: 0.2, rng: 0.0 } 
             },
             "Brazil": { 
                 totalCapacityMW: 180000, 
                 peakLoadsMW: { summer: 101860, winter: 91674, fall: 89637, spring: 81488 },
-                mix: { coal: 2.0, naturalGas: 18.0, hydro: 59.0, wind: 10.5, offshoreWind: 0, solar: 9.5, nuclear: 1.0, geothermal: 0.0, biomass: 8.0 } 
+                mix: { coal: 2.0, naturalGas: 18.0, hydro: 59.0, wind: 10.5, offshoreWind: 0, solar: 9.5, nuclear: 1.0, geothermal: 0.0, biomass: 6.0, rng: 2.0 } 
             },
             "Germany": { 
                 totalCapacityMW: 210000, 
                 peakLoadsMW: { winter: 84000, summer: 75600, fall: 73920, spring: 67200 },
-                mix: { coal: 14.0, naturalGas: 38.0, hydro: 4.0, wind: 22.0, offshoreWind: 4.0, solar: 12.0, nuclear: 5.0, geothermal: 0.0, biomass: 6.0 },
+                mix: { coal: 14.0, naturalGas: 38.0, hydro: 4.0, wind: 22.0, offshoreWind: 4.0, solar: 12.0, nuclear: 5.0, geothermal: 0.0, biomass: 4.0, rng: 2.0 },
                 storageGWh: { battery4hr: 22.1 }
             },
             "Canada": { 
                 totalCapacityMW: 165000, 
                 peakLoadsMW: { winter: 140000, summer: 126000, fall: 123200, spring: 112000 },
-                mix: { coal: 4.5, naturalGas: 13.5, hydro: 57.0, wind: 8.5, offshoreWind: 0, solar: 2.5, nuclear: 14.0, geothermal: 0.0, biomass: 2.0 },
+                mix: { coal: 4.5, naturalGas: 13.5, hydro: 57.0, wind: 8.5, offshoreWind: 0, solar: 2.5, nuclear: 14.0, geothermal: 0.0, biomass: 1.5, rng: 0.5 },
                 storageGWh: { battery4hr: 1 }
             },
             "South Korea": { 
                 totalCapacityMW: 125000, 
                 peakLoadsMW: { summer: 93000, winter: 83700, fall: 81840, spring: 74400 },
-                mix: { coal: 34.0, naturalGas: 20.0, hydro: 5.0, wind: 1.4, offshoreWind: 0.1, solar: 12.5, nuclear: 27.0, geothermal: 0.0, biomass: 1.0 },
+                mix: { coal: 34.0, naturalGas: 20.0, hydro: 5.0, wind: 1.4, offshoreWind: 0.1, solar: 12.5, nuclear: 27.0, geothermal: 0.0, biomass: 0.8, rng: 0.2 },
                 storageGWh: { battery4hr: 9 }
             },
             "France": { 
                 totalCapacityMW: 115000, 
                 peakLoadsMW: { winter: 102000, summer: 91800, fall: 89760, spring: 81600 },
-                mix: { coal: 1.0, naturalGas: 10.0, hydro: 10.0, wind: 8.0, offshoreWind: 0.5, solar: 6.0, nuclear: 64.0, geothermal: 0.0, biomass: 0.5 },
+                mix: { coal: 1.0, naturalGas: 10.0, hydro: 10.0, wind: 8.0, offshoreWind: 0.5, solar: 6.0, nuclear: 64.0, geothermal: 0.0, biomass: 0.4, rng: 0.1 },
                 storageGWh: { battery4hr: 1.0 }
             },
             "United Kingdom": { 
                 totalCapacityMW: 78000, 
                 peakLoadsMW: { winter: 60000, summer: 54000, fall: 52800, spring: 48000 },
-                mix: { coal: 1.0, naturalGas: 38.0, hydro: 2.0, wind: 15.0, offshoreWind: 14.0, solar: 19.0, nuclear: 9.0, geothermal: 0.0, biomass: 6.0 },
+                mix: { coal: 1.0, naturalGas: 38.0, hydro: 2.0, wind: 15.0, offshoreWind: 14.0, solar: 19.0, nuclear: 9.0, geothermal: 0.0, biomass: 4.0, rng: 2.0 },
                  storageGWh: { battery4hr: 16.0 }
             },
             "Australia": { 
                 totalCapacityMW: 65000, 
                 peakLoadsMW: { summer: 47000, winter: 42300, fall: 41360, spring: 37600 },
-                mix: { coal: 45.0, naturalGas: 18.0, hydro: 13.0, wind: 10.0, offshoreWind: 0, solar: 13.0, nuclear: 0.0, geothermal: 0.0, biomass: 1.0 },
+                mix: { coal: 45.0, naturalGas: 18.0, hydro: 13.0, wind: 10.0, offshoreWind: 0, solar: 13.0, nuclear: 0.0, geothermal: 0.0, biomass: 0.8, rng: 0.2 },
                 storageGWh: { battery4hr: 5.6 }
             },
             "Spain": { 
                 totalCapacityMW: 120000, 
                 peakLoadsMW: { summer: 45000, winter: 40500, fall: 39600, spring: 36000 },
-                mix: { coal: 2.0, naturalGas: 22.0, hydro: 17.0, wind: 27.5, offshoreWind: 0, solar: 21.5, nuclear: 7.0, geothermal: 0.0, biomass: 1.5 },
+                mix: { coal: 2.0, naturalGas: 22.0, hydro: 17.0, wind: 27.5, offshoreWind: 0, solar: 21.5, nuclear: 7.0, geothermal: 0.0, biomass: 1.2, rng: 0.3 },
                 storageGWh: { battery4hr: 1.7 }
             },
             "Italy": { 
                 totalCapacityMW: 122000, 
                 peakLoadsMW: { summer: 60000, winter: 54000, fall: 52800, spring: 48000 },
-                mix: { coal: 4.0, naturalGas: 47.0, hydro: 18.0, wind: 10.0, offshoreWind: 0, solar: 19.0, nuclear: 0.0, geothermal: 1.0, biomass: 2.0 },
+                mix: { coal: 4.0, naturalGas: 47.0, hydro: 18.0, wind: 10.0, offshoreWind: 0, solar: 19.0, nuclear: 0.0, geothermal: 1.0, biomass: 1.5, rng: 0.5 },
                 storageGWh: { battery4hr: 6 }
             },
             "Indonesia": { 
                 totalCapacityMW: 75000, 
                 peakLoadsMW: { summer: 50000, winter: 45000, fall: 44000, spring: 40000 },
-                mix: { coal: 48.0, naturalGas: 28.0, hydro: 9.0, wind: 0.2, offshoreWind: 0, solar: 2.8, nuclear: 0.0, geothermal: 3.0, biomass: 1.0 } 
+                mix: { coal: 48.0, naturalGas: 28.0, hydro: 9.0, wind: 0.2, offshoreWind: 0, solar: 2.8, nuclear: 0.0, geothermal: 3.0, biomass: 0.8, rng: 0.2 } 
             },
             "South Africa": { 
                 totalCapacityMW: 60000, 
                 peakLoadsMW: { winter: 34000, summer: 30600, fall: 29920, spring: 27200 },
-                mix: { coal: 78.0, naturalGas: 6.0, hydro: 6.0, wind: 5.5, offshoreWind: 0, solar: 3.5, nuclear: 0.0, geothermal: 0.0, biomass: 0.5 },
+                mix: { coal: 78.0, naturalGas: 6.0, hydro: 6.0, wind: 5.5, offshoreWind: 0, solar: 3.5, nuclear: 0.0, geothermal: 0.0, biomass: 0.4, rng: 0.1 },
                 storageGWh: { battery4hr: 2 }
             },
             "Mexico": { 
                 totalCapacityMW: 88000, 
                 peakLoadsMW: { summer: 50000, winter: 45000, fall: 44000, spring: 40000 },
-                mix: { coal: 5.0, naturalGas: 58.0, hydro: 15.0, wind: 9.0, offshoreWind: 0, solar: 11.0, nuclear: 1.0, geothermal: 1.0, biomass: 0.5 } ,
+                mix: { coal: 5.0, naturalGas: 58.0, hydro: 15.0, wind: 9.0, offshoreWind: 0, solar: 11.0, nuclear: 1.0, geothermal: 1.0, biomass: 0.4, rng: 0.1 } ,
                 storageGWh: { battery4hr: 0.6 }
             },
             "Norway": { 
                 totalCapacityMW: 39000, 
                 peakLoadsMW: { winter: 25000, summer: 22500, fall: 22000, spring: 20000 },
-                mix: { coal: 0.0, naturalGas: 0.0, hydro: 91.0, wind: 8.5, offshoreWind: 0, solar: 0.5, nuclear: 0.0, geothermal: 0.0, biomass: 0.0 } ,
+                mix: { coal: 0.0, naturalGas: 0.0, hydro: 91.0, wind: 8.5, offshoreWind: 0, solar: 0.5, nuclear: 0.0, geothermal: 0.0, biomass: 0.0, rng: 0.0 } ,
                 storageGWh: { battery4hr: 0.2 }
             },
             "New Zealand": { 
                 totalCapacityMW: 9800, 
                 peakLoadsMW: { winter: 7000, summer: 6300, fall: 6160, spring: 5600 },
-                mix: { coal: 0.0, naturalGas: 14.0, hydro: 56.0, wind: 7.5, offshoreWind: 0, solar: 1.5, nuclear: 0.0, geothermal: 20.0, biomass: 1.0 },
+                mix: { coal: 0.0, naturalGas: 14.0, hydro: 56.0, wind: 7.5, offshoreWind: 0, solar: 1.5, nuclear: 0.0, geothermal: 20.0, biomass: 0.8, rng: 0.2 },
                 storageGWh: { battery4hr: 0.4 } 
             },
             "Vietnam": { 
                 totalCapacityMW: 80000, 
                 peakLoadsMW: { summer: 45000, winter: 40500, fall: 39600, spring: 36000 },
-                mix: { coal: 32.0, naturalGas: 9.0, hydro: 28.0, wind: 6.0, offshoreWind: 0, solar: 24.0, nuclear: 0.0, geothermal: 0.0, biomass: 1.0 },
+                mix: { coal: 32.0, naturalGas: 9.0, hydro: 28.0, wind: 6.0, offshoreWind: 0, solar: 24.0, nuclear: 0.0, geothermal: 0.0, biomass: 0.8, rng: 0.2 },
                 storageGWh: { battery4hr: 0.1 } 
             }
         };
@@ -804,37 +837,41 @@
                 offshoreWind: OFFSHORE_WIND_CF_PROFILE
             }
         };
-        const EMISSION_FACTORS = { naturalGas: 395, hydro: 0, nuclear: 0, solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, coal: 850, biomass: 0 };
+        const EMISSION_FACTORS = { naturalGas: 395, hydro: 0, nuclear: 0, solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, coal: 850, biomass: 0, rng: 0 };
         
         const COST_DATA = {
             capex: { 
-                solar: 1200, wind: 1500, offshoreWind: 5000, nuclear: 7242, geothermal: 3329, biomass: 3500,
+                solar: 1200, wind: 1500, offshoreWind: 5000, nuclear: 7242, geothermal: 3329, biomass: 3500, rng: 3000,
                 naturalGas: 1300, hydro: 3336, coal: 4407,
                 battery4hr: 350, battery8hr: 300, longduration: 300, // $/kWh
                 dac: 1000 // $/ton/year
             },
             fixed_om: {
-                solar: 15, wind: 35, offshoreWind: 100, nuclear: 140, geothermal: 120, biomass: 100, // $/kW-year
+                solar: 15, wind: 35, offshoreWind: 100, nuclear: 140, geothermal: 120, biomass: 100, rng: 95, // $/kW-year
                 naturalGas: 20, hydro: 20, coal: 40,
                 battery4hr: 15, battery8hr: 15, longduration: 60, // $/kW-year
                 dac: 20 // $/ton/year
             },
             variable_om: { 
-                solar: 0, wind: 1, offshoreWind: 0, nuclear: 10, geothermal: 5, biomass: 10, // $/MWh
+                solar: 0, wind: 1, offshoreWind: 0, nuclear: 10, geothermal: 5, biomass: 10, rng: 50, // $/MWh
                 naturalGasCCGT: { start: 35, end: 80 }, // NEW: $/MWh
                 naturalGasCT: { start: 100, end: 150 }, // NEW: $/MWh
                 hydro: 5, coal: 30, // $/MWh 
                 battery4hr: 0, battery8hr: 2, longduration: 1,
                 dac: 400, // $/ton
-                storage: 30 // $/MWh - an assumed opportunity cost for dispatching storage
+                storage: {
+                    tranche1: 25,
+                    tranche2: 50,
+                    tranche3: 75
+                }
             },
             lifetime: {
-                solar: 30, wind: 30, offshoreWind: 30, nuclear: 60, geothermal: 30, biomass: 25,
+                solar: 30, wind: 30, offshoreWind: 30, nuclear: 60, geothermal: 30, biomass: 25, rng: 25,
                 naturalGas: 30, hydro: 80, coal: 40,
                 battery4hr: 15, battery8hr: 15, longduration: 25, dac: 25
             },
             capacity_factor: {
-                solar: 0.25, wind: 0.35, offshoreWind: 0.50, nuclear: 0.9, geothermal: 0.9, biomass: 0.85,
+                solar: 0.25, wind: 0.35, offshoreWind: 0.50, nuclear: 0.9, geothermal: 0.9, biomass: 0.85, rng: 0.85,
                 naturalGas: 0.55, hydro: 0.45, coal: 0.6
             },
             discount_rate: 0.07
@@ -847,13 +884,14 @@
             const sliders = {
                 solar: document.getElementById('solar-slider'), wind: document.getElementById('wind-slider'), offshoreWind: document.getElementById('offshoreWind-slider'),
                 geothermal: document.getElementById('geothermal-slider'), nuclear: document.getElementById('nuclear-slider'),
-                biomass: document.getElementById('biomass-slider'),
+                biomass: document.getElementById('biomass-slider'), rng: document.getElementById('rng-slider'),
                 battery4hr: document.getElementById('battery4hr-slider'), battery8hr: document.getElementById('battery8hr-slider'),
                 longduration: document.getElementById('longduration-slider'), demandflex: document.getElementById('demandflex-slider'),
                 dac: document.getElementById('dac-slider'), solarIncentive: document.getElementById('solar-incentive-slider'),
                 windIncentive: document.getElementById('wind-incentive-slider'), offshoreWindIncentive: document.getElementById('offshoreWind-incentive-slider'),
                 geothermalIncentive: document.getElementById('geothermal-incentive-slider'),
                 nuclearIncentive: document.getElementById('nuclear-incentive-slider'), biomassIncentive: document.getElementById('biomass-incentive-slider'),
+                rngIncentive: document.getElementById('rng-incentive-slider'),
                 storageIncentive: document.getElementById('storage-incentive-slider'),
                 dacIncentive: document.getElementById('dac-incentive-slider'), carbonTax: document.getElementById('carbon-tax-slider'),
                 exportPrice: document.getElementById('export-price-slider'),
@@ -861,13 +899,14 @@
             const inputs = {
                 solar: document.getElementById('solar-input'), wind: document.getElementById('wind-input'), offshoreWind: document.getElementById('offshoreWind-input'),
                 geothermal: document.getElementById('geothermal-input'), nuclear: document.getElementById('nuclear-input'),
-                biomass: document.getElementById('biomass-input'),
+                biomass: document.getElementById('biomass-input'), rng: document.getElementById('rng-input'),
                 battery4hr: document.getElementById('battery4hr-input'), battery8hr: document.getElementById('battery8hr-input'),
                 longduration: document.getElementById('longduration-input'), demandflex: document.getElementById('demandflex-input'),
                 dac: document.getElementById('dac-input'), solarIncentive: document.getElementById('solar-incentive-input'),
-                windIncentive: document.getElementById('wind-incentive-input'), offshoreWindIncentive: document.getElementById('offshoreWind-incentive-input'),
+                windIncentive: document.getElementById('wind-incentive-input'), offshoreWindIncentive: document.getElementById('offshoreWind-incentive-slider'),
                 geothermalIncentive: document.getElementById('geothermal-incentive-input'),
                 nuclearIncentive: document.getElementById('nuclear-incentive-input'), biomassIncentive: document.getElementById('biomass-incentive-input'),
+                rngIncentive: document.getElementById('rng-incentive-input'),
                 storageIncentive: document.getElementById('storage-incentive-input'),
                 dacIncentive: document.getElementById('dac-incentive-input'), carbonTax: document.getElementById('carbon-tax-input'),
                 exportPrice: document.getElementById('export-price-input'),
@@ -900,6 +939,7 @@
             const revertCFBtn = document.getElementById('revert-cf-btn');
             const cfPresetsDiv = document.getElementById('cf-presets');
             const visitorCountEl = document.getElementById('visitor-count');
+            const pricingModelIndicator = document.getElementById('pricing-model-indicator');
 
 
             // --- STATE MANAGEMENT ---
@@ -944,6 +984,7 @@
                 offshoreWind: 'rgba(12, 148, 103, 0.8)', 
                 geothermal: 'rgba(120, 40, 40, 0.8)',
                 biomass: 'rgba(101, 67, 33, 0.8)',
+                rng: 'rgba(132, 204, 22, 0.8)', // Lime green for RNG
                 storage: 'rgba(168, 85, 247, 0.8)', demand: 'rgba(17, 24, 39, 1)',
                 curtailment: 'rgba(253, 186, 116, 0.8)', coal: 'rgba(0, 0, 0, 0.8)',
                 price: 'rgba(79, 70, 229, 1)' // NEW for price chart
@@ -980,6 +1021,7 @@
                 coalToStorage: createPattern(COLORS.coal, COLORS.storage),
                 naturalGasToStorage: createPattern(COLORS.naturalGas, COLORS.storage),
                 biomassToStorage: createPattern(COLORS.biomass, COLORS.storage),
+                rngToStorage: createPattern(COLORS.rng, COLORS.storage),
             };
             
             const generationChartConfig = {
@@ -990,6 +1032,7 @@
                         { label: 'Nuclear', data: [], backgroundColor: COLORS.nuclear, stack: 'generators', dragData: false },
                         { label: 'Geothermal', data: [], backgroundColor: COLORS.geothermal, stack: 'generators', dragData: false },
                         { label: 'Biomass', data: [], backgroundColor: COLORS.biomass, stack: 'generators', dragData: false },
+                        { label: 'RNG (Biogas)', data: [], backgroundColor: COLORS.rng, stack: 'generators', dragData: false },
                         { label: 'Hydro', data: [], backgroundColor: COLORS.hydro, stack: 'generators', dragData: false },
                         { label: 'Onshore Wind', data: [], backgroundColor: COLORS.wind, stack: 'generators', dragData: false },
                         { label: 'Offshore Wind', data: [], backgroundColor: COLORS.offshoreWind, stack: 'generators', dragData: false },
@@ -1041,7 +1084,7 @@
                                     });
 
                                     const lines = [];
-                                    const tooltipOrder = ['Coal', 'Natural Gas', 'Hydro', 'Geothermal', 'Biomass', 'Nuclear', 'Solar', 'Onshore Wind', 'Offshore Wind', 'Storage', 'Curtailment', 'Solar (to Storage)', 'Onshore Wind (to Storage)', 'Offshore Wind (to Storage)', 'Demand'];
+                                    const tooltipOrder = ['Coal', 'Natural Gas', 'Hydro', 'Geothermal', 'Biomass', 'RNG (Biogas)', 'Nuclear', 'Solar', 'Onshore Wind', 'Offshore Wind', 'Storage', 'Curtailment', 'Solar (to Storage)', 'Onshore Wind (to Storage)', 'Offshore Wind (to Storage)', 'Demand'];
                                     tooltipOrder.forEach(label => {
                                         if (totals[label] > 0.01) { 
                                             lines.push(`${label}: ${totals[label].toFixed(2)}`);
@@ -1186,6 +1229,7 @@
             function calculateTotalAnnualSystemCost(generation, capacity, currentIncentives, curtailedEnergy, baselineCapacity, baselineStorage, gasGenDetails) {
                 let totalAnnualCost = 0;
                 const d = COST_DATA.discount_rate;
+                const carbonTax = currentIncentives.carbonTax || 0;
 
                 for (const tech in COST_DATA.capacity_factor) {
                     if (tech === 'naturalGas') continue; // Skip NG here, will be calculated separately
@@ -1204,7 +1248,12 @@
                         const annual_fom = techData.fixed_om[tech] * totalCapacityKW;
                         
                         const annual_generation_mwh = (generation[tech] || []).reduce((a, b) => a + b, 0) * 1000 * 365;
-                        const annual_vom = techData.variable_om[tech] * annual_generation_mwh;
+                        let annual_vom = techData.variable_om[tech] * annual_generation_mwh;
+                        
+                        if (EMISSION_FACTORS[tech] > 0) {
+                            const carbon_cost = (EMISSION_FACTORS[tech] / 1000) * carbonTax * annual_generation_mwh;
+                            annual_vom += carbon_cost;
+                        }
 
                         let annual_ptc = 0;
                         if (currentIncentives[tech]) {
@@ -1272,9 +1321,6 @@
                     totalAnnualCost += (annualizedDacCapex + annualDacFom + dacVariableCost - dacIncentiveValue);
                 }
                 
-                const totalAnnualCO2 = calculateEmissions(generation, 0).reduce((a, b) => a + b, 0) * 365;
-                totalAnnualCost += totalAnnualCO2 * currentIncentives.carbonTax;
-
                 const annualExportRevenue = curtailedEnergy.reduce((a, b) => a + b, 0) * 1000 * 365 * currentIncentives.exportPrice;
                 totalAnnualCost -= annualExportRevenue;
 
@@ -1290,16 +1336,14 @@
                 return totalCost * 365;
             }
 
-
-            // --- REWRITTEN DISPATCH LOGIC ---
-            function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProfile, potentialGen, baselineStorageGWh = {}, hydroCF, countryName, storageOverrideDisabled = false) {
+function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProfile, potentialGen, baselineStorageGWh = {}, hydroCF, countryName, storageOverrideDisabled = false, forceMeritOrder = false, predefinedBatterySchedule = null) {
                 const VRE_SOURCES = ['solar', 'wind', 'offshoreWind'];
-                const INFLEXIBLE_SOURCES = ['nuclear', 'geothermal', 'biomass'];
+                const INFLEXIBLE_SOURCES = ['nuclear', 'geothermal', 'biomass']; 
                 
                 let finalGeneration = {
                     coal: Array(24).fill(0), naturalGas: Array(24).fill(0),
                     hydro: Array(24).fill(0), nuclear: Array(24).fill(0),
-                    geothermal: Array(24).fill(0), biomass: Array(24).fill(0),
+                    geothermal: Array(24).fill(0), biomass: Array(24).fill(0), rng: Array(24).fill(0),
                     solar: Array(24).fill(0), wind: Array(24).fill(0), offshoreWind: Array(24).fill(0),
                     storage: Array(24).fill(0), curtailment: Array(24).fill(0),
                     solarToStorage: Array(24).fill(0), windToStorage: Array(24).fill(0), offshoreWindToStorage: Array(24).fill(0)
@@ -1325,7 +1369,7 @@
                         totalAmountToShift -= amountThisIteration;
                     }
                 }
-
+                
                 let currentPotential = JSON.parse(JSON.stringify(potentialGen));
                 for (let i = 0; i < 24; i++) {
                     currentPotential.solar[i] += inputs.capacity.solar * solarProfile[i];
@@ -1334,45 +1378,83 @@
                     currentPotential.nuclear[i] += inputs.capacity.nuclear * COST_DATA.capacity_factor.nuclear;
                     currentPotential.geothermal[i] += inputs.capacity.geothermal * COST_DATA.capacity_factor.geothermal;
                     currentPotential.biomass[i] += inputs.capacity.biomass * COST_DATA.capacity_factor.biomass;
-                }
-                const hydroCapacity = (currentCountryInstalledCapacity.hydro || 0) + (inputs.capacity.hydro || 0);
-                const maxHourlyHydroOutput = countryName === 'California' ? hydroCapacity * 0.32 : hydroCapacity;
-
-                let netLoad = Array(24).fill(0);
-                for (let i = 0; i < 24; i++) {
-                    let vreAndInflexibleGen = 0;
-                    [...INFLEXIBLE_SOURCES, ...VRE_SOURCES].forEach(tech => {
-                        const potential = currentPotential[tech][i];
-                        finalGeneration[tech][i] = potential; 
-                        vreAndInflexibleGen += potential;
-                    });
-                    netLoad[i] = modifiedDemand[i] - vreAndInflexibleGen;
+                    currentPotential.rng[i] += inputs.capacity.rng * COST_DATA.capacity_factor.rng;
                 }
                 
-                if (!storageOverrideDisabled) {
-                    const storageDispatch = dispatchStorageEconomically(netLoad, inputs, baselineStorageGWh, currentPotential);
-                    finalGeneration.storage = storageDispatch.discharge;
+                let netLoad = Array(24).fill(0);
+                for (let i = 0; i < 24; i++) {
+                    let mustRunGen = 0;
+                    const sourcesToSubtract = [...VRE_SOURCES, 'nuclear', 'geothermal'];
                     
-                    for (let i = 0; i < 24; i++) {
-                        netLoad[i] += storageDispatch.charge[i];
-                        netLoad[i] -= storageDispatch.discharge[i];
-                        
-                        // FIX 1: Subtract charged amount from VRE sources for correct visual accounting
-                        if (storageDispatch.charge[i] > 0) {
-                            let totalVrePotential = finalGeneration.solar[i] + finalGeneration.wind[i] + finalGeneration.offshoreWind[i];
-                            if (totalVrePotential > 0) {
-                                let solarCharge = (finalGeneration.solar[i] / totalVrePotential) * storageDispatch.charge[i];
-                                let windCharge = (finalGeneration.wind[i] / totalVrePotential) * storageDispatch.charge[i];
-                                let offshoreCharge = (finalGeneration.offshoreWind[i] / totalVrePotential) * storageDispatch.charge[i];
-                                
-                                finalGeneration.solarToStorage[i] = solarCharge;
-                                finalGeneration.windToStorage[i] = windCharge;
-                                finalGeneration.offshoreWindToStorage[i] = offshoreCharge;
+                    sourcesToSubtract.forEach(tech => {
+                        if (currentPotential[tech]) {
+                            const potential = currentPotential[tech][i];
+                            finalGeneration[tech][i] = potential; 
+                            mustRunGen += potential;
+                        }
+                    });
 
-                                finalGeneration.solar[i] -= solarCharge;
-                                finalGeneration.wind[i] -= windCharge;
-                                finalGeneration.offshoreWind[i] -= offshoreCharge;
-                            }
+                    if (!forceMeritOrder) {
+                        if(currentPotential.biomass) {
+                            const biomassPotential = currentPotential.biomass[i];
+                            finalGeneration.biomass[i] = biomassPotential;
+                            mustRunGen += biomassPotential;
+                        }
+                    } else {
+                        finalGeneration.biomass[i] = 0;
+                    }
+                    
+                    netLoad[i] = modifiedDemand[i] - mustRunGen;
+                }
+                
+                let batteryDischargeEnergy = Array(24).fill(0);
+
+                // --- START: MODIFIED STORAGE LOGIC ---
+                let storageDispatch = { charge: Array(24).fill(0), discharge: Array(24).fill(0) };
+
+                if (predefinedBatterySchedule) {
+                    // Use the externally calculated arbitrage schedule passed from runTwoPassSimulation
+                    storageDispatch = predefinedBatterySchedule;
+                } else if (!storageOverrideDisabled) {
+                    // This is the original logic path, now used only by the Thermal Margin model.
+                    if (forceMeritOrder) {
+                        // This call to dispatchStorageAsGenerator is part of the old logic. The new arbitrage flow bypasses this entirely.
+                        storageDispatch = dispatchStorageAsGenerator(netLoad, inputs, baselineStorageGWh, currentPotential, modifiedDemand, hydroCF, countryName);
+                    } else {
+                        storageDispatch = dispatchStorageEconomically(netLoad, inputs, baselineStorageGWh, currentPotential);
+                    }
+                }
+                // If storageOverrideDisabled is true and no predefined schedule, storageDispatch correctly remains all zeros for the preliminary run.
+                
+                finalGeneration.storage = storageDispatch.discharge;
+                batteryDischargeEnergy = storageDispatch.discharge;
+                // --- END: MODIFIED STORAGE LOGIC ---
+
+                for (let i = 0; i < 24; i++) {
+                    // This logic correctly applies the chosen storage actions to the netLoad
+                    netLoad[i] += storageDispatch.charge[i];
+                    if (!forceMeritOrder) {
+                        netLoad[i] -= storageDispatch.discharge[i];
+                    }
+                    
+                    if (storageDispatch.charge[i] > 0) {
+                        let totalVrePotential = finalGeneration.solar[i] + finalGeneration.wind[i] + finalGeneration.offshoreWind[i];
+                        if (totalVrePotential > 0) {
+                            let solarCharge = (finalGeneration.solar[i] / totalVrePotential) * storageDispatch.charge[i];
+                            let windCharge = (finalGeneration.wind[i] / totalVrePotential) * storageDispatch.charge[i];
+                            let offshoreCharge = (finalGeneration.offshoreWind[i] / totalVrePotential) * storageDispatch.charge[i];
+                            
+                            solarCharge = Math.min(solarCharge, finalGeneration.solar[i]);
+                            windCharge = Math.min(windCharge, finalGeneration.wind[i]);
+                            offshoreCharge = Math.min(offshoreCharge, finalGeneration.offshoreWind[i]);
+
+                            finalGeneration.solarToStorage[i] = solarCharge;
+                            finalGeneration.windToStorage[i] = windCharge;
+                            finalGeneration.offshoreWindToStorage[i] = offshoreCharge;
+
+                            finalGeneration.solar[i] -= solarCharge;
+                            finalGeneration.wind[i] -= windCharge;
+                            finalGeneration.offshoreWind[i] -= offshoreCharge;
                         }
                     }
                 }
@@ -1388,9 +1470,6 @@
                             [...INFLEXIBLE_SOURCES, ...VRE_SOURCES].forEach(tech => {
                                 const proportion = finalGeneration[tech][i] / availableForCurtailment;
                                 const reduction = finalGeneration.curtailment[i] * proportion;
-                                if (curtailmentBySource.hasOwnProperty(tech)) {
-                                    curtailmentBySource[tech][i] += reduction;
-                                }                                
                                 finalGeneration[tech][i] -= reduction;
                             });
                         }
@@ -1398,79 +1477,23 @@
                     }
                 }
                 
-                let netLoadRamp = Array(24).fill(0);
-                for (let i = 0; i < 24; i++) {
-                    // For the first hour, the previous hour is the last hour of the day (hour 23)
-                    const previousHourIndex = (i === 0) ? 23 : i - 1;
-                    const ramp = netLoad[i] - netLoad[previousHourIndex];
+                const dispatchResult = calculateDispatchableGenerationAndPrice(
+                    netLoad, inputs, currentPotential, forceMeritOrder, hydroCF, countryName, batteryDischargeEnergy
+                );
 
-                    // We only care about ramping UP, so we ignore negative ramps (ramping down)
-                    if (ramp > 0) {
-                        netLoadRamp[i] = ramp;
-                    }
-                }                
-                // Define the capacities based on the current state of the model
-                const totalNGCapacity = (currentCountryInstalledCapacity.naturalGas || 0) + (inputs.capacity.naturalGas || 0);
-                const ccgtCapacity = totalNGCapacity * 0.70;
-                const ctCapacity = totalNGCapacity * 0.30;
-                const ccgtRampLimitGW = ccgtCapacity * 0.08; // 8% of total CCGT capacity 
-                let thermalGeneration = { naturalGas: Array(24).fill(0), coal: Array(24).fill(0) };
-                let rampPrice = Array(24).fill(0); // <-- ADD THIS LINE
-
-                for (let i = 0; i < 24; i++) {
-                    if (netLoadRamp[i] > ccgtRampLimitGW) {
-                        const excessRamp = netLoadRamp[i] - ccgtRampLimitGW;
-                        const ctDispatchForRamp = Math.min(excessRamp, ctCapacity);
-                        thermalGeneration.naturalGas[i] += ctDispatchForRamp;
-                        netLoad[i] -= ctDispatchForRamp;
-
-                        // --- ADD THIS BLOCK ---
-                        // If we dispatched a CT for the ramp, calculate its marginal price
-                        if (ctDispatchForRamp > 0) {
-                            const costStart = COST_DATA.variable_om.naturalGasCT.start; // e.g., $100
-                            const costEnd = COST_DATA.variable_om.naturalGasCT.end;     // e.g., $150
-                            const priceAtDispatch = costStart + (costEnd - costStart) * (ctDispatchForRamp / ctCapacity);
-                            rampPrice[i] = priceAtDispatch;
-                        }
-                        // --- END ADDED BLOCK ---
-                    }
-                }
-                const totalDailyHydroEnergy = hydroCapacity * hydroCF * 24;
-                const baseloadHydroEnergy = totalDailyHydroEnergy * 0.40;
-                let flexibleHydroEnergy = totalDailyHydroEnergy * 0.60;
-
-                const deficitHours = netLoad.map((load, hour) => load > 0.01 ? hour : -1).filter(hour => hour !== -1);
-                if (deficitHours.length > 0) {
-                    const hourlyBaseloadHydro = baseloadHydroEnergy / deficitHours.length;
-                    deficitHours.forEach(i => {
-                        const hydroToDispatch = Math.min(hourlyBaseloadHydro, netLoad[i], maxHourlyHydroOutput - finalGeneration.hydro[i]);
-                        finalGeneration.hydro[i] += hydroToDispatch;
-                        netLoad[i] -= hydroToDispatch;
-                    });
-                }
-
-                while (flexibleHydroEnergy > 0.01) {
-                    let maxPriority = -Infinity, maxPriorityHour = -1;
-                    for (let i = 0; i < 24; i++) {
-                        if (netLoad[i] > 0.01 && netLoad[i] > maxPriority) {
-                            maxPriority = netLoad[i];
-                            maxPriorityHour = i;
-                        }
-                    }
-                    if (maxPriorityHour === -1) break;
-
-                    const hydroToDispatch = Math.min(0.1, flexibleHydroEnergy, netLoad[maxPriorityHour], maxHourlyHydroOutput - finalGeneration.hydro[maxPriorityHour]);
-                    if (hydroToDispatch < 0.001) break;
-
-                    finalGeneration.hydro[maxPriorityHour] += hydroToDispatch;
-                    netLoad[maxPriorityHour] -= hydroToDispatch;
-                    flexibleHydroEnergy -= hydroToDispatch;
+                finalGeneration.naturalGas = dispatchResult.generation.naturalGas;
+                finalGeneration.coal = dispatchResult.generation.coal;
+                finalGeneration.hydro = dispatchResult.generation.hydro;
+                finalGeneration.rng = dispatchResult.generation.rng;
+                
+                if (forceMeritOrder) {
+                    finalGeneration.biomass.forEach((val, i) => finalGeneration.biomass[i] += dispatchResult.generation.biomass[i]);
+                    // Storage generation is already set from storageDispatch, but we affirm it here from the dispatch result if needed.
+                    finalGeneration.storage = dispatchResult.generation.storage;
                 }
                 
-                const { gasGenDetails, hourlyMarginalPrice, thermalGeneration: finalThermalGeneration } = calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential, thermalGeneration, rampPrice);
-                finalGeneration.naturalGas = finalThermalGeneration.naturalGas;
-                finalGeneration.coal = finalThermalGeneration.coal;                
-                // FIX 2: Override price with export price during curtailment hours
+                const hourlyMarginalPrice = dispatchResult.hourlyMarginalPrice;
+
                 for (let i = 0; i < 24; i++) {
                     if (finalGeneration.curtailment[i] > 0.01) {
                         hourlyMarginalPrice[i] = inputs.incentives.exportPrice;
@@ -1478,7 +1501,7 @@
                 }
 
                 const newEmissions = calculateEmissions(finalGeneration, inputs.capacity.dac);
-                const newSystemCost = calculateTotalAnnualSystemCost(finalGeneration, inputs.capacity, inputs.incentives, finalGeneration.curtailment, currentCountryInstalledCapacity, baselineStorageGWh, gasGenDetails);
+                const newSystemCost = calculateTotalAnnualSystemCost(finalGeneration, inputs.capacity, inputs.incentives, finalGeneration.curtailment, currentCountryInstalledCapacity, baselineStorageGWh, dispatchResult.gasGenDetails);
                 
                 return {
                     generation: finalGeneration,
@@ -1489,16 +1512,324 @@
                     hourlyMarginalPrice: hourlyMarginalPrice 
                 };
             }
-            function calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential, initialThermalGeneration, rampPrice) {            
+
+            function calculateDispatchableGenerationAndPrice(netLoad, inputs, currentPotential, useFullMeritOrder, hydroCF, countryName, batteryDischargeEnergy = Array(24).fill(0)) {
+                if (useFullMeritOrder) {
+                    return calculateFullMeritOrderDispatchAndPrice(netLoad, inputs, currentPotential, hydroCF, countryName, batteryDischargeEnergy);
+                } else {
+                    const hydroCapacity = (currentCountryInstalledCapacity.hydro || 0) + (inputs.capacity.hydro || 0);
+                    const maxHourlyHydroOutput = countryName === 'California' ? hydroCapacity * 0.32 : hydroCapacity;
+                    const hydroGeneration = Array(24).fill(0);
+                    let loadAfterHydro = [...netLoad];
+
+                    const totalDailyHydroEnergy = hydroCapacity * hydroCF * 24;
+                    const baseloadHydroEnergy = totalDailyHydroEnergy * 0.40;
+                    let flexibleHydroEnergy = totalDailyHydroEnergy * 0.60;
+
+                    const deficitHours = loadAfterHydro.map((load, hour) => load > 0.01 ? hour : -1).filter(hour => hour !== -1);
+                    if (deficitHours.length > 0) {
+                        const hourlyBaseloadHydro = baseloadHydroEnergy / deficitHours.length;
+                        deficitHours.forEach(i => {
+                            const hydroToDispatch = Math.min(hourlyBaseloadHydro, loadAfterHydro[i], maxHourlyHydroOutput - hydroGeneration[i]);
+                            hydroGeneration[i] += hydroToDispatch;
+                            loadAfterHydro[i] -= hydroToDispatch;
+                        });
+                    }
+
+                    while (flexibleHydroEnergy > 0.01) {
+                        let maxPriority = -Infinity, maxPriorityHour = -1;
+                        for (let i = 0; i < 24; i++) {
+                            if (loadAfterHydro[i] > 0.01 && loadAfterHydro[i] > maxPriority) {
+                                maxPriority = loadAfterHydro[i];
+                                maxPriorityHour = i;
+                            }
+                        }
+                        if (maxPriorityHour === -1) break;
+
+                        const hydroToDispatch = Math.min(0.1, flexibleHydroEnergy, loadAfterHydro[maxPriorityHour], maxHourlyHydroOutput - hydroGeneration[maxPriorityHour]);
+                        if (hydroToDispatch < 0.001) break;
+
+                        hydroGeneration[maxPriorityHour] += hydroToDispatch;
+                        loadAfterHydro[maxPriorityHour] -= hydroToDispatch;
+                        flexibleHydroEnergy -= hydroToDispatch;
+                    }
+                    
+                    const thermalResult = calculateThermalDispatchAndPrice(loadAfterHydro, inputs, currentPotential);
+                    
+                    return {
+                        generation: {
+                            naturalGas: thermalResult.thermalGeneration.naturalGas,
+                            coal: thermalResult.thermalGeneration.coal,
+                            hydro: hydroGeneration,
+                            rng: thermalResult.thermalGeneration.rng,
+                            biomass: Array(24).fill(0) // Biomass is not dispatchable in this model, so it returns 0.
+                        },
+                        hourlyMarginalPrice: thermalResult.hourlyMarginalPrice,
+                        gasGenDetails: thermalResult.gasGenDetails
+                    };
+                }
+            }
+
+            /**
+             * Plans a full charge/discharge schedule by iteratively finding the best arbitrage opportunity,
+             * dispatching a small batch, and recalculating market prices after each step.
+             * @returns {object} An object containing the final { charge: [...], discharge: [...] } schedules.
+             */
+            function planArbitrageScheduleIteratively(initialNetLoad, inputs, potentialGen, hydroCF, countryName, demand, baselineStorageGWh) {
+                // --- Initialize schedules and storage parameters ---
+                let chargeSchedule = Array(24).fill(0);
+                let dischargeSchedule = Array(24).fill(0);
+                const storageEfficiency = 0.85;
+                const DISPATCH_INCREMENT = 0.1; // GWh batch size
+
+                // --- Calculate total storage energy and power capacity ---
+                const storageTypes = ['battery4hr', 'battery8hr', 'longduration'];
+                let totalStorageEnergyGWh = 0;
+                let totalStoragePowerGW = 0;
+
+                storageTypes.forEach(type => {
+                    if (enabledTechnologies[type]) {
+                        const capacity = (baselineStorageGWh[type] || 0) + inputs.capacity[type];
+                        totalStorageEnergyGWh += capacity;
+                        const duration = type === 'longduration' ? 24 : parseInt(type.match(/\d+/)[0]);
+                        totalStoragePowerGW += capacity / duration;
+                    }
+                });
+
+                if (totalStorageEnergyGWh === 0 || totalStoragePowerGW === 0) {
+                    return { charge: chargeSchedule, discharge: dischargeSchedule };
+                }
+
+                let energyCycledGWh = 0; // Tracks total energy discharged
+                const maxEnergyToCycle = totalStorageEnergyGWh * storageEfficiency;
+                let currentNetLoad = [...initialNetLoad];
+
+                // --- Main iterative loop ---
+                // This loop continues as long as there is energy to cycle and profitable opportunities exist.
+                while (energyCycledGWh < maxEnergyToCycle) {
+
+                    // STEP 1: Recalculate prices based on the current state of the grid
+                    const { hourlyMarginalPrice } = calculateFullMeritOrderDispatchAndPrice(currentNetLoad, inputs, potentialGen, hydroCF, countryName, dischargeSchedule);
+
+                    // STEP 2: Find the best hours to charge (lowest score) and discharge (highest score)
+                    let bestChargeHour = -1, bestDischargeHour = -1;
+                    let minScore = Infinity, maxScore = -Infinity;
+
+                    for (let i = 0; i < 24; i++) {
+                        // Score is price * demand. High score is good for discharging, low is good for charging.
+                        const score = hourlyMarginalPrice[i] * demand[i];
+
+                        // Check for the best DISCHARGE hour
+                        // Add condition: Do NOT consider this hour if it already has a scheduled charge.
+                        if (dischargeSchedule[i] < totalStoragePowerGW && chargeSchedule[i] === 0 && score > maxScore) {
+                            maxScore = score;
+                            bestDischargeHour = i;
+                        }
+                        // Check for the best CHARGE hour
+                        // Add condition: Do NOT consider this hour if it already has a scheduled discharge.
+                        if (chargeSchedule[i] < totalStoragePowerGW && dischargeSchedule[i] === 0 && score < minScore) {
+                            minScore = score;
+                            bestChargeHour = i;
+                        }
+                    }
+
+                    // STEP 3: Check for profitability and exit if no opportunity exists
+                    if (bestChargeHour === -1 || bestDischargeHour === -1 || bestChargeHour === bestDischargeHour) {
+                        break; // No valid pair of hours found
+                    }
+
+                    const dischargePrice = hourlyMarginalPrice[bestDischargeHour];
+                    const chargePrice = hourlyMarginalPrice[bestChargeHour];
+
+                    // If the best discharge price (after efficiency loss) isn't higher than the charge price, stop.
+                    if ((dischargePrice * storageEfficiency) <= chargePrice) {
+                        break;
+                    }
+
+                    // STEP 4: Determine the batch size for this iteration
+                    const chargePowerHeadroom = totalStoragePowerGW - chargeSchedule[bestChargeHour];
+                    const dischargePowerHeadroom = totalStoragePowerGW - dischargeSchedule[bestDischargeHour];
+                    const energyHeadroom = maxEnergyToCycle - energyCycledGWh;
+                    
+                    const dispatchAmount = Math.min(DISPATCH_INCREMENT, dischargePowerHeadroom, energyHeadroom);
+                    const chargeAmount = dispatchAmount / storageEfficiency;
+
+                    // Ensure we don't exceed the charging power limit with this batch
+                    if (chargeAmount > chargePowerHeadroom) {
+                        break; // Can't charge this batch without violating power limits
+                    }
+                    if (dispatchAmount < 0.001) {
+                         break; // Amount is too small, stop iterating
+                    }
+
+                    // STEP 5: Apply the batch to the schedules and the net load for the *next* iteration
+                    dischargeSchedule[bestDischargeHour] += dispatchAmount;
+                    chargeSchedule[bestChargeHour] += chargeAmount;
+                    
+                    energyCycledGWh += dispatchAmount; // Increment the total energy we've decided to discharge
+
+                    // Update the net load for the next price calculation
+                    currentNetLoad[bestDischargeHour] -= dispatchAmount;
+                    currentNetLoad[bestChargeHour] += chargeAmount;
+                }
+
+                return { charge: chargeSchedule, discharge: dischargeSchedule };
+            }            
+
+            function calculateFullMeritOrderDispatchAndPrice(netLoad, inputs, currentPotential, hydroCF, countryName, batteryDischargeEnergy) {
+                const carbonTax = inputs.incentives.carbonTax || 0;
+                const carbonCostCoal = (EMISSION_FACTORS.coal / 1000) * carbonTax;
+                const carbonCostNG = (EMISSION_FACTORS.naturalGas / 1000) * carbonTax;
+
+                const meritOrder = [
+                    { tech: 'wind', cost: COST_DATA.variable_om.wind },
+                    { tech: 'offshoreWind', cost: COST_DATA.variable_om.offshoreWind },
+                    { tech: 'solar', cost: COST_DATA.variable_om.solar },
+                    { tech: 'hydro', cost: COST_DATA.variable_om.hydro },
+                    { tech: 'geothermal', cost: COST_DATA.variable_om.geothermal },
+                    { tech: 'biomass', cost: COST_DATA.variable_om.biomass },
+                    { tech: 'nuclear', cost: COST_DATA.variable_om.nuclear },
+                    { tech: 'rng', cost: COST_DATA.variable_om.rng },
+                    { tech: 'coal', cost: COST_DATA.variable_om.coal + carbonCostCoal },
+                    { tech: 'naturalGasCCGT', cost: COST_DATA.variable_om.naturalGasCCGT.start + carbonCostNG },
+                    { tech: 'naturalGasCT', cost: COST_DATA.variable_om.naturalGasCT.start + carbonCostNG }
+                ].sort((a, b) => a.cost - b.cost);
+                const finalGeneration = { naturalGas: Array(24).fill(0), coal: Array(24).fill(0), hydro: Array(24).fill(0), biomass: Array(24).fill(0), rng: Array(24).fill(0), storage: Array(24).fill(0) };
                 const gasGenDetails = { ccgt: { generation: 0, cost: 0 }, ct: { generation: 0, cost: 0 } };
                 const hourlyMarginalPrice = Array(24).fill(0);
-                const thermalGeneration = { 
-                    naturalGas: [...initialThermalGeneration.naturalGas], 
-                    coal: [...initialThermalGeneration.coal] 
-                };                
+
                 const totalNGCapacity = (currentCountryInstalledCapacity.naturalGas || 0) + (inputs.capacity.naturalGas || 0);
                 const ccgtCapacity = totalNGCapacity * 0.7;
                 const ctCapacity = totalNGCapacity * 0.3;
+                
+                const hydroCapacity = (currentCountryInstalledCapacity.hydro || 0) + (inputs.capacity.hydro || 0);
+                const totalDailyHydroEnergy = hydroCapacity * hydroCF * 24;
+                let remainingDailyHydro = totalDailyHydroEnergy;
+                
+                const storagePowerGW = {};
+                ['battery4hr', 'battery8hr', 'longduration'].forEach(type => {
+                    const capacity = (currentBaselineStorage[type] || 0) + inputs.capacity[type];
+                    const duration = type === 'longduration' ? 24 : parseInt(type.match(/\d+/)[0]);
+                    storagePowerGW[type] = capacity / duration;
+                });
+                const totalStoragePower = Object.values(storagePowerGW).reduce((a, b) => a + b, 0);
+                const tranchePower = totalStoragePower / 3;
+
+                let totalStorageEnergyGWh = 0;
+                ['battery4hr', 'battery8hr', 'longduration'].forEach(type => {
+                    if (enabledTechnologies[type]) {
+                        totalStorageEnergyGWh += (currentBaselineStorage[type] || 0) + inputs.capacity[type];
+                    }
+                });
+                const storageEfficiency = 0.85;
+                let remainingBatteryEnergy = totalStorageEnergyGWh * storageEfficiency;
+
+                for (let i = 0; i < 24; i++) {
+                    let remainingLoad = netLoad[i];
+                    
+                    // --- START: THIS IS THE FIX ---
+                    // Apply the pre-planned battery discharge for this hour.
+                    const plannedDischarge = batteryDischargeEnergy[i] || 0;
+                    if (plannedDischarge > 0) {
+                        const actualDischarge = Math.min(remainingLoad, plannedDischarge);
+                        finalGeneration.storage[i] = actualDischarge;
+                        remainingLoad -= actualDischarge;
+                    }
+                    // --- END: THIS IS THE FIX ---
+
+                    if (remainingLoad <= 0.01) {
+                        // If battery met all the load, the price is the battery's marginal cost.
+                        // We can set it to a representative value or the cost of the last generator.
+                        // For simplicity, if load is met, we often see prices drop. Let's use 0 for now.
+                        hourlyMarginalPrice[i] = 0; 
+                        continue;
+                    }
+                    for (const source of meritOrder) {
+                        if (remainingLoad <= 0.01) break;
+                        
+                        let availableGen = 0;
+                        let dispatchAmount = 0;
+
+                        switch(source.tech) {
+                            case 'hydro':
+                                const maxHourlyHydroOutput = countryName === 'California' ? hydroCapacity * 0.32 : hydroCapacity;
+                                availableGen = Math.min(maxHourlyHydroOutput, remainingDailyHydro);
+                                dispatchAmount = Math.min(remainingLoad, availableGen);
+                                finalGeneration.hydro[i] += dispatchAmount;
+                                remainingDailyHydro -= dispatchAmount;
+                                break;
+                            
+                            case 'biomass':
+                                availableGen = currentPotential.biomass[i];
+                                dispatchAmount = Math.min(remainingLoad, availableGen);
+                                finalGeneration.biomass[i] += dispatchAmount;
+                                break;
+
+                            case 'rng':
+                                availableGen = currentPotential.rng[i];
+                                dispatchAmount = Math.min(remainingLoad, availableGen);
+                                finalGeneration.rng[i] += dispatchAmount;
+                                break;
+
+                            case 'coal':
+                                availableGen = currentPotential.coal[i];
+                                dispatchAmount = Math.min(remainingLoad, availableGen);
+                                finalGeneration.coal[i] += dispatchAmount;
+                                break;
+                            
+                            case 'naturalGasCCGT':
+                                availableGen = ccgtCapacity;
+                                dispatchAmount = Math.min(remainingLoad, availableGen);
+                                if (dispatchAmount > 0) {
+                                    finalGeneration.naturalGas[i] += dispatchAmount;
+                                    const costStart = COST_DATA.variable_om.naturalGasCCGT.start + carbonCostNG;
+                                    const costEnd = COST_DATA.variable_om.naturalGasCCGT.end + carbonCostNG;
+                                    const priceAtDispatch = costStart + (costEnd - costStart) * (dispatchAmount / ccgtCapacity);
+                                    hourlyMarginalPrice[i] = Math.max(hourlyMarginalPrice[i], priceAtDispatch);
+                                    const avgCost = (costStart + priceAtDispatch) / 2;
+                                    gasGenDetails.ccgt.cost += dispatchAmount * 1000 * avgCost;
+                                }
+                                break;
+
+                            case 'naturalGasCT':
+                                availableGen = ctCapacity;
+                                dispatchAmount = Math.min(remainingLoad, availableGen);
+                                 if (dispatchAmount > 0) {
+                                    finalGeneration.naturalGas[i] += dispatchAmount;
+                                    const costStart = COST_DATA.variable_om.naturalGasCT.start + carbonCostNG;
+                                    const costEnd = COST_DATA.variable_om.naturalGasCT.end + carbonCostNG;
+                                    const priceAtDispatch = costStart + (costEnd - costStart) * (dispatchAmount / ctCapacity);
+                                    hourlyMarginalPrice[i] = Math.max(hourlyMarginalPrice[i], priceAtDispatch);
+                                    const avgCost = (costStart + priceAtDispatch) / 2;
+                                    gasGenDetails.ct.cost += dispatchAmount * 1000 * avgCost;
+                                }
+                                break;
+                        }
+                        
+                        if (dispatchAmount > 0) {
+                            remainingLoad -= dispatchAmount;
+                            if (source.tech !== 'naturalGasCCGT' && source.tech !== 'naturalGasCT') {
+                                hourlyMarginalPrice[i] = source.cost;
+                            }
+                        }
+                    }
+                }
+                const totalDischarged = finalGeneration.storage.reduce((a, b) => a + b, 0);
+                return { generation: finalGeneration, hourlyMarginalPrice, gasGenDetails, totalDischarged };
+            }
+
+            function calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential) {
+                const gasGenDetails = { ccgt: { generation: 0, cost: 0 }, ct: { generation: 0, cost: 0 } };
+                const hourlyMarginalPrice = Array(24).fill(0);
+                const thermalGeneration = { naturalGas: Array(24).fill(0), coal: Array(24).fill(0), rng: Array(24).fill(0) };
+                
+                const totalNGCapacity = (currentCountryInstalledCapacity.naturalGas || 0) + (inputs.capacity.naturalGas || 0);
+                const ccgtCapacity = totalNGCapacity * 0.7;
+                const ctCapacity = totalNGCapacity * 0.3;
+                
+                const carbonTax = inputs.incentives.carbonTax || 0;
+                const carbonCostCoal = (EMISSION_FACTORS.coal / 1000) * carbonTax;
+                const carbonCostNG = (EMISSION_FACTORS.naturalGas / 1000) * carbonTax;
 
                 for (let i = 0; i < 24; i++) {
                     let remainingLoad = netLoad[i];
@@ -1508,14 +1839,24 @@
                         hourlyMarginalPrice[i] = 0;
                         continue;
                     }
+                    
+                    // Dispatch RNG first as it's cheaper than NG
+                    if (currentPotential.rng[i] > 0) {
+                        const rngToDispatch = Math.min(remainingLoad, currentPotential.rng[i]);
+                        if (rngToDispatch > 0) {
+                            thermalGeneration.rng[i] += rngToDispatch;
+                            remainingLoad -= rngToDispatch;
+                            hourlyPrice = Math.max(hourlyPrice, COST_DATA.variable_om.rng);
+                        }
+                    }
 
-                    if (ccgtCapacity > 0) {
+                    if (remainingLoad > 0.01 && ccgtCapacity > 0) {
                         const ccgtToDispatch = Math.min(remainingLoad, ccgtCapacity);
                         if (ccgtToDispatch > 0) {
                             thermalGeneration.naturalGas[i] += ccgtToDispatch;
                             remainingLoad -= ccgtToDispatch;
-                            const costStart = COST_DATA.variable_om.naturalGasCCGT.start;
-                            const costEnd = COST_DATA.variable_om.naturalGasCCGT.end;
+                            const costStart = COST_DATA.variable_om.naturalGasCCGT.start + carbonCostNG;
+                            const costEnd = COST_DATA.variable_om.naturalGasCCGT.end + carbonCostNG;
                             const priceAtDispatch = costStart + (costEnd - costStart) * (ccgtToDispatch / ccgtCapacity);
                             hourlyPrice = Math.max(hourlyPrice, priceAtDispatch);
                             const avgCost = (costStart + priceAtDispatch) / 2;
@@ -1528,8 +1869,8 @@
                         if (ctToDispatch > 0) {
                             thermalGeneration.naturalGas[i] += ctToDispatch;
                             remainingLoad -= ctToDispatch;
-                            const costStart = COST_DATA.variable_om.naturalGasCT.start;
-                            const costEnd = COST_DATA.variable_om.naturalGasCT.end;
+                            const costStart = COST_DATA.variable_om.naturalGasCT.start + carbonCostNG;
+                            const costEnd = COST_DATA.variable_om.naturalGasCT.end + carbonCostNG;
                             const priceAtDispatch = costStart + (costEnd - costStart) * (ctToDispatch / ctCapacity);
                             hourlyPrice = Math.max(hourlyPrice, priceAtDispatch);
                             const avgCost = (costStart + priceAtDispatch) / 2;
@@ -1541,9 +1882,9 @@
                         const coalToDispatch = Math.min(remainingLoad, currentPotential.coal[i]);
                         thermalGeneration.coal[i] += coalToDispatch;
                         remainingLoad -= coalToDispatch;
-                        hourlyPrice = Math.max(hourlyPrice, COST_DATA.variable_om.coal);
+                        hourlyPrice = Math.max(hourlyPrice, COST_DATA.variable_om.coal + carbonCostCoal);
                     }
-                    hourlyMarginalPrice[i] = Math.max(hourlyPrice, rampPrice[i]);
+                    hourlyMarginalPrice[i] = hourlyPrice;
                 }
                 return { gasGenDetails, hourlyMarginalPrice, thermalGeneration };
             }
@@ -1580,13 +1921,8 @@
                 const PROFIT_THRESHOLD = 20; // $20/MWh
 
                 while (true) {
-                    const { hourlyMarginalPrice } = calculateThermalDispatchAndPrice(
-                        netLoad, 
-                        inputs, 
-                        currentPotential, 
-                        { naturalGas: Array(24).fill(0), coal: Array(24).fill(0) },
-                        Array(24).fill(0) // <-- ADD THIS LINE for the 5th 'rampPrice' argument
-                    );
+                    const { hourlyMarginalPrice } = calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential);
+                    
                     let maxPrice = -Infinity, minPrice = Infinity;
                     let maxPriceHour = -1, minPriceHour = -1;
 
@@ -1618,7 +1954,7 @@
 
                     const dispatchAmount = Math.min(DISPATCH_INCREMENT, chargeHeadroom, dischargeHeadroom, energyHeadroom);
 
-                    if (dispatchAmount < 0.01) {
+                    if (dispatchAmount < 0.001) {
                         break; 
                     }
 
@@ -1634,37 +1970,114 @@
                 return { charge: hourlyCharge, discharge: hourlyDischarge };
             }
 
+            function dispatchStorageAsGenerator(initialNetLoad, inputs, baselineStorageGWh, currentPotential, demand, hydroCF, countryName) {
+                const storageTypes = ['battery4hr', 'battery8hr', 'longduration'];
+                let totalStorageEnergyGWh = 0;
+                let totalStoragePowerGW = 0;
 
+                storageTypes.forEach(type => {
+                    if (enabledTechnologies[type]) {
+                        const capacity = (baselineStorageGWh[type] || 0) + inputs.capacity[type];
+                        totalStorageEnergyGWh += capacity;
+                        const duration = type === 'longduration' ? 24 : parseInt(type.match(/\d+/)[0]);
+                        totalStoragePowerGW += capacity / duration;
+                    }
+                });
+
+                if (totalStorageEnergyGWh === 0) {
+                    return { charge: Array(24).fill(0), discharge: Array(24).fill(0) };
+                }
+
+                let netLoadForCharging = [...initialNetLoad];
+                let hourlyCharge = Array(24).fill(0);
+                let totalChargedGWh = 0;
+                const storageEfficiency = 0.85;
+                const DISPATCH_INCREMENT = 0.1;
+
+                // Iteratively charge the battery based on price/demand score
+                while (totalChargedGWh < totalStorageEnergyGWh) {
+                    const priceResult = calculateFullMeritOrderDispatchAndPrice(netLoadForCharging, inputs, currentPotential, hydroCF, countryName, Array(24).fill(0));
+                    const hourlyPrice = priceResult.hourlyMarginalPrice;
+
+                    let bestScore = Infinity;
+                    let bestHour = -1;
+
+                    for (let i = 0; i < 24; i++) {
+                        if (hourlyCharge[i] < totalStoragePowerGW) { // Check power capacity headroom
+                            const score = demand[i] > 0 ? hourlyPrice[i] / demand[i] : (hourlyPrice[i] === 0 ? -Infinity : hourlyPrice[i]);
+                            if (score < bestScore) {
+                                bestScore = score;
+                                bestHour = i;
+                            }
+                        }
+                    }
+
+                    if (bestHour === -1) break; 
+                    
+                    const chargeHeadroom = totalStoragePowerGW - hourlyCharge[bestHour];
+                    const energyHeadroom = totalStorageEnergyGWh - totalChargedGWh;
+                    const chargeAmount = Math.min(DISPATCH_INCREMENT, chargeHeadroom, energyHeadroom);
+
+                    if (chargeAmount < 0.001) break;
+
+                    hourlyCharge[bestHour] += chargeAmount;
+                    totalChargedGWh += chargeAmount;
+                    netLoadForCharging[bestHour] += chargeAmount;
+                }
+                
+                let hourlyDischarge = Array(24).fill(0);
+                let totalEnergyToDispatch = totalChargedGWh * storageEfficiency;
+                let netLoadForDischarging = [...initialNetLoad];
+                 for(let i=0; i<24; i++) {
+                    netLoadForDischarging[i] += hourlyCharge[i];
+                }
+                
+                // Iteratively decide discharge hours based on profit
+                while (totalEnergyToDispatch > 0.01) {
+                    const priceResult = calculateFullMeritOrderDispatchAndPrice(netLoadForDischarging, inputs, currentPotential, hydroCF, countryName, hourlyDischarge);
+                    const hourlyPrice = priceResult.hourlyMarginalPrice;
+
+                    let bestScore = -Infinity;
+                    let bestHour = -1;
+
+                    for (let i = 0; i < 24; i++) {
+                        if (hourlyDischarge[i] < totalStoragePowerGW) { // Check power capacity headroom
+                            const score = hourlyPrice[i] * demand[i];
+                            if (score > bestScore) {
+                                bestScore = score;
+                                bestHour = i;
+                            }
+                        }
+                    }
+                    
+                    if (bestHour === -1) break;
+
+                    const dischargeHeadroom = totalStoragePowerGW - hourlyDischarge[bestHour];
+                    const dischargeAmount = Math.min(DISPATCH_INCREMENT, dischargeHeadroom, totalEnergyToDispatch);
+
+                    if (dischargeAmount < 0.001) break;
+
+                    hourlyDischarge[bestHour] += dischargeAmount;
+                    totalEnergyToDispatch -= dischargeAmount;
+                    netLoadForDischarging[bestHour] -= dischargeAmount;
+                }
+
+                return { charge: hourlyCharge, discharge: hourlyDischarge };
+            }
+
+
+            // --- UPDATED SIMULATION RUNNER ---
             function runSimulation() {
                 const currentValues = {};
                 for (const key in sliders) {
                     currentValues[key] = parseFloat(sliders[key].value);
                 }
                 
-                const selectedCountry = countrySelect.value;
-                const baseSolarProfile = (countryProfiles[selectedCountry] || countryProfiles.default).solar;
-                const baseWindProfile = (countryProfiles[selectedCountry] || countryProfiles.default).wind;
-                const baseOffshoreWindProfile = (countryProfiles[selectedCountry] || countryProfiles.default).offshoreWind;
-                
-                const baseSeason = currentDemandProfileName.split(' ')[0].toLowerCase();
-                const seasonalMultipliers = SEASONAL_MULTIPLIERS[baseSeason] || { solar: 1.0, wind: 1.0, offshoreWind: 1.0 };
-                const seasonalSolarProfile = currentSolarCFProfile.length > 0 ? currentSolarCFProfile : baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
-                const seasonalWindProfile = currentWindCFProfile.length > 0 ? currentWindCFProfile : baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
-                const seasonalOffshoreWindProfile = currentOffshoreWindCFProfile.length > 0 ? currentOffshoreWindCFProfile : baseOffshoreWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.offshoreWind));
-
-
-                let activePotentialGeneration = JSON.parse(JSON.stringify(BASELINE_POTENTIAL_GENERATION));
-                for (const tech in enabledTechnologies) {
-                    if (!enabledTechnologies[tech]) {
-                        activePotentialGeneration[tech] = Array(24).fill(0);
-                    }
-                }
-                
                 const inputsForSim = {
                     capacity: {
                         solar: currentValues.solar, wind: currentValues.wind, offshoreWind: currentValues.offshoreWind,
                         geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
-                        biomass: currentValues.biomass,
+                        biomass: currentValues.biomass, rng: currentValues.rng,
                         battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
                         longduration: currentValues.longduration, dac: currentValues.dac,
                         demandflex: currentValues.demandflex,
@@ -1672,25 +2085,17 @@
                     incentives: {
                         solar: currentValues.solarIncentive, wind: currentValues.windIncentive, offshoreWind: currentValues.offshoreWindIncentive,
                         geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
-                        biomass: currentValues.biomassIncentive,
+                        biomass: currentValues.biomassIncentive, rng: currentValues.rngIncentive,
                         storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
                         carbonTax: currentValues.carbonTax,
                         exportPrice: currentValues.exportPrice,
                     }
                 };
+                
+                const { result, useFullMeritOrder, actualRenewableShare } = runTwoPassSimulation(inputsForSim);
+                const { result: resultWithoutStorage } = runTwoPassSimulation(inputsForSim, true);
 
-                const result = getSimulationResult(
-                    inputsForSim,
-                    seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
-                    activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry
-                );
-
-                const resultWithoutStorage = getSimulationResult(
-                    inputsForSim,
-                    seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
-                    activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry,
-                    true // storageOverrideDisabled = true
-                );
+                updatePricingModelIndicator(useFullMeritOrder, actualRenewableShare);
 
                 const totalDailyCO2 = result.emissions.reduce((a, b) => a + b, 0);
                 
@@ -1713,6 +2118,17 @@
                 if (co2Avoided > 0) {
                     abatementCost = costDifference / co2Avoided;
                 }
+
+                const selectedCountry = countrySelect.value;
+                const baseSolarProfile = (countryProfiles[selectedCountry] || countryProfiles.default).solar;
+                const baseWindProfile = (countryProfiles[selectedCountry] || countryProfiles.default).wind;
+                const baseOffshoreWindProfile = (countryProfiles[selectedCountry] || countryProfiles.default).offshoreWind;
+                const baseSeason = currentDemandProfileName.split(' ')[0].toLowerCase();
+                const seasonalMultipliers = SEASONAL_MULTIPLIERS[baseSeason] || { solar: 1.0, wind: 1.0, offshoreWind: 1.0 };
+                const seasonalSolarProfile = currentSolarCFProfile.length > 0 ? currentSolarCFProfile : baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
+                const seasonalWindProfile = currentWindCFProfile.length > 0 ? currentWindCFProfile : baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
+                const seasonalOffshoreWindProfile = currentOffshoreWindCFProfile.length > 0 ? currentOffshoreWindCFProfile : baseOffshoreWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.offshoreWind));
+
 
                 updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile, result.hourlyMarginalPrice, resultWithoutStorage.hourlyMarginalPrice);
                 updateGridMixSlider(currentCountryInstalledCapacity, defaultCapacityMix);
@@ -1751,6 +2167,142 @@
                 }
             }
             
+            /**
+             * Creates a 24-hour discharging schedule based on iteratively finding the hours with the highest value score.
+             * @param {number} totalEnergyToDispatch - The total energy that needs to be discharged.
+             * @param {number[]} hourlyPrices - The 24-hour marginal price forecast.
+             * @param {number[]} hourlyDemand - The 24-hour demand profile.
+             * @param {object} inputs - The main simulation inputs object.
+             * @param {object} baselineStorageGWh - The baseline storage capacity.
+             * @returns {number[]} A 24-hour array representing the discharging schedule.
+             */
+            function planDischargingSchedule(totalEnergyToDispatch, hourlyPrices, hourlyDemand, inputs, baselineStorageGWh) {
+                let dischargeSchedule = Array(24).fill(0);
+                if (totalEnergyToDispatch <= 0) return dischargeSchedule;
+
+                let dispatchedGWh = 0;
+                const DISCHARGE_INCREMENT = 0.1;
+
+                // Calculate total battery power capacity for discharging
+                const storageTypes = ['battery4hr', 'battery8hr', 'longduration'];
+                let totalStoragePowerGW = 0;
+                storageTypes.forEach(type => {
+                    if (enabledTechnologies[type]) {
+                        const capacity = (baselineStorageGWh[type] || 0) + inputs.capacity[type];
+                        const duration = type === 'longduration' ? 24 : parseInt(type.match(/\d+/)[0]);
+                        totalStoragePowerGW += capacity / duration;
+                    }
+                });
+
+                if (totalStoragePowerGW === 0) return dischargeSchedule;
+
+                // This loop plans the entire discharge schedule based on one set of prices.
+                while (dispatchedGWh < totalEnergyToDispatch) {
+                    let bestHour = -1;
+                    let maxScore = -Infinity;
+
+                    for (let i = 0; i < 24; i++) {
+                        // Only consider hours that have discharging headroom below the power limit
+                        if (dischargeSchedule[i] < totalStoragePowerGW) {
+                            // The score is high when price and demand are high.
+                            const score = hourlyPrices[i] * hourlyDemand[i];
+                            if (score > maxScore) {
+                                maxScore = score;
+                                bestHour = i;
+                            }
+                        }
+                    }
+
+                    if (bestHour === -1) {
+                        // No available hour to discharge, break to prevent an infinite loop.
+                        break;
+                    }
+
+                    const dischargeAmount = Math.min(DISCHARGE_INCREMENT, totalEnergyToDispatch - dispatchedGWh, totalStoragePowerGW - dischargeSchedule[bestHour]);
+                    dischargeSchedule[bestHour] += dischargeAmount;
+                    dispatchedGWh += dischargeAmount;
+                }
+
+                return dischargeSchedule;
+            }
+            
+            // --- NEW: Centralized Two-Pass Simulation Logic ---
+            function runTwoPassSimulation(inputs, storageOverride = false) {
+                const selectedCountry = countrySelect.value;
+                const baseSolarProfile = (countryProfiles[selectedCountry] || countryProfiles.default).solar;
+                const baseWindProfile = (countryProfiles[selectedCountry] || countryProfiles.default).wind;
+                const baseOffshoreWindProfile = (countryProfiles[selectedCountry] || countryProfiles.default).offshoreWind;
+                const baseSeason = currentDemandProfileName.split(' ')[0].toLowerCase();
+                const seasonalMultipliers = SEASONAL_MULTIPLIERS[baseSeason] || { solar: 1.0, wind: 1.0, offshoreWind: 1.0 };
+                const seasonalSolarProfile = currentSolarCFProfile.length > 0 ? currentSolarCFProfile : baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
+                const seasonalWindProfile = currentWindCFProfile.length > 0 ? currentWindCFProfile : baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
+                const seasonalOffshoreWindProfile = currentOffshoreWindCFProfile.length > 0 ? currentOffshoreWindCFProfile : baseOffshoreWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.offshoreWind));
+                
+                let activePotentialGeneration = JSON.parse(JSON.stringify(BASELINE_POTENTIAL_GENERATION));
+                for (const tech in enabledTechnologies) {
+                    if (!enabledTechnologies[tech]) {
+                        activePotentialGeneration[tech] = Array(24).fill(0);
+                    }
+                }
+
+                const firstPassResult = getSimulationResult(
+                    inputs, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
+                    activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry, storageOverride, false
+                );
+
+                const flexibleRenewableSources = ['solar', 'wind', 'offshoreWind', 'hydro', 'biomass', 'rng', 'geothermal'];
+                let totalDailyEnergy = 0;
+                let flexibleRenewableDailyEnergy = 0;
+
+                for(const tech in firstPassResult.generation) {
+                    if (tech.includes('ToStorage') || tech === 'curtailment') continue;
+                    const dailyTotal = firstPassResult.generation[tech].reduce((a, b) => a + b, 0);
+                    totalDailyEnergy += dailyTotal;
+                    if (flexibleRenewableSources.includes(tech)) {
+                        flexibleRenewableDailyEnergy += dailyTotal;
+                    }
+                }
+                const actualRenewableShare = totalDailyEnergy > 0 ? (flexibleRenewableDailyEnergy / totalDailyEnergy) : 0;
+                const useFullMeritOrder = actualRenewableShare > 0.70;
+
+                if (useFullMeritOrder && !storageOverride) {
+                    // --- RENEWABLE MARGIN: Use new iterative arbitrage model ---
+
+                    // Step 1: Calculate the initial net load BEFORE any storage is dispatched.
+                    // This is the load that the iterative planner will try to smooth out.
+                    let initialNetLoad = Array(24).fill(0);
+                    for (let i = 0; i < 24; i++) {
+                        let mustRunGen = 0;
+                        const sourcesToSubtract = ['solar', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass'];
+                        sourcesToSubtract.forEach(tech => {
+                            if (activePotentialGeneration[tech]) {
+                                mustRunGen += (activePotentialGeneration[tech][i] || 0) + (inputs.capacity[tech] || 0) * (tech === 'solar' ? seasonalSolarProfile[i] : (tech === 'wind' ? seasonalWindProfile[i] : (tech === 'offshoreWind' ? seasonalOffshoreWindProfile[i] : COST_DATA.capacity_factor[tech])));
+                            }
+                        });
+                        initialNetLoad[i] = currentDemand[i] - mustRunGen;
+                    }
+
+                    // Step 2: Call the iterative planner ONCE. It will perform all the batching and 
+                    // price recalculations internally to find the optimal schedule.
+                    const optimalSchedule = planArbitrageScheduleIteratively(
+                        initialNetLoad, inputs, activePotentialGeneration, currentHydroCF, selectedCountry, currentDemand, currentBaselineStorage
+                    );
+
+                    // Step 3: Run the final simulation using the optimized schedule to get the final grid state.
+                    const finalSimResult = getSimulationResult(
+                        inputs, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile,
+                        activePotentialGeneration, currentBaselineStorage, currentHydroCF, selectedCountry,
+                        false, true, optimalSchedule
+                    );
+                    
+                    return { result: finalSimResult, useFullMeritOrder, actualRenewableShare };
+   
+                } else {
+                    // --- THERMAL MARGIN (or storage-disabled run): Use the original "price taker" model ---
+                    return { result: firstPassResult, useFullMeritOrder, actualRenewableShare };
+                }
+            }
+
             function calculateEmissions(generation, dacRate) {
                 const co2 = [];
                 for (let i = 0; i < 24; i++) {
@@ -1768,10 +2320,10 @@
                 const chartData = generationChart.data.datasets;
                 
                 const techMap = {
-                    nuclear: 0, geothermal: 1, biomass: 2, hydro: 3, 
-                    wind: 4, offshoreWind: 5, solar: 6, 
-                    naturalGas: 7, coal: 8, storage: 9, curtailment: 10,
-                    solarToStorage: 11, windToStorage: 12, offshoreWindToStorage: 13
+                    nuclear: 0, geothermal: 1, biomass: 2, rng: 3, hydro: 4, 
+                    wind: 5, offshoreWind: 6, solar: 7, 
+                    naturalGas: 8, coal: 9, storage: 10, curtailment: 11,
+                    solarToStorage: 12, windToStorage: 13, offshoreWindToStorage: 14
                 };
 
                 for (const tech in techMap) {
@@ -1779,7 +2331,7 @@
                         chartData[techMap[tech]].data = generation[tech];
                     }
                 }
-                chartData[14].data = demand;
+                chartData[15].data = demand;
 
                 generationChart.update('none');
                 
@@ -1846,11 +2398,12 @@
             }
             
             function createGridMixSliders() {
-                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass'];
+                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass', 'rng'];
                 techOrder.forEach(tech => {
                     let name = tech.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
                     if (tech === 'wind') name = 'Onshore Wind';
                     if (tech === 'offshoreWind') name = 'Offshore Wind';
+                    if (tech === 'rng') name = 'RNG (Biogas)';
 
                     const color = COLORS[tech] || '#ccc';
 
@@ -1954,7 +2507,7 @@
                 dailyGenerationTotalsGWh = {}; // Clear previous totals
                 let totalGeneration = 0;
 
-                const gridTechs = ['coal', 'naturalGas', 'hydro', 'geothermal', 'biomass', 'nuclear', 'solar', 'wind', 'offshoreWind', 'storage'];
+                const gridTechs = ['coal', 'naturalGas', 'hydro', 'geothermal', 'biomass', 'rng', 'nuclear', 'solar', 'wind', 'offshoreWind', 'storage'];
                 gridTechs.forEach(tech => {
                     const techTotal = (generation[tech] || []).reduce((a, b) => a + b, 0);
                     dailyGenerationTotalsGWh[tech] = techTotal;
@@ -2030,11 +2583,12 @@
             }
 
             function createGenerationMixSliders() {
-                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass', 'storage'];
+                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass', 'rng', 'storage'];
                 techOrder.forEach(tech => {
                     let name = tech.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
                     if (tech === 'wind') name = 'Onshore Wind';
                     if (tech === 'offshoreWind') name = 'Offshore Wind';
+                    if (tech === 'rng') name = 'RNG (Biogas)';
                     const color = COLORS[tech] || '#ccc';
 
                     const wrapper = document.createElement('div');
@@ -2214,34 +2768,27 @@
                         activePotentialGeneration[tech] = Array(24).fill(0);
                     }
                 }
-
-                const newBaselineResult = getSimulationResult(
-                    {
-                        capacity: {
-                            solar: currentValues.solar, wind: currentValues.wind, offshoreWind: currentValues.offshoreWind,
-                            geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
-                            biomass: currentValues.biomass,
-                            battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
-                            longduration: currentValues.longduration, dac: currentValues.dac,
-                            demandflex: currentValues.demandflex,
-                        },
-                        incentives: {
-                            solar: currentValues.solarIncentive, wind: currentValues.windIncentive, offshoreWind: currentValues.offshoreWindIncentive,
-                            geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
-                            biomass: currentValues.biomassIncentive,
-                            storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
-                            carbonTax: currentValues.carbonTax,
-                            exportPrice: currentValues.exportPrice,
-                        }
+                
+                const inputsForBaseline = {
+                    capacity: {
+                        solar: currentValues.solar, wind: currentValues.wind, offshoreWind: currentValues.offshoreWind,
+                        geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
+                        biomass: currentValues.biomass, rng: currentValues.rng,
+                        battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
+                        longduration: currentValues.longduration, dac: currentValues.dac,
+                        demandflex: currentValues.demandflex,
                     },
-                    currentSolarCFProfile,
-                    currentWindCFProfile,
-                    currentOffshoreWindCFProfile,
-                    activePotentialGeneration,
-                    currentBaselineStorage,
-                    currentHydroCF,
-                    countrySelect.value
-                );
+                    incentives: {
+                        solar: currentValues.solarIncentive, wind: currentValues.windIncentive, offshoreWind: currentValues.offshoreWindIncentive,
+                        geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
+                        biomass: currentValues.biomassIncentive, rng: currentValues.rngIncentive,
+                        storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
+                        carbonTax: currentValues.carbonTax,
+                        exportPrice: currentValues.exportPrice,
+                    }
+                };
+                
+                const { result: newBaselineResult } = runTwoPassSimulation(inputsForBaseline);
                 
                 customBaselineSystemCost = newBaselineResult.systemCost;
                 customBaselineConsumerCost = calculateAnnualConsumerCost(newBaselineResult.hourlyMarginalPrice, newBaselineResult.demand);
@@ -2624,20 +3171,14 @@
                        enabledTechnologies[tech] = true;
                     }
                 });
+                
+                const inputsForBaseline = { 
+                    capacity: { solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, nuclear: 0, biomass: 0, rng: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
+                    incentives: { solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, nuclear: 0, biomass: 0, rng: 0, storage: 0, dac: 0, carbonTax: newCarbonTax, exportPrice: newExportPrice }
+                };
+                
+                const { result: baselineResult } = runTwoPassSimulation(inputsForBaseline);
 
-                const baselineResult = getSimulationResult(
-                    { 
-                        capacity: { solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, nuclear: 0, biomass: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
-                        incentives: { solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, nuclear: 0, biomass: 0, storage: 0, dac: 0, carbonTax: newCarbonTax, exportPrice: newExportPrice }
-                    },
-                    currentSolarCFProfile,
-                    currentWindCFProfile,
-                    currentOffshoreWindCFProfile,
-                    BASELINE_POTENTIAL_GENERATION,
-                    currentBaselineStorage,
-                    currentHydroCF,
-                    countryName
-                );
                 customBaselineSystemCost = baselineResult.systemCost;
                 customBaselineConsumerCost = calculateAnnualConsumerCost(baselineResult.hourlyMarginalPrice, baselineResult.demand); // NEW
                 customBaselineTotalAnnualCO2 = baselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
@@ -2681,6 +3222,20 @@
                 applySeason(currentSystemDefaultProfileName);
             });
             
+            // --- NEW: Pricing Model Indicator ---
+            function updatePricingModelIndicator(useFullMeritOrder, renewableShare) {
+                const percentage = (renewableShare * 100).toFixed(1);
+                if (useFullMeritOrder) {
+                    pricingModelIndicator.textContent = 'Renewable Margin';
+                    pricingModelIndicator.className = 'bg-green-100 text-green-800 text-sm';
+                    pricingModelIndicator.dataset.tooltipText = `Daily renewable share is ${percentage}% (>70%), so a full merit order pricing model is active. All generators can set the price.`;
+                } else {
+                    pricingModelIndicator.textContent = 'Thermal Margin';
+                    pricingModelIndicator.className = 'bg-gray-200 text-gray-800 text-sm';
+                    pricingModelIndicator.dataset.tooltipText = `Daily renewable share is ${percentage}% (<70%), so price is set by the marginal thermal plant.`;
+                }
+            }
+
             document.addEventListener('mousemove', (e) => {
                 hoverTooltip.style.left = e.pageX + 15 + 'px';
                 hoverTooltip.style.top = e.pageY + 15 + 'px';
@@ -2858,6 +3413,66 @@
                 popoverEl.style.transform = 'none';
                 popoverEl.style.visibility = 'visible';
             }
+
+            /**
+             * Creates a 24-hour charging schedule based on iteratively finding the hours with the lowest value score.
+             * @param {number} totalRequiredChargeGWh - The total energy that needs to be charged.
+             * @param {number[]} hourlyPrices - The 24-hour marginal price forecast.
+             * @param {number[]} hourlyDemand - The 24-hour demand profile.
+             * @param {object} inputs - The main simulation inputs object.
+             * @param {object} baselineStorageGWh - The baseline storage capacity.
+             * @returns {number[]} A 24-hour array representing the charging schedule.
+             */
+            function planChargingSchedule(totalRequiredChargeGWh, hourlyPrices, hourlyDemand, inputs, baselineStorageGWh) {
+                let chargeSchedule = Array(24).fill(0);
+                if (totalRequiredChargeGWh <= 0) return chargeSchedule;
+
+                let chargedGWh = 0;
+                const CHARGE_INCREMENT = 0.1;
+
+                // Calculate total battery power capacity for charging
+                const storageTypes = ['battery4hr', 'battery8hr', 'longduration'];
+                let totalStoragePowerGW = 0;
+                storageTypes.forEach(type => {
+                    if (enabledTechnologies[type]) {
+                        const capacity = (baselineStorageGWh[type] || 0) + inputs.capacity[type];
+                        const duration = type === 'longduration' ? 24 : parseInt(type.match(/\d+/)[0]);
+                        totalStoragePowerGW += capacity / duration;
+                    }
+                });
+
+                if (totalStoragePowerGW === 0) return chargeSchedule;
+
+                // This loop plans the entire charge schedule based on one set of prices.
+                // Re-calculating prices after every 0.1 GWh is too computationally intensive.
+                while (chargedGWh < totalRequiredChargeGWh) {
+                    let bestHour = -1;
+                    let minScore = Infinity;
+
+                    for (let i = 0; i < 24; i++) {
+                        // Only consider hours that have charging headroom below the power limit
+                        if (chargeSchedule[i] < totalStoragePowerGW) {
+                            // The score is low when price and demand are low.
+                            const score = hourlyPrices[i] * hourlyDemand[i];
+                            if (score < minScore) {
+                                minScore = score;
+                                bestHour = i;
+                            }
+                        }
+                    }
+
+                    if (bestHour === -1) {
+                        // No available hour to charge, break to prevent an infinite loop.
+                        break;
+                    }
+
+                    const chargeAmount = Math.min(CHARGE_INCREMENT, totalRequiredChargeGWh - chargedGWh, totalStoragePowerGW - chargeSchedule[bestHour]);
+                    chargeSchedule[bestHour] += chargeAmount;
+                    chargedGWh += chargeAmount;
+                }
+
+                return chargeSchedule;
+            }            
 
             function showTutorialStep(stepIndex) {
                 if (stepIndex < 0 || stepIndex >= tutorialSteps.length) {
