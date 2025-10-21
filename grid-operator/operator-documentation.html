@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Operator Game Documentation | Dr. Eshan Singh</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+
+    <style>
+        html { scroll-behavior: smooth; }
+        body {
+            background-color: #fcfcfc;
+            font-family: 'Inter', sans-serif;
+        }
+        .font-lora { font-family: 'Lora', serif; }
+
+        /* Glass Card Effect */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        /* Documentation specific styles */
+        .documentation-content h3 {
+            font-size: 1.5rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 0.5rem;
+            color: #1f2937;
+        }
+        .documentation-content h4 {
+            font-size: 1.2rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: #2563eb;
+            font-weight: 600;
+        }
+        .documentation-content h5 {
+            font-size: 1.1rem;
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+            color: #374151;
+            font-weight: 600;
+        }
+        .documentation-content p, .documentation-content li {
+            line-height: 1.7;
+            text-align: justify;
+            color: #4b5563;
+        }
+        .documentation-content ul, .documentation-content ol {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .documentation-content ol li {
+            margin-bottom: 0.75rem;
+        }
+        .documentation-content strong {
+            color: #1f2937;
+        }
+        .documentation-content a {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .documentation-content a:hover {
+            text-decoration: underline;
+        }
+        .documentation-content code {
+            background-color: rgba(37, 99, 235, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.875rem;
+            color: #2563eb;
+        }
+        .parameter-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(4px);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        .parameter-table th, .parameter-table td {
+            padding: 0.75rem 1rem;
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            text-align: left;
+        }
+        .parameter-table th {
+            background-color: #2563eb;
+            color: white;
+            font-weight: 600;
+        }
+        .parameter-table tbody tr:nth-child(even) {
+            background-color: rgba(37, 99, 235, 0.05);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <header class="p-8 bg-white border-b border-gray-200">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="index.html" class="font-lora text-2xl font-semibold">Dr. Eshan Singh</a>
+            <nav class="flex items-center space-x-2">
+                <a href="index.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Home</a>
+                <a href="index.html" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-full hover:bg-blue-700 transition-colors">Grid Operator Game</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-8 py-16">
+        <div class="glass-card rounded-2xl p-8 shadow-xl bg-white">
+            <section class="documentation-content">
+                <h2 class="text-center text-4xl font-bold text-gray-800 mb-8 font-lora">Grid Operator Game: Complete Technical Documentation</h2>
+
+      <h3>1. Introduction</h3>
+      <p>
+        The Grid Operator Game is an interactive educational simulation that models the challenges facing grid operators in California's evolving power system. As renewable energy penetration increases—particularly solar photovoltaic generation—grid operators face a complex balancing act: matching electricity supply to demand in real-time while managing the intermittency and variability of renewable resources, maintaining grid frequency stability, minimizing operational costs, and avoiding blackouts.
+      </p>
+      <p>
+        The game puts the player in the role of a grid operator who must dispatch flexible generation resources (batteries, hydroelectric power, combined-cycle gas turbines, and combustion turbines) to fill the gap between total demand and the renewable energy supply (solar, wind, nuclear, geothermal, and biomass). This gap is referred to as the <strong>Net Demand</strong>—the portion of demand that must be met by dispatchable resources.
+      </p>
+      <p>
+        The game is built to illustrate the <strong>"Duck Curve"</strong> phenomenon, where California's midday solar generation creates a deep trough in net demand, followed by a steep ramp in the evening when solar output drops rapidly while demand remains high. This presents significant operational challenges requiring fast-ramping resources and careful energy management.
+      </p>
+
+      <h3>2. Game Objective and Constraints</h3>
+      <p>The player's objective is to operate the grid for a full 24-hour day (288 five-minute time intervals) while achieving the following goals:</p>
+      <ul>
+        <li><strong>Match Net Demand Exactly:</strong> Keep the delta (supply minus net demand) as close to zero as possible. Large imbalances cause grid instability.</li>
+        <li><strong>Minimize Operational Costs:</strong> Each generation resource has associated operational costs and startup costs. The player must minimize total cost over the 24-hour period.</li>
+        <li><strong>Avoid Grid Outages:</strong> Excessive supply-demand imbalances trigger Emergency Alerts or Blackouts, which count against the player.</li>
+        <li><strong>Manage Battery State of Charge (SOC):</strong> Ensure the battery does not deplete completely or exceed its capacity.</li>
+        <li><strong>Respect Physical Constraints:</strong> Each resource has ramp rates, minimum load requirements, startup times, and capacity limits that must be respected.</li>
+      </ul>
+
+      <h3>3. System Architecture and Simulation Framework</h3>
+      <p>
+        The game is built as a client-side web application using vanilla JavaScript, leveraging the Chart.js library for data visualization. The simulation runs in discrete time steps (ticks), with each tick representing a 5-minute interval in the 24-hour day.
+      </p>
+
+      <h4>3.1. Time Discretization and Game Loop</h4>
+      <ul>
+        <li><strong>Time Resolution:</strong> 5-minute intervals (288 ticks per day)</li>
+        <li><strong>Game Speed:</strong> Configurable from 0.1 to 10.0 seconds per tick (default: 1.0 second per tick)</li>
+        <li><strong>Simulation Clock:</strong> The game uses <code>setInterval(gameLoop, gameSpeed * 1000)</code> to advance the simulation at the selected speed</li>
+        <li><strong>Pause/Resume:</strong> Players can pause, resume, or restart the simulation at any time</li>
+      </ul>
+
+      <h4>3.2. Data Generation and Forecasting</h4>
+      <p>The game generates synthetic 24-hour profiles for:</p>
+      <ul>
+        <li><strong>Total Demand:</strong> Based on seasonal load profiles with hourly percentage curves that are interpolated to 5-minute resolution</li>
+        <li><strong>Renewable Generation:</strong> Solar and wind capacity factors vary by season and time of day, multiplied by installed capacity to yield actual generation</li>
+        <li><strong>Baseload Resources:</strong> Nuclear, geothermal, and biomass are assumed constant throughout the day</li>
+      </ul>
+
+      <h3>4. California's Renewable and Baseload Generation Mix</h3>
+      <p>The game models California's actual installed capacity for renewable and baseload resources as of 2024:</p>
+
+      <div style="overflow-x: auto;">
+        <table class="parameter-table">
+          <thead>
+            <tr>
+              <th>Resource Type</th>
+              <th>Installed Capacity (MW)</th>
+              <th>Variability</th>
+              <th>Modeling Approach</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>☀️ Solar PV</td><td>23,274</td><td>High (diurnal pattern)</td><td>Hourly capacity factors by season</td></tr>
+            <tr><td>💨 Wind</td><td>6,335</td><td>Moderate</td><td>Hourly capacity factors by season</td></tr>
+            <tr><td>⚛️ Nuclear</td><td>2,256</td><td>None (baseload)</td><td>Constant 100% output</td></tr>
+            <tr><td>🌋 Geothermal</td><td>2,677</td><td>None (baseload)</td><td>Constant 100% output</td></tr>
+            <tr><td>🌾 Biomass</td><td>1,249</td><td>None (baseload)</td><td>Constant 100% output</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>5. Flexible Dispatchable Resources</h3>
+      <p>The player controls four types of flexible generation resources, each with distinct technical and economic characteristics:</p>
+
+      <h4>5.1. Battery Energy Storage System (BESS)</h4>
+      <p>A large-scale lithium-ion battery system representing California's grid-scale storage fleet.</p>
+      <div style="overflow-x: auto;">
+        <table class="parameter-table">
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Value</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Energy Capacity</td><td>52,000 MWh</td><td>Total energy storage (equivalent to 4-hour battery at 13 GW power)</td></tr>
+            <tr><td>Power Capacity</td><td>±13,000 MW</td><td>Maximum charge/discharge rate</td></tr>
+            <tr><td>Initial SOC</td><td>20%</td><td>Starting state of charge</td></tr>
+            <tr><td>Ramp Rate</td><td>Instantaneous ⚡</td><td>Can change output instantly within power limits</td></tr>
+            <tr><td>Operating Cost</td><td>$5/MWh</td><td>Marginal cost of charge/discharge cycling</td></tr>
+            <tr><td>Minimum Load</td><td>None</td><td>Can operate at any power level between -13,000 and +13,000 MW</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>Key Operational Characteristics:</strong></p>
+      <ul>
+        <li>Bidirectional power flow: Positive values = discharging (supplying power), Negative values = charging (consuming power)</li>
+        <li>State of charge evolves according to: <code>SOC(t+1) = SOC(t) + (PowerMW × Δt) / Capacity</code></li>
+        <li>SOC constrained to [0%, 100%]. Attempting to exceed limits triggers warnings and clamps the value.</li>
+        <li>Ideal for rapid response to short-term imbalances and smoothing renewable variability</li>
+      </ul>
+
+      <h4>5.2. Hydroelectric Power</h4>
+      <p>Represents California's pumped-storage and conventional hydroelectric fleet, with capacity varying by water year conditions.</p>
+      <div style="overflow-x: auto;">
+        <table class="parameter-table">
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Wet Year</th>
+              <th>Normal Year</th>
+              <th>Dry Year</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Maximum Capacity</td><td>6,000 MW</td><td>4,000 MW</td><td>2,000 MW</td></tr>
+            <tr><td>Ramp Rate</td><td colspan="3">Full capacity per hour (fast)</td></tr>
+            <tr><td>Operating Cost</td><td colspan="3">$2/MWh</td></tr>
+            <tr><td>Minimum Load</td><td colspan="3">0 MW (can turn off completely)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>Key Operational Characteristics:</strong></p>
+      <ul>
+        <li>Fast-ramping, flexible resource ideal for load following</li>
+        <li>Very low operating cost (fuel is "free")</li>
+        <li>Capacity limited by water availability, which varies seasonally and by water year type</li>
+        <li>Can provide ancillary services like frequency regulation</li>
+      </ul>
+
+      <h4>5.3. Combined Cycle Gas Turbines (CCGT)</h4>
+      <p>Natural gas-fired power plants with high efficiency but slower startup times and minimum load constraints.</p>
+      <div style="overflow-x: auto;">
+        <table class="parameter-table">
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Value</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Unit Capacity</td><td>500 MW</td><td>Capacity per individual unit</td></tr>
+            <tr><td>Fleet Size</td><td>30 units max</td><td>Total fleet capacity: 15,000 MW</td></tr>
+            <tr><td>Startup Time</td><td>60-90 minutes</td><td>Hot start (randomized per unit)</td></tr>
+            <tr><td>Minimum Stable Load</td><td>50%</td><td>Must operate at ≥250 MW when online</td></tr>
+            <tr><td>Ramp Rate</td><td>12.5 MW/min</td><td>10-15 MW/min per unit (when online)</td></tr>
+            <tr><td>Operating Cost</td><td>$35/unit + $5/500MW</td><td>Fixed cost per unit online + variable cost</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>Key Operational Characteristics:</strong></p>
+      <ul>
+        <li><strong>Unit Commitment:</strong> Players commit individual units, which require 60-90 minutes to start up</li>
+        <li><strong>Minimum Load Constraint:</strong> Once online, each unit must operate at ≥50% of rated capacity (250 MW minimum)</li>
+        <li><strong>Startup Sequence:</strong> Units in "starting" state count down their startup timer (in game ticks) before transitioning to "online"</li>
+        <li><strong>Economic Dispatch:</strong> Power is distributed across online units based on the power slider position</li>
+        <li>Efficient for sustained, predictable load, but less flexible than batteries or hydro</li>
+      </ul>
+
+      <h4>5.4. Combustion Turbines (CT) / Peaker Plants</h4>
+      <p>Fast-starting gas turbines optimized for peak demand periods, but with lower efficiency and higher operating costs.</p>
+      <div style="overflow-x: auto;">
+        <table class="parameter-table">
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Value</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Unit Capacity</td><td>200 MW</td><td>Capacity per individual unit</td></tr>
+            <tr><td>Fleet Size</td><td>50 units max</td><td>Total fleet capacity: 10,000 MW</td></tr>
+            <tr><td>Startup Time</td><td>10-20 minutes</td><td>Fast start (randomized per unit)</td></tr>
+            <tr><td>Minimum Stable Load</td><td>0%</td><td>No minimum load requirement (flexible turndown)</td></tr>
+            <tr><td>Ramp Rate</td><td>Fast</td><td>Can ramp to full output quickly once online</td></tr>
+            <tr><td>Operating Cost</td><td>$65/unit + $5/200MW</td><td>Higher fixed and variable costs than CCGT</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>Key Operational Characteristics:</strong></p>
+      <ul>
+        <li><strong>Rapid Deployment:</strong> Very short startup time (10-20 minutes) makes CTs ideal for emergency response</li>
+        <li><strong>No Minimum Load:</strong> Can operate at any power level from 0 to 200 MW per unit</li>
+        <li><strong>High Operating Cost:</strong> Typically reserved for peak periods or emergencies due to inefficiency</li>
+        <li><strong>Flexible Operation:</strong> Power slider can move units to any output level without violating minimum load constraints</li>
+      </ul>
+
+      <h3>6. Game Mechanics and Physics</h3>
+
+      <h4>6.1. Supply-Demand Balance and Grid Frequency</h4>
+      <p>The fundamental equation governing the grid is:</p>
+      <p><code>Delta (MW) = Total Supply - Net Demand</code></p>
+      <p>Where:</p>
+      <ul>
+        <li><strong>Total Supply</strong> = Battery + Hydro + CCGT + CT + (Baseload Renewables)</li>
+        <li><strong>Net Demand</strong> = Total Demand - Solar - Wind - Nuclear - Geothermal - Biomass</li>
+      </ul>
+      <p>The delta directly affects grid frequency:</p>
+      <ul>
+        <li><strong>Delta = 0:</strong> Perfect balance, frequency = 60.00 Hz (nominal)</li>
+        <li><strong>Delta > 0 (Oversupply):</strong> Frequency rises above 60.00 Hz</li>
+        <li><strong>Delta < 0 (Undersupply):</strong> Frequency drops below 60.00 Hz</li>
+      </ul>
+      <p>The frequency calculation uses a simplified linear model:</p>
+      <p><code>Frequency (Hz) = 60.00 + (Delta / 10000) × K</code></p>
+      <p>Where K is a scaling constant that maps MW imbalances to Hz deviations.</p>
+
+      <h4>6.2. Grid Stability Zones and Alerts</h4>
+      <p>The game defines three stability zones based on the delta magnitude:</p>
+      <div style="overflow-x: auto;">
+        <table class="parameter-table">
+          <thead>
+            <tr>
+              <th>Zone</th>
+              <th>Delta Range (MW)</th>
+              <th>Status</th>
+              <th>Consequence</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="background-color: rgba(16, 185, 129, 0.1);">✓ Stable</td>
+              <td>-500 to +500</td>
+              <td>Normal Operation</td>
+              <td>No penalties</td>
+            </tr>
+            <tr>
+              <td style="background-color: rgba(251, 191, 36, 0.1);">⚠️ Emergency Alert</td>
+              <td>-2000 to -500 or +500 to +2000</td>
+              <td>Grid Stressed</td>
+              <td>Emergency Alert counter increments each tick</td>
+            </tr>
+            <tr>
+              <td style="background-color: rgba(239, 68, 68, 0.1);">⚫ Blackout</td>
+              <td>< -2000 or > +2000</td>
+              <td>Grid Failure</td>
+              <td>Blackout counter increments each tick</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>At the end of the 24-hour simulation, the player receives a performance summary:</p>
+      <ul>
+        <li><strong>Emergency Minutes:</strong> Number of emergency alert ticks × 5 minutes</li>
+        <li><strong>Blackout Minutes:</strong> Number of blackout ticks × 5 minutes</li>
+        <li><strong>Total Cost:</strong> Sum of all operational costs over the day</li>
+      </ul>
+
+      <h4>6.3. Cost Calculation</h4>
+      <p>Operational costs are calculated each tick based on the output of each resource:</p>
+      <ul>
+        <li><strong>Battery:</strong> <code>Cost = |BatteryMW| × $5/MWh × (5/60) hours</code></li>
+        <li><strong>Hydro:</strong> <code>Cost = HydroMW × $2/MWh × (5/60) hours</code></li>
+        <li><strong>CCGT:</strong> <code>Cost = (OnlineUnits × $35) + (TotalCCGT_MW × $5/500MW × (5/60))</code></li>
+        <li><strong>CT:</strong> <code>Cost = (OnlineUnits × $65) + (TotalCT_MW × $5/200MW × (5/60))</code></li>
+      </ul>
+      <p>The cumulative cost over all 288 ticks gives the total operational cost for the day.</p>
+
+      <h4>6.4. Battery State of Charge Dynamics</h4>
+      <p>The battery SOC is updated each tick according to the energy balance:</p>
+      <p><code>Energy Change (MWh) = -BatteryMW × (5/60) hours</code></p>
+      <p><code>SOC Change = Energy Change / 52,000 MWh</code></p>
+      <p><code>New SOC = clamp(Old SOC + SOC Change, 0, 1)</code></p>
+      <p>Key points:</p>
+      <ul>
+        <li>Discharging (positive MW) <strong>decreases</strong> SOC</li>
+        <li>Charging (negative MW) <strong>increases</strong> SOC</li>
+        <li>SOC is clamped to [0, 1] to prevent overcharge/overdischarge</li>
+        <li>Player must manage SOC strategically to ensure battery availability throughout the day</li>
+      </ul>
+
+      <h4>6.5. Unit Dispatch and Power Distribution</h4>
+      <p>For CCGT and CT units, the game implements a unit commitment and economic dispatch model:</p>
+      <ul>
+        <li><strong>Pre-Game Commitment:</strong> Before the game starts, players can commit units, which come online instantly at maximum capacity and are then dispatched according to the power slider.</li>
+        <li><strong>In-Game Commitment:</strong> During gameplay, committing a unit starts a startup timer (60-90 min for CCGT, 10-20 min for CT). The unit transitions to "online" once the timer expires.</li>
+        <li><strong>Power Distribution Algorithm:</strong> The <code>distributePowerToUnits()</code> function allocates the target power (from the slider) across all online units, respecting minimum load constraints:
+          <ul>
+            <li>Calculate minimum total power required across all online units</li>
+            <li>Clamp target power to [minMW, maxMW]</li>
+            <li>Distribute power proportionally across units, ensuring each unit meets its minimum load</li>
+          </ul>
+        </li>
+        <li><strong>Shutdown:</strong> Players can shut down units to reduce costs when capacity is not needed. Shutdowns are instantaneous.</li>
+      </ul>
+
+      <h3>7. Seasonal Profiles and Load Variability</h3>
+      <p>The game includes four seasonal profiles (Spring, Summer, Fall, Winter) for both demand and renewable capacity factors:</p>
+
+      <h4>7.1. Demand Profiles</h4>
+      <p>Each season has a characteristic daily demand pattern defined by hourly percentage values:</p>
+      <ul>
+        <li><strong>Summer:</strong> High afternoon/evening peak (air conditioning load), peak demand ~30,000 MW</li>
+        <li><strong>Winter:</strong> Morning and evening peaks (heating load), moderate midday demand</li>
+        <li><strong>Spring/Fall:</strong> Lower overall demand with moderate peaks</li>
+      </ul>
+      <p>The hourly percentages are interpolated to 5-minute resolution using linear interpolation between hourly values.</p>
+
+      <h4>7.2. Solar Capacity Factors</h4>
+      <p>Solar generation follows a bell curve peaking at midday, with seasonal variations in output:</p>
+      <ul>
+        <li><strong>Summer:</strong> High solar output (long days, high irradiance), peak CF ~95%</li>
+        <li><strong>Winter:</strong> Lower solar output (short days, lower angle), peak CF ~70%</li>
+        <li><strong>Spring/Fall:</strong> Moderate solar output</li>
+      </ul>
+      <p>Solar CF is zero from midnight to sunrise and from sunset to midnight, creating the characteristic "duck curve" net demand profile.</p>
+
+      <h4>7.3. Wind Capacity Factors</h4>
+      <p>Wind generation exhibits less predictable diurnal patterns, with seasonal and hourly variations:</p>
+      <ul>
+        <li>Generally higher at night and in the evening</li>
+        <li>Lower during midday hours</li>
+        <li>Seasonal variations in average output</li>
+      </ul>
+
+      <h3>8. User Interface and Visualization</h3>
+
+      <h4>8.1. Grid Generation & Demand Chart</h4>
+      <p>A stacked area chart displaying:</p>
+      <ul>
+        <li><strong>Baseload Renewables (bottom):</strong> Biomass (brown), Geothermal (red), Nuclear (purple), Wind (cyan), Solar (yellow)</li>
+        <li><strong>Flexible Resources:</strong> Hydro (cyan), CCGT (blue), CT (orange), Battery (green)</li>
+        <li><strong>Total Demand Line (dashed gray):</strong> The total electricity demand</li>
+        <li><strong>Net Demand Line (solid pink):</strong> The gap between total demand and renewable supply—this is the player's target</li>
+      </ul>
+      <p>The x-axis shows time of day in 24-hour format (0-23), with grid lines and labels every hour. The y-axis shows power in MW.</p>
+
+      <h4>8.2. Live Gauges</h4>
+      <p>Two semi-circular dial gauges provide real-time feedback:</p>
+      <ul>
+        <li><strong>Delta Gauge:</strong> Shows the current supply-demand imbalance from -2000 to +2000 MW, with color-coded zones (red for extreme imbalance, yellow for warning, green for stable)</li>
+        <li><strong>Frequency Gauge:</strong> Shows the grid frequency from 59 to 61 Hz, with similar color coding</li>
+      </ul>
+
+      <h4>8.3. Game Metrics Panel</h4>
+      <p>Displays key performance indicators:</p>
+      <ul>
+        <li><strong>Current Time:</strong> Live game clock showing current hour and minute</li>
+        <li><strong>Status Banner:</strong> Color-coded status (green = stable, yellow = emergency, red = blackout)</li>
+        <li><strong>Net Demand, Total Supply, Delta:</strong> Real-time power values</li>
+        <li><strong>Battery SOC:</strong> Visual bar chart showing battery state of charge (0-100%)</li>
+        <li><strong>Emergency Alerts and Blackouts:</strong> Running counters of grid instability events</li>
+        <li><strong>Current Interval Cost and Total Cost:</strong> Economic performance metrics</li>
+        <li><strong>Running Delta Chart:</strong> Time series plot of delta values throughout the game, allowing players to see their balancing performance over time</li>
+      </ul>
+
+      <h4>8.4. Control Panels</h4>
+      <p>Players interact with the game through several control panels:</p>
+      <ul>
+        <li><strong>Game Controls:</strong> Game speed slider (0.1-10.0s per tick), Start/Pause/Resume/Restart buttons, event buttons (Cloud Cover, Demand Spike)</li>
+        <li><strong>Flexible Generation Sliders:</strong> Battery power (-13,000 to +13,000 MW), Hydro power (0 to max capacity), CCGT power (min to max based on committed units), CT power (min to max based on committed units)</li>
+        <li><strong>Unit Commitment Buttons:</strong> +Commit Unit and -Shutdown Unit buttons for CCGT and CT, showing online/starting unit counts</li>
+        <li><strong>Hydro Condition Selector:</strong> Dropdown to select water year type (Wet, Normal, Dry)</li>
+      </ul>
+
+      <h3>9. Advanced Features and Extensions</h3>
+
+      <h4>9.1. Editable Load and Capacity Factor Profiles</h4>
+      <p>Players can edit the demand and renewable capacity factor profiles by clicking the edit button next to each chart. This enables exploration of "what-if" scenarios, such as:</p>
+      <ul>
+        <li>Higher renewable penetration</li>
+        <li>Demand response programs shifting peak loads</li>
+        <li>Seasonal variations in demand patterns</li>
+      </ul>
+
+      <h4>9.2. Random Events (Future Enhancement)</h4>
+      <p>The game includes placeholder functionality for random events:</p>
+      <ul>
+        <li><strong>☁️ Cloud Cover:</strong> Sudden reduction in solar output due to passing clouds</li>
+        <li><strong>⚡ Demand Spike:</strong> Unexpected increase in demand (e.g., extreme weather event)</li>
+      </ul>
+      <p>These events are currently disabled but can be implemented to increase gameplay complexity.</p>
+
+      <h4>9.3. Pre-Game Planning Phase</h4>
+      <p>Before starting the game, players can:</p>
+      <ul>
+        <li>Commit CCGT and CT units to be online at game start (units come online instantly at full capacity)</li>
+        <li>Set initial power levels for all resources</li>
+        <li>Select seasonal profiles and hydro conditions</li>
+        <li>Edit load and capacity factor profiles</li>
+      </ul>
+      <p>This planning phase allows players to prepare for known challenges (e.g., the evening ramp) by pre-positioning generation resources.</p>
+
+      <h3>10. Educational Objectives and Learning Outcomes</h3>
+      <p>The Grid Operator Game is designed to teach players about:</p>
+      <ul>
+        <li><strong>Grid Balancing Fundamentals:</strong> Real-time matching of supply and demand</li>
+        <li><strong>The Duck Curve:</strong> Challenges of high renewable penetration (midday oversupply, evening ramp)</li>
+        <li><strong>Resource Characteristics:</strong> Trade-offs between flexibility, cost, and startup time for different generation types</li>
+        <li><strong>Energy Storage Value:</strong> The role of batteries in smoothing variability and providing fast response</li>
+        <li><strong>Unit Commitment and Economic Dispatch:</strong> Strategic planning of which units to commit and when</li>
+        <li><strong>Operational Costs vs. Reliability:</strong> Balancing cost minimization with grid stability</li>
+        <li><strong>Seasonal and Temporal Variability:</strong> How demand and renewable output patterns change throughout the year</li>
+      </ul>
+
+      <h3>11. Technical Implementation Details</h3>
+
+      <h4>11.1. Technologies Used</h4>
+      <ul>
+        <li><strong>HTML5/CSS3:</strong> Structure and styling</li>
+        <li><strong>Tailwind CSS:</strong> Utility-first CSS framework for responsive design</li>
+        <li><strong>JavaScript (ES6+):</strong> Game logic and simulation engine</li>
+        <li><strong>Chart.js:</strong> Data visualization library for charts and graphs</li>
+      </ul>
+
+      <h4>11.2. Key Functions and Algorithms</h4>
+      <ul>
+        <li><code>generateForecastData()</code>: Generates the 288-point time series for demand and renewable generation based on seasonal profiles</li>
+        <li><code>gameLoop()</code>: Main simulation loop executed every game tick, updating all state variables and UI elements</li>
+        <li><code>calculateSupplyDemand()</code>: Computes net demand, total supply, delta, and frequency for the current tick</li>
+        <li><code>updateSupplyValues()</code>: Updates the chart with current generation values and refreshes UI displays</li>
+        <li><code>distributePowerToUnits()</code>: Allocates target power across committed units while respecting minimum load constraints</li>
+        <li><code>processStartupTimers()</code>: Advances startup timers for units in "starting" state and transitions them to "online" when ready</li>
+        <li><code>updateGauges()</code>: Updates the delta and frequency gauge needle positions based on current grid state</li>
+      </ul>
+
+      <h4>11.3. Data Structures</h4>
+      <ul>
+        <li><strong>forecastData[]:</strong> Array of 288 objects, each containing demand, renewable generation, and time data for one 5-minute interval</li>
+        <li><strong>ccgtUnits[] and ctUnits[]:</strong> Arrays of unit objects, each with <code>{state, outputMW, startupTicksRemaining}</code></li>
+        <li><strong>seasonalProfilesData:</strong> Nested object structure containing hourly demand percentages and capacity factors for each season</li>
+      </ul>
+
+      <h3>12. Model Assumptions and Limitations</h3>
+      <ul>
+        <li><strong>Simplified Frequency Model:</strong> The linear frequency response model is a simplification; real grid frequency dynamics involve inertia, governor response, and automatic generation control</li>
+        <li><strong>Perfect Forecasting:</strong> Players have perfect knowledge of future demand and renewable generation, which is unrealistic</li>
+        <li><strong>No Transmission Constraints:</strong> The model assumes all generation can reach all demand (no grid congestion)</li>
+        <li><strong>Simplified Cost Model:</strong> Actual electricity market pricing is complex, involving day-ahead and real-time markets, ancillary services, and locational marginal pricing</li>
+        <li><strong>No Ramp Rate Enforcement:</strong> While ramp rates are defined, the simulation does not strictly enforce ramp limits (future enhancement)</li>
+        <li><strong>Deterministic Profiles:</strong> Demand and renewable profiles are deterministic; real systems have significant uncertainty</li>
+      </ul>
+
+      <h3>13. Future Enhancements</h3>
+      <ul>
+        <li><strong>Uncertainty and Forecasting Errors:</strong> Introduce forecast errors to simulate real-world unpredictability</li>
+        <li><strong>Ramp Rate Constraints:</strong> Enforce ramp limits on all resources</li>
+        <li><strong>Ancillary Services:</strong> Model frequency regulation, spinning reserves, and voltage support</li>
+        <li><strong>Emissions Tracking:</strong> Calculate CO₂ emissions based on generation mix</li>
+        <li><strong>Multi-Day Simulation:</strong> Extend to multi-day or weekly simulations to explore energy constraints (e.g., limited hydro energy budget)</li>
+        <li><strong>Demand Response:</strong> Allow players to incentivize demand reductions during peak periods</li>
+        <li><strong>Transmission and Congestion:</strong> Model grid topology and transmission constraints</li>
+        <li><strong>Market Dynamics:</strong> Simulate electricity market prices and revenue optimization</li>
+      </ul>
+
+      <h3>14. References and Data Sources</h3>
+      <ol>
+        <li><a href="https://www.caiso.com/" target="_blank">California Independent System Operator (CAISO). (Ongoing). Grid data and operational insights.</a></li>
+        <li><a href="https://www.energy.ca.gov/" target="_blank">California Energy Commission (CEC). (2024). Installed renewable energy capacity data.</a></li>
+        <li><a href="https://www.nrel.gov/analysis/re-futures.html" target="_blank">National Renewable Energy Laboratory (NREL). (2012). Renewable Electricity Futures Study.</a></li>
+        <li>Denholm, P., et al. (2015). <em>Overgeneration from Solar Energy in California: A Field Guide to the Duck Chart</em>. NREL/TP-6A20-65023.</li>
+        <li><a href="https://www.eia.gov/electricity/annual/" target="_blank">U.S. Energy Information Administration (EIA). (Ongoing). Electricity generation and capacity data.</a></li>
+        <li>Ela, E., et al. (2013). <em>Evolution of Wholesale Electricity Market Design with Increasing Levels of Renewable Generation</em>. NREL/TP-5D00-61765.</li>
+        <li>Milligan, M., et al. (2015). <em>Operating Reserves and Variable Generation</em>. NREL/TP-5500-51978.</li>
+        <li><a href="https://www.chartjs.org/docs/latest/" target="_blank">Chart.js Documentation. (Ongoing). JavaScript charting library.</a></li>
+      </ol>
+
+      <h3>15. Contact and Support</h3>
+      <p>
+        For questions, feedback, or suggestions regarding the Grid Operator Game, please contact:
+      </p>
+      <p>
+        <strong>Dr. Eshan Singh</strong><br>
+        Email: <a href="mailto:hello@eshansingh.xyz">hello@eshansingh.xyz</a><br>
+        Website: <a href="https://www.eshansingh.xyz" target="_blank">www.eshansingh.xyz</a>
+      </p>
+
+            </section>
+        </div>
+    </main>
+
+    <footer class="w-full text-center py-5 border-t border-gray-200/80">
+        <div class="flex items-center justify-center space-x-4">
+             <p class="text-sm text-gray-500">&copy; 2025 Eshan & Associates LLC. All rights reserved.</p>
+             <a href="https://www.linkedin.com/in/eshan-singh-188b1554/" target="_blank" rel="noopener noreferrer">
+                <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn" class="h-5 w-5 hover:opacity-75 transition-opacity">
+            </a>
+        </div>
+    </footer>
+
+</body>
+</html>
