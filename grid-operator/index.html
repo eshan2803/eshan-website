@@ -143,6 +143,32 @@
         .tutorial-highlight-active.rounded-lg {
             border-radius: 1rem;
         }
+        /* Rainbow Border Animation for navigation links */
+        @keyframes rainbow-border {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+        .rainbow-glow {
+            position: relative;
+            background: linear-gradient(90deg, #ff0080, #ff8000, #ffff00, #80ff00, #00ff80, #0080ff, #8000ff, #ff0080);
+            background-size: 200% 200%;
+            animation: rainbow-border 2s linear infinite;
+            padding: 2px;
+            border-radius: 9999px;
+        }
+        .rainbow-glow .button-content {
+            background: #f3f4f6;
+            border-radius: 9999px;
+            padding: 0.5rem 1rem;
+            display: block;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        .rainbow-glow:hover .button-content {
+            background: #e5e7eb;
+        }
         .form-input {
             width: 100%;
             -webkit-appearance: none;
@@ -180,7 +206,31 @@
     <div class="mesh-gradient-container">
         <div class="mesh-gradient-1"></div>
 
-        <div class="container mx-auto p-4 md:p-8">
+        <header class="p-8">
+            <div class="container mx-auto flex justify-between items-center">
+                <div class="flex flex-col">
+                    <a href="https://eshansingh.xyz" class="font-lora text-2xl font-semibold">Dr. Eshan Singh</a>
+                    <div class="text-sm text-gray-500 mt-1">
+                        <span>Views: </span><span id="visitor-count">Loading...</span>
+                    </div>
+                </div>
+                <nav class="flex items-center space-x-2">
+                    <a href="https://eshansingh.xyz/energy.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
+                    <a href="https://eshansingh.xyz/transport-model-new.html" class="rainbow-glow">
+                        <span class="button-content">Transport Model</span>
+                    </a>
+                    <a href="https://eshansingh.xyz/grid-decarbonization.html" class="rainbow-glow">
+                         <span class="button-content">Grid Planner</span>
+                    </a>
+                    <a href="https://eshansingh.xyz/grid-operator/index.html" class="rainbow-glow">
+                         <span class="button-content">Grid Operator</span>
+                    </a>
+                    <a href="https://eshansingh.xyz/musings.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Musings</a>
+                </nav>
+            </div>
+        </header>
+
+        <div class="container mx-auto p-4 md:p-8 pt-0">
             <!-- Title Section -->
             <section id="tutorial-step-1" class="text-center mb-8">
                 <h1 class="font-lora text-5xl font-bold text-gray-800 mb-4">Grid Operator Game</h1>

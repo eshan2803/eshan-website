@@ -886,7 +886,12 @@ function createChart() {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'Power (MW)'
+                        text: 'Power (GW)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return Math.round(value / 1000);
+                        }
                     }
                 },
                 x: {
@@ -1901,7 +1906,7 @@ function formatGameTime(tick) {
 
 // --- 11. CAPACITY FACTOR CHART FUNCTIONS ---
 function createCFChart() {
-    const HOURS = Array.from({ length: 24 }, (_, i) => `${i}:00`);
+    const HOURS = Array.from({ length: 24 }, (_, i) => i.toString());
     const profile = seasonalProfilesData.california.profiles[currentSeason];
 
     cfChart = new Chart(cfCtx, {
@@ -1910,7 +1915,7 @@ function createCFChart() {
             labels: HOURS,
             datasets: [
                 {
-                    label: 'Solar CF',
+                    label: 'Solar',
                     data: profile.solarCF.map(cf => cf * 100),
                     borderColor: 'rgba(251, 191, 36, 1)',
                     backgroundColor: 'rgba(251, 191, 36, 0.1)',
@@ -1920,7 +1925,7 @@ function createCFChart() {
                     tension: 0.4
                 },
                 {
-                    label: 'Wind CF',
+                    label: 'Wind',
                     data: profile.windCF.map(cf => cf * 100),
                     borderColor: 'rgba(52, 211, 153, 1)',
                     backgroundColor: 'rgba(52, 211, 153, 0.1)',
@@ -1963,7 +1968,7 @@ function createCFChart() {
                 x: {
                     title: {
                         display: true,
-                        text: 'Hour of Day'
+                        text: 'Time of Day (Hour)'
                     }
                 },
                 y: {
