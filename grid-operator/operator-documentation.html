@@ -27,6 +27,27 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.18);
         }
+        .rainbow-glow {
+            position: relative;
+            background: linear-gradient(90deg, #ff0080, #ff8000, #ffff00, #80ff00, #00ff80, #0080ff, #8000ff, #ff0080);
+            background-size: 200% 200%;
+            animation: rainbow-border 2s linear infinite;
+            padding: 2px;
+            border-radius: 9999px;
+        }
+        .rainbow-glow .button-content {
+            background: #f3f4f6;
+            border-radius: 9999px;
+            padding: 0.5rem 1rem;
+            display: block;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        .rainbow-glow:hover .button-content {
+            background: #e5e7eb;
+        }
 
         /* Documentation specific styles */
         .documentation-content h3 {
