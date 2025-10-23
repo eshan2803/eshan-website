@@ -97,6 +97,7 @@ let cfChart;
 let deltaHistoryChart;
 let gameInterval;
 let forecastData = [];
+let hourlyForecastData = []; // Hourly forecast (24 points) for pre-game display
 let gameTick = 0;
 let gameStarted = false; // Track whether game has started
 let gamePaused = false; // Track whether game is paused
@@ -434,47 +435,118 @@ function distributePowerToUnits(units, targetMW, unitSize) {
 }
 
 // --- 3. GENERATE FORECAST DATA FROM SEASONAL PROFILE ---
-// Helper function: Linear interpolation
-function linearInterpolate(val1, val2, fraction) {
-    return val1 + (val2 - val1) * fraction;
+// Helper function: Cubic Hermite spline interpolation (smooth curves)
+// This creates smooth, natural-looking curves between hourly points
+function cubicInterpolate(p0, p1, p2, p3, t) {
+    // Catmull-Rom spline: uses 4 points to create smooth curve between p1 and p2
+    // t is the fraction between p1 and p2 (0 to 1)
+    const t2 = t * t;
+    const t3 = t2 * t;
+
+    // Catmull-Rom coefficients (tension = 0.5 for balanced smoothness)
+    const v0 = (p2 - p0) * 0.5;
+    const v1 = (p3 - p1) * 0.5;
+
+    return (2 * p1 - 2 * p2 + v0 + v1) * t3 +
+           (-3 * p1 + 3 * p2 - 2 * v0 - v1) * t2 +
+           v0 * t + p1;
 }
 
-// Helper function: Random walk for demand constrained around linear path
-function generateRandomWalkDemand(hourlyDemands, peakMW) {
-    const fiveMinDemands = [];
-    const maxStepMW = 50; // Maximum ±50 MW per 5-minute step
-    const maxDeviationFromLinear = 200; // Maximum ±200 MW from linear interpolation
+// Helper function: Generate smooth interpolation for array of hourly values
+// Returns array with 288 values (24 hours * 12 five-minute intervals)
+function smoothInterpolate(hourlyValues) {
+    const result = [];
+    const n = hourlyValues.length; // Should be 24
+
+    // Find min and max values for clamping (prevent overshoot)
+    const minValue = Math.min(...hourlyValues);
+    const maxValue = Math.max(...hourlyValues);
 
     for (let hour = 0; hour < 24; hour++) {
-        const currentHourDemand = hourlyDemands[hour];
-        const nextHourDemand = hourlyDemands[(hour + 1) % 24];
+        // Get 4 points for cubic interpolation (wrap around for edges)
+        const p0 = hourlyValues[(hour - 1 + n) % n];
+        const p1 = hourlyValues[hour];
+        const p2 = hourlyValues[(hour + 1) % n];
+        const p3 = hourlyValues[(hour + 2) % n];
 
-        // Start at current hour value
-        let currentValue = currentHourDemand;
-
+        // Generate 12 five-minute intervals within this hour
         for (let interval = 0; interval < 12; interval++) {
-            // Linear interpolation value at this point
-            const fraction = interval / 12;
-            const linearValue = linearInterpolate(currentHourDemand, nextHourDemand, fraction);
+            const t = interval / 12; // Fraction within the hour (0 to 11/12)
+            let value = cubicInterpolate(p0, p1, p2, p3, t);
 
-            // Random step constrained by maxStepMW
-            const randomStep = (Math.random() * 2 - 1) * maxStepMW;
-            let newValue = currentValue + randomStep;
+            // Clamp to prevent overshoot (especially important for capacity factors)
+            // Allow slight overshoot for smoother curves, but prevent negative values
+            value = Math.max(0, Math.min(maxValue * 1.05, value));
 
-            // Constrain to stay within band around linear interpolation
-            const minAllowed = linearValue - maxDeviationFromLinear;
-            const maxAllowed = linearValue + maxDeviationFromLinear;
-            newValue = Math.max(minAllowed, Math.min(maxAllowed, newValue));
-
-            // Also ensure we don't go negative
-            newValue = Math.max(0, newValue);
-
-            fiveMinDemands.push(newValue);
-            currentValue = newValue;
+            result.push(value);
         }
     }
 
+    return result;
+}
+
+// Helper function: Random walk for demand constrained around smooth curve
+function generateRandomWalkDemand(hourlyDemands, peakMW) {
+    const fiveMinDemands = [];
+    const maxStepMW = 50; // Maximum ±50 MW per 5-minute step
+    const maxDeviationFromCurve = 200; // Maximum ±200 MW from smooth curve
+
+    // First, generate smooth baseline curve using cubic interpolation
+    const smoothBaseline = smoothInterpolate(hourlyDemands);
+
+    // Start at first hour value
+    let currentValue = hourlyDemands[0];
+
+    // Generate random walk around the smooth baseline
+    for (let i = 0; i < 288; i++) {
+        const baselineValue = smoothBaseline[i];
+
+        // Random step constrained by maxStepMW
+        const randomStep = (Math.random() * 2 - 1) * maxStepMW;
+        let newValue = currentValue + randomStep;
+
+        // Constrain to stay within band around smooth baseline
+        const minAllowed = baselineValue - maxDeviationFromCurve;
+        const maxAllowed = baselineValue + maxDeviationFromCurve;
+        newValue = Math.max(minAllowed, Math.min(maxAllowed, newValue));
+
+        // Also ensure we don't go negative
+        newValue = Math.max(0, newValue);
+
+        fiveMinDemands.push(newValue);
+        currentValue = newValue;
+    }
+
     return fiveMinDemands;
+}
+
+// Helper function to extract hourly forecast points from 5-min data
+function extractHourlyForecast(fiveMinData) {
+    if (!fiveMinData || fiveMinData.length === 0) {
+        console.error("extractHourlyForecast: fiveMinData is empty or undefined");
+        return [];
+    }
+
+    const hourlyData = [];
+    // Extract data at the start of each hour (indices 0, 12, 24, ... 276)
+    for (let hour = 0; hour < 24; hour++) {
+        const index = hour * 12; // Each hour has 12 five-minute intervals
+        if (index >= fiveMinData.length) {
+            console.error(`extractHourlyForecast: index ${index} out of bounds (length: ${fiveMinData.length})`);
+            break;
+        }
+        hourlyData.push({
+            timestamp: fiveMinData[index].timestamp,
+            total_demand_mw: fiveMinData[index].total_demand_mw,
+            net_demand_mw: fiveMinData[index].net_demand_mw,
+            biomass_mw: fiveMinData[index].biomass_mw,
+            geothermal_mw: fiveMinData[index].geothermal_mw,
+            nuclear_mw: fiveMinData[index].nuclear_mw,
+            wind_mw: fiveMinData[index].wind_mw,
+            solar_mw: fiveMinData[index].solar_mw
+        });
+    }
+    return hourlyData;
 }
 
 function generateForecastFromProfile(season) {
@@ -501,18 +573,9 @@ function generateForecastFromProfile(season) {
     // Generate 5-minute demand with random walk
     const fiveMinDemands = generateRandomWalkDemand(hourlyDemandsMW, peakMW);
 
-    // Generate 5-minute capacity factors using linear interpolation
-    const fiveMinSolarCF = [];
-    const fiveMinWindCF = [];
-
-    for (let hour = 0; hour < 24; hour++) {
-        const nextHour = (hour + 1) % 24;
-        for (let interval = 0; interval < 12; interval++) {
-            const fraction = interval / 12;
-            fiveMinSolarCF.push(linearInterpolate(solarCF[hour], solarCF[nextHour], fraction));
-            fiveMinWindCF.push(linearInterpolate(windCF[hour], windCF[nextHour], fraction));
-        }
-    }
+    // Generate 5-minute capacity factors using smooth cubic interpolation
+    const fiveMinSolarCF = smoothInterpolate(solarCF);
+    const fiveMinWindCF = smoothInterpolate(windCF);
 
     const data = [];
     const today = new Date();
@@ -691,7 +754,9 @@ async function initialize() {
         showInitialDemand();
     } catch (e) {
         console.error("Failed to initialize game:", e);
-        alert("Failed to load game data. Check the console for errors.");
+        console.error("Error stack:", e.stack);
+        console.error("Error message:", e.message);
+        alert("Failed to load game data. Error: " + e.message + "\nCheck the console for details.");
     }
 }
 
@@ -717,12 +782,16 @@ function showInitialDemand() {
         } else {
             deltaElement.className = 'text-2xl font-bold text-red-600';
         }
+
+        // Update gauges (delta and frequency) during pre-game
+        updateGauges(delta, totalSupply);
     }
 }
 
 // --- 5. LOAD SEASONAL PROFILE ---
 function loadSeasonalProfile(season) {
     forecastData = generateForecastFromProfile(season);
+    hourlyForecastData = extractHourlyForecast(forecastData);
 
     if (myChart) {
         updateChartData();
@@ -731,6 +800,12 @@ function loadSeasonalProfile(season) {
 
 // --- 6. CREATE THE CHART ---
 function createChart() {
+    // Ensure hourlyForecastData exists before creating chart
+    if (!hourlyForecastData || hourlyForecastData.length === 0) {
+        console.error("Cannot create chart: hourlyForecastData is empty");
+        throw new Error("No forecast data available");
+    }
+
     myChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -802,30 +877,40 @@ function createChart() {
                     order: 5
                 },
                 {
-                    label: 'Total Demand',
+                    label: 'Total Demand (Forecast)',
                     type: 'line',
-                    data: forecastData.map(d => d.total_demand_mw),
+                    data: forecastData.map((d, i) => (i % 12 === 0) ? d.total_demand_mw : null),
                     borderColor: 'rgba(150, 150, 150, 0.9)',
                     borderDash: [5, 5],
-                    borderWidth: 3,
+                    borderWidth: 0, // No line initially (just dots)
                     fill: false,
-                    pointRadius: 0,
-                    pointHoverRadius: 0,
+                    showLine: false, // Don't connect the dots
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointStyle: 'circle',
+                    pointBorderWidth: 2,
+                    pointBackgroundColor: 'rgba(150, 150, 150, 0.7)',
+                    pointBorderColor: 'rgba(150, 150, 150, 1)',
                     order: 3
                 },
                 {
-                    label: 'Net Demand (Your Target)',
+                    label: 'Net Demand (Forecast)',
                     type: 'line',
-                    data: forecastData.map(d => d.net_demand_mw),
+                    data: forecastData.map((d, i) => (i % 12 === 0) ? d.net_demand_mw : null),
                     borderColor: 'rgba(255, 99, 132, 1)',
-                    borderWidth: 3,
+                    borderWidth: 0, // No line initially (just dots)
                     fill: false,
-                    pointRadius: 0,
-                    pointHoverRadius: 0,
+                    showLine: false, // Don't connect the dots
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointStyle: 'circle',
+                    pointBorderWidth: 2,
+                    pointBackgroundColor: 'rgba(255, 99, 132, 0.7)',
+                    pointBorderColor: 'rgba(255, 99, 132, 1)',
                     order: 1
                 },
                 {
-                    label: 'Battery Supply',
+                    label: 'Battery',
                     type: 'line',
                     data: [],
                     borderColor: 'rgba(34, 197, 94, 1)',
@@ -838,7 +923,7 @@ function createChart() {
                     order: 4
                 },
                 {
-                    label: 'CCGT Supply',
+                    label: 'CCGT',
                     type: 'line',
                     data: [],
                     borderColor: 'rgba(59, 130, 246, 1)',
@@ -851,7 +936,7 @@ function createChart() {
                     order: 4
                 },
                 {
-                    label: 'CT Supply',
+                    label: 'CT',
                     type: 'line',
                     data: [],
                     borderColor: 'rgba(249, 115, 22, 1)',
@@ -864,7 +949,7 @@ function createChart() {
                     order: 4
                 },
                 {
-                    label: 'Hydro Supply',
+                    label: 'Hydro',
                     type: 'line',
                     data: [],
                     borderColor: 'rgba(6, 182, 212, 1)',
@@ -899,19 +984,35 @@ function createChart() {
                         display: true,
                         text: 'Time of Day (Hour)'
                     },
+                    min: 0,
+                    max: 287, // 288 data points (0-287) representing 24 hours
                     ticks: {
-                        // Show ticks every hour (every 12 data points since we have 5-min intervals)
+                        // Show ticks every hour (0, 1, 2, ..., 24)
                         callback: function(value, index, ticks) {
-                            // Only show label if index is divisible by 12 (hourly)
-                            if (index % 12 === 0) {
-                                const hour = Math.floor(index / 12);
-                                return hour.toString();
+                            const totalDataPoints = ticks.length;
+
+                            // If we have 24 data points (hourly mode), show all hours
+                            if (totalDataPoints === 24) {
+                                return index.toString();
                             }
-                            return '';
+                            // If we have 288 data points (5-min mode), show every 12th tick (hourly)
+                            else if (totalDataPoints === 288) {
+                                if (index % 12 === 0) {
+                                    const hour = Math.floor(index / 12);
+                                    return hour.toString();
+                                }
+                                // Show hour 24 at the end (index 288 would be out of bounds, so show at 287)
+                                if (index === 287) {
+                                    return '24';
+                                }
+                                return '';
+                            }
+                            return index.toString();
                         },
                         autoSkip: false,
                         maxRotation: 0,
-                        minRotation: 0
+                        minRotation: 0,
+                        stepSize: 12 // One tick every 12 data points (hourly)
                     },
                     grid: {
                         display: true,
@@ -928,11 +1029,128 @@ function createChart() {
             plugins: {
                 legend: {
                     display: true,
-                    position: 'bottom'
+                    position: 'bottom',
+                    labels: {
+                        filter: function(legendItem, chartData) {
+                            // During gameplay, hide the forecast dot datasets from legend
+                            // Only show the actual line datasets
+                            const totalDatasets = chartData.datasets.length;
+
+                            // If we have more than 11 datasets, game has started (actual lines added)
+                            if (totalDatasets > 11) {
+                                // Hide forecast dots (indices 5 and 6) during gameplay
+                                // The actual demand lines are at indices 7 and 8
+                                if (legendItem.datasetIndex === 5 || legendItem.datasetIndex === 6) {
+                                    return false;
+                                }
+                            }
+
+                            return true;
+                        },
+                        generateLabels: function(chart) {
+                            // Use Chart.js default label generation
+                            const datasets = chart.data.datasets;
+                            const labels = datasets.map((dataset, i) => {
+                                // For demand datasets (scatter plots), use pointBorderColor
+                                // For other datasets (filled areas), use backgroundColor
+                                const usePointColor = dataset.pointBorderColor && dataset.showLine === false;
+
+                                return {
+                                    text: dataset.label,
+                                    fillStyle: usePointColor ? dataset.pointBorderColor : dataset.backgroundColor,
+                                    strokeStyle: usePointColor ? dataset.pointBorderColor : dataset.borderColor,
+                                    lineWidth: dataset.borderWidth,
+                                    hidden: !chart.isDatasetVisible(i),
+                                    datasetIndex: i
+                                };
+                            });
+
+                            // Define custom order: Demand first, then renewables, then flexible
+                            const order = [
+                                'Total Demand', 'Net Demand',  // Row 1
+                                'Solar', 'Wind', 'Geothermal', 'Nuclear', 'Biomass',  // Row 2
+                                'CCGT', 'CT', 'Hydro', 'Battery'  // Row 3
+                            ];
+
+                            // Remove "(Forecast)" and "(Actual)" suffixes from labels
+                            labels.forEach(label => {
+                                label.text = label.text.replace(' (Forecast)', '').replace(' (Actual)', '');
+                            });
+
+                            // Sort labels based on custom order
+                            labels.sort((a, b) => {
+                                const aIndex = order.indexOf(a.text);
+                                const bIndex = order.indexOf(b.text);
+                                return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+                            });
+
+                            return labels;
+                        }
+                    }
                 },
                 tooltip: {
                     mode: 'index',
-                    intersect: false
+                    intersect: false,
+                    axis: 'x',
+                    callbacks: {
+                        title: function(tooltipItems) {
+                            if (tooltipItems.length === 0) return '';
+
+                            const index = tooltipItems[0].dataIndex;
+
+                            // In edit mode, data points are hourly (indices 0-23)
+                            if (isEditMode) {
+                                return `Hour ${index}`;
+                            }
+
+                            // In pre-game, snap to nearest hour
+                            if (!gameStarted) {
+                                const hour = Math.round(index / 12);
+                                return `Hour ${hour}`;
+                            }
+
+                            // During game - check if this is future time (beyond gameTick)
+                            if (gameStarted && index > gameTick) {
+                                // For future time, snap to nearest hour
+                                const hour = Math.round(index / 12);
+                                return `Hour ${hour} (Forecast)`;
+                            }
+
+                            // During game - past/current time, show hour and minute
+                            const hour = Math.floor(index / 12);
+                            const minute = (index % 12) * 5;
+                            return `Time: ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                        },
+                        label: function(context) {
+                            const currentIndex = context.dataIndex;
+                            const datasetIndex = context.datasetIndex;
+                            const dataset = context.chart.data.datasets[datasetIndex];
+
+                            // In pre-game mode OR future time during gameplay, snap values to nearest hour
+                            if ((!gameStarted && !isEditMode) || (gameStarted && currentIndex > gameTick)) {
+                                const nearestHourIndex = Math.round(currentIndex / 12) * 12;
+
+                                // Get the value at the nearest hour
+                                const value = dataset.data[nearestHourIndex];
+
+                                if (value === null || value === undefined) {
+                                    return null;
+                                }
+
+                                return `${dataset.label}: ${value.toFixed(2)} GW`;
+                            }
+
+                            // Default behavior for edit mode and past/current game time
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y.toFixed(2) + ' GW';
+                            }
+                            return label;
+                        }
+                    }
                 },
                 dragData: {
                     enabled: false,
@@ -960,19 +1178,30 @@ function createChart() {
 
 // --- 7. UPDATE CHART DATA ---
 function updateChartData() {
+    // Use 5-minute forecast data for smooth curves (288 points)
+    // But show demand as hourly dots only
     myChart.data.labels = forecastData.map(d => new Date(d.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }));
+
+    // Renewable generation (smooth curves)
     myChart.data.datasets[0].data = forecastData.map(d => d.biomass_mw);
     myChart.data.datasets[1].data = forecastData.map(d => d.geothermal_mw);
     myChart.data.datasets[2].data = forecastData.map(d => d.nuclear_mw);
     myChart.data.datasets[3].data = forecastData.map(d => d.wind_mw);
     myChart.data.datasets[4].data = forecastData.map(d => d.solar_mw);
-    myChart.data.datasets[5].data = forecastData.map(d => d.total_demand_mw);
-    myChart.data.datasets[6].data = forecastData.map(d => d.net_demand_mw);
+
+    // Demand datasets (hourly dots only)
+    myChart.data.datasets[5].data = forecastData.map((d, i) => (i % 12 === 0) ? d.total_demand_mw : null);
+    myChart.data.datasets[6].data = forecastData.map((d, i) => (i % 12 === 0) ? d.net_demand_mw : null);
+
+    // Flexible generation (empty pre-game)
     myChart.data.datasets[7].data = []; // Battery
     myChart.data.datasets[8].data = []; // CCGT
     myChart.data.datasets[9].data = []; // CT
     myChart.data.datasets[10].data = []; // Hydro
     myChart.update();
+
+    // Update demand and gauges after chart data changes
+    showInitialDemand();
 }
 
 // --- 8. EDIT MODE FUNCTIONS ---
@@ -1042,7 +1271,10 @@ function enterEditMode() {
     myChart.data.datasets[3].hidden = true; // Wind
     myChart.data.datasets[4].hidden = true; // Solar
     myChart.data.datasets[6].hidden = true; // Net Demand
-    myChart.data.datasets[7].hidden = true; // Your Supply
+    myChart.data.datasets[7].hidden = true; // Battery Supply
+    myChart.data.datasets[8].hidden = true; // CCGT Supply
+    myChart.data.datasets[9].hidden = true; // CT Supply
+    myChart.data.datasets[10].hidden = true; // Hydro Supply
 
     // Switch to hourly data for editing (24 points instead of 288)
     const peakMW = profile.peakMW;
@@ -1091,30 +1323,55 @@ function confirmEdit() {
 
     startButton.disabled = false;
 
-    const demandDataset = myChart.data.datasets[5];
+    // Unhide all datasets
     myChart.data.datasets[0].hidden = false; // Biomass
     myChart.data.datasets[1].hidden = false; // Geothermal
     myChart.data.datasets[2].hidden = false; // Nuclear
     myChart.data.datasets[3].hidden = false; // Wind
     myChart.data.datasets[4].hidden = false; // Solar
     myChart.data.datasets[6].hidden = false; // Net Demand
-    myChart.data.datasets[7].hidden = false; // Your Supply
+    myChart.data.datasets[7].hidden = false; // Battery Supply
+    myChart.data.datasets[8].hidden = false; // CCGT Supply
+    myChart.data.datasets[9].hidden = false; // CT Supply
+    myChart.data.datasets[10].hidden = false; // Hydro Supply
 
-    demandDataset.borderWidth = 2;
-    demandDataset.pointRadius = 0;
-    demandDataset.pointHoverRadius = 0;
-    demandDataset.borderDash = [5, 5];
+    // Restore Total Demand dataset to pre-game dot style (not lines)
+    const demandDataset = myChart.data.datasets[5];
+    demandDataset.showLine = false; // Don't connect dots in pre-game
+    demandDataset.borderWidth = 0; // No line border
+    demandDataset.pointRadius = 5; // Visible dots
+    demandDataset.pointHoverRadius = 7;
+    demandDataset.pointBackgroundColor = 'rgba(150, 150, 150, 0.7)';
+    demandDataset.pointBorderColor = 'rgba(150, 150, 150, 1)';
+    demandDataset.pointBorderWidth = 2;
+
+    // Restore Net Demand dataset to pre-game dot style
+    const netDemandDataset = myChart.data.datasets[6];
+    netDemandDataset.showLine = false; // Don't connect dots in pre-game
+    netDemandDataset.borderWidth = 0; // No line border
+    netDemandDataset.pointRadius = 5; // Visible dots
+    netDemandDataset.pointHoverRadius = 7;
 
     myChart.options.plugins.dragData.enabled = false;
     myChart.options.onHover = null;
 
-    // Restore x-axis configuration for 5-minute intervals (288 points)
+    // Restore x-axis configuration for hourly intervals (24 points in pre-game)
     myChart.options.scales.x.ticks.callback = function(value, index, ticks) {
-        if (index % 12 === 0) {
-            const hour = Math.floor(index / 12);
-            return hour.toString();
+        const totalDataPoints = ticks.length;
+
+        // If we have 24 data points (hourly mode), show all hours
+        if (totalDataPoints === 24) {
+            return index.toString();
         }
-        return '';
+        // If we have 288 data points (5-min mode), show every 12th tick (hourly)
+        else if (totalDataPoints === 288) {
+            if (index % 12 === 0) {
+                const hour = Math.floor(index / 12);
+                return hour.toString();
+            }
+            return '';
+        }
+        return index.toString();
     };
     myChart.options.scales.x.ticks.autoSkip = false;
     myChart.options.scales.x.grid.color = function(context) {
@@ -1126,25 +1383,10 @@ function confirmEdit() {
 
     // Regenerate full 288-point forecast from edited hourly percentages
     forecastData = generateForecastFromProfile(currentSeason);
+    hourlyForecastData = extractHourlyForecast(forecastData);
 
-    // Restore 5-minute labels and full data
-    myChart.data.labels = forecastData.map(d => new Date(d.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }));
-    myChart.data.datasets[0].data = forecastData.map(d => d.biomass_mw);
-    myChart.data.datasets[1].data = forecastData.map(d => d.geothermal_mw);
-    myChart.data.datasets[2].data = forecastData.map(d => d.nuclear_mw);
-    myChart.data.datasets[3].data = forecastData.map(d => d.wind_mw);
-    myChart.data.datasets[4].data = forecastData.map(d => d.solar_mw);
-    myChart.data.datasets[5].data = forecastData.map(d => d.total_demand_mw);
-    myChart.data.datasets[6].data = forecastData.map(d => d.net_demand_mw);
-    myChart.data.datasets[7].data = []; // Battery
-    myChart.data.datasets[8].data = []; // CCGT
-    myChart.data.datasets[9].data = []; // CT
-    myChart.data.datasets[10].data = []; // Hydro
-
-    myChart.update();
-
-    // Update initial demand display
-    showInitialDemand();
+    // Restore hourly pre-game view using updateChartData()
+    updateChartData();
 }
 
 function revertEdit() {
@@ -1322,9 +1564,20 @@ function updateGauges(delta, totalSupply) {
     deltaGaugeValue.textContent = Math.round(delta);
 
     // Update Grid Frequency Gauge
-    // Formula: frequency = 60 + 12 * (delta / total_supply)
-    // Avoid division by zero
-    const frequency = totalSupply > 0 ? 60 + 12 * (delta / totalSupply) : 60;
+    // Formula based on grid frequency response to power imbalance
+    // delta = supply - demand (positive = oversupply, negative = undersupply)
+    // Undersupply (delta < 0) → lower frequency
+    // Oversupply (delta > 0) → higher frequency
+
+    // Realistic frequency response based on game thresholds:
+    // ±500 MW (Emergency Alert) → ~59.7/60.3 Hz (0.3 Hz deviation)
+    // ±1500 MW (Blackout) → ~59.0/61.0 Hz (1.0 Hz deviation)
+    // Beyond ±1500 MW → increasingly severe (can go below 58 Hz for catastrophic undersupply)
+
+    // Use frequency droop: Δf (Hz) = delta (MW) / droop_constant
+    // Calibrated so ±1500 MW gives ±1.0 Hz deviation
+    const droopConstant = 1500; // MW per Hz deviation
+    const frequency = 60 + (delta / droopConstant);
 
     // Typical grid frequency range: 59.5 Hz to 60.5 Hz
     // Map 59 Hz to -90°, 60 Hz to 0°, 61 Hz to +90°
@@ -1488,8 +1741,22 @@ function triggerDemandSpikeEvent() {
     forecastData[nextTick].net_demand_mw += spikeMW; // Net demand increases by same amount
 
     // Update chart data for that tick
-    myChart.data.datasets[5].data[nextTick] = forecastData[nextTick].total_demand_mw;
-    myChart.data.datasets[6].data[nextTick] = forecastData[nextTick].net_demand_mw;
+    // During gameplay, we have both forecast dots (5-6) and actual lines (7-8)
+    if (myChart.data.datasets.length > 11) {
+        // Game is running - update both forecast and actual
+        if ((nextTick % 12) === 0) {
+            // Update forecast dot if it's an hourly point
+            myChart.data.datasets[5].data[nextTick] = forecastData[nextTick].total_demand_mw;
+            myChart.data.datasets[6].data[nextTick] = forecastData[nextTick].net_demand_mw;
+        }
+        // Update actual line data
+        myChart.data.datasets[7].data[nextTick] = forecastData[nextTick].total_demand_mw;
+        myChart.data.datasets[8].data[nextTick] = forecastData[nextTick].net_demand_mw;
+    } else {
+        // Pre-game - just update forecast
+        myChart.data.datasets[5].data[nextTick] = forecastData[nextTick].total_demand_mw;
+        myChart.data.datasets[6].data[nextTick] = forecastData[nextTick].net_demand_mw;
+    }
     myChart.update('none');
 
     // Disable button temporarily
@@ -1621,11 +1888,20 @@ function gameLoop() {
     }
 
     // Update chart data
-    myChart.data.datasets[7].data.push(batteryMW);  // Battery
-    myChart.data.datasets[8].data.push(ccgtMW);     // CCGT
-    myChart.data.datasets[9].data.push(ctMW);       // CT
-    myChart.data.datasets[10].data.push(hydroMW);   // Hydro
-    myChart.update();
+    // Note: After switchToActualData(), datasets 7-8 are actual demand lines, 9-12 are supply
+    myChart.data.datasets[9].data.push(batteryMW);  // Battery
+    myChart.data.datasets[10].data.push(ccgtMW);     // CCGT
+    myChart.data.datasets[11].data.push(ctMW);       // CT
+    myChart.data.datasets[12].data.push(hydroMW);   // Hydro
+
+    // Update the ACTUAL demand lines for the CURRENT tick
+    // This ensures the array has valid data up to the point being rendered
+    if (myChart.data.datasets[7] && myChart.data.datasets[8]) {
+        myChart.data.datasets[7].data[gameTick] = forecastData[gameTick].total_demand_mw;
+        myChart.data.datasets[8].data[gameTick] = forecastData[gameTick].net_demand_mw;
+    }
+
+    myChart.update('none');
 
     demandValueSpan.textContent = Math.round(currentNetDemand);
     const delta = totalSupply - currentNetDemand;
@@ -1700,6 +1976,108 @@ function gameLoop() {
     gameTick++;
 }
 
+// Switch from hourly forecast dots to 5-min actual data when game starts
+function switchToActualData() {
+    // Keep all 288 labels for proper x-axis scale
+    myChart.data.labels = forecastData.map(d => new Date(d.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }));
+
+    // Keep renewable generation visible (known upfront)
+    myChart.data.datasets[0].data = forecastData.map(d => d.biomass_mw);
+    myChart.data.datasets[1].data = forecastData.map(d => d.geothermal_mw);
+    myChart.data.datasets[2].data = forecastData.map(d => d.nuclear_mw);
+    myChart.data.datasets[3].data = forecastData.map(d => d.wind_mw);
+    myChart.data.datasets[4].data = forecastData.map(d => d.solar_mw);
+
+    // Show all hourly forecast dots (known upfront)
+    const totalDemandForecastDataset = myChart.data.datasets[5];
+    totalDemandForecastDataset.label = 'Total Demand (Forecast)';
+    totalDemandForecastDataset.data = forecastData.map((d, i) => (i % 12 === 0) ? d.total_demand_mw : null);
+    totalDemandForecastDataset.showLine = false;
+    totalDemandForecastDataset.pointRadius = 4;
+    totalDemandForecastDataset.pointHoverRadius = 6;
+
+    const netDemandForecastDataset = myChart.data.datasets[6];
+    netDemandForecastDataset.label = 'Net Demand (Forecast)';
+    netDemandForecastDataset.data = forecastData.map((d, i) => (i % 12 === 0) ? d.net_demand_mw : null);
+    netDemandForecastDataset.showLine = false;
+    netDemandForecastDataset.pointRadius = 4;
+    netDemandForecastDataset.pointHoverRadius = 6;
+
+    // Add new datasets for actual demand lines (progressively revealed)
+    // Create sparse arrays - will be filled as game progresses
+    const actualTotalDemand = new Array(288);
+    const actualNetDemand = new Array(288);
+
+    myChart.data.datasets.splice(7, 0, {
+        label: 'Total Demand',
+        type: 'line',
+        data: actualTotalDemand,
+        borderColor: 'rgba(150, 150, 150, 1)',
+        borderDash: [5, 5],
+        borderWidth: 2,
+        fill: false,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        order: 2,
+        spanGaps: true,  // Skip over undefined values
+        hidden: false
+    });
+
+    myChart.data.datasets.splice(8, 0, {
+        label: 'Net Demand',
+        type: 'line',
+        data: actualNetDemand,
+        borderColor: 'rgba(255, 99, 132, 1)',
+        borderWidth: 3,
+        fill: false,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        order: 1,
+        spanGaps: true,  // Skip over undefined values
+        hidden: false
+    });
+
+    myChart.update('none'); // Update without animation
+}
+
+// Switch back to hourly forecast dots when game resets
+function switchToForecastData() {
+    // Remove the actual demand line datasets if they exist (indices 7 and 8)
+    if (myChart.data.datasets.length > 11) {
+        myChart.data.datasets.splice(7, 2); // Remove the 2 actual demand datasets
+    }
+
+    // Update chart labels to show 5-minute intervals (smooth curves)
+    myChart.data.labels = forecastData.map(d => new Date(d.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }));
+
+    // Update renewable generation to 5-minute smooth data
+    myChart.data.datasets[0].data = forecastData.map(d => d.biomass_mw);
+    myChart.data.datasets[1].data = forecastData.map(d => d.geothermal_mw);
+    myChart.data.datasets[2].data = forecastData.map(d => d.nuclear_mw);
+    myChart.data.datasets[3].data = forecastData.map(d => d.wind_mw);
+    myChart.data.datasets[4].data = forecastData.map(d => d.solar_mw);
+
+    // Update Total Demand dataset to show hourly forecast dots (null for non-hourly points)
+    const totalDemandDataset = myChart.data.datasets[5];
+    totalDemandDataset.label = 'Total Demand (Forecast)';
+    totalDemandDataset.data = forecastData.map((d, i) => (i % 12 === 0) ? d.total_demand_mw : null);
+    totalDemandDataset.showLine = false; // Don't connect dots
+    totalDemandDataset.borderWidth = 0;
+    totalDemandDataset.pointRadius = 5;
+    totalDemandDataset.pointHoverRadius = 7;
+
+    // Update Net Demand dataset to show hourly forecast dots (null for non-hourly points)
+    const netDemandDataset = myChart.data.datasets[6];
+    netDemandDataset.label = 'Net Demand (Forecast)';
+    netDemandDataset.data = forecastData.map((d, i) => (i % 12 === 0) ? d.net_demand_mw : null);
+    netDemandDataset.showLine = false; // Don't connect dots
+    netDemandDataset.borderWidth = 0;
+    netDemandDataset.pointRadius = 5;
+    netDemandDataset.pointHoverRadius = 7;
+
+    myChart.update('none');
+}
+
 function startGame() {
     gameStarted = true; // Mark game as started
     gamePaused = false; // Mark game as not paused
@@ -1723,6 +2101,9 @@ function startGame() {
     // Enable event buttons during gameplay
     cloudCoverBtn.disabled = false;
     demandSpikeBtn.disabled = false;
+
+    // Switch from hourly forecast to 5-min actual data
+    switchToActualData();
 
     gameInterval = setInterval(gameLoop, gameSpeed * 1000);
 }
@@ -1832,6 +2213,10 @@ function resetGame() {
     myChart.data.datasets[8].data = []; // CCGT
     myChart.data.datasets[9].data = []; // CT
     myChart.data.datasets[10].data = []; // Hydro
+
+    // Switch back to hourly forecast dots
+    switchToForecastData();
+
     myChart.update();
 
     // Clear delta history chart
