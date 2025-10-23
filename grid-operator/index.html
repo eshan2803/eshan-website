@@ -210,6 +210,9 @@
             <div class="container mx-auto flex justify-between items-center">
                 <div class="flex flex-col">
                     <a href="https://eshansingh.xyz" class="font-lora text-2xl font-semibold">Dr. Eshan Singh</a>
+                    <div class="text-sm text-gray-500 mt-1">
+                        <span>Views: </span><span id="visitor-count">Loading...</span>
+                    </div>
                 </div>
                 <nav class="flex items-center space-x-2">
                     <a href="https://eshansingh.xyz/energy.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
@@ -255,7 +258,7 @@
                     <!-- Generation Chart -->
                     <section id="tutorial-step-2" class="glass-card">
                         <div class="flex justify-between items-center mb-4">
-                            <h3 class="font-lora text-xl font-semibold text-gray-800">Grid Generation & Demand</h3>
+                            <h3 class="font-lora text-xl font-semibold text-gray-800">Demand & Generation</h3>
                             <div class="flex items-center space-x-2">
                                 <div id="current-load-profile-text" class="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded-full">Summer</div>
                                 <button id="editProfileButton" class="p-2 rounded-full hover:bg-gray-200" title="Edit load profile">
@@ -326,7 +329,7 @@
                             <button id="cloudCoverBtn" class="flex-1 px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-lg hover:bg-gray-700 transition-colors shadow-sm disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
                                 ☁️ Cloud Cover
                             </button>
-                            <button id="demandSpikeBtn" class="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-sm disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                            <button id="demandSpikeBtn" class="flex-1 px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-lg hover:bg-gray-700 transition-colors shadow-sm disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
                                 ⚡ Demand Spike
                             </button>
                         </div>
@@ -703,7 +706,5 @@
     <script src="script.js"></script>
 </body>
 </html>
-
-
 
 
