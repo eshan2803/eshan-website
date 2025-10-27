@@ -733,7 +733,10 @@ async function initialize() {
         const speedSteps = [0.1, 1, 5, 10, 20, 30];
         const gameSpeedSlider = document.getElementById("gameSpeedSlider");
         const gameSpeedTime = document.getElementById("gameSpeedTime");
-        
+        const defaultIndex = 2;
+        gameSpeedSlider.value = defaultIndex;
+        gameSpeed = speedSteps[defaultIndex];
+        gameSpeedTime.textContent = gameSpeed.toFixed(1);        
         gameSpeedSlider.addEventListener("input", function () {
             const index = parseInt(this.value);
             const selectedSpeed = speedSteps[index];
@@ -2668,4 +2671,5 @@ initialize().then(() => {
     // Start tutorial after a short delay to let the page fully load
     setTimeout(startTutorial, 500);
 });
+
 
