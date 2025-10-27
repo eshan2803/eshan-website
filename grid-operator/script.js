@@ -730,18 +730,22 @@ async function initialize() {
         // Hydro condition dropdown listener
         hydroCondition.addEventListener('change', updateHydroCapacity);
 
-        // Game speed slider listener
-        gameSpeedSlider.addEventListener('input', () => {
-            gameSpeed = parseFloat(gameSpeedSlider.value);
-            gameSpeedTime.textContent = gameSpeed.toFixed(1);
-
-            // If game is running, restart interval with new speed
+        const speedSteps = [0.1, 1, 5, 10, 20, 30];
+        const gameSpeedSlider = document.getElementById("gameSpeedSlider");
+        const gameSpeedTime = document.getElementById("gameSpeedTime");
+        
+        gameSpeedSlider.addEventListener("input", function () {
+            const index = parseInt(this.value);
+            const selectedSpeed = speedSteps[index];
+            gameSpeed = selectedSpeed;
+            gameSpeedTime.textContent = selectedSpeed.toFixed(1);
+        
             if (gameStarted && !gamePaused) {
                 clearInterval(gameInterval);
                 gameInterval = setInterval(gameLoop, gameSpeed * 1000);
             }
         });
-
+        
         // Documentation button listener
         documentationBtn.addEventListener('click', () => {
             window.open('operator-documentation.html', '_blank');
@@ -2664,3 +2668,4 @@ initialize().then(() => {
     // Start tutorial after a short delay to let the page fully load
     setTimeout(startTutorial, 500);
 });
+
