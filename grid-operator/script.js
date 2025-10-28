@@ -80,6 +80,7 @@ const frequencyGaugeValue = document.getElementById('frequencyGaugeValue');
 
 // Status banner and counters
 const statusBanner = document.getElementById('statusBanner');
+const tipsBanner = document.getElementById('tipsBanner');
 const emergencyCountSpan = document.getElementById('emergencyCount');
 const blackoutCountSpan = document.getElementById('blackoutCount');
 
@@ -1552,6 +1553,120 @@ function updateBatterySOCDisplay() {
     }
 }
 
+// Update contextual tips banner based on game state
+function updateTipsBanner() {
+    if (!gameStarted) {
+        // Pre-game tip
+        tipsBanner.textContent = '💡 Ensure you match the demand and supply before you Start the Day';
+        tipsBanner.className = 'mb-4 px-4 py-2 rounded-lg text-center text-sm font-medium transition-all duration-300 bg-blue-50 text-blue-800 border border-blue-200';
+        return;
+    }
+
+    // Get current game state
+    const currentHour = Math.floor(gameTick / 12); // 12 ticks per hour (5-min intervals)
+    const socPercent = batterySOC * 100;
+    const ccgtStarting = getUnitCounts(ccgtUnits).starting;
+    const ctStarting = getUnitCounts(ctUnits).starting;
+    const ccgtOnline = getUnitCounts(ccgtUnits).online;
+    const ctOnline = getUnitCounts(ctUnits).online;
+
+    let message = '';
+    let bgClass = '';
+    let textClass = '';
+    let borderClass = '';
+
+    // Priority order: Critical warnings > Important tips > Informational
+
+    // CRITICAL: Battery critically low
+    if (socPercent < 15) {
+        message = '⚠️ Battery critically low! Deploy gas generators or risk blackouts';
+        bgClass = 'bg-red-50';
+        textClass = 'text-red-800';
+        borderClass = 'border-red-200';
+    }
+    // WARNING: Battery low during daytime with solar
+    else if (socPercent < 18 && currentHour >= 6 && currentHour < 18) {
+        message = '☀️ Battery running low - solar generation can help recharge';
+        bgClass = 'bg-yellow-50';
+        textClass = 'text-yellow-800';
+        borderClass = 'border-yellow-200';
+    }
+    // WARNING: Evening peak approaching
+    else if (currentHour >= 16 && currentHour < 18) {
+        message = '🌆 Evening peak approaching! Solar fading, demand rising - prepare resources';
+        bgClass = 'bg-orange-50';
+        textClass = 'text-orange-800';
+        borderClass = 'border-orange-200';
+    }
+    // CRITICAL: Evening peak
+    else if (currentHour >= 18 && currentHour < 21) {
+        message = '⚡ Evening peak! Maximum demand, no solar - use all resources';
+        bgClass = 'bg-red-50';
+        textClass = 'text-red-800';
+        borderClass = 'border-red-200';
+    }
+    // TIP: Morning ramp
+    else if (currentHour >= 6 && currentHour < 9) {
+        message = '🌅 Morning ramp-up: Demand rising, solar coming online';
+        bgClass = 'bg-blue-50';
+        textClass = 'text-blue-800';
+        borderClass = 'border-blue-200';
+    }
+    // TIP: Peak solar hours
+    else if (currentHour >= 11 && currentHour < 14) {
+        message = '☀️ Peak solar hours - great time to charge batteries!';
+        bgClass = 'bg-green-50';
+        textClass = 'text-green-800';
+        borderClass = 'border-green-200';
+    }
+    // TIP: Overnight period
+    else if (currentHour >= 22 || currentHour < 6) {
+        message = '🌙 Overnight period - maintain baseload efficiently';
+        bgClass = 'bg-indigo-50';
+        textClass = 'text-indigo-800';
+        borderClass = 'border-indigo-200';
+    }
+    // TIP: Battery well charged
+    else if (socPercent > 80) {
+        message = '✓ Battery well charged - consider reducing expensive generators';
+        bgClass = 'bg-green-50';
+        textClass = 'text-green-800';
+        borderClass = 'border-green-200';
+    }
+    // TIP: Expensive CT peakers online
+    else if (ctOnline >= 5) {
+        message = '💰 Multiple CT peakers online - expensive! Consider CCGT for sustained load';
+        bgClass = 'bg-yellow-50';
+        textClass = 'text-yellow-800';
+        borderClass = 'border-yellow-200';
+    }
+    // INFO: Units starting
+    else if (ccgtStarting > 0) {
+        const nextTime = getNextUnitCountdown(ccgtUnits);
+        message = `⏰ CCGT units starting - will be online in ${nextTime} min`;
+        bgClass = 'bg-blue-50';
+        textClass = 'text-blue-800';
+        borderClass = 'border-blue-200';
+    }
+    else if (ctStarting > 0) {
+        const nextTime = getNextUnitCountdown(ctUnits);
+        message = `⏰ CT peakers starting - will be online in ${nextTime} min`;
+        bgClass = 'bg-blue-50';
+        textClass = 'text-blue-800';
+        borderClass = 'border-blue-200';
+    }
+    // DEFAULT: General tip
+    else {
+        message = '💡 Monitor battery levels and plan ahead for demand changes';
+        bgClass = 'bg-blue-50';
+        textClass = 'text-blue-800';
+        borderClass = 'border-blue-200';
+    }
+
+    tipsBanner.textContent = message;
+    tipsBanner.className = `mb-4 px-4 py-2 rounded-lg text-center text-sm font-medium transition-all duration-300 ${bgClass} ${textClass} border ${borderClass}`;
+}
+
 // Update hydro capacity based on dropdown selection
 function updateHydroCapacity() {
     const condition = hydroCondition.value;
@@ -1889,6 +2004,7 @@ function gameLoop() {
     }
 
     updateBatterySOCDisplay();
+    updateTipsBanner();
 
     // Calculate cost for this 5-minute interval
     // Cost = (Power in MW) * (Operating Cost in $/MWh) * (Duration in hours)
@@ -1955,22 +2071,30 @@ function gameLoop() {
         nextDemandPreview.classList.remove('hidden');
         nextDemandValue.textContent = Math.round(nextNetDemand);
 
-        if (Math.abs(demandChange) < 10) {
-            // Minimal change
-            nextDemandChange.textContent = '(~0 MW)';
-            nextDemandChange.className = 'font-semibold text-gray-600';
-        } else if (demandChange > 0) {
+        if (demandChange > 0) {
             // Increase (harder to meet)
             nextDemandChange.textContent = `(↑${Math.round(demandChange)} MW)`;
             if (demandChange > 500) {
                 nextDemandChange.className = 'font-semibold text-red-600';
-            } else {
+            } else if (demandChange > 100) {
                 nextDemandChange.className = 'font-semibold text-orange-600';
+            } else {
+                nextDemandChange.className = 'font-semibold text-yellow-600';
             }
-        } else {
+        } else if (demandChange < 0) {
             // Decrease (easier to meet)
             nextDemandChange.textContent = `(↓${Math.round(Math.abs(demandChange))} MW)`;
-            nextDemandChange.className = 'font-semibold text-green-600';
+            if (Math.abs(demandChange) > 500) {
+                nextDemandChange.className = 'font-semibold text-green-600';
+            } else if (Math.abs(demandChange) > 100) {
+                nextDemandChange.className = 'font-semibold text-teal-600';
+            } else {
+                nextDemandChange.className = 'font-semibold text-blue-600';
+            }
+        } else {
+            // Exactly 0 change (rare but possible)
+            nextDemandChange.textContent = '(0 MW)';
+            nextDemandChange.className = 'font-semibold text-gray-600';
         }
     } else {
         // Last tick - hide preview
@@ -2135,6 +2259,7 @@ function startGame() {
 
     totalCost = 0; // Reset cost tracking
     updateBatterySOCDisplay();
+    updateTipsBanner();
     currentCostValueSpan.textContent = '0';
     totalCostValueSpan.textContent = '0';
 
@@ -2219,6 +2344,7 @@ function resetGame() {
     updateCCGTPowerSlider();
     updateCTDisplay();
     updateCTPowerSlider();
+    updateTipsBanner();
 
     demandValueSpan.textContent = '--';
     deltaValueSpan.textContent = '--';
@@ -2723,4 +2849,5 @@ initialize().then(() => {
     // Start tutorial after a short delay to let the page fully load
     setTimeout(startTutorial, 500);
 });
+
 
