@@ -182,9 +182,6 @@ def run_lca_model(inputs):
     All helper functions, parameters, and process steps are defined and called
     within this function to ensure correct variable scoping.
     """
-    # Clean cache if needed to prevent memory issues
-    clean_cache_if_needed()
-
     # =================================================================
     # <<<                       HELPER FUNCTIONS                    >>>
     # =================================================================
@@ -641,8 +638,8 @@ def run_lca_model(inputs):
             if total_figure_height_inches > 15:
                 total_figure_height_inches = 15
             
-            # Reduce figure width to save memory (8 instead of 10)
-            fig, ax = plt.subplots(figsize=(8, total_figure_height_inches))
+            # Reduce figure size significantly to save memory
+            fig, ax = plt.subplots(figsize=(6, min(total_figure_height_inches, 10)))
 
             # Adjust subplot parameters to create space for the text at the bottom
             # This sets the margin within the figure for the main plot
@@ -686,17 +683,12 @@ def run_lca_model(inputs):
             plt.tight_layout() # Just call it without rect
 
             buf = io.BytesIO()
-            # Use JPEG instead of PNG for much smaller file size (60-80% smaller)
-            # DPI=72 for web display, quality=85 for good visual quality
-            plt.savefig(buf, format='jpg', dpi=72, bbox_inches='tight',
-                       pil_kwargs={'quality': 85, 'optimize': True})
+            # Keep PNG format (more reliable than JPEG with matplotlib)
+            # Use lower DPI (50 instead of 100) to reduce memory
+            plt.savefig(buf, format='png', dpi=50, bbox_inches='tight')
             buf.seek(0)
             img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-            buf.close()  # Explicitly close the buffer
-            plt.close(fig)
-            plt.close('all')  # Close all matplotlib figures
-            del buf  # Delete buffer reference
-            gc.collect()  # Force garbage collection
+            plt.close(fig)  # Close the figure
 
             return img_base64    
     
@@ -3619,16 +3611,7 @@ def calculate_endpoint():
         print(f"[INFO] Processing inputs: {inputs}")
         results = run_lca_model(inputs)
         print("[INFO] Calculation completed successfully")
-
-        # Create response
-        response = jsonify(results)
-
-        # Force garbage collection to free memory immediately
-        del results
-        gc.collect()
-        print("[INFO] Memory cleanup completed")
-
-        return response
+        return jsonify(results)
     except Exception as e:
         print(f"[ERROR] Exception occurred: {str(e)}")
         traceback.print_exc()
