@@ -202,17 +202,17 @@ function renderCostChart(chartData) {
         hovermode: 'closest',
         showlegend: true,
         legend: {
-            orientation: 'h',
+            orientation: 'v',
             yanchor: 'bottom',
-            y: -0.12,
-            xanchor: 'left',
-            x: 0.02,
-            font: { size: 11, family: 'Inter, sans-serif' },
-            bgcolor: 'rgba(255, 255, 255, 0)',
-            bordercolor: 'rgba(0,0,0,0)',
-            borderwidth: 0
+            y: 0.02,
+            xanchor: 'right',
+            x: 0.98,
+            font: { size: 10, family: 'Inter, sans-serif' },
+            bgcolor: 'rgba(255, 255, 255, 0.95)',
+            bordercolor: '#d1d5db',
+            borderwidth: 1
         },
-        margin: { l: 280, r: 50, t: 70, b: chartData.overlay_text ? 200 : 100 },
+        margin: { l: 280, r: 50, t: 70, b: chartData.overlay_text ? 140 : 80 },
         height: totalHeight,
         plot_bgcolor: '#fafafa',
         paper_bgcolor: '#ffffff',
@@ -224,16 +224,14 @@ function renderCostChart(chartData) {
         layout.annotations = [{
             xref: 'paper',
             yref: 'paper',
-            x: 0.02,
-            y: -0.18,
+            x: 0,
+            y: -0.12,
             xanchor: 'left',
             yanchor: 'top',
-            text: '<b>Context:</b><br>' + chartData.overlay_text.replace(/\n/g, '<br>'),
+            text: chartData.overlay_text.replace(/\n/g, '<br>'),
             showarrow: false,
             font: { size: 10, family: 'Inter, sans-serif', color: '#374151' },
-            align: 'left',
-            xref: 'paper',
-            yref: 'paper'
+            align: 'left'
         }];
     }
 
@@ -298,7 +296,7 @@ function renderEmissionChart(chartData) {
         },
         hovermode: 'closest',
         showlegend: false,
-        margin: { l: 280, r: 50, t: 70, b: chartData.overlay_text ? 180 : 80 },
+        margin: { l: 280, r: 50, t: 70, b: chartData.overlay_text ? 140 : 80 },
         height: totalHeight,
         plot_bgcolor: '#fafafa',
         paper_bgcolor: '#ffffff',
@@ -310,11 +308,11 @@ function renderEmissionChart(chartData) {
         layout.annotations = [{
             xref: 'paper',
             yref: 'paper',
-            x: 0.02,
-            y: -0.15,
+            x: 0,
+            y: -0.12,
             xanchor: 'left',
             yanchor: 'top',
-            text: '<b>Context:</b><br>' + chartData.overlay_text.replace(/\n/g, '<br>'),
+            text: chartData.overlay_text.replace(/\n/g, '<br>'),
             showarrow: false,
             font: { size: 10, family: 'Inter, sans-serif', color: '#374151' },
             align: 'left'
