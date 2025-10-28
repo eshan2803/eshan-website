@@ -1609,12 +1609,12 @@ def run_lca_model(inputs):
                 "base_capex_M_usd": 15, "base_capacity": 6650000, "power_law_exp": 0.7
             },
             2: {
-                "default": {"base_capex_M_usd": 0, "base_capacity": 1, "power_law_exp": 0}
+                "base_capex_M_usd": 8, "base_capacity": 5000000, "power_law_exp": 0.7
             }
         }
 
         if fuel_type not in cost_models:
-            return 0
+            return 0, 0
 
         model = cost_models[fuel_type]
 
