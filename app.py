@@ -3197,29 +3197,25 @@ def run_lca_model(inputs):
         carbon_tax_per_kg_for_chart_idx = new_detailed_headers.index("Carbon Tax/kg ($/kg)")
         insurance_per_kg_for_chart_idx = new_detailed_headers.index("Insurance/kg ($/kg)")
         eco2_per_kg_for_chart_idx = new_detailed_headers.index("CO2eq/kg (kg/kg)")
-        cost_chart_base64 = create_breakdown_chart(
-            aggregated_data_for_chart,
-            opex_per_kg_for_chart_idx,
-            capex_per_kg_for_chart_idx,
-            carbon_tax_per_kg_for_chart_idx,
-            insurance_per_kg_for_chart_idx, # Ensure this index is passed
-            'Cost Breakdown per kg of Delivered Fuel',
-            'Cost ($/kg)',
-            overlay_text=cost_overlay_text,
-            is_emission_chart=False
-        )        
+        # Prepare chart data for Plotly.js (interactive charts in browser)
+        cost_chart_data = {
+            'labels': [row[0] for row in aggregated_data_for_chart],
+            'opex': [row[opex_per_kg_for_chart_idx] for row in aggregated_data_for_chart],
+            'capex': [row[capex_per_kg_for_chart_idx] for row in aggregated_data_for_chart],
+            'carbon_tax': [row[carbon_tax_per_kg_for_chart_idx] for row in aggregated_data_for_chart],
+            'insurance': [row[insurance_per_kg_for_chart_idx] for row in aggregated_data_for_chart],
+            'title': 'Cost Breakdown per kg of Delivered Fuel',
+            'x_label': 'Cost ($/kg)',
+            'overlay_text': cost_overlay_text
+        }
 
-        emission_chart_base64 = create_breakdown_chart(
-            data_for_emission_chart,
-            eco2_per_kg_for_chart_idx,      # Emissions chart uses this as its primary value
-            eco2_per_kg_for_chart_idx,      # Placeholder, will be ignored for emission charts
-            eco2_per_kg_for_chart_idx,      # Placeholder, will be ignored for emission charts
-            eco2_per_kg_for_chart_idx,      # Placeholder, will be ignored for emission charts
-            'CO2eq Breakdown per kg of Delivered Fuel',
-            'CO2eq (kg/kg)',
-            overlay_text=emission_overlay_text,
-            is_emission_chart=True
-        )
+        emission_chart_data = {
+            'labels': [row[0] for row in data_for_emission_chart],
+            'emissions': [row[eco2_per_kg_for_chart_idx] for row in data_for_emission_chart],
+            'title': 'CO2eq Breakdown per kg of Delivered Fuel',
+            'x_label': 'CO2eq (kg/kg)',
+            'overlay_text': emission_overlay_text
+        }
         summary1_data = [
             ["Cost ($/kg chemical)", f"{chem_cost:.2f}"],
             ["Consumed Energy (MJ/kg chemical)", f"{chem_energy:.2f}"],
@@ -3261,8 +3257,8 @@ def run_lca_model(inputs):
             },
             "csv_data": csv_data, # Now csv_data is defined
             "charts": {
-                "cost_chart_base64": cost_chart_base64,
-                "emission_chart_base64": emission_chart_base64
+                "cost_chart_data": cost_chart_data,
+                "emission_chart_data": emission_chart_data
             }
         }
         return response
@@ -3544,28 +3540,25 @@ def run_lca_model(inputs):
                 f"• Logistics add {ratio_emission:.1f}X the farming emissions."
             )
 
-        cost_chart_base64 = create_breakdown_chart(
-            aggregated_data_for_chart,
-            opex_per_kg_for_chart_idx,
-            capex_per_kg_for_chart_idx,
-            carbon_tax_per_kg_for_chart_idx,
-            insurance_per_kg_for_chart_idx,
-            'Cost Breakdown per kg of Delivered Food',
-            'Cost ($/kg)',
-            overlay_text=cost_overlay_text,
-            is_emission_chart=False
-        )
-        emission_chart_base64 = create_breakdown_chart(
-            data_for_emission_chart,
-            eco2_per_kg_for_chart_idx,
-            eco2_per_kg_for_chart_idx,
-            eco2_per_kg_for_chart_idx,
-            eco2_per_kg_for_chart_idx,
-            'CO2eq Breakdown per kg of Delivered Food',
-            'CO2eq (kg/kg)',
-            overlay_text=emission_overlay_text,
-            is_emission_chart=True
-        )        
+        # Prepare chart data for Plotly.js (interactive charts in browser)
+        cost_chart_data = {
+            'labels': [row[0] for row in aggregated_data_for_chart],
+            'opex': [row[opex_per_kg_for_chart_idx] for row in aggregated_data_for_chart],
+            'capex': [row[capex_per_kg_for_chart_idx] for row in aggregated_data_for_chart],
+            'carbon_tax': [row[carbon_tax_per_kg_for_chart_idx] for row in aggregated_data_for_chart],
+            'insurance': [row[insurance_per_kg_for_chart_idx] for row in aggregated_data_for_chart],
+            'title': 'Cost Breakdown per kg of Delivered Food',
+            'x_label': 'Cost ($/kg)',
+            'overlay_text': cost_overlay_text
+        }
+
+        emission_chart_data = {
+            'labels': [row[0] for row in data_for_emission_chart],
+            'emissions': [row[eco2_per_kg_for_chart_idx] for row in data_for_emission_chart],
+            'title': 'CO2eq Breakdown per kg of Delivered Food',
+            'x_label': 'CO2eq (kg/kg)',
+            'overlay_text': emission_overlay_text
+        }        
             
         response = {
             "status": "success",
@@ -3579,7 +3572,7 @@ def run_lca_model(inputs):
                 "green_premium_data": green_premium_data
             },
             "csv_data": [new_detailed_headers] + detailed_data_formatted,
-            "charts": { "cost_chart_base64": cost_chart_base64, "emission_chart_base64": emission_chart_base64 },
+            "charts": { "cost_chart_data": cost_chart_data, "emission_chart_data": emission_chart_data },
             "local_sourcing_comparison": local_sourcing_results,
             "food_type": food_type
         }
