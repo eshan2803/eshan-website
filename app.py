@@ -634,12 +634,9 @@ def run_lca_model(inputs):
             # Ensure a minimum height if there are very few bars
             if total_figure_height_inches < 4:
                 total_figure_height_inches = 4
-            # MEMORY OPTIMIZATION: Limit maximum height to prevent huge figures
-            if total_figure_height_inches > 15:
-                total_figure_height_inches = 15
-            
-            # Reduce figure size significantly to save memory
-            fig, ax = plt.subplots(figsize=(6, min(total_figure_height_inches, 10)))
+
+            # Original high-quality figure size (infinite loop bug is fixed)
+            fig, ax = plt.subplots(figsize=(10, total_figure_height_inches))
 
             # Adjust subplot parameters to create space for the text at the bottom
             # This sets the margin within the figure for the main plot
@@ -683,9 +680,8 @@ def run_lca_model(inputs):
             plt.tight_layout() # Just call it without rect
 
             buf = io.BytesIO()
-            # Keep PNG format (more reliable than JPEG with matplotlib)
-            # Use lower DPI (50 instead of 100) to reduce memory
-            plt.savefig(buf, format='png', dpi=50, bbox_inches='tight')
+            # High quality PNG charts (infinite loop bug is fixed, so memory is fine)
+            plt.savefig(buf, format='png', dpi=100, bbox_inches='tight')
             buf.seek(0)
             img_base64 = base64.b64encode(buf.read()).decode('utf-8')
 
