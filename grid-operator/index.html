@@ -515,7 +515,10 @@
                                 <!-- Unit status display -->
                                 <div class="text-xs text-gray-700 mb-2">
                                     <div>Online: <span id="ccgtOnlineCount" class="font-semibold">0</span> units (<span id="ccgtOnlineMW">0</span> MW)</div>
-                                    <div>Starting: <span id="ccgtStartingCount" class="font-semibold">0</span> units</div>
+                                    <div class="flex justify-between">
+                                        <span>Starting: <span id="ccgtStartingCount" class="font-semibold">0</span> units</span>
+                                        <span id="ccgtNextOnline" class="text-blue-600 font-medium"></span>
+                                    </div>
                                 </div>
 
                                 <!-- Power output slider (for online units) -->
@@ -525,7 +528,7 @@
 
                                 <div class="text-xs text-gray-500">
                                     <div>500 MW/unit • 30 units max</div>
-                                    <div class="text-blue-600 font-medium">Startup: 60-90 min</div>
+                                    <div class="text-blue-600 font-medium">Startup: 75 min</div>
                                     <div class="text-blue-600 font-medium">Min Load: 50%</div>
                                     <div class="text-gray-600 font-medium">Cost: $35+$5/500MW</div>
                                 </div>
@@ -553,7 +556,10 @@
                                 <!-- Unit status display -->
                                 <div class="text-xs text-gray-700 mb-2">
                                     <div>Online: <span id="ctOnlineCount" class="font-semibold">0</span> units (<span id="ctOnlineMW">0</span> MW)</div>
-                                    <div>Starting: <span id="ctStartingCount" class="font-semibold">0</span> units</div>
+                                    <div class="flex justify-between">
+                                        <span>Starting: <span id="ctStartingCount" class="font-semibold">0</span> units</span>
+                                        <span id="ctNextOnline" class="text-orange-600 font-medium"></span>
+                                    </div>
                                 </div>
 
                                 <!-- Power output slider (for online units) -->
@@ -563,7 +569,7 @@
 
                                 <div class="text-xs text-gray-500">
                                     <div>200 MW/unit • 50 units max</div>
-                                    <div class="text-orange-600 font-medium">Startup: 10-20 min</div>
+                                    <div class="text-orange-600 font-medium">Startup: 15 min</div>
                                     <div class="text-orange-600 font-medium">Min Load: 0%</div>
                                     <div class="text-gray-600 font-medium">Cost: $65+$5/200MW</div>
                                 </div>
