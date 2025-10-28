@@ -12,6 +12,7 @@ from urllib.parse import urlencode
 import re
 import os
 import json
+import gc  # Add garbage collection for memory management
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -160,6 +161,18 @@ BOG_EQUIPMENT_CAPEX = {
     }
 }
 api_cache = {}
+MAX_CACHE_SIZE = 500  # Limit cache to 500 entries to prevent memory issues
+
+def clean_cache_if_needed():
+    """Remove oldest cache entries if cache grows too large"""
+    global api_cache
+    if len(api_cache) > MAX_CACHE_SIZE:
+        # Remove 20% of oldest entries (simple FIFO approach)
+        keys_to_remove = list(api_cache.keys())[:int(MAX_CACHE_SIZE * 0.2)]
+        for key in keys_to_remove:
+            del api_cache[key]
+        print(f"[INFO] Cache cleaned. Removed {len(keys_to_remove)} entries. Cache size now: {len(api_cache)}")
+        gc.collect()
 # ==============================================================================
 # MAIN CALCULATION FUNCTION
 # ==============================================================================
@@ -169,6 +182,9 @@ def run_lca_model(inputs):
     All helper functions, parameters, and process steps are defined and called
     within this function to ensure correct variable scoping.
     """
+    # Clean cache if needed to prevent memory issues
+    clean_cache_if_needed()
+
     # =================================================================
     # <<<                       HELPER FUNCTIONS                    >>>
     # =================================================================
@@ -666,10 +682,15 @@ def run_lca_model(inputs):
             plt.tight_layout() # Just call it without rect
 
             buf = io.BytesIO()
-            plt.savefig(buf, format='png', dpi=100, bbox_inches='tight')
+            # Reduce DPI to 72 for smaller file size and lower memory usage
+            plt.savefig(buf, format='png', dpi=72, bbox_inches='tight')
             buf.seek(0)
             img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+            buf.close()  # Explicitly close the buffer
             plt.close(fig)
+            plt.close('all')  # Close all matplotlib figures
+            del buf  # Delete buffer reference
+            gc.collect()  # Force garbage collection
 
             return img_base64    
     
@@ -3578,7 +3599,16 @@ def calculate_endpoint():
         print(f"[INFO] Processing inputs: {inputs}")
         results = run_lca_model(inputs)
         print("[INFO] Calculation completed successfully")
-        return jsonify(results)
+
+        # Create response
+        response = jsonify(results)
+
+        # Force garbage collection to free memory immediately
+        del results
+        gc.collect()
+        print("[INFO] Memory cleanup completed")
+
+        return response
     except Exception as e:
         print(f"[ERROR] Exception occurred: {str(e)}")
         traceback.print_exc()
