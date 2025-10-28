@@ -188,13 +188,15 @@ function renderCostChart(chartData) {
             showline: true,
             linecolor: '#d1d5db',
             linewidth: 1,
-            zeroline: false
+            zeroline: false,
+            automargin: true
         },
         yaxis: {
             autorange: 'reversed',
             gridcolor: 'rgba(0,0,0,0)',
             showline: false,
-            tickfont: { size: 11, family: 'Inter, sans-serif', color: '#374151' }
+            tickfont: { size: 11, family: 'Inter, sans-serif', color: '#374151' },
+            automargin: true
         },
         barmode: 'stack',
         hovermode: 'closest',
@@ -210,7 +212,7 @@ function renderCostChart(chartData) {
             bordercolor: '#d1d5db',
             borderwidth: 1
         },
-        margin: { l: 50, r: 50, t: 70, b: 80 },
+        margin: { t: 70, b: 80 },
         height: totalHeight,
         plot_bgcolor: '#fafafa',
         paper_bgcolor: '#ffffff',
@@ -229,8 +231,7 @@ function renderCostChart(chartData) {
     // Display context text in HTML div below chart
     const contextDiv = document.getElementById('costChartContext');
     if (chartData.overlay_text && contextDiv) {
-        contextDiv.innerHTML = '<p class="font-semibold mb-2">Context:</p>' +
-                              chartData.overlay_text.split('\n').map(line => `<p>${line}</p>`).join('');
+        contextDiv.innerHTML = chartData.overlay_text.split('\n').map(line => `<p>${line}</p>`).join('');
         contextDiv.style.display = 'block';
     }
 }
@@ -275,17 +276,19 @@ function renderEmissionChart(chartData) {
             showline: true,
             linecolor: '#d1d5db',
             linewidth: 1,
-            zeroline: false
+            zeroline: false,
+            automargin: true
         },
         yaxis: {
             autorange: 'reversed',
             gridcolor: 'rgba(0,0,0,0)',
             showline: false,
-            tickfont: { size: 11, family: 'Inter, sans-serif', color: '#374151' }
+            tickfont: { size: 11, family: 'Inter, sans-serif', color: '#374151' },
+            automargin: true
         },
         hovermode: 'closest',
         showlegend: false,
-        margin: { l: 50, r: 50, t: 70, b: 80 },
+        margin: { t: 70, b: 80 },
         height: totalHeight,
         plot_bgcolor: '#fafafa',
         paper_bgcolor: '#ffffff',
@@ -304,8 +307,7 @@ function renderEmissionChart(chartData) {
     // Display context text in HTML div below chart
     const contextDiv = document.getElementById('emissionChartContext');
     if (chartData.overlay_text && contextDiv) {
-        contextDiv.innerHTML = '<p class="font-semibold mb-2">Context:</p>' +
-                              chartData.overlay_text.split('\n').map(line => `<p>${line}</p>`).join('');
+        contextDiv.innerHTML = chartData.overlay_text.split('\n').map(line => `<p>${line}</p>`).join('');
         contextDiv.style.display = 'block';
     }
 }
