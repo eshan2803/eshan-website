@@ -1609,7 +1609,7 @@ def run_lca_model(inputs):
                 "base_capex_M_usd": 15, "base_capacity": 6650000, "power_law_exp": 0.7
             },
             2: {
-                "base_capex_M_usd": 8, "base_capacity": 5000000, "power_law_exp": 0.7
+                "base_capex_M_usd": 1.5, "base_capacity": 5000000, "power_law_exp": 0.6
             }
         }
 
@@ -3523,3 +3523,4 @@ print("=" * 60)
 print("[STARTUP] Flask app initialized successfully")
 print(f"[STARTUP] API Keys status: Google={bool(api_key_google != 'ESHAN_API_KEY_GOOGLE')}, OpenAI={bool(api_key_openAI != 'ESHAN_API_KEY_OPENAI')}")
 print("=" * 60)
+
