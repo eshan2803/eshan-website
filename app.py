@@ -20,7 +20,16 @@ import base64
 
 # --- Initialize Flask App ---
 app = Flask(__name__)
-CORS(app, resources={r"/calculate": {"origins": ["https://eshansingh.xyz", "http://localhost:8000", "http://127.0.0.1:8000"]}})
+# Enhanced CORS configuration with explicit method support
+CORS(app, resources={
+    r"/calculate": {
+        "origins": ["https://eshansingh.xyz", "http://localhost:8000", "http://127.0.0.1:8000"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"],
+        "expose_headers": ["Content-Type"],
+        "supports_credentials": False
+    }
+})
 
 # --- API KEYS ---
 api_key_google = os.environ.get("API_KEY_GOOGLE", "ESHAN_API_KEY_GOOGLE")
@@ -3541,20 +3550,51 @@ def run_lca_model(inputs):
         }
         return response    
 
-# --- Flask API Endpoint ---
-@app.route('/calculate', methods=['POST'])
+# --- Flask API Endpoints ---
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint for monitoring"""
+    return jsonify({"status": "ok", "message": "Server is running"}), 200
+
+@app.route('/calculate', methods=['POST', 'OPTIONS'])
 def calculate_endpoint():
+    # Handle CORS preflight request
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', 'https://eshansingh.xyz')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        return response, 200
+
     try:
+        print(f"[INFO] Received {request.method} request to /calculate")
+        print(f"[INFO] Request headers: {dict(request.headers)}")
+
         inputs = request.get_json()
         if not inputs:
+            print("[ERROR] Invalid JSON input received")
             return jsonify({"status": "error", "message": "Invalid JSON input"}), 400
+
+        print(f"[INFO] Processing inputs: {inputs}")
         results = run_lca_model(inputs)
+        print("[INFO] Calculation completed successfully")
         return jsonify(results)
     except Exception as e:
+        print(f"[ERROR] Exception occurred: {str(e)}")
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
 
 # --- Main execution block ---
 if __name__ == '__main__':
+    print("=" * 60)
     print("Starting Flask server...")
+    print(f"API Keys loaded: Google={bool(api_key_google)}, OpenAI={bool(api_key_openAI)}")
+    print("Server ready to accept requests")
+    print("=" * 60)
     app.run(debug=True, port=5000)
+
+# Print startup message for production (Gunicorn)
+print("=" * 60)
+print("[STARTUP] Flask app initialized successfully")
+print(f"[STARTUP] API Keys status: Google={bool(api_key_google != 'ESHAN_API_KEY_GOOGLE')}, OpenAI={bool(api_key_openAI != 'ESHAN_API_KEY_OPENAI')}")
+print("=" * 60)
