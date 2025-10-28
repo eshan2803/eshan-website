@@ -106,7 +106,173 @@ function shareOnLinkedIn() {
     showModal("Your results page link has been prepared for sharing on LinkedIn. Please add a screenshot of your results manually!");
 }
 
-// Form Submission Handler
+// Plotly Chart Rendering Functions
+function renderCostChart(chartData) {
+    if (!chartData || !chartData.labels) {
+        console.error("Invalid chart data for cost chart");
+        return;
+    }
+
+    // Create stacked horizontal bar chart
+    const traces = [];
+
+    // Insurance (purple)
+    if (chartData.insurance && chartData.insurance.some(v => v > 0)) {
+        traces.push({
+            y: chartData.labels,
+            x: chartData.insurance,
+            name: 'Overheads & Fees',
+            type: 'bar',
+            orientation: 'h',
+            marker: { color: '#800080' },
+            hovertemplate: '%{y}<br>Overheads: $%{x:.4f}/kg<extra></extra>'
+        });
+    }
+
+    // OPEX (light green)
+    traces.push({
+        y: chartData.labels,
+        x: chartData.opex,
+        name: 'OPEX',
+        type: 'bar',
+        orientation: 'h',
+        marker: { color: '#8BC34A' },
+        hovertemplate: '%{y}<br>OPEX: $%{x:.4f}/kg<extra></extra>'
+    });
+
+    // CAPEX (darker green)
+    traces.push({
+        y: chartData.labels,
+        x: chartData.capex,
+        name: 'CAPEX',
+        type: 'bar',
+        orientation: 'h',
+        marker: { color: '#4CAF50' },
+        hovertemplate: '%{y}<br>CAPEX: $%{x:.4f}/kg<extra></extra>'
+    });
+
+    // Carbon Tax (yellow)
+    if (chartData.carbon_tax && chartData.carbon_tax.some(v => v > 0)) {
+        traces.push({
+            y: chartData.labels,
+            x: chartData.carbon_tax,
+            name: 'Carbon Tax',
+            type: 'bar',
+            orientation: 'h',
+            marker: { color: '#FFC107' },
+            hovertemplate: '%{y}<br>Carbon Tax: $%{x:.4f}/kg<extra></extra>'
+        });
+    }
+
+    const layout = {
+        title: {
+            text: chartData.title,
+            font: { size: 16, weight: 'bold' }
+        },
+        xaxis: {
+            title: chartData.x_label,
+            titlefont: { size: 14, weight: 'bold' }
+        },
+        yaxis: {
+            autorange: 'reversed' // Top to bottom
+        },
+        barmode: 'stack',
+        hovermode: 'closest',
+        showlegend: true,
+        legend: {
+            orientation: 'h',
+            y: 1.15,
+            x: 0.5,
+            xanchor: 'center'
+        },
+        margin: { l: 200, r: 50, t: 80, b: 60 },
+        height: 500,
+        annotations: chartData.overlay_text ? [{
+            xref: 'paper',
+            yref: 'paper',
+            x: 0.95,
+            y: 0.5,
+            xanchor: 'right',
+            yanchor: 'middle',
+            text: chartData.overlay_text.replace(/\n/g, '<br>'),
+            showarrow: false,
+            font: { size: 12 },
+            bgcolor: 'rgba(255, 255, 200, 0.6)',
+            borderpad: 8,
+            bordercolor: '#FFC107',
+            borderwidth: 1
+        }] : []
+    };
+
+    const config = {
+        responsive: true,
+        displayModeBar: true,
+        modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+        displaylogo: false
+    };
+
+    Plotly.newPlot('costChart', traces, layout, config);
+}
+
+function renderEmissionChart(chartData) {
+    if (!chartData || !chartData.labels) {
+        console.error("Invalid chart data for emission chart");
+        return;
+    }
+
+    const trace = {
+        y: chartData.labels,
+        x: chartData.emissions,
+        name: 'Emissions',
+        type: 'bar',
+        orientation: 'h',
+        marker: { color: '#4CAF50' },
+        hovertemplate: '%{y}<br>Emissions: %{x:.4f} kg CO₂eq/kg<extra></extra>'
+    };
+
+    const layout = {
+        title: {
+            text: chartData.title,
+            font: { size: 16, weight: 'bold' }
+        },
+        xaxis: {
+            title: chartData.x_label,
+            titlefont: { size: 14, weight: 'bold' }
+        },
+        yaxis: {
+            autorange: 'reversed'
+        },
+        hovermode: 'closest',
+        showlegend: false,
+        margin: { l: 200, r: 50, t: 80, b: 60 },
+        height: 500,
+        annotations: chartData.overlay_text ? [{
+            xref: 'paper',
+            yref: 'paper',
+            x: 0.95,
+            y: 0.5,
+            xanchor: 'right',
+            yanchor: 'middle',
+            text: chartData.overlay_text.replace(/\n/g, '<br>'),
+            showarrow: false,
+            font: { size: 12 },
+            bgcolor: 'rgba(255, 255, 200, 0.6)',
+            borderpad: 8,
+            bordercolor: '#FFC107',
+            borderwidth: 1
+        }] : []
+    };
+
+    const config = {
+        responsive: true,
+        displayModeBar: true,
+        modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+        displaylogo: false
+    };
+
+    Plotly.newPlot('emissionChart', [trace], layout, config);
+}
+
 // Form Submission Handler
 async function handleCalculation(e) {
     e.preventDefault();
@@ -234,9 +400,27 @@ async function handleCalculation(e) {
         displayTables(results.table_data, commodity);
         completeResultsForCsv = results.csv_data;
         
+        console.log("Full results object:", results);
         if (results.charts) {
-            document.getElementById('costChartImg').src = "data:image/png;base64," + results.charts.cost_chart_base64;
-            document.getElementById('emissionChartImg').src = "data:image/png;base64," + results.charts.emission_chart_base64;
+            console.log("Charts data received:", results.charts);
+
+            // Check if we have new Plotly data format
+            if (results.charts.cost_chart_data && results.charts.cost_chart_data.labels) {
+                console.log("✅ Using new Plotly data format");
+                renderCostChart(results.charts.cost_chart_data);
+                renderEmissionChart(results.charts.emission_chart_data);
+            }
+            // Fallback to old base64 format if backend not yet deployed
+            else if (results.charts.cost_chart_base64) {
+                console.warn("⚠️ Backend not deployed yet - using old matplotlib format");
+                document.getElementById('costChart').innerHTML = `<img src="data:image/png;base64,${results.charts.cost_chart_base64}" class="w-full" alt="Cost Chart">`;
+                document.getElementById('emissionChart').innerHTML = `<img src="data:image/png;base64,${results.charts.emission_chart_base64}" class="w-full" alt="Emission Chart">`;
+            } else {
+                console.error("❌ No valid chart data found (neither Plotly nor base64)");
+                console.log("Charts object:", results.charts);
+            }
+        } else {
+            console.error("❌ No charts object in results");
         }
         
         const comparisonSection = document.getElementById('comparisonSection');
