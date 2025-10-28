@@ -18,6 +18,7 @@ const ccgtOutputDisplay = document.getElementById('ccgtOutputDisplay');
 const ccgtOnlineCount = document.getElementById('ccgtOnlineCount');
 const ccgtOnlineMW = document.getElementById('ccgtOnlineMW');
 const ccgtStartingCount = document.getElementById('ccgtStartingCount');
+const ccgtNextOnline = document.getElementById('ccgtNextOnline');
 
 // CT unit dispatch controls
 const ctCommitBtn = document.getElementById('ctCommitBtn');
@@ -27,6 +28,7 @@ const ctOutputDisplay = document.getElementById('ctOutputDisplay');
 const ctOnlineCount = document.getElementById('ctOnlineCount');
 const ctOnlineMW = document.getElementById('ctOnlineMW');
 const ctStartingCount = document.getElementById('ctStartingCount');
+const ctNextOnline = document.getElementById('ctNextOnline');
 
 // Hydro controls
 const hydroSlider = document.getElementById('hydroSlider');
@@ -246,6 +248,21 @@ function getOnlineCapacity(units, unitSize, minLoadPercent) {
     return { minMW, maxMW, onlineCount };
 }
 
+// Helper: Get next unit coming online and its countdown
+function getNextUnitCountdown(units) {
+    const startingUnits = units.filter(u => u.state === 'starting');
+    if (startingUnits.length === 0) return null;
+
+    // Find the unit with the smallest startupTicksRemaining (coming online soonest)
+    const nextUnit = startingUnits.reduce((min, unit) =>
+        unit.startupTicksRemaining < min.startupTicksRemaining ? unit : min
+    );
+
+    // Convert ticks to minutes (each tick is 5 minutes)
+    const minutesRemaining = nextUnit.startupTicksRemaining * 5;
+    return minutesRemaining;
+}
+
 // CCGT: Commit a unit (start the startup timer or bring online instantly if pre-game)
 function commitCCGTUnit() {
     const offlineUnit = ccgtUnits.find(u => u.state === 'offline');
@@ -379,6 +396,14 @@ function updateCCGTDisplay() {
     ccgtStartingCount.textContent = counts.starting;
     ccgtOutputDisplay.textContent = `${Math.round(totalMW)} MW`;
 
+    // Update countdown for next unit coming online
+    const minutesRemaining = getNextUnitCountdown(ccgtUnits);
+    if (minutesRemaining !== null) {
+        ccgtNextOnline.textContent = `Next: ${minutesRemaining} min`;
+    } else {
+        ccgtNextOnline.textContent = '';
+    }
+
     // Enable/disable buttons
     ccgtCommitBtn.disabled = counts.offline === 0;
     ccgtShutdownBtn.disabled = counts.online === 0;
@@ -393,6 +418,14 @@ function updateCTDisplay() {
     ctOnlineMW.textContent = Math.round(totalMW);
     ctStartingCount.textContent = counts.starting;
     ctOutputDisplay.textContent = `${Math.round(totalMW)} MW`;
+
+    // Update countdown for next unit coming online
+    const minutesRemaining = getNextUnitCountdown(ctUnits);
+    if (minutesRemaining !== null) {
+        ctNextOnline.textContent = `Next: ${minutesRemaining} min`;
+    } else {
+        ctNextOnline.textContent = '';
+    }
 
     // Enable/disable buttons
     ctCommitBtn.disabled = counts.offline === 0;
@@ -2156,10 +2189,12 @@ function resetGame() {
     prevHydro = 0; // Reset ramp tracking
     totalCost = 0; // Reset cost tracking
 
-    // Reset game speed to default
-    gameSpeed = 1.0;
-    gameSpeedSlider.value = 1.0;
-    gameSpeedTime.textContent = '1.0';
+    // Reset game speed to default (index 2 = 5s/tick)
+    const speedSteps = [0.1, 1, 5, 10, 20, 30];
+    const defaultIndex = 2;
+    gameSpeed = speedSteps[defaultIndex];
+    gameSpeedSlider.value = defaultIndex;
+    gameSpeedTime.textContent = gameSpeed.toFixed(1);
 
     // Reset all units to offline
     ccgtUnits.forEach(unit => {
@@ -2215,14 +2250,31 @@ function resetGame() {
     ccgtCommitBtn.disabled = false;
     ctCommitBtn.disabled = false;
 
-    // Clear chart data
+    // Clear supply chart data BEFORE switching back to forecast
+    // During game, actual demand datasets are at 7-8, pushing supply to 9-12
+    // We need to clear 9-12 if they exist, or 7-10 if game never started
+    if (myChart.data.datasets.length > 11) {
+        // Game was running: clear datasets at indices 9-12 (Battery, CCGT, CT, Hydro)
+        myChart.data.datasets[9].data = []; // Battery
+        myChart.data.datasets[10].data = []; // CCGT
+        myChart.data.datasets[11].data = []; // CT
+        myChart.data.datasets[12].data = []; // Hydro
+    } else {
+        // Game never started: clear datasets at indices 7-10
+        myChart.data.datasets[7].data = []; // Battery
+        myChart.data.datasets[8].data = []; // CCGT
+        myChart.data.datasets[9].data = []; // CT
+        myChart.data.datasets[10].data = []; // Hydro
+    }
+
+    // Switch back to hourly forecast dots (removes actual demand datasets 7-8)
+    switchToForecastData();
+
+    // Now clear supply data at their reset positions (7-10)
     myChart.data.datasets[7].data = []; // Battery
     myChart.data.datasets[8].data = []; // CCGT
     myChart.data.datasets[9].data = []; // CT
     myChart.data.datasets[10].data = []; // Hydro
-
-    // Switch back to hourly forecast dots
-    switchToForecastData();
 
     myChart.update();
 
@@ -2671,5 +2723,4 @@ initialize().then(() => {
     // Start tutorial after a short delay to let the page fully load
     setTimeout(startTutorial, 500);
 });
-
 
