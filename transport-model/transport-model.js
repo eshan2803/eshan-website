@@ -400,9 +400,27 @@ async function handleCalculation(e) {
         displayTables(results.table_data, commodity);
         completeResultsForCsv = results.csv_data;
         
+        console.log("Full results object:", results);
         if (results.charts) {
-            renderCostChart(results.charts.cost_chart_data);
-            renderEmissionChart(results.charts.emission_chart_data);
+            console.log("Charts data received:", results.charts);
+
+            // Check if we have new Plotly data format
+            if (results.charts.cost_chart_data && results.charts.cost_chart_data.labels) {
+                console.log("✅ Using new Plotly data format");
+                renderCostChart(results.charts.cost_chart_data);
+                renderEmissionChart(results.charts.emission_chart_data);
+            }
+            // Fallback to old base64 format if backend not yet deployed
+            else if (results.charts.cost_chart_base64) {
+                console.warn("⚠️ Backend not deployed yet - using old matplotlib format");
+                document.getElementById('costChart').innerHTML = `<img src="data:image/png;base64,${results.charts.cost_chart_base64}" class="w-full" alt="Cost Chart">`;
+                document.getElementById('emissionChart').innerHTML = `<img src="data:image/png;base64,${results.charts.emission_chart_base64}" class="w-full" alt="Emission Chart">`;
+            } else {
+                console.error("❌ No valid chart data found (neither Plotly nor base64)");
+                console.log("Charts object:", results.charts);
+            }
+        } else {
+            console.error("❌ No charts object in results");
         }
         
         const comparisonSection = document.getElementById('comparisonSection');
