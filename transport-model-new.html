@@ -439,11 +439,11 @@
                     <div class="grid md:grid-cols-2 gap-8 mb-8">
                         <div>
                             <h4 class="text-lg font-semibold mb-4">Cost Breakdown</h4>
-                            <img id="costChartImg" class="w-full rounded-lg" alt="Cost Chart">
+                            <div id="costChart" class="w-full rounded-lg" style="height: 500px;"></div>
                         </div>
                         <div>
                             <h4 class="text-lg font-semibold mb-4">Emission Breakdown</h4>
-                            <img id="emissionChartImg" class="w-full rounded-lg" alt="Emission Chart">
+                            <div id="emissionChart" class="w-full rounded-lg" style="height: 500px;"></div>
                         </div>
                     </div>
 
@@ -485,6 +485,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <!-- Plotly.js for interactive charts -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', () => {
