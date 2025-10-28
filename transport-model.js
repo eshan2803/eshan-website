@@ -164,17 +164,22 @@ function renderCostChart(chartData) {
         });
     }
 
+    // Calculate dynamic height
+    const numRows = chartData.labels.length;
+    const baseHeight = 400;
+    const rowHeight = 30;
+    const legendHeight = 60;
+    const contextHeight = chartData.overlay_text ? 100 : 0;
+    const totalHeight = baseHeight + (numRows * rowHeight) + legendHeight + contextHeight;
+
     const layout = {
         title: {
             text: chartData.title,
-            font: { size: 16, family: 'Inter, sans-serif', color: '#1f2937' },
-            xref: 'paper',
-            x: 0,
+            font: { size: 18, family: 'Inter, sans-serif', color: '#1f2937', weight: 600 },
+            x: 0.02,
             xanchor: 'left',
-            yref: 'container',
-            y: 1,
-            yanchor: 'bottom',
-            pad: { t: 0, b: 10 }
+            y: 0.98,
+            yanchor: 'top'
         },
         xaxis: {
             title: {
@@ -185,48 +190,52 @@ function renderCostChart(chartData) {
             showline: true,
             linecolor: '#d1d5db',
             linewidth: 1,
-            zeroline: false,
-            domain: [0, 1]
+            zeroline: false
         },
         yaxis: {
             autorange: 'reversed',
             gridcolor: 'rgba(0,0,0,0)',
             showline: false,
-            tickfont: { size: 11, family: 'Inter, sans-serif', color: '#374151' },
-            domain: [0, 0.85]
+            tickfont: { size: 11, family: 'Inter, sans-serif', color: '#374151' }
         },
         barmode: 'stack',
         hovermode: 'closest',
         showlegend: true,
         legend: {
             orientation: 'h',
-            yanchor: 'top',
-            y: -0.15,
+            yanchor: 'bottom',
+            y: -0.12,
             xanchor: 'left',
-            x: 0,
-            font: { size: 10, family: 'Inter, sans-serif' },
+            x: 0.02,
+            font: { size: 11, family: 'Inter, sans-serif' },
             bgcolor: 'rgba(255, 255, 255, 0)',
             bordercolor: 'rgba(0,0,0,0)',
-            borderwidth: 0,
-            tracegroupgap: 5
+            borderwidth: 0
         },
-        margin: { l: 250, r: 20, t: 60, b: chartData.overlay_text ? 180 : 100 },
-        height: Math.max(550, chartData.labels.length * 35 + (chartData.overlay_text ? 250 : 150)),
+        margin: { l: 280, r: 50, t: 70, b: chartData.overlay_text ? 200 : 100 },
+        height: totalHeight,
         plot_bgcolor: '#fafafa',
         paper_bgcolor: '#ffffff',
-        annotations: chartData.overlay_text ? [{
+        autosize: true
+    };
+
+    // Add context annotation if present
+    if (chartData.overlay_text) {
+        layout.annotations = [{
             xref: 'paper',
             yref: 'paper',
-            x: 0,
-            y: -0.28,
+            x: 0.02,
+            y: -0.18,
             xanchor: 'left',
             yanchor: 'top',
             text: '<b>Context:</b><br>' + chartData.overlay_text.replace(/\n/g, '<br>'),
             showarrow: false,
             font: { size: 10, family: 'Inter, sans-serif', color: '#374151' },
-            align: 'left'
-        }] : []
-    };
+            align: 'left',
+            xref: 'paper',
+            yref: 'paper'
+        }];
+    }
 
     const config = {
         responsive: true,
@@ -254,17 +263,21 @@ function renderEmissionChart(chartData) {
         hovertemplate: '%{y}<br>Emissions: %{x:.4f} kg CO₂eq/kg<extra></extra>'
     };
 
+    // Calculate dynamic height
+    const numRows = chartData.labels.length;
+    const baseHeight = 400;
+    const rowHeight = 30;
+    const contextHeight = chartData.overlay_text ? 100 : 0;
+    const totalHeight = baseHeight + (numRows * rowHeight) + contextHeight;
+
     const layout = {
         title: {
             text: chartData.title,
-            font: { size: 16, family: 'Inter, sans-serif', color: '#1f2937' },
-            xref: 'paper',
-            x: 0,
+            font: { size: 18, family: 'Inter, sans-serif', color: '#1f2937', weight: 600 },
+            x: 0.02,
             xanchor: 'left',
-            yref: 'container',
-            y: 1,
-            yanchor: 'bottom',
-            pad: { t: 0, b: 10 }
+            y: 0.98,
+            yanchor: 'top'
         },
         xaxis: {
             title: {
@@ -275,35 +288,38 @@ function renderEmissionChart(chartData) {
             showline: true,
             linecolor: '#d1d5db',
             linewidth: 1,
-            zeroline: false,
-            domain: [0, 1]
+            zeroline: false
         },
         yaxis: {
             autorange: 'reversed',
             gridcolor: 'rgba(0,0,0,0)',
             showline: false,
-            tickfont: { size: 11, family: 'Inter, sans-serif', color: '#374151' },
-            domain: [0, 0.9]
+            tickfont: { size: 11, family: 'Inter, sans-serif', color: '#374151' }
         },
         hovermode: 'closest',
         showlegend: false,
-        margin: { l: 250, r: 20, t: 60, b: chartData.overlay_text ? 150 : 80 },
-        height: Math.max(550, chartData.labels.length * 35 + (chartData.overlay_text ? 200 : 150)),
+        margin: { l: 280, r: 50, t: 70, b: chartData.overlay_text ? 180 : 80 },
+        height: totalHeight,
         plot_bgcolor: '#fafafa',
         paper_bgcolor: '#ffffff',
-        annotations: chartData.overlay_text ? [{
+        autosize: true
+    };
+
+    // Add context annotation if present
+    if (chartData.overlay_text) {
+        layout.annotations = [{
             xref: 'paper',
             yref: 'paper',
-            x: 0,
-            y: -0.18,
+            x: 0.02,
+            y: -0.15,
             xanchor: 'left',
             yanchor: 'top',
             text: '<b>Context:</b><br>' + chartData.overlay_text.replace(/\n/g, '<br>'),
             showarrow: false,
             font: { size: 10, family: 'Inter, sans-serif', color: '#374151' },
             align: 'left'
-        }] : []
-    };
+        }];
+    }
 
     const config = {
         responsive: true,
