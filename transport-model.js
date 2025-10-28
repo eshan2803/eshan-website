@@ -166,17 +166,15 @@ function renderCostChart(chartData) {
 
     // Calculate dynamic height
     const numRows = chartData.labels.length;
-    const baseHeight = 400;
+    const baseHeight = 350;
     const rowHeight = 30;
-    const legendHeight = 60;
-    const contextHeight = chartData.overlay_text ? 100 : 0;
-    const totalHeight = baseHeight + (numRows * rowHeight) + legendHeight + contextHeight;
+    const totalHeight = baseHeight + (numRows * rowHeight);
 
     const layout = {
         title: {
             text: chartData.title,
             font: { size: 18, family: 'Inter, sans-serif', color: '#1f2937', weight: 600 },
-            x: 0.02,
+            x: 0,
             xanchor: 'left',
             y: 0.98,
             yanchor: 'top'
@@ -212,28 +210,12 @@ function renderCostChart(chartData) {
             bordercolor: '#d1d5db',
             borderwidth: 1
         },
-        margin: { l: 280, r: 50, t: 70, b: chartData.overlay_text ? 140 : 80 },
+        margin: { l: 50, r: 50, t: 70, b: 80 },
         height: totalHeight,
         plot_bgcolor: '#fafafa',
         paper_bgcolor: '#ffffff',
         autosize: true
     };
-
-    // Add context annotation if present
-    if (chartData.overlay_text) {
-        layout.annotations = [{
-            xref: 'paper',
-            yref: 'paper',
-            x: 0,
-            y: -0.12,
-            xanchor: 'left',
-            yanchor: 'top',
-            text: chartData.overlay_text.replace(/\n/g, '<br>'),
-            showarrow: false,
-            font: { size: 10, family: 'Inter, sans-serif', color: '#374151' },
-            align: 'left'
-        }];
-    }
 
     const config = {
         responsive: true,
@@ -243,6 +225,14 @@ function renderCostChart(chartData) {
     };
 
     Plotly.newPlot('costChart', traces, layout, config);
+
+    // Display context text in HTML div below chart
+    const contextDiv = document.getElementById('costChartContext');
+    if (chartData.overlay_text && contextDiv) {
+        contextDiv.innerHTML = '<p class="font-semibold mb-2">Context:</p>' +
+                              chartData.overlay_text.split('\n').map(line => `<p>${line}</p>`).join('');
+        contextDiv.style.display = 'block';
+    }
 }
 
 function renderEmissionChart(chartData) {
@@ -263,16 +253,15 @@ function renderEmissionChart(chartData) {
 
     // Calculate dynamic height
     const numRows = chartData.labels.length;
-    const baseHeight = 400;
+    const baseHeight = 350;
     const rowHeight = 30;
-    const contextHeight = chartData.overlay_text ? 100 : 0;
-    const totalHeight = baseHeight + (numRows * rowHeight) + contextHeight;
+    const totalHeight = baseHeight + (numRows * rowHeight);
 
     const layout = {
         title: {
             text: chartData.title,
             font: { size: 18, family: 'Inter, sans-serif', color: '#1f2937', weight: 600 },
-            x: 0.02,
+            x: 0,
             xanchor: 'left',
             y: 0.98,
             yanchor: 'top'
@@ -296,28 +285,12 @@ function renderEmissionChart(chartData) {
         },
         hovermode: 'closest',
         showlegend: false,
-        margin: { l: 280, r: 50, t: 70, b: chartData.overlay_text ? 140 : 80 },
+        margin: { l: 50, r: 50, t: 70, b: 80 },
         height: totalHeight,
         plot_bgcolor: '#fafafa',
         paper_bgcolor: '#ffffff',
         autosize: true
     };
-
-    // Add context annotation if present
-    if (chartData.overlay_text) {
-        layout.annotations = [{
-            xref: 'paper',
-            yref: 'paper',
-            x: 0,
-            y: -0.12,
-            xanchor: 'left',
-            yanchor: 'top',
-            text: chartData.overlay_text.replace(/\n/g, '<br>'),
-            showarrow: false,
-            font: { size: 10, family: 'Inter, sans-serif', color: '#374151' },
-            align: 'left'
-        }];
-    }
 
     const config = {
         responsive: true,
@@ -327,6 +300,14 @@ function renderEmissionChart(chartData) {
     };
 
     Plotly.newPlot('emissionChart', [trace], layout, config);
+
+    // Display context text in HTML div below chart
+    const contextDiv = document.getElementById('emissionChartContext');
+    if (chartData.overlay_text && contextDiv) {
+        contextDiv.innerHTML = '<p class="font-semibold mb-2">Context:</p>' +
+                              chartData.overlay_text.split('\n').map(line => `<p>${line}</p>`).join('');
+        contextDiv.style.display = 'block';
+    }
 }
 
 // Form Submission Handler
