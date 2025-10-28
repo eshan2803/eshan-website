@@ -448,6 +448,12 @@ async function handleCalculation(e) {
                 console.log("✅ Using new Plotly data format");
                 renderCostChart(results.charts.cost_chart_data);
                 renderEmissionChart(results.charts.emission_chart_data);
+
+                // Force Plotly to resize charts after a short delay to ensure proper rendering
+                setTimeout(() => {
+                    Plotly.Plots.resize('costChart');
+                    Plotly.Plots.resize('emissionChart');
+                }, 100);
             }
             // Fallback to old base64 format if backend not yet deployed
             else if (results.charts.cost_chart_base64) {
