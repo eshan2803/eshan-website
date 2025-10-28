@@ -3335,10 +3335,9 @@ def run_lca_model(inputs):
         farm_name = None
         price_farm = None
 
-        # MEMORY OPTIMIZATION: Disable local sourcing comparison to reduce memory usage
-        # This feature doubles memory consumption by running a second full LCA
-        # Set enable_local_sourcing to True to re-enable (requires more RAM)
-        enable_local_sourcing = False  # Changed from True to False to save memory
+        # Local sourcing comparison - calculates alternative from nearby farm
+        # Re-enabled now that infinite loop bug is fixed
+        enable_local_sourcing = True
 
         farm_region = None
         if enable_local_sourcing:
@@ -3503,7 +3502,7 @@ def run_lca_model(inputs):
         capex_per_kg_for_chart_idx = new_detailed_headers.index("Capex/kg ($/kg)")
         carbon_tax_per_kg_for_chart_idx = new_detailed_headers.index("Carbon Tax/kg ($/kg)")
         insurance_per_kg_for_chart_idx = new_detailed_headers.index("Insurance/kg ($/kg)") 
-        eco2_per_kg_for_chart_idx = new_detailed_headers.index("eCO2/kg (kg/kg)")
+        eco2_per_kg_for_chart_idx = new_detailed_headers.index("CO2eq/kg (kg/kg)")
         
         cost_per_kg = total_money / final_commodity_kg if final_commodity_kg > 0 else 0
         energy_per_kg = total_energy / final_commodity_kg if final_commodity_kg > 0 else 0
