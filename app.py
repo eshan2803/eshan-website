@@ -3463,10 +3463,13 @@ def run_lca_model(inputs):
             ]
             data_with_all_columns.append(new_row_with_additions)
 
+        # FIX: Don't append while iterating! Create new list instead
+        relabeled_data = []
         for row in data_with_all_columns:
             relabel_key = row[0]
             new_label = label_map.get(relabel_key, relabel_key)
-            data_with_all_columns.append([new_label] + row[1:])
+            relabeled_data.append([new_label] + row[1:])
+        data_with_all_columns = relabeled_data
      
         aggregated_data_for_chart = []
         aggregated_overheads_row = ["Overheads & Fees", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -3546,32 +3549,28 @@ def run_lca_model(inputs):
                 f"• Logistics add {ratio_emission:.1f}X the farming emissions."
             )
 
-        # TEMPORARY: Disable charts for food to test memory issue
-        print("[INFO] Skipping chart generation for food (memory optimization)")
-        cost_chart_base64 = ""
-        emission_chart_base64 = ""
-        # cost_chart_base64 = create_breakdown_chart(
-        #     aggregated_data_for_chart,
-        #     opex_per_kg_for_chart_idx,
-        #     capex_per_kg_for_chart_idx,
-        #     carbon_tax_per_kg_for_chart_idx,
-        #     insurance_per_kg_for_chart_idx,
-        #     'Cost Breakdown per kg of Delivered Food',
-        #     'Cost ($/kg)',
-        #     overlay_text=cost_overlay_text,
-        #     is_emission_chart=False
-        # )
-        # emission_chart_base64 = create_breakdown_chart(
-        #     data_for_emission_chart,
-        #     eco2_per_kg_for_chart_idx,
-        #     eco2_per_kg_for_chart_idx,
-        #     eco2_per_kg_for_chart_idx,
-        #     eco2_per_kg_for_chart_idx,
-        #     'CO2eq Breakdown per kg of Delivered Food',
-        #     'CO2eq (kg/kg)',
-        #     overlay_text=emission_overlay_text,
-        #     is_emission_chart=True
-        # )        
+        cost_chart_base64 = create_breakdown_chart(
+            aggregated_data_for_chart,
+            opex_per_kg_for_chart_idx,
+            capex_per_kg_for_chart_idx,
+            carbon_tax_per_kg_for_chart_idx,
+            insurance_per_kg_for_chart_idx,
+            'Cost Breakdown per kg of Delivered Food',
+            'Cost ($/kg)',
+            overlay_text=cost_overlay_text,
+            is_emission_chart=False
+        )
+        emission_chart_base64 = create_breakdown_chart(
+            data_for_emission_chart,
+            eco2_per_kg_for_chart_idx,
+            eco2_per_kg_for_chart_idx,
+            eco2_per_kg_for_chart_idx,
+            eco2_per_kg_for_chart_idx,
+            'CO2eq Breakdown per kg of Delivered Food',
+            'CO2eq (kg/kg)',
+            overlay_text=emission_overlay_text,
+            is_emission_chart=True
+        )        
             
         response = {
             "status": "success",
