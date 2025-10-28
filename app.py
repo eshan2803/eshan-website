@@ -688,7 +688,11 @@ def run_lca_model(inputs):
             plt.savefig(buf, format='png', dpi=50, bbox_inches='tight')
             buf.seek(0)
             img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-            plt.close(fig)  # Close the figure
+
+            # Clean up immediately
+            buf.close()
+            plt.close(fig)
+            plt.close('all')  # Close any orphaned figures
 
             return img_base64    
     
@@ -3542,28 +3546,32 @@ def run_lca_model(inputs):
                 f"• Logistics add {ratio_emission:.1f}X the farming emissions."
             )
 
-        cost_chart_base64 = create_breakdown_chart(
-            aggregated_data_for_chart, 
-            opex_per_kg_for_chart_idx,
-            capex_per_kg_for_chart_idx,
-            carbon_tax_per_kg_for_chart_idx,
-            insurance_per_kg_for_chart_idx, 
-            'Cost Breakdown per kg of Delivered Food',
-            'Cost ($/kg)',
-            overlay_text=cost_overlay_text,
-            is_emission_chart=False
-        )
-        emission_chart_base64 = create_breakdown_chart(
-            data_for_emission_chart, 
-            eco2_per_kg_for_chart_idx,      
-            eco2_per_kg_for_chart_idx,      
-            eco2_per_kg_for_chart_idx,      
-            eco2_per_kg_for_chart_idx,      
-            'CO2eq Breakdown per kg of Delivered Food',
-            'CO2eq (kg/kg)',
-            overlay_text=emission_overlay_text,
-            is_emission_chart=True
-        )        
+        # TEMPORARY: Disable charts for food to test memory issue
+        print("[INFO] Skipping chart generation for food (memory optimization)")
+        cost_chart_base64 = ""
+        emission_chart_base64 = ""
+        # cost_chart_base64 = create_breakdown_chart(
+        #     aggregated_data_for_chart,
+        #     opex_per_kg_for_chart_idx,
+        #     capex_per_kg_for_chart_idx,
+        #     carbon_tax_per_kg_for_chart_idx,
+        #     insurance_per_kg_for_chart_idx,
+        #     'Cost Breakdown per kg of Delivered Food',
+        #     'Cost ($/kg)',
+        #     overlay_text=cost_overlay_text,
+        #     is_emission_chart=False
+        # )
+        # emission_chart_base64 = create_breakdown_chart(
+        #     data_for_emission_chart,
+        #     eco2_per_kg_for_chart_idx,
+        #     eco2_per_kg_for_chart_idx,
+        #     eco2_per_kg_for_chart_idx,
+        #     eco2_per_kg_for_chart_idx,
+        #     'CO2eq Breakdown per kg of Delivered Food',
+        #     'CO2eq (kg/kg)',
+        #     overlay_text=emission_overlay_text,
+        #     is_emission_chart=True
+        # )        
             
         response = {
             "status": "success",
@@ -3611,7 +3619,21 @@ def calculate_endpoint():
         print(f"[INFO] Processing inputs: {inputs}")
         results = run_lca_model(inputs)
         print("[INFO] Calculation completed successfully")
-        return jsonify(results)
+
+        # Create the response
+        response = jsonify(results)
+
+        # CRITICAL: Clear results from memory before Flask serializes it
+        # This prevents double memory usage (Python object + JSON string)
+        del results
+
+        # Register cleanup to run after response is sent
+        @response.call_on_close
+        def cleanup():
+            print("[INFO] Response sent, forcing garbage collection")
+            gc.collect()
+
+        return response
     except Exception as e:
         print(f"[ERROR] Exception occurred: {str(e)}")
         traceback.print_exc()
