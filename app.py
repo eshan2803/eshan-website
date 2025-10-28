@@ -13,11 +13,6 @@ import re
 import os
 import json
 import gc  # Add garbage collection for memory management
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import io
-import base64
 
 # --- Initialize Flask App ---
 app = Flask(__name__)
@@ -587,118 +582,7 @@ def run_lca_model(inputs):
             
             return cop_actual
 
-    def create_breakdown_chart(data, opex_col_idx, capex_col_idx, carbon_tax_col_idx, insurance_col_idx, title, x_label, overlay_text=None, is_emission_chart=False):
-        try:
-            if not data:
-                print("Chart creation skipped: No data provided.")
-                return ""
-            labels = [row[0] for row in data]
-            # Initialize lists for all component values
-            opex_values = []
-            capex_values = []
-            carbon_tax_values = []
-            insurance_values = []
-
-            for row in data:
-                try:
-                    if is_emission_chart:
-                        opex_values.append(float(row[opex_col_idx]))
-                        capex_values.append(0.0)
-                        carbon_tax_values.append(0.0)
-                        insurance_values.append(0.0)
-                    else:
-                        opex_values.append(float(row[opex_col_idx]))
-                        capex_values.append(float(row[capex_col_idx]))
-                        carbon_tax_values.append(float(row[carbon_tax_col_idx]))
-                        insurance_values.append(float(row[insurance_col_idx]))
-                except (ValueError, TypeError, IndexError) as e:
-                    print(f"DEBUG: Error processing row for chart '{title}': {row}. Error: {e}")
-                    opex_values.append(0.0)
-                    capex_values.append(0.0)
-                    carbon_tax_values.append(0.0)
-                    insurance_values.append(0.0)
-                    print(f"Warning: Could not convert value to a number for chart '{title}'. Defaulting to 0.")
-
-            plt.style.use('seaborn-v0_8-whitegrid')
-            
-            # Estimate text height to adjust figure size BEFORE creating the subplot
-            extra_bottom_margin = 0.0 # Default no extra margin
-            if overlay_text:
-                num_lines = len(overlay_text.split('\n'))
-                # A good rule of thumb for text height: 0.03-0.04 per line in figure coordinates
-                extra_bottom_margin = 0.035 * num_lines + 0.05 # Add some padding
-
-            # Adjust figure height based on labels count and potential overlay text
-            fig_height_base = len(labels) * 0.5 # Base height for bars
-            total_figure_height_inches = fig_height_base + (extra_bottom_margin * 10) # Convert normalized margin to inches for fig size
-            # Ensure a minimum height if there are very few bars
-            if total_figure_height_inches < 4:
-                total_figure_height_inches = 4
-
-            # Original high-quality figure size (infinite loop bug is fixed)
-            fig, ax = plt.subplots(figsize=(10, total_figure_height_inches))
-
-            # Adjust subplot parameters to create space for the text at the bottom
-            # This sets the margin within the figure for the main plot
-            fig.subplots_adjust(bottom=extra_bottom_margin + 0.05) # Add a bit more margin to existing plot margin
-
-            y_pos = np.arange(len(labels))
-
-            if is_emission_chart:
-                ax.barh(y_pos, opex_values, align='center', color='#4CAF50', edgecolor='black', label='Emissions')
-            else:
-                ax.barh(y_pos, insurance_values, align='center', color='#800080', edgecolor='black', label='Overheads & Fees')
-                ax.barh(y_pos, opex_values, left=insurance_values, align='center', color='#8BC34A', edgecolor='black', label='OPEX')
-                ax.barh(y_pos, capex_values, left=np.array(insurance_values) + np.array(opex_values), align='center', color='#4CAF50', edgecolor='black', label='CAPEX')
-                ax.barh(y_pos, carbon_tax_values, left=np.array(insurance_values) + np.array(opex_values) + np.array(capex_values), align='center', color='#FFC107', edgecolor='black', label='Carbon Tax')
-
-            ax.set_yticks(y_pos)
-            ax.set_yticklabels(labels, fontsize=12)
-            ax.invert_yaxis()
-            ax.set_xlabel(x_label, fontsize=14, weight='bold')
-            ax.set_title(title, fontsize=16, weight='bold', pad=20)
-
-            for i in range(len(labels)):
-                total_value = 0
-                if is_emission_chart:
-                    total_value = opex_values[i]
-                else:
-                    total_value = opex_values[i] + capex_values[i] + carbon_tax_values[i] + insurance_values[i]
-                ax.text(total_value, i, f' {total_value:,.2f}', color='black', va='center', fontweight='bold')
-
-            ax.legend(loc='lower right', fontsize=10)
-
-            if overlay_text:
-                # Place text using fig.text, relative to the figure's bottom margin
-                # x=0.05 (5% from left), y=0.01 (1% from bottom, within the extended margin)
-                fig.text(0.3, 0.25, overlay_text, # Coordinates are (x, y) relative to the figure
-                         ha='left', va='bottom', size=12,
-                         bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.6))
-            
-            # Use tight_layout, but apply it to the subplot area that fig.subplots_adjust defined.
-            # No need for the `rect` parameter with fig.subplots_adjust handling margins.
-            plt.tight_layout() # Just call it without rect
-
-            buf = io.BytesIO()
-            # High quality PNG charts (infinite loop bug is fixed, so memory is fine)
-            plt.savefig(buf, format='png', dpi=100, bbox_inches='tight')
-            buf.seek(0)
-            img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-
-            # Clean up immediately
-            buf.close()
-            plt.close(fig)
-            plt.close('all')  # Close any orphaned figures
-
-            return img_base64    
-    
-        except Exception as e:
-            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-            print(f"CRITICAL ERROR generating chart '{title}': {e}")
-            import traceback
-            traceback.print_exc()
-            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-            return ""
+    # Matplotlib chart generation removed - now using Plotly.js on frontend for interactive charts
     # =================================================================
     # <<<                   FUEL PROCESS FUNCTIONS                  >>>
     # =================================================================
