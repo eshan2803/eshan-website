@@ -637,8 +637,12 @@ def run_lca_model(inputs):
             # Ensure a minimum height if there are very few bars
             if total_figure_height_inches < 4:
                 total_figure_height_inches = 4
+            # MEMORY OPTIMIZATION: Limit maximum height to prevent huge figures
+            if total_figure_height_inches > 15:
+                total_figure_height_inches = 15
             
-            fig, ax = plt.subplots(figsize=(10, total_figure_height_inches))
+            # Reduce figure width to save memory (8 instead of 10)
+            fig, ax = plt.subplots(figsize=(8, total_figure_height_inches))
 
             # Adjust subplot parameters to create space for the text at the bottom
             # This sets the margin within the figure for the main plot
@@ -682,8 +686,10 @@ def run_lca_model(inputs):
             plt.tight_layout() # Just call it without rect
 
             buf = io.BytesIO()
-            # Reduce DPI to 72 for smaller file size and lower memory usage
-            plt.savefig(buf, format='png', dpi=72, bbox_inches='tight')
+            # Use JPEG instead of PNG for much smaller file size (60-80% smaller)
+            # DPI=72 for web display, quality=85 for good visual quality
+            plt.savefig(buf, format='jpg', dpi=72, bbox_inches='tight',
+                       pil_kwargs={'quality': 85, 'optimize': True})
             buf.seek(0)
             img_base64 = base64.b64encode(buf.read()).decode('utf-8')
             buf.close()  # Explicitly close the buffer
@@ -3333,7 +3339,14 @@ def run_lca_model(inputs):
         farm_name = None
         price_farm = None
 
-        farm_region = openai_get_nearest_farm_region(current_food_params['name'], end_country)
+        # MEMORY OPTIMIZATION: Disable local sourcing comparison to reduce memory usage
+        # This feature doubles memory consumption by running a second full LCA
+        # Set enable_local_sourcing to True to re-enable (requires more RAM)
+        enable_local_sourcing = False  # Changed from True to False to save memory
+
+        farm_region = None
+        if enable_local_sourcing:
+            farm_region = openai_get_nearest_farm_region(current_food_params['name'], end_country)
 
         if farm_region:
             farm_lat = farm_region['latitude']
@@ -3346,11 +3359,18 @@ def run_lca_model(inputs):
             local_duration_mins = time_to_minutes(local_dur_str)
             
             comparison_weight = final_commodity_kg
-            precooling_full_params = {**current_food_params.get('precooling_params', {}), **current_food_params.get('general_params', {})}
-            local_precool_opex, local_precool_capex, local_precool_carbon_tax, local_precool_energy, local_precool_emissions, _, _, _ = food_precooling_process(comparison_weight, (precooling_full_params, end_electricity_price, CO2e_end, facility_capacity, end_country_name, CARBON_TAX_PER_TON_CO2_DICT))
-            
-            freezing_full_params = {**current_food_params.get('freezing_params', {}), **current_food_params.get('general_params', {})} 
-            local_freeze_opex, local_freeze_capex, local_freeze_carbon_tax, local_freeze_energy, local_freeze_emissions, _, _, _ = food_freezing_process(comparison_weight, (freezing_full_params, end_local_temperature, end_electricity_price, CO2e_end, facility_capacity, end_country_name, CARBON_TAX_PER_TON_CO2_DICT))
+
+            # Pre-cooling (if needed)
+            local_precool_opex = local_precool_capex = local_precool_carbon_tax = local_precool_energy = local_precool_emissions = 0
+            if current_food_params['process_flags'].get('needs_precooling', False):
+                precooling_full_params = {**current_food_params.get('precooling_params', {}), **current_food_params.get('general_params', {})}
+                local_precool_opex, local_precool_capex, local_precool_carbon_tax, local_precool_energy, local_precool_emissions, _, _, _ = food_precooling_process(comparison_weight, (precooling_full_params, end_electricity_price, CO2e_end, facility_capacity, end_country_name, CARBON_TAX_PER_TON_CO2_DICT))
+
+            # Freezing (only if needed - not for Hass Avocado or Banana)
+            local_freeze_opex = local_freeze_capex = local_freeze_carbon_tax = local_freeze_energy = local_freeze_emissions = 0
+            if current_food_params['process_flags'].get('needs_freezing', False):
+                freezing_full_params = {**current_food_params.get('freezing_params', {}), **current_food_params.get('general_params', {})}
+                local_freeze_opex, local_freeze_capex, local_freeze_carbon_tax, local_freeze_energy, local_freeze_emissions, _, _, _ = food_freezing_process(comparison_weight, (freezing_full_params, end_local_temperature, end_electricity_price, CO2e_end, facility_capacity, end_country_name, CARBON_TAX_PER_TON_CO2_DICT))
             
             local_trucking_args = (current_food_params, local_distance_km, local_duration_mins, diesel_price_end, HHV_diesel, diesel_density, CO2e_diesel, end_local_temperature, driver_daily_salary_end, annual_working_days, MAINTENANCE_COST_PER_KM_TRUCK, truck_capex_params, end_country_name, CARBON_TAX_PER_TON_CO2_DICT) 
             local_trucking_opex, local_trucking_capex, local_trucking_carbon_tax, local_trucking_energy, local_trucking_emissions, _, _, _ = food_road_transport(comparison_weight, local_trucking_args)
