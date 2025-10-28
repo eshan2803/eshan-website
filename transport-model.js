@@ -167,40 +167,60 @@ function renderCostChart(chartData) {
     const layout = {
         title: {
             text: chartData.title,
-            font: { size: 16, weight: 'bold' }
+            font: { size: 18, family: 'Inter, sans-serif', color: '#1f2937' },
+            xref: 'paper',
+            x: 0
         },
         xaxis: {
-            title: chartData.x_label,
-            titlefont: { size: 14, weight: 'bold' }
+            title: {
+                text: chartData.x_label,
+                font: { size: 13, family: 'Inter, sans-serif', color: '#4b5563' }
+            },
+            gridcolor: '#e5e7eb',
+            showline: true,
+            linecolor: '#d1d5db',
+            linewidth: 1,
+            zeroline: false
         },
         yaxis: {
-            autorange: 'reversed' // Top to bottom
+            autorange: 'reversed',
+            gridcolor: 'rgba(0,0,0,0)',
+            showline: false,
+            tickfont: { size: 11, family: 'Inter, sans-serif', color: '#374151' }
         },
         barmode: 'stack',
         hovermode: 'closest',
         showlegend: true,
         legend: {
             orientation: 'h',
-            y: 1.15,
-            x: 0.5,
-            xanchor: 'center'
+            yanchor: 'bottom',
+            y: 1.02,
+            xanchor: 'left',
+            x: 0,
+            font: { size: 12, family: 'Inter, sans-serif' },
+            bgcolor: 'rgba(255, 255, 255, 0)',
+            bordercolor: 'rgba(0,0,0,0)',
+            borderwidth: 0
         },
-        margin: { l: 200, r: 50, t: 80, b: 60 },
-        height: 500,
+        margin: { l: 250, r: chartData.overlay_text ? 250 : 20, t: 100, b: 80 },
+        height: Math.max(450, chartData.labels.length * 35 + 150),
+        plot_bgcolor: '#fafafa',
+        paper_bgcolor: '#ffffff',
         annotations: chartData.overlay_text ? [{
             xref: 'paper',
             yref: 'paper',
-            x: 0.95,
+            x: 1.01,
             y: 0.5,
-            xanchor: 'right',
+            xanchor: 'left',
             yanchor: 'middle',
             text: chartData.overlay_text.replace(/\n/g, '<br>'),
             showarrow: false,
-            font: { size: 12 },
-            bgcolor: 'rgba(255, 255, 200, 0.6)',
-            borderpad: 8,
-            bordercolor: '#FFC107',
-            borderwidth: 1
+            font: { size: 11, family: 'Inter, sans-serif', color: '#374151' },
+            bgcolor: 'rgba(254, 249, 195, 0.95)',
+            borderpad: 10,
+            bordercolor: '#fbbf24',
+            borderwidth: 2,
+            align: 'left'
         }] : []
     };
 
@@ -233,33 +253,48 @@ function renderEmissionChart(chartData) {
     const layout = {
         title: {
             text: chartData.title,
-            font: { size: 16, weight: 'bold' }
+            font: { size: 18, family: 'Inter, sans-serif', color: '#1f2937' },
+            xref: 'paper',
+            x: 0
         },
         xaxis: {
-            title: chartData.x_label,
-            titlefont: { size: 14, weight: 'bold' }
+            title: {
+                text: chartData.x_label,
+                font: { size: 13, family: 'Inter, sans-serif', color: '#4b5563' }
+            },
+            gridcolor: '#e5e7eb',
+            showline: true,
+            linecolor: '#d1d5db',
+            linewidth: 1,
+            zeroline: false
         },
         yaxis: {
-            autorange: 'reversed'
+            autorange: 'reversed',
+            gridcolor: 'rgba(0,0,0,0)',
+            showline: false,
+            tickfont: { size: 11, family: 'Inter, sans-serif', color: '#374151' }
         },
         hovermode: 'closest',
         showlegend: false,
-        margin: { l: 200, r: 50, t: 80, b: 60 },
-        height: 500,
+        margin: { l: 250, r: chartData.overlay_text ? 250 : 20, t: 100, b: 80 },
+        height: Math.max(450, chartData.labels.length * 35 + 150),
+        plot_bgcolor: '#fafafa',
+        paper_bgcolor: '#ffffff',
         annotations: chartData.overlay_text ? [{
             xref: 'paper',
             yref: 'paper',
-            x: 0.95,
+            x: 1.01,
             y: 0.5,
-            xanchor: 'right',
+            xanchor: 'left',
             yanchor: 'middle',
             text: chartData.overlay_text.replace(/\n/g, '<br>'),
             showarrow: false,
-            font: { size: 12 },
-            bgcolor: 'rgba(255, 255, 200, 0.6)',
-            borderpad: 8,
-            bordercolor: '#FFC107',
-            borderwidth: 1
+            font: { size: 11, family: 'Inter, sans-serif', color: '#374151' },
+            bgcolor: 'rgba(254, 249, 195, 0.95)',
+            borderpad: 10,
+            bordercolor: '#fbbf24',
+            borderwidth: 2,
+            align: 'left'
         }] : []
     };
 
