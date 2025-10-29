@@ -850,7 +850,7 @@ def run_lca_model(inputs):
 
         target_weight = total_ship_volume * liquid_chem_density[fuel_type] * 0.98
 
-        con = {'type': 'ineq', 'fun': constraint}
+        con = {'type': 'ineq', 'fun': constraint, 'args': (target_weight,)}
 
         process_funcs_for_optimization = [
             site_A_chem_production, site_A_chem_liquification,
