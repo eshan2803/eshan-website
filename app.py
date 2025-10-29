@@ -356,6 +356,13 @@ def run_lca_model(inputs):
     calculate_loading_unloading_capex = calc_loading_capex_module
     calculate_voyage_overheads = calc_voyage_overheads_module
 
+    # Aliases for constants (lowercase versions for backward compatibility)
+    HHV_diesel = HHV_DIESEL
+    diesel_density = DIESEL_DENSITY
+    CO2e_diesel = CO2E_DIESEL
+    annual_working_days = ANNUAL_WORKING_DAYS
+    truck_capex_params = TRUCK_CAPEX_PARAMS
+
     def calculate_route_risk_multiplier(searoute_coords, route_risk_zones):
         """
         Calculates a risk multiplier based on whether the marine route passes through high-risk zones.
