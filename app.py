@@ -339,13 +339,23 @@ def run_lca_model(inputs):
         api_cache[cache_key] = default_intensity
         return default_intensity
 
-    # DELETED: get_country_from_coords - now imported from services.geocoding as get_country_from_coords_module
-    # DELETED: get_diesel_price - now imported from utils.helpers as get_diesel_price_module
-    # DELETED: openai_get_electricity_price - now imported from services.openai_service as openai_get_electricity_price_helper_module
-    # DELETED: openai_get_hydrogen_cost - now imported from services.openai_service as openai_get_hydrogen_cost_helper_module
-    # DELETED: openai_get_marine_fuel_price - now imported from services.openai_service as openai_get_marine_fuel_price_helper_module
-    # DELETED: calculate_ship_power_kw - now imported from utils.ship_helpers as calculate_ship_power_kw_helper_module
-    
+    # Aliases for imported helper functions (to maintain compatibility with nested function calls)
+    get_country_from_coords = get_country_from_coords_module
+    get_diesel_price = get_diesel_price_module
+    openai_get_electricity_price = openai_get_electricity_price_helper_module
+    openai_get_hydrogen_cost = openai_get_hydrogen_cost_helper_module
+    openai_get_marine_fuel_price = openai_get_marine_fuel_price_helper_module
+    calculate_ship_power_kw = calculate_ship_power_kw_helper_module
+    decode_polyline = decode_polyline_module
+    time_to_minutes = time_to_minutes_module
+    detect_canal_transit = detect_canal_transit_module
+    straight_dis = straight_dis_module
+    calculate_dynamic_cop = calculate_dynamic_cop_module
+    calculate_liquefaction_capex = calc_liq_capex_module
+    calculate_storage_capex = calc_storage_capex_module
+    calculate_loading_unloading_capex = calc_loading_capex_module
+    calculate_voyage_overheads = calc_voyage_overheads_module
+
     def calculate_route_risk_multiplier(searoute_coords, route_risk_zones):
         """
         Calculates a risk multiplier based on whether the marine route passes through high-risk zones.
