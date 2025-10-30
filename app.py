@@ -901,7 +901,10 @@ def run_lca_model(inputs):
             MAINTENANCE_COST_PER_KM_TRUCK,
             hydrogen_production_cost, # Note: INSURANCE_PERCENTAGE_OF_CARGO_VALUE is NOT passed here, as it's part of the new func
             start_country_name, start_port_country_name, CARBON_TAX_PER_TON_CO2_DICT,
-            port_regions, selected_fuel_name, searoute_coor, port_to_port_duration # Added here
+            port_regions, selected_fuel_name, searoute_coor, port_to_port_duration, # Added here
+            storage_area, ship_tank_metal_thickness, ship_tank_insulation_thickness,
+            ship_number_of_tanks, ship_tank_metal_density, ship_tank_insulation_density,
+            ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat
         )
         args_for_optimizer_tuple = (
             user_define,
