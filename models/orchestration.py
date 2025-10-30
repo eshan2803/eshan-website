@@ -108,7 +108,10 @@ def optimization_chem_weight(A_initial_guess, args_for_optimizer_tuple, target_w
     maintenance_cost_per_km_truck_opt,
     hydrogen_production_cost_opt,
     start_country_name_opt, start_port_country_name_opt, carbon_tax_per_ton_co2_dict_opt,
-    port_regions_opt, selected_fuel_name_opt, searoute_coor_opt, port_to_port_duration_opt
+    port_regions_opt, selected_fuel_name_opt, searoute_coor_opt, port_to_port_duration_opt,
+    storage_area, ship_tank_metal_thickness, ship_tank_insulation_thickness,
+    ship_number_of_tanks, ship_tank_metal_density, ship_tank_insulation_density,
+    ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat
     ) = all_shared_params_tuple
 
     X = A_initial_guess[0]
