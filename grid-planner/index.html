@@ -839,30 +839,29 @@
         const EMISSION_FACTORS = { naturalGas: 395, hydro: 0, nuclear: 0, solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, coal: 850, biomass: 0, rng: 0 };
         
         const COST_DATA = {
-            capex: { 
+            capex: {
                 solar: 1200, wind: 1500, offshoreWind: 5000, nuclear: 7242, geothermal: 3329, biomass: 3500, rng: 3000,
                 naturalGas: 1300, hydro: 3336, coal: 4407,
                 battery4hr: 350, battery8hr: 300, longduration: 300, // $/kWh
                 dac: 1000 // $/ton/year
             },
             fixed_om: {
-                solar: 15, wind: 35, offshoreWind: 100, nuclear: 140, geothermal: 120, biomass: 100, // $/kW-year
+                solar: 15, wind: 35, offshoreWind: 100, nuclear: 140, geothermal: 120, biomass: 100, rng: 95, // $/kW-year
                 naturalGas: 20, hydro: 20, coal: 40,
                 battery4hr: 15, battery8hr: 15, longduration: 60, // $/kW-year
                 dac: 20 // $/ton/year
             },
-            variable_om: { 
-                solar: 0, wind: 1, offshoreWind: 0, nuclear: 10, geothermal: 5, biomass: 10, // $/MWh
+            variable_om: {
+                solar: 0, wind: 1, offshoreWind: 0, nuclear: 10, geothermal: 5, biomass: 10, rng: 50, // $/MWh
                 naturalGasCCGT: { start: 35, end: 80 }, // NEW: $/MWh
                 naturalGasCT: { start: 100, end: 150 }, // NEW: $/MWh
-                hydro: 5, coal: 30, // $/MWh 
+                hydro: 5, coal: 30, // $/MWh
                 battery4hr: 0, battery8hr: 2, longduration: 1,
                 dac: 400, // $/ton
                 storage: 30 // $/MWh - an assumed opportunity cost for dispatching storage
             },
             lifetime: {
                 solar: 30, wind: 30, offshoreWind: 30, nuclear: 60, geothermal: 30, biomass: 25, rng: 25,
-                biomass: 25,
                 naturalGas: 30, hydro: 80, coal: 40,
                 battery4hr: 15, battery8hr: 15, longduration: 25, dac: 25
             },
