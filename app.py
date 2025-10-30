@@ -926,11 +926,45 @@ def run_lca_model(inputs):
         else:
             raise Exception(f"Optimization failed: {result.message}")
         
-        # Pass new insurance-related args to total_chem_base
+        # Pass all required parameters to total_chem_base
         final_results_raw, data_raw = total_chem_base(
             chem_weight, user_define[1], user_define[2],
-            user_define[3], user_define[4], user_define[5], 
-            CARBON_TAX_PER_TON_CO2_DICT, selected_fuel_name, searoute_coor, port_to_port_duration
+            user_define[3], user_define[4], user_define[5],
+            CARBON_TAX_PER_TON_CO2_DICT, selected_fuel_name, searoute_coor, port_to_port_duration,
+            # All parameters from parent scope
+            GWP_chem, hydrogen_production_cost, start_country_name,
+            LH2_plant_capacity, EIM_liquefication, specific_heat_chem, start_local_temperature,
+            boiling_point_chem, latent_H_chem, COP_liq_dyn, start_electricity_price, CO2e_start,
+            calculate_liquefaction_capex, V_flowrate, number_of_cryo_pump_load_truck_site_A,
+            dBOR_dT, BOR_loading, liquid_chem_density, head_pump, pump_power_factor,
+            EIM_cryo_pump, ss_therm_cond, pipe_length, pipe_inner_D, pipe_thick,
+            COP_refrig, EIM_refrig_eff, start_port_country_name,
+            number_of_cryo_pump_load_storage_port_A, BOR_unloading,
+            calculate_loading_unloading_capex, road_delivery_ener, HHV_chem,
+            chem_in_truck_weight, truck_economy, distance_A_to_port, HHV_diesel,
+            diesel_density, diesel_price_start, truck_tank_radius, truck_tank_length,
+            truck_tank_metal_thickness, metal_thermal_conduct, truck_tank_insulator_thickness,
+            insulator_thermal_conduct, OHTC_ship, COP_refrig, duration_A_to_port,
+            BOR_truck_trans, diesel_engine_eff, EIM_truck_eff, CO2e_diesel,
+            BOG_recirculation_truck, fuel_cell_eff, EIM_fuel_cell, LHV_chem,
+            driver_daily_salary_start, truck_capex_params,
+            storage_volume, start_local_temperature, BOR_land_storage, storage_time_A,
+            storage_radius, tank_metal_thickness, tank_insulator_thickness,
+            BOG_recirculation_storage, calculate_storage_capex,
+            number_of_cryo_pump_load_ship_port_A, pipe_metal_specific_heat,
+            storage_area, ship_tank_metal_thickness, ship_tank_insulation_thickness,
+            ship_tank_metal_density, ship_tank_insulation_density, ship_tank_metal_specific_heat,
+            ship_tank_insulation_specific_heat, COP_cooldown_dyn, ship_number_of_tanks,
+            end_local_temperature, selected_marine_fuel_params, port_to_port_duration,
+            dBOR_dT, BOR_ship_trans, BOG_recirculation_mati_trans,
+            avg_ship_power_kw, GWP_N2O, calculate_voyage_overheads,
+            selected_ship_params, canal_transits, port_regions, end_country_name,
+            end_port_country_name, number_of_cryo_pump_load_storage_port_B,
+            end_electricity_price, CO2e_end, end_local_temperature,
+            number_of_cryo_pump_load_truck_port_B, distance_port_to_B,
+            diesel_price_end, duration_port_to_B, driver_daily_salary_end,
+            number_of_cryo_pump_load_storage_site_B, storage_time_B, storage_time_C,
+            label_map
         ) 
 
         # Retrieve the collected insurance cost from data_raw's first element (from site_A_chem_production)
@@ -1185,9 +1219,23 @@ def run_lca_model(inputs):
         
         # Call total_food_lca; it should correctly populate data_raw including all costs and insurance
         final_results_raw, data_raw = total_food_lca(
-            initial_weight, current_food_params, CARBON_TAX_PER_TON_CO2_DICT, 
+            initial_weight, current_food_params, CARBON_TAX_PER_TON_CO2_DICT,
             HHV_diesel, diesel_density, CO2e_diesel,
-            food_name_for_lookup, searoute_coor, port_to_port_duration, shipment_size_containers 
+            food_name_for_lookup, searoute_coor, port_to_port_duration, shipment_size_containers,
+            # All parameters from parent scope
+            start, start_port_name, end_port_name, end,
+            price_start, start_country_name, facility_capacity,
+            start_electricity_price, CO2e_start, start_local_temperature,
+            distance_A_to_port, duration_A_to_port, diesel_price_start,
+            driver_daily_salary_start, truck_capex_params,
+            storage_time_A, start_port_electricity_price, start_port_country_name,
+            port_to_port_duration, selected_marine_fuel_params, avg_ship_power_kw,
+            calculate_voyage_overheads, selected_ship_params, canal_transits,
+            port_regions, end_country_name, total_ship_container_capacity,
+            storage_time_B, end_port_electricity_price, end_local_temperature,
+            end_port_country_name, distance_port_to_B, duration_port_to_B,
+            diesel_price_end, driver_daily_salary_end, storage_time_C,
+            end_electricity_price, CO2e_end
         )
         
         # Recalculate totals after all steps are processed and potentially re-inserted by total_food_lca
