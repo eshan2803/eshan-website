@@ -334,7 +334,7 @@ def openai_get_nearest_farm_region(food_name, location_name, api_cache=None):
         api_cache: Optional cache dictionary
 
     Returns:
-        str: Farm region name or None if failed
+        dict: Dictionary with 'farm_region_name', 'latitude', 'longitude' or None if failed
     """
     if api_cache is None:
         api_cache = {}
@@ -352,21 +352,41 @@ def openai_get_nearest_farm_region(food_name, location_name, api_cache=None):
             messages=[
                 {
                     "role": "system",
-                    "content": "You are an expert in agricultural geography. Identify major farming regions."
+                    "content": "You are an expert in agricultural logistics and supply chains. Your task is to identify a major commercial producing region for a specific food item that is as close as possible to a target destination city. Return the name of this region and its representative geographic coordinates as a JSON object. If the destination is itself a major producer, use a location within that region. If no significant commercial production exists nearby, return null for all fields."
                 },
                 {
                     "role": "user",
-                    "content": f'What is the nearest major farming region for {food_name} to {location_name}? Return JSON: {{"region_name": "<region>", "explanation": "<brief explanation>"}}'
+                    "content": f'For the food item \'{food_name}\', find the nearest major commercial farming region to the destination \'{location_name}\'. Return the result in the following JSON format: {{"farm_region_name": "NAME_OF_REGION", "latitude": LATITUDE_FLOAT, "longitude": LONGITUDE_FLOAT}}'
                 }
             ],
             timeout=15.0
         )
 
         result = json.loads(response.choices[0].message.content)
-        region = result.get("region_name")
 
-        api_cache[cache_key] = region
-        return region
+        # Validate that we have all required fields and correct types
+        farm_region_name = result.get("farm_region_name")
+        latitude = result.get("latitude")
+        longitude = result.get("longitude")
+
+        if farm_region_name and latitude is not None and longitude is not None:
+            # Try to convert lat/lon to float if they're strings
+            try:
+                farm_result = {
+                    'farm_region_name': str(farm_region_name),
+                    'latitude': float(latitude),
+                    'longitude': float(longitude)
+                }
+                api_cache[cache_key] = farm_result
+                return farm_result
+            except (ValueError, TypeError) as e:
+                print(f"Error converting coordinates to float for {food_name} near {location_name}: {e}")
+                api_cache[cache_key] = None
+                return None
+        else:
+            # Missing required fields
+            api_cache[cache_key] = None
+            return None
 
     except Exception as e:
         print(f"AI farm region lookup failed for {food_name} near {location_name}: {e}")
