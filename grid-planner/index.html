@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Planning Simulator | Dr. Eshan Singh</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata@2.2.1/dist/chartjs-plugin-dragdata.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fcfcfc;
+            color: #1f2937;
+        }
+        .font-lora { 
+            font-family: 'Lora', serif; 
+        }
+        .glass-card {
+            background-color: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 1rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+        }
+        .mesh-gradient-container {
+            position: relative;
+            z-index: 1;
+        }
+        .mesh-gradient-1 {
+            background-image: radial-gradient(at 40% 20%, hsla(28,100%,74%,1) 0px, transparent 50%),
+                              radial-gradient(at 80% 20%, hsla(189,100%,56%,1) 0px, transparent 50%),
+                              radial-gradient(at 0% 50%, hsla(355,100%,93%,1) 0px, transparent 50%),
+                              radial-gradient(at 80% 50%, hsla(340,100%,76%,1) 0px, transparent 50%),
+                              radial-gradient(at 0% 100%, hsla(22,100%,77%,1) 0px, transparent 50%),
+                              radial-gradient(at 80% 100%, hsla(242,100%,70%,1) 0px, transparent 50%);
+            background-size: 100% 100%; 
+            filter: blur(25px) saturate(1.2); 
+            opacity: 0.15;
+            position: absolute; 
+            top: 0; left: 0; right: 0; bottom: 0; 
+            z-index: -1;
+            animation: pulse-bg 15s infinite alternate;
+        }
+         .tutorial-active .mesh-gradient-1 {
+            animation: none !important;
+        }
+        .form-input {
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 0.5rem;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 9999px;
+            outline: none;
+            border: 1px solid #e5e7eb;
+            transition: background .2s;
+        }
+        .form-input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 1.25rem;
+            height: 1.25rem;
+            background: #2563eb;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-input::-moz-range-thumb {
+            width: 1.25rem;
+            height: 1.25rem;
+            background: #2563eb;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .mix-slider-track {
+            background-color: #e5e7eb;
+            border-radius: 9999px;
+            height: 0.75rem;
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+        .mix-slider-fill {
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 0.2s ease-in-out;
+        }
+        .mix-slider-default-outline {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            border: 1px solid black;
+            border-radius: 9999px;
+            box-sizing: border-box;
+            background: transparent;
+        }
+        .value-input {
+            width: 6rem; /* Adjust width as needed */
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            border: 1px solid #d1d5db;
+            text-align: right;
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+        /* Color-coded slider thumbs */
+        .thumb-solar::-webkit-slider-thumb { background-color: rgba(251, 191, 36, 1); }
+        .thumb-solar::-moz-range-thumb { background-color: rgba(251, 191, 36, 1); }
+        .thumb-wind::-webkit-slider-thumb { background-color: rgba(52, 211, 153, 1); } /* Lighter green */
+        .thumb-wind::-moz-range-thumb { background-color: rgba(52, 211, 153, 1); } /* Lighter green */
+        .thumb-offshoreWind::-webkit-slider-thumb { background-color: rgba(12, 148, 103, 1); }
+        .thumb-offshoreWind::-moz-range-thumb { background-color: rgba(12, 148, 103, 1); }
+        .thumb-geothermal::-webkit-slider-thumb { background-color: rgba(120, 40, 40, 1); }
+        .thumb-geothermal::-moz-range-thumb { background-color: rgba(120, 40, 40, 1); }
+        .thumb-nuclear::-webkit-slider-thumb { background-color: rgba(239, 68, 68, 1); }
+        .thumb-nuclear::-moz-range-thumb { background-color: rgba(239, 68, 68, 1); }
+        .thumb-storage::-webkit-slider-thumb { background-color: rgba(168, 85, 247, 1); }
+        .thumb-storage::-moz-range-thumb { background-color: rgba(168, 85, 247, 1); }
+        .thumb-neutral::-webkit-slider-thumb { background-color: rgba(107, 114, 128, 1); }
+        .thumb-neutral::-moz-range-thumb { background-color: rgba(107, 114, 128, 1); }
+        .thumb-biomass::-webkit-slider-thumb { background-color: rgba(101, 67, 33, 1); } /* Brown color for biomass */
+        .thumb-biomass::-moz-range-thumb { background-color: rgba(101, 67, 33, 1); }
+        .thumb-rng::-webkit-slider-thumb { background-color: rgba(132, 204, 22, 1); } /* Lime green for RNG */
+        .thumb-rng::-moz-range-thumb { background-color: rgba(132, 204, 22, 1); }
+        
+        /* Rainbow Border Animation */
+        @keyframes rainbow-border {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+        .rainbow-glow {
+            position: relative;
+            background: linear-gradient(90deg, #ff0080, #ff8000, #ffff00, #80ff00, #00ff80, #0080ff, #8000ff, #ff0080);
+            background-size: 200% 200%;
+            animation: rainbow-border 2s linear infinite;
+            padding: 2px;
+            border-radius: 9999px;
+        }
+        .rainbow-glow .button-content {
+            background: #f3f4f6;
+            border-radius: 9999px;
+            padding: 0.5rem 1rem;
+            display: block;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        .rainbow-glow:hover .button-content {
+            background: #e5e7eb;
+        }
+        /* Style for active season preset button */
+        .preset-active {
+            background-color: #4b5563 !important; /* A darker gray */
+            color: #ffffff !important;
+        }
+
+        /* --- TUTORIAL STYLES --- */
+        #tutorial-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 9998;
+            display: none; /* Controlled by JS */
+        }
+        #tutorial-popover {
+            position: fixed;
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            z-index: 10001;
+            width: 320px;
+            max-width: 90vw;
+            display: none;
+            transition: top 0.3s ease-in-out, left 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+        .tutorial-highlight-active {
+            position: relative;
+            z-index: 9999;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.7), 
+                        0 0 20px 10px rgba(59, 130, 246, 0.4),
+                        0 0 0 9999px rgba(0, 0, 0, 0.6);
+            transition: box-shadow 0.3s ease-in-out;
+        }
+        .tutorial-highlight-active.rounded-full {
+             border-radius: 9999px;
+        }
+        .tutorial-highlight-active.rounded-lg {
+             border-radius: 1rem;
+        }
+
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="mesh-gradient-container">
+        <div class="mesh-gradient-1"></div>
+
+        <header class="p-8">
+            <div class="container mx-auto flex justify-between items-center">
+                <a href="#" class="font-lora text-2xl font-semibold text-gray-800">Dr. Eshan Singh</a>
+                <nav class="flex items-center space-x-2">
+                    <a href="#" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
+                    <a href="#" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Transport Model</a>
+                    <a href="#" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Musings</a>
+                </nav>
+            </div>
+        </header>
+
+        <div class="container mx-auto p-4 md:p-8 pt-0">
+
+            <section class="text-center mb-12">
+                <h1 class="font-lora text-5xl md:text-6xl font-medium leading-tight text-gray-900">Grid Decarbonization Simulator</h1>
+                <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+                    Your challenge: use policy levers for clean energy and direct air capture to eliminate CO2 emissions from the electricity grid.
+                </p>
+            </section>
+
+            <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+                <div class="lg:col-span-2 glass-card">
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly Electricity Generation (GWh)</h2>
+                        <canvas id="generationMixChart"></canvas>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly CO2 Emissions (Metric Tons)</h2>
+                        <canvas id="co2EmissionsChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="mb-8 text-center">
+                        <h3 class="text-xl font-lora font-semibold text-gray-800">Impact on Customer Bills</h3>
+                        <p id="bill-impact" class="text-5xl font-bold text-blue-600 mt-2">0%</p>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div>
+                            <h2 class="text-2xl font-lora font-semibold mb-4 border-b border-gray-300 pb-4 text-gray-800">Policy Levers</h2>
+                            <div class="space-y-6 pt-4">
+                                <div>
+                                    <label for="solar-slider" class="block text-md font-medium text-gray-700">New Solar Capacity</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="solar-slider" min="0" max="200" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="solar-value">0 GW</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="wind-slider" class="block text-md font-medium text-gray-700">New Wind Capacity</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="wind-slider" min="0" max="200" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="wind-value">0 GW</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="geothermal-slider" class="block text-md font-medium text-gray-700">New Geothermal Capacity</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="geothermal-slider" min="0" max="50" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="geothermal-value">0 GW</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="nuclear-slider" class="block text-md font-medium text-gray-700">New Nuclear Capacity</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="nuclear-slider" min="0" max="50" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="nuclear-value">0 GW</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="biomass-slider" class="block text-md font-medium text-gray-700">New Biomass Capacity</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="biomass-slider" min="0" max="50" value="0" class="w-full form-input thumb-biomass">
+                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="biomass-value">0 GW</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="rng-slider" class="block text-md font-medium text-gray-700">New RNG (Biogas) Capacity</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="rng-slider" min="0" max="50" value="0" class="w-full form-input thumb-rng">
+                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="rng-value">0 GW</span>
+                                    </div>
+                                </div>
+                                <div class="border-t border-gray-300 pt-6">
+                                    <label for="battery4hr-slider" class="block text-md font-medium text-gray-700">4-hr Battery Storage</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="battery4hr-slider" min="0" max="200" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="battery4hr-value">0 GWh</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="battery8hr-slider" class="block text-md font-medium text-gray-700">8-hr Battery Storage</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="battery8hr-slider" min="0" max="200" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="battery8hr-value">0 GWh</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="longduration-slider" class="block text-md font-medium text-gray-700">24-hr Long Duration Storage</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="longduration-slider" min="0" max="500" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="longduration-value">0 GWh</span>
+                                    </div>
+                                </div>
+                                 <div class="border-t border-gray-300 pt-6">
+                                    <label for="demandflex-slider" class="block text-md font-medium text-gray-700">Demand Flexibility</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="demandflex-slider" min="0" max="25" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="demandflex-value">0 %</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h2 class="text-2xl font-lora font-semibold mb-4 border-b border-t border-gray-300 pt-6 pb-4 text-gray-800">Government Incentives</h2>
+                            <div class="space-y-6 pt-4">
+                                <!-- Incentive levers -->
+                                <div>
+                                    <label for="solar-incentive-slider" class="block text-sm font-medium text-gray-700">Solar (PTC)</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="solar-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="solar-incentive-value">$0/MWh</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="wind-incentive-slider" class="block text-sm font-medium text-gray-700">Wind (PTC)</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="wind-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="wind-incentive-value">$0/MWh</span>
+                                    </div>
+                                </div>
+                                 <div>
+                                    <label for="geothermal-incentive-slider" class="block text-sm font-medium text-gray-700">Geothermal (PTC)</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="geothermal-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="geothermal-incentive-value">$0/MWh</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="nuclear-incentive-slider" class="block text-sm font-medium text-gray-700">Nuclear (PTC)</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="nuclear-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="nuclear-incentive-value">$0/MWh</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="biomass-incentive-slider" class="block text-sm font-medium text-gray-700">Biomass (PTC)</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="biomass-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-biomass">
+                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="biomass-incentive-value">$0/MWh</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="rng-incentive-slider" class="block text-sm font-medium text-gray-700">RNG (Biogas) (PTC)</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="rng-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-rng">
+                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="rng-incentive-value">$0/MWh</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="storage-incentive-slider" class="block text-sm font-medium text-gray-700">Storage (ITC)</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="storage-incentive-slider" min="0" max="100" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="storage-incentive-value">$0/kWh</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="dac-incentive-slider" class="block text-sm font-medium text-gray-700">Direct Air Capture (45Q)</label>
+                                    <div class="flex items-center space-x-4 mt-2">
+                                        <input type="range" id="dac-incentive-slider" min="0" max="200" value="0" class="w-full form-input">
+                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="dac-incentive-value">$0/ton</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="border-t border-gray-300 pt-6">
+                            <label for="dac-slider" class="block text-md font-medium text-gray-700">Direct Air Capture Deployment</label>
+                            <div class="flex items-center space-x-4 mt-2">
+                                <input type="range" id="dac-slider" min="0" max="10000" value="0" class="w-full form-input">
+                                <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md" id="dac-value">0 t/hr</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+        <script src="grid-decarbonization.js"></script>
+</body>
+</html>
