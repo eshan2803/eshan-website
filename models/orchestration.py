@@ -92,7 +92,7 @@ def optimization_chem_weight(A_initial_guess, args_for_optimizer_tuple, target_w
     number_of_cryo_pump_load_storage_port_A_opt, number_of_cryo_pump_load_ship_port_A_opt,
     dBOR_dT, BOR_loading, BOR_unloading, head_pump_opt, pump_power_factor_opt,
     EIM_cryo_pump_opt, ss_therm_cond_opt, pipe_length_opt, pipe_inner_D_opt,
-    pipe_thick_opt, COP_refrig, EIM_refrig_eff_opt, pipe_metal_specific_heat, COP_cooldown,
+    pipe_thick_opt, COP_refrig, EIM_refrig_eff_opt, pipe_metal_specific_heat, COP_cooldown_dyn,
     road_delivery_ener, HHV_chem, chem_in_truck_weight, truck_economy,
     truck_tank_radius_opt, truck_tank_length_opt, truck_tank_metal_thickness_opt,
     metal_thermal_conduct_opt, truck_tank_insulator_thickness_opt, insulator_thermal_conduct_opt,
@@ -105,9 +105,9 @@ def optimization_chem_weight(A_initial_guess, args_for_optimizer_tuple, target_w
     diesel_price_start_opt, driver_daily_salary_start_opt, annual_working_days_opt,
     calculate_liquefaction_capex_helper_opt, calculate_loading_unloading_capex_helper_opt,
     calculate_storage_capex_helper_opt, truck_capex_params_opt,
-    maintenance_cost_per_km_truck_opt,
+    MAINTENANCE_COST_PER_KM_TRUCK,
     hydrogen_production_cost_opt,
-    start_country_name_opt, start_port_country_name_opt, carbon_tax_per_ton_co2_dict_opt,
+    start_country_name_opt, start_port_country_name_opt, CARBON_TAX_PER_TON_CO2_DICT,
     port_regions_opt, selected_fuel_name_opt, searoute_coor_opt, port_to_port_duration_opt,
     storage_area, ship_tank_metal_thickness, ship_tank_insulation_thickness,
     ship_number_of_tanks, ship_tank_metal_density, ship_tank_insulation_density,
@@ -136,7 +136,7 @@ def optimization_chem_weight(A_initial_guess, args_for_optimizer_tuple, target_w
         if func_to_call.__name__ == "site_A_chem_production":
             process_args_for_current_func = (
                 GWP_chem, hydrogen_production_cost_opt, start_country_name_opt,
-                carbon_tax_per_ton_co2_dict_opt, selected_fuel_name_opt,
+                CARBON_TAX_PER_TON_CO2_DICT, selected_fuel_name_opt,
                 searoute_coor_opt, port_to_port_duration_opt
             )
 
@@ -145,7 +145,7 @@ def optimization_chem_weight(A_initial_guess, args_for_optimizer_tuple, target_w
                 LH2_plant_capacity_opt, EIM_liquefication_opt, specific_heat_chem,
                 start_local_temperature_opt, boiling_point_chem, latent_H_chem,
                 COP_liq_dyn, start_electricity_price_opt, CO2e_start_opt, GWP_chem,
-                calculate_liquefaction_capex_helper_opt, start_country_name_opt, carbon_tax_per_ton_co2_dict_opt
+                calculate_liquefaction_capex_helper_opt, start_country_name_opt, CARBON_TAX_PER_TON_CO2_DICT
             )
 
         elif func_to_call.__name__ == "fuel_pump_transfer":
@@ -159,7 +159,7 @@ def optimization_chem_weight(A_initial_guess, args_for_optimizer_tuple, target_w
                     pipe_inner_D_opt, pipe_thick_opt, COP_refrig, EIM_refrig_eff_opt,
                     start_electricity_price_opt, CO2e_start_opt, GWP_chem,
                     start_local_temperature_opt, calculate_loading_unloading_capex_helper_opt,
-                    country_for_transfer, carbon_tax_per_ton_co2_dict_opt
+                    country_for_transfer, CARBON_TAX_PER_TON_CO2_DICT
                 )
             elif transfer_context == 'portA_to_storage':
                 country_for_transfer = start_port_country_name_opt
@@ -171,7 +171,7 @@ def optimization_chem_weight(A_initial_guess, args_for_optimizer_tuple, target_w
                     pipe_inner_D_opt, pipe_thick_opt, COP_refrig, EIM_refrig_eff_opt,
                     start_electricity_price_opt, CO2e_start_opt, GWP_chem,
                     start_local_temperature_opt, calculate_loading_unloading_capex_helper_opt,
-                    country_for_transfer, carbon_tax_per_ton_co2_dict_opt
+                    country_for_transfer, CARBON_TAX_PER_TON_CO2_DICT
                 )
         elif func_to_call.__name__ == "fuel_road_transport":
             country_for_road = start_country_name_opt # Default for optimizer's scope
@@ -189,8 +189,8 @@ def optimization_chem_weight(A_initial_guess, args_for_optimizer_tuple, target_w
                 LH2_plant_capacity_opt, EIM_liquefication_opt,
                 fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem,
                 driver_daily_salary_start_opt, annual_working_days_opt,
-                maintenance_cost_per_km_truck_opt, truck_capex_params_opt,
-                country_for_road, carbon_tax_per_ton_co2_dict_opt
+                MAINTENANCE_COST_PER_KM_TRUCK, truck_capex_params_opt,
+                country_for_road, CARBON_TAX_PER_TON_CO2_DICT
             )
 
         elif func_to_call.__name__ == "fuel_storage":
@@ -205,7 +205,7 @@ def optimization_chem_weight(A_initial_guess, args_for_optimizer_tuple, target_w
                 BOG_recirculation_storage_opt,
                 LH2_plant_capacity_opt, EIM_liquefication_opt,
                 fuel_cell_eff_opt, EIM_fuel_cell_opt, LHV_chem,
-                calculate_storage_capex_helper_opt, country_for_storage, carbon_tax_per_ton_co2_dict_opt
+                calculate_storage_capex_helper_opt, country_for_storage, CARBON_TAX_PER_TON_CO2_DICT
             )
 
         elif func_to_call.__name__ == "chem_loading_to_ship":
@@ -221,7 +221,7 @@ def optimization_chem_weight(A_initial_guess, args_for_optimizer_tuple, target_w
                 ship_tank_insulation_thickness, ship_tank_metal_density, ship_tank_insulation_density,
                 ship_tank_metal_specific_heat, ship_tank_insulation_specific_heat,
                 COP_cooldown_dyn, COP_refrig, ship_number_of_tanks, pipe_metal_specific_heat,
-                calculate_loading_unloading_capex_helper_opt, start_country_name_opt, carbon_tax_per_ton_co2_dict_opt
+                calculate_loading_unloading_capex_helper_opt, start_country_name_opt, CARBON_TAX_PER_TON_CO2_DICT
             )
 
         # Call the current process function with its tailored arguments
