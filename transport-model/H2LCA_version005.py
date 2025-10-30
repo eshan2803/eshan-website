@@ -60,7 +60,7 @@ and is 0.225 metric tone of HFO/mile. So this is a reasonable range.
 - check BOR values from Lee et al. 2019 cited in ref [3]: 0.3%/day is already given, no reference where this value from and it is for in-land storage. Claude says 0.1~0.5 %/day and trypically 0.2 %/day.
 calculate BOR based on fundemental equations
 - OHTC: from ref [3] cited
-: "Züttel, A., 2003. Material for hydrogen" it's 0.03, but no OHTC value was found in their citation. So check with Claude, it says typical values of OHTC: 0.05 to 0.5 W/(m²·K), a well-design one should have around 0.1 W/(m²·K). Our process: 0.05~0.3.
+: "ZÃ¼ttel, A., 2003. Material for hydrogen" it's 0.03, but no OHTC value was found in their citation. So check with Claude, it says typical values of OHTC: 0.05 to 0.5 W/(mÂ²Â·K), a well-design one should have around 0.1 W/(mÂ²Â·K). Our process: 0.05~0.3.
 
 - T effect on BOR for each stage -- ok, using slope for extrapolation, check if 1/4 makes sense.
 - electricity price -- ok
@@ -757,7 +757,7 @@ def local_temperature(lat, lon):
 
 
 #temperature = local_temperature(latitude, longitude)
-#print(f"The current temperature at ({latitude}, {longitude}) is {temperature}°C")
+#print(f"The current temperature at ({latitude}, {longitude}) is {temperature}Â°C")
 
 """Carbon intensity: This endpoint retrieves the last known carbon intensity (in gCO2eq/kWh) of electricity consumed in an area. It can either be queried by zone identifier or by geolocation.
 
@@ -867,7 +867,7 @@ port_to_port_duration = float(port_to_port_dis)/(avg_ship_speed*1.852)
 
 """Results"""
 
-print(f"local temperature at {start}: {start_local_temperature}",'°C')
+print(f"local temperature at {start}: {start_local_temperature}",'Â°C')
 print(f'electricity price at {start}:',round(electricity_price(extract_lat_long(start)[2])/3.6,3), '$/MJ')
 print('From',start,'to',start_port[2],':')
 print(start_to_port[0],',',start_to_port[1])
@@ -878,7 +878,7 @@ print(f"Distance bewtween {start_port[2]} and {end_port[2]}: {round(port_to_port
 # print(f"Avg Speed: 31.5",'km/h (17 knots)')
 
 print('')
-print(f"local temperature at {end}: {end_local_temperature}",'°C')
+print(f"local temperature at {end}: {end_local_temperature}",'Â°C')
 print(f'electricity price at {end}:',round(electricity_price(extract_lat_long(end)[2])/3.6,3), '$/MJ')
 print('From',end_port[2],'to',end,':')
 print(port_to_end[0],',',port_to_end[1])
@@ -1006,9 +1006,9 @@ number_of_cryo_pump_load_site_B = 10
                                         #However, based on ref [10] fig 5, the largest storage size is only 3200 ~ 3400 m3
 storage_volume = [5683, 50000000/liquid_chem_density[1], 50000000/liquid_chem_density[2]] #m3, ref [12] p.9: NASA commissioned the construction of a larger stationary tank with a volume of 1.25 million gallons (approx. 5683 m3), ref [23] for Ammonia storage: 50,000 ton at 1 atm
 storage_radius = [np.cbrt(3 * volume / (4 * np.pi)) for volume in storage_volume] #meter, checked!
-stroage_heat_transfer_coeff = 0.3 #W/(m2 K), given by ChatGPT: For insluated in-land storage, U-values are generally lower, often ranging from 0.2 to 0.6 W/m²·K.
-shipping_heat_transfer_coeff = 0.4 #W/(m2 K), given by ChatGPT: For insulated marine containers, the U-value typically ranges from 0.3 to 0.7 W/m²·K.
-truck_heat_transfer_coeff = 0.5 #W/(m2 K), given by ChatGPT: For Insulated Trucks, U-values typically range from 0.3 to 0.6 W/m²·K
+stroage_heat_transfer_coeff = 0.3 #W/(m2 K), given by ChatGPT: For insluated in-land storage, U-values are generally lower, often ranging from 0.2 to 0.6 W/mÂ²Â·K.
+shipping_heat_transfer_coeff = 0.4 #W/(m2 K), given by ChatGPT: For insulated marine containers, the U-value typically ranges from 0.3 to 0.7 W/mÂ²Â·K.
+truck_heat_transfer_coeff = 0.5 #W/(m2 K), given by ChatGPT: For Insulated Trucks, U-values typically range from 0.3 to 0.6 W/mÂ²Â·K
 # ship_tank_volume = 10000 #m3, ref [10] P.24159: HySTRA JV launched the world's first LH2 carrier ship with a single LH2 storage tank with a capacity of 1250 m3
 ship_number_of_tanks = 4 # ref [13]
 # ship_tank_height = 138   #m, ref [13] table 4
@@ -1101,7 +1101,7 @@ def site_A_chem_production(A,B,C,D,E,F):  #The production process of H2 in gas-p
   #money = NoCal_H2_price*A
   convert_energy_consumed = energy_conversion_to_chem[B]*1/1000*A*3600 #MWh/ton H2 * ton/kg * ton H2 * 3600 s/hr = MJ
   money = convert_energy_consumed*start_electricity_price
-  G_emission = convert_energy_consumed*0.2778*CO2e_start*0.001  #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJ×0.2778
+  G_emission = convert_energy_consumed*0.2778*CO2e_start*0.001  #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJÃ—0.2778
   BOG_loss = 0
   
   return money, convert_energy_consumed, G_emission, A, BOG_loss
@@ -1118,7 +1118,7 @@ def site_A_chem_liquification(A,B,C,D,E,F):  #The process that turns H2 from gas
 
   liquify_ener_consumed = liquify_energy_required*A #MJ/kg*kg = MJ
   liquify_money = liquify_ener_consumed*start_electricity_price #MJ*$/MJ = $
-  G_emission = liquify_ener_consumed*0.2778*CO2e_start*0.001 #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJ×0.2778
+  G_emission = liquify_ener_consumed*0.2778*CO2e_start*0.001 #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJÃ—0.2778
   BOG_loss = 0.016*A  #ed in Table 5. A hydrogen loss of 1.6 % was assumed during liquefaction in ref [11] page 21
   return liquify_money, liquify_ener_consumed, G_emission, A, BOG_loss
 
@@ -1133,7 +1133,7 @@ def chem_site_A_loading_to_truck(A,B,C,D,E,F):  #The liquified H2 (LH2) are load
   A -= BOG_loss
   money = ener_consumed*start_electricity_price #MJ*$/MJ = $
   #money from electricity
-  G_emission = ener_consumed*0.2778*CO2e_start*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJ×0.2778
+  G_emission = ener_consumed*0.2778*CO2e_start*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJÃ—0.2778
   return money, ener_consumed, G_emission, A, BOG_loss
 
 def site_A_to_port_A(A,B,C,D,E,F):    #This process calculates the costs of the in-land route transporting with trucks between the production site and port.
@@ -1216,7 +1216,7 @@ def port_A_unloading_to_storage(A,B,C,D,E,F): #As trucks arrive at sea port, LH2
   A -= BOG_loss
   money = ener_consumed*start_electricity_price #MJ*$/MJ = $
   #money from electricity
-  G_emission = ener_consumed*0.2778*CO2e_start*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJ×0.2778
+  G_emission = ener_consumed*0.2778*CO2e_start*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJÃ—0.2778
   return money, ener_consumed, G_emission, A, BOG_loss
 
 def chem_storage_at_port_A(A,B,C,D,E,F):
@@ -1231,7 +1231,7 @@ def chem_storage_at_port_A(A,B,C,D,E,F):
   heat_required = OHTC*storage_area*(start_local_temperature+273-20) #W = W/(m2 K)* m2 * K, ref [3] eqn 16
   ener_consumed = (heat_required/(COP_refrig[B]*EIM_refrig_eff/100))/1000000*86400*storage_time #MJ = J/s * MJ/J * s/day   ref [3] eqn 1
   money = ener_consumed*start_electricity_price #$ = MJ*$/MJ
-  G_emission = ener_consumed*0.2778*CO2e_start*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJ×0.2778
+  G_emission = ener_consumed*0.2778*CO2e_start*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJÃ—0.2778
 
   ##recirculation
   if C == 2:
@@ -1277,7 +1277,7 @@ def chem_loading_to_ship(A,B,C,D,E,F):
   A -= BOG_loss
   money = ener_consumed*start_electricity_price #MJ*$/MJ = $
   #money from electricity
-  G_emission = ener_consumed*0.2778*CO2e_start*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJ×0.2778
+  G_emission = ener_consumed*0.2778*CO2e_start*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJÃ—0.2778
   return money, ener_consumed, G_emission, A, BOG_loss
 
 def port_to_port(A,B,C,D,E,F):
@@ -1356,7 +1356,7 @@ def chem_unloading_from_ship(A,B,C,D,E,F):
   A -= BOG_loss
   money = ener_consumed*end_electricity_price #MJ*$/MJ = $
   #money from electricity
-  G_emission = ener_consumed*0.2778*CO2e_end*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJ×0.2778
+  G_emission = ener_consumed*0.2778*CO2e_end*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJÃ—0.2778
   return money, ener_consumed, G_emission, A, BOG_loss
 
 def chem_storage_at_port_B(A,B,C,D,E,F):
@@ -1370,7 +1370,7 @@ def chem_storage_at_port_B(A,B,C,D,E,F):
   heat_required = OHTC*storage_area*(end_local_temperature+273-20) #W = W/(m2 K)* m2 * K, ref [3] eqn 16
   ener_consumed = (heat_required/(COP_refrig[B]*EIM_refrig_eff/100))/1000000*86400*storage_time #MJ = J/s * MJ/J * s/day * day  ref [3] eqn 1
   money = ener_consumed*end_electricity_price #$ = MJ*$/MJ
-  G_emission = ener_consumed*0.2778*CO2e_end*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJ×0.2778
+  G_emission = ener_consumed*0.2778*CO2e_end*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJÃ—0.2778
 
   ##recirculation
   if C == 2:
@@ -1416,7 +1416,7 @@ def port_B_unloading_from_storage(A,B,C,D,E,F):
   A -= BOG_loss
   money = ener_consumed*end_electricity_price #MJ*$/MJ = $
   #money from electricity
-  G_emission = ener_consumed*0.2778*CO2e_end*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJ×0.2778
+  G_emission = ener_consumed*0.2778*CO2e_end*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJÃ—0.2778
   return money, ener_consumed, G_emission, A, BOG_loss
 
 def port_B_to_site_B(A,B,C,D,E,F):
@@ -1497,7 +1497,7 @@ def chem_site_B_unloading_from_truck(A,B,C,D,E,F):
   A -= BOG_loss
   money = ener_consumed*end_electricity_price #MJ*$/MJ = $
   #money from electricity
-  G_emission = ener_consumed*0.2778*CO2e_end*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJ×0.2778
+  G_emission = ener_consumed*0.2778*CO2e_end*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJÃ—0.2778
   return money, ener_consumed, G_emission, A, BOG_loss
 
 def chem_storage_at_site_B(A,B,C,D,E,F):
@@ -1511,7 +1511,7 @@ def chem_storage_at_site_B(A,B,C,D,E,F):
   heat_required = OHTC*storage_area*(end_local_temperature+273-20) #W = W/(m2 K)* m2 * K, ref [3] eqn 16
   ener_consumed = (heat_required/(COP_refrig[B]*EIM_refrig_eff/100))/1000000*86400*storage_time #MJ = J/s * MJ/J * s/day   ref [3] eqn 1
   money = ener_consumed*end_electricity_price #$ = MJ*$/MJ
-  G_emission = ener_consumed*0.2778*CO2e_end*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJ×0.2778
+  G_emission = ener_consumed*0.2778*CO2e_end*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJÃ—0.2778
 
   ##recirculation
   if C == 2:
@@ -1557,7 +1557,7 @@ def chem_unloading_from_site_B(A,B,C,D,E,F):   #to consumer
   A -= BOG_loss
   money = ener_consumed*end_electricity_price #MJ*$/MJ = $
   #money from electricity
-  G_emission = ener_consumed*0.2778*CO2e_end*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJ×0.2778
+  G_emission = ener_consumed*0.2778*CO2e_end*0.001 + BOG_loss*GWP_chem[B] #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJÃ—0.2778
   return money, ener_consumed, G_emission, A, BOG_loss
 
 ### PH2 section:
@@ -1568,7 +1568,7 @@ def PH2_pressurization_at_site_A(A,B,C,D,E,F):
   compress_energy = multistage_compress(PH2_pressure)*A/multistage_eff #MJ/kg H2 * kg = MJ
   
   money = start_electricity_price*compress_energy #$/MJ*MJ  need compressor stations?
-  G_emission = compress_energy*0.2778*CO2e_start*0.001 #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJ×0.2778
+  G_emission = compress_energy*0.2778*CO2e_start*0.001 #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJÃ—0.2778
   leak_loss = 0
   print('H2 pressure at pressurization process at site A (bar): ',PH2_pressure)
   return money, compress_energy, G_emission, A, leak_loss
@@ -1596,7 +1596,7 @@ def PH2_site_A_to_port_A(A,B,C,D,E,F):
   A_final = final_PH2_density*PH2_storage_V*numbers_of_PH2_storage
   trans_loss = A-A_final
   money = start_electricity_price*ener_consumed #$/MJ*MJ  start_electricity_price might be wrong if the port is in different state from start location
-  G_emission = ener_consumed*0.2778*CO2e_start*0.001 #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJ×0.2778
+  G_emission = ener_consumed*0.2778*CO2e_start*0.001 #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJÃ—0.2778
   print('pressure drop (bar): ',P_drop)
   print('final pressure at port A (bar): ',final_P_PH2)
   return money, ener_consumed, G_emission, A_final, trans_loss
@@ -1605,7 +1605,7 @@ def port_A_liquification(A,B,C,D,E,F):
   LH2_energy_required = liquification_data_fitting(LH2_plant_capacity)/(EIM_liquefication/100) #MJ/kg
   LH2_ener_consumed = LH2_energy_required*A #MJ/kg*kg = MJ
   LH2_money = LH2_ener_consumed*start_port_electricity_price #MJ*$/MJ = $
-  G_emission = LH2_ener_consumed*0.2778*CO2e_start*0.001 #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJ×0.2778
+  G_emission = LH2_ener_consumed*0.2778*CO2e_start*0.001 #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJÃ—0.2778
   BOG_loss = 0.016*A  #ed in Table 5. A hydrogen loss of 1.6 % was assumed during liquefaction in ref [11] page 21
  
   return LH2_money, LH2_ener_consumed, G_emission, A, BOG_loss
@@ -1620,7 +1620,7 @@ def H2_pressurization_at_port_B(A,B,C,D,E,F):
   
   ener_consumed  = compress_energy + Q_latent + Q_sensible
   money = end_port_electricity_price*ener_consumed #$/MJ*MJ  need compressor stations?
-  G_emission = ener_consumed*0.2778*CO2e_end*0.001 #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJ×0.2778
+  G_emission = ener_consumed*0.2778*CO2e_end*0.001 #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJÃ—0.2778
   leak_loss = 0
   print('H2 pressure at pressurization process at port B (bar): ',PH2_pressure)
   return money, ener_consumed, G_emission, A, leak_loss
@@ -1649,7 +1649,7 @@ def PH2_port_B_to_site_B(A,B,C,D,E,F):
   A_final = final_PH2_density*PH2_storage_V*numbers_of_PH2_storage
   trans_loss = A-A_final
   money = end_port_electricity_price*ener_consumed #$/MJ*MJ  start_electricity_price might be wrong if the port is in different state from start location
-  G_emission = ener_consumed*0.2778*CO2e_end*0.001 #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJ×0.2778
+  G_emission = ener_consumed*0.2778*CO2e_end*0.001 #kgCO2 = MJ* kWh/MJ * gCO2/kWh* kg/g, kWh=MJÃ—0.2778
   print('pressure drop (bar): ',P_drop)
   print('final pressure at site B (bar): ',final_P_PH2)
   return money, ener_consumed, G_emission, A_final, trans_loss
