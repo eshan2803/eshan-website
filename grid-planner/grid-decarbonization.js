@@ -255,13 +255,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     const sliders = {
         solar: document.getElementById('solar-slider'), wind: document.getElementById('wind-slider'), offshoreWind: document.getElementById('offshoreWind-slider'),
         geothermal: document.getElementById('geothermal-slider'), nuclear: document.getElementById('nuclear-slider'),
-        biomass: document.getElementById('biomass-slider') rng: document.getElementById('rng-slider'),
+        biomass: document.getElementById('biomass-slider'), rng: document.getElementById('rng-slider'),
         battery4hr: document.getElementById('battery4hr-slider'), battery8hr: document.getElementById('battery8hr-slider'),
         longduration: document.getElementById('longduration-slider'), demandflex: document.getElementById('demandflex-slider'),
         dac: document.getElementById('dac-slider'), solarIncentive: document.getElementById('solar-incentive-slider'),
         windIncentive: document.getElementById('wind-incentive-slider'), offshoreWindIncentive: document.getElementById('offshoreWind-incentive-slider'),
         geothermalIncentive: document.getElementById('geothermal-incentive-slider'),
-        nuclearIncentive: document.getElementById('nuclear-incentive-slider'), biomassIncentive: document.getElementById('biomass-incentive-slider')
+        nuclearIncentive: document.getElementById('nuclear-incentive-slider'), biomassIncentive: document.getElementById('biomass-incentive-slider'),
         rngIncentive: document.getElementById('rng-incentive-slider'),
         storageIncentive: document.getElementById('storage-incentive-slider'),
         dacIncentive: document.getElementById('dac-incentive-slider'), carbonTax: document.getElementById('carbon-tax-slider'),
@@ -270,13 +270,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     const inputs = {
         solar: document.getElementById('solar-input'), wind: document.getElementById('wind-input'), offshoreWind: document.getElementById('offshoreWind-input'),
         geothermal: document.getElementById('geothermal-input'), nuclear: document.getElementById('nuclear-input'),
-        biomass: document.getElementById('biomass-input') rng: document.getElementById('rng-input'),
+        biomass: document.getElementById('biomass-input'), rng: document.getElementById('rng-input'),
         battery4hr: document.getElementById('battery4hr-input'), battery8hr: document.getElementById('battery8hr-input'),
         longduration: document.getElementById('longduration-input'), demandflex: document.getElementById('demandflex-input'),
         dac: document.getElementById('dac-input'), solarIncentive: document.getElementById('solar-incentive-input'),
         windIncentive: document.getElementById('wind-incentive-input'), offshoreWindIncentive: document.getElementById('offshoreWind-incentive-input'),
         geothermalIncentive: document.getElementById('geothermal-incentive-input'),
-        nuclearIncentive: document.getElementById('nuclear-incentive-input'), biomassIncentive: document.getElementById('biomass-incentive-input')
+        nuclearIncentive: document.getElementById('nuclear-incentive-input'), biomassIncentive: document.getElementById('biomass-incentive-input'),
         rngIncentive: document.getElementById('rng-incentive-input'),
         storageIncentive: document.getElementById('storage-incentive-input'),
         dacIncentive: document.getElementById('dac-incentive-input'), carbonTax: document.getElementById('carbon-tax-input'),
