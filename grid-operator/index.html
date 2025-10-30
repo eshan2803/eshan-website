@@ -53,16 +53,47 @@
             100% { opacity: 0.25; }
         }
         /* Cloud animation */
-        @keyframes cloud-slide {
-            from { transform: translateX(100vw); }
-            to { transform: translateX(-200px); }
+        @keyframes cloud-sweep {
+            0% {
+                transform: translateY(-150vh) scale(0.5);
+                opacity: 0;
+            }
+            30% {
+                transform: translateY(20vh) scale(1.5);
+                opacity: 0.95;
+            }
+            70% {
+                transform: translateY(20vh) scale(1.5);
+                opacity: 0.95;
+            }
+            100% {
+                transform: translateY(-150vh) scale(0.5);
+                opacity: 0;
+            }
         }
         .cloud-element {
             position: absolute;
-            font-size: 120px;
-            opacity: 0.7;
-            animation: cloud-slide 3s ease-in-out;
+            font-size: 200px;
+            animation: cloud-sweep 3.5s ease-in-out;
             pointer-events: none;
+            filter: drop-shadow(0 0 30px rgba(128, 128, 128, 0.6));
+            z-index: 2;
+        }
+        @keyframes darken-sky {
+            0%, 100% {
+                opacity: 0;
+            }
+            30%, 70% {
+                opacity: 0.5;
+            }
+        }
+        .cloud-darken-overlay {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(100, 100, 120, 0.6) 0%, rgba(50, 50, 70, 0.4) 100%);
+            animation: darken-sky 3.5s ease-in-out;
+            pointer-events: none;
+            z-index: 1;
         }
         /* Demand spike animation */
         @keyframes lightning-drop {
