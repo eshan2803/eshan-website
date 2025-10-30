@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Grid Planning Simulator | Dr. Eshan Singh</title>
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
@@ -131,7 +132,7 @@
         .thumb-biomass::-moz-range-thumb { background-color: rgba(101, 67, 33, 1); }
         .thumb-rng::-webkit-slider-thumb { background-color: rgba(132, 204, 22, 1); } /* Lime green for RNG */
         .thumb-rng::-moz-range-thumb { background-color: rgba(132, 204, 22, 1); }
-        
+
         /* Rainbow Border Animation */
         @keyframes rainbow-border {
             0% { background-position: 0% 50%; }
@@ -205,121 +206,297 @@
     </style>
 </head>
 <body class="antialiased">
+    <!-- Tooltip element -->
+    <div id="hover-tooltip" class="absolute hidden bg-gray-800 text-white text-sm rounded-md px-2 py-1 z-50 pointer-events-none shadow-lg"></div>
+
+    <!-- TUTORIAL HTML -->
+    <div id="tutorial-overlay"></div>
+    <div id="tutorial-popover">
+        <h3 id="tutorial-title" class="text-xl font-lora font-bold mb-2 text-gray-800"></h3>
+        <p id="tutorial-text" class="text-gray-600 mb-4"></p>
+        <div class="flex justify-between items-center">
+            <button id="tutorial-skip" class="text-sm text-gray-500 hover:text-gray-800">Skip Tour</button>
+            <div>
+                <button id="tutorial-prev" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 mr-2">Prev</button>
+                <button id="tutorial-next" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">Next</button>
+            </div>
+        </div>
+    </div>
 
     <div class="mesh-gradient-container">
         <div class="mesh-gradient-1"></div>
 
         <header class="p-8">
             <div class="container mx-auto flex justify-between items-center">
-                <a href="#" class="font-lora text-2xl font-semibold text-gray-800">Dr. Eshan Singh</a>
+                <div class="flex flex-col">
+                    <a href="index.html" class="font-lora text-2xl font-semibold">Dr. Eshan Singh</a>
+                    <div class="text-sm text-gray-500 mt-1">
+                        <span>Views: </span><span id="visitor-count">Loading...</span>
+                    </div>
+                </div>
                 <nav class="flex items-center space-x-2">
-                    <a href="#" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
-                    <a href="#" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Transport Model</a>
-                    <a href="#" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Musings</a>
+                    <a href="energy.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
+                    <a href="/transport-model/index.html" class="rainbow-glow">
+                        <span class="button-content">Transport Model</span>
+                    </a>
+                    <a href="grid-decarbonization.html" class="rainbow-glow">
+                         <span class="button-content">Grid Planner</span>
+                    </a>
+                    <a href="grid-operator/index.html" class="rainbow-glow">
+                         <span class="button-content">Grid Operator</span>
+                    </a>
+                    <a href="musings.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Musings</a>
                 </nav>
             </div>
         </header>
 
         <div class="container mx-auto p-4 md:p-8 pt-0">
 
-            <section class="text-center mb-12">
-                <h1 class="font-lora text-5xl md:text-6xl font-medium leading-tight text-gray-900">Grid Decarbonization Simulator</h1>
+            <section id="tutorial-step-1" class="text-center mb-12">
+                <h1 class="font-lora text-5xl md:text-6xl font-medium leading-tight text-gray-900">Grid Planning Simulator</h1>
                 <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
-                    Your challenge: use policy levers for clean energy and direct air capture to eliminate CO2 emissions from the electricity grid.
+                    Your challenge: Use policy levers for clean energy and direct air capture to eliminate CO2 emissions from the electricity grid, while minimizing the impact on customer bill.
+                </p>
+                <div class="flex justify-center items-center space-x-4 mt-4">
+                    <a href="grid-model-documentation.html" class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors text-sm font-medium">
+                        📖 View Documentation
+                    </a>
+                    <button id="start-tutorial-btn" class="inline-flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors text-sm font-medium">
+                        🚀 Show Tutorial
+                    </button>
+                </div>
+                <p class="mt-4 text-sm text-gray-600">
+                    Send your queries at <a href="mailto:hello@eshansingh.xyz" class="text-blue-600 hover:underline">hello@eshansingh.xyz</a>
                 </p>
             </section>
 
             <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                <div class="lg:col-span-2 glass-card">
-                    <div class="mb-8">
-                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly Electricity Generation (GWh)</h2>
+                <div id="tutorial-step-2" class="lg:col-span-2 glass-card rounded-lg">
+                    <div class="mb-8 relative">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-lora font-semibold text-gray-800">Hourly Electricity Generation (GWh)</h2>
+                            <div class="flex items-center space-x-2">
+                                <div id="current-demand-profile-text" class="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded-full mr-1"></div>
+                                <div id="demand-edit-controls" class="flex items-center space-x-1">
+                                    <button id="edit-demand-btn" class="p-2 rounded-full hover:bg-gray-200" title="Edit demand profile or select a seasonal preset">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                                            <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                    <!-- Seasonal Demand Preset Buttons -->
+                                    <div id="demand-presets" class="hidden flex flex-wrap gap-2">
+                                        <button id="preset-demand-spring-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Spring Typical</button>
+                                        <button id="preset-demand-spring-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Spring High</button>
+                                        <button id="preset-demand-summer-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Summer Typical</button>
+                                        <button id="preset-demand-summer-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Summer High</button>
+                                        <button id="preset-demand-fall-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Fall Typical</button>
+                                        <button id="preset-demand-fall-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Fall High</button>
+                                        <button id="preset-demand-winter-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Winter Typical</button>
+                                        <button id="preset-demand-winter-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Winter High</button>
+                                    </div>
+                                    <button id="revert-demand-btn" class="p-2 rounded-full hover:bg-gray-200 hidden" title="Revert to original demand profile">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
+                                          <path fill-rule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                    <button id="confirm-demand-btn" class="p-2 rounded-full hover:bg-gray-200 hidden" title="Confirm changes to demand">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                         <canvas id="generationMixChart"></canvas>
                     </div>
-                    <div>
+                    <!-- NEW: Marginal Price Chart -->
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly Marginal Price ($/MWh)</h2>
+                        <canvas id="marginalPriceChart"></canvas>
+                    </div>
+                    <div class="mb-8">
                         <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly CO2 Emissions (Metric Tons)</h2>
                         <canvas id="co2EmissionsChart"></canvas>
                     </div>
+                     <div id="tutorial-step-4" class="mt-8">
+                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Installed Capacity Mix (%)</h2>
+                        <div id="grid-mix-sliders" class="space-y-3">
+                            <!-- Sliders will be dynamically inserted here -->
+                        </div>
+                        <!-- NEW: Container for storage capacity display -->
+                        <div id="storage-capacity-display" class="mt-6"></div>
+                    </div>
+                    <div class="mt-8">
+                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Daily Generation Mix (%)</h2>
+                        <div id="generation-mix-sliders" class="space-y-3">
+                            <!-- New chart sliders will be dynamically inserted here -->
+                        </div>
+                    </div>
+                    <div class="mt-8">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-lora font-semibold text-gray-800">Hourly Capacity Factors</h2>
+                             <div class="flex items-center space-x-2">
+                                <div id="current-cf-profile-text" class="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded-full mr-1"></div>
+                                <div id="cf-edit-controls" class="flex items-center space-x-1">
+                                    <button id="edit-cf-btn" class="p-2 rounded-full hover:bg-gray-200" title="Edit capacity factor profiles or select a seasonal preset">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                                            <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                    <div id="cf-presets" class="hidden">
+                                        <button id="preset-cf-spring" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Spring</button>
+                                        <button id="preset-cf-summer" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Summer</button>
+                                        <button id="preset-cf-fall" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Fall</button>
+                                        <button id="preset-cf-winter" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Winter</button>
+                                    </div>
+                                    <button id="revert-cf-btn" class="p-2 rounded-full hover:bg-gray-200 hidden" title="Revert to original capacity factor profiles">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
+                                          <path fill-rule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                    <button id="confirm-cf-btn" class="p-2 rounded-full hover:bg-gray-200 hidden" title="Confirm changes to capacity factors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <canvas id="capacityFactorChart"></canvas>
+                    </div>
                 </div>
 
-                <div class="glass-card">
-                    <div class="mb-8 text-center">
-                        <h3 class="text-xl font-lora font-semibold text-gray-800">Impact on Customer Bills</h3>
-                        <p id="bill-impact" class="text-5xl font-bold text-blue-600 mt-2">0%</p>
+                <div class="lg:col-span-1 space-y-8">
+                    <div id="tutorial-step-5" class="glass-card rounded-lg sticky top-6 z-10">
+                        <div class="grid grid-cols-2 gap-4 text-center">
+                            <div title="Based on the average wholesale price of electricity&#10;Assuming natural gas plant on the margin drives the price">
+                                <h3 class="text-xl font-lora font-semibold text-gray-800">Marginal Price</h3>
+                                <p id="bill-impact" class="text-5xl font-bold text-blue-600 mt-2">0%</p>
+                            </div>
+                            <div title="Based on the total annualized cost to operate the grid">
+                                <h3 class="text-xl font-lora font-semibold text-gray-800">System Cost</h3>
+                                <p id="system-cost-impact" class="text-5xl font-bold text-blue-600 mt-2">0%</p>
+                            </div>
+                        </div>
+                         <div class="text-center mt-2">
+                            <p id="co2-avoided-text" class="text-md font-medium text-gray-700"></p>
+                        </div>
                     </div>
 
-                    <div class="space-y-6">
+                    <div id="tutorial-step-3" class="glass-card space-y-6 rounded-lg">
+                         <div class="mb-6">
+                            <label for="country-select" class="block text-md font-medium text-gray-700 mb-2">Select Default Grid Mix</label>
+                            <select id="country-select" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
+                                <!-- Options will be populated by JS -->
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                             <div class="flex items-center justify-around">
+                                <button id="undo-button" class="p-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Undo" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                </button>
+                                <button id="redo-button" class="p-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Redo" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                                </button>
+                             </div>
+                             <button id="make-default-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors" title="Set the current lever positions as your new default">Make Default</button>
+                             <button id="reset-to-default-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors" title="Reset levers to the default for this grid mix">Reset to Default</button>
+                             <button id="reset-to-zero-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors" title="Reset all policy and new capacity levers to zero">Reset to Zero</button>
+                        </div>
                         <div>
-                            <h2 class="text-2xl font-lora font-semibold mb-4 border-b border-gray-300 pb-4 text-gray-800">Policy Levers</h2>
+                            <h2 class="text-2xl font-lora font-semibold mb-4 border-b border-t pt-4 border-gray-300 pb-4 text-gray-800">Policy Levers</h2>
                             <div class="space-y-6 pt-4">
+                                <!-- Levers -->
                                 <div>
                                     <label for="solar-slider" class="block text-md font-medium text-gray-700">New Solar Capacity</label>
-                                    <div class="flex items-center space-x-4 mt-2">
-                                        <input type="range" id="solar-slider" min="0" max="200" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="solar-value">0 GW</span>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="solar-slider" min="0" max="200" value="0" class="w-full form-input thumb-solar">
+                                        <input type="number" id="solar-input" min="0" max="200" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="solar-unit">GW</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="wind-slider" class="block text-md font-medium text-gray-700">New Wind Capacity</label>
-                                    <div class="flex items-center space-x-4 mt-2">
-                                        <input type="range" id="wind-slider" min="0" max="200" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="wind-value">0 GW</span>
+                                    <label for="wind-slider" class="block text-md font-medium text-gray-700">New Onshore Wind Capacity</label>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="wind-slider" min="0" max="200" value="0" class="w-full form-input thumb-wind">
+                                        <input type="number" id="wind-input" min="0" max="200" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="wind-unit">GW</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="offshoreWind-slider" class="block text-md font-medium text-gray-700">New Offshore Wind Capacity</label>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="offshoreWind-slider" min="0" max="200" value="0" class="w-full form-input thumb-offshoreWind">
+                                        <input type="number" id="offshoreWind-input" min="0" max="200" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="offshoreWind-unit">GW</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label for="geothermal-slider" class="block text-md font-medium text-gray-700">New Geothermal Capacity</label>
-                                    <div class="flex items-center space-x-4 mt-2">
-                                        <input type="range" id="geothermal-slider" min="0" max="50" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="geothermal-value">0 GW</span>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="geothermal-slider" min="0" max="50" value="0" class="w-full form-input thumb-geothermal">
+                                        <input type="number" id="geothermal-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="geothermal-unit">GW</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label for="nuclear-slider" class="block text-md font-medium text-gray-700">New Nuclear Capacity</label>
-                                    <div class="flex items-center space-x-4 mt-2">
-                                        <input type="range" id="nuclear-slider" min="0" max="50" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="nuclear-value">0 GW</span>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="nuclear-slider" min="0" max="50" value="0" class="w-full form-input thumb-nuclear">
+                                        <input type="number" id="nuclear-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="nuclear-unit">GW</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label for="biomass-slider" class="block text-md font-medium text-gray-700">New Biomass Capacity</label>
-                                    <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="biomass-slider" min="0" max="50" value="0" class="w-full form-input thumb-biomass">
-                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="biomass-value">0 GW</span>
+                                        <input type="number" id="biomass-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="biomass-unit">GW</span>
                                     </div>
                                 </div>
+                                <!-- NEW: RNG (Biogas) Slider -->
                                 <div>
                                     <label for="rng-slider" class="block text-md font-medium text-gray-700">New RNG (Biogas) Capacity</label>
-                                    <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="rng-slider" min="0" max="50" value="0" class="w-full form-input thumb-rng">
-                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="rng-value">0 GW</span>
+                                        <input type="number" id="rng-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="rng-unit">GW</span>
                                     </div>
                                 </div>
                                 <div class="border-t border-gray-300 pt-6">
                                     <label for="battery4hr-slider" class="block text-md font-medium text-gray-700">4-hr Battery Storage</label>
-                                    <div class="flex items-center space-x-4 mt-2">
-                                        <input type="range" id="battery4hr-slider" min="0" max="200" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="battery4hr-value">0 GWh</span>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="battery4hr-slider" min="0" max="200" value="0" class="w-full form-input thumb-storage">
+                                        <input type="number" id="battery4hr-input" min="0" max="200" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="battery4hr-unit">GWh</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label for="battery8hr-slider" class="block text-md font-medium text-gray-700">8-hr Battery Storage</label>
-                                    <div class="flex items-center space-x-4 mt-2">
-                                        <input type="range" id="battery8hr-slider" min="0" max="200" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="battery8hr-value">0 GWh</span>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="battery8hr-slider" min="0" max="200" value="0" class="w-full form-input thumb-storage">
+                                        <input type="number" id="battery8hr-input" min="0" max="200" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="battery8hr-unit">GWh</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label for="longduration-slider" class="block text-md font-medium text-gray-700">24-hr Long Duration Storage</label>
-                                    <div class="flex items-center space-x-4 mt-2">
-                                        <input type="range" id="longduration-slider" min="0" max="500" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="longduration-value">0 GWh</span>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="longduration-slider" min="0" max="500" value="0" class="w-full form-input thumb-storage">
+                                        <input type="number" id="longduration-input" min="0" max="500" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="longduration-unit">GWh</span>
                                     </div>
                                 </div>
                                  <div class="border-t border-gray-300 pt-6">
                                     <label for="demandflex-slider" class="block text-md font-medium text-gray-700">Demand Flexibility</label>
-                                    <div class="flex items-center space-x-4 mt-2">
-                                        <input type="range" id="demandflex-slider" min="0" max="25" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-20 text-center bg-gray-100/80 py-1 rounded-md" id="demandflex-value">0 %</span>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="demandflex-slider" min="0" max="25" value="0" class="w-full form-input thumb-neutral">
+                                        <input type="number" id="demandflex-input" min="0" max="25" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="demandflex-unit">%</span>
                                     </div>
                                 </div>
                             </div>
@@ -330,68 +507,104 @@
                             <div class="space-y-6 pt-4">
                                 <!-- Incentive levers -->
                                 <div>
+                                    <label for="carbon-tax-slider" class="block text-sm font-medium text-gray-700">Carbon Tax</label>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="carbon-tax-slider" min="0" max="200" value="0" class="w-full form-input thumb-neutral">
+                                        <input type="number" id="carbon-tax-input" min="0" max="200" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="carbon-tax-unit">$/ton</span>
+                                    </div>
+                                </div>
+                                 <div>
+                                    <label for="export-price-slider" class="block text-sm font-medium text-gray-700">Export Price</label>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="export-price-slider" min="-100" max="100" value="20" class="w-full form-input thumb-neutral">
+                                        <input type="number" id="export-price-input" min="-100" max="100" value="20" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="export-price-unit">$/MWh</span>
+                                    </div>
+                                </div>
+                                <div class="border-t border-gray-300 pt-6">
                                     <label for="solar-incentive-slider" class="block text-sm font-medium text-gray-700">Solar (PTC)</label>
-                                    <div class="flex items-center space-x-4 mt-2">
-                                        <input type="range" id="solar-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="solar-incentive-value">$0/MWh</span>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="solar-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-solar">
+                                        <input type="number" id="solar-incentive-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="solar-incentive-unit">$/MWh</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="wind-incentive-slider" class="block text-sm font-medium text-gray-700">Wind (PTC)</label>
-                                    <div class="flex items-center space-x-4 mt-2">
-                                        <input type="range" id="wind-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="wind-incentive-value">$0/MWh</span>
+                                    <label for="wind-incentive-slider" class="block text-sm font-medium text-gray-700">Onshore Wind (PTC)</label>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="wind-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-wind">
+                                        <input type="number" id="wind-incentive-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="wind-incentive-unit">$/MWh</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="offshoreWind-incentive-slider" class="block text-sm font-medium text-gray-700">Offshore Wind (PTC)</label>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="offshoreWind-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-offshoreWind">
+                                        <input type="number" id="offshoreWind-incentive-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="offshoreWind-incentive-unit">$/MWh</span>
                                     </div>
                                 </div>
                                  <div>
                                     <label for="geothermal-incentive-slider" class="block text-sm font-medium text-gray-700">Geothermal (PTC)</label>
-                                    <div class="flex items-center space-x-4 mt-2">
-                                        <input type="range" id="geothermal-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="geothermal-incentive-value">$0/MWh</span>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="geothermal-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-geothermal">
+                                        <input type="number" id="geothermal-incentive-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="geothermal-incentive-unit">$/MWh</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label for="nuclear-incentive-slider" class="block text-sm font-medium text-gray-700">Nuclear (PTC)</label>
-                                    <div class="flex items-center space-x-4 mt-2">
-                                        <input type="range" id="nuclear-incentive-slider" min="0" max="50" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="nuclear-incentive-value">$0/MWh</span>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="nuclear-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-nuclear">
+                                        <input type="number" id="nuclear-incentive-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="nuclear-incentive-unit">$/MWh</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label for="biomass-incentive-slider" class="block text-sm font-medium text-gray-700">Biomass (PTC)</label>
-                                    <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="biomass-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-biomass">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="biomass-incentive-value">$0/MWh</span>
+                                        <input type="number" id="biomass-incentive-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="biomass-incentive-unit">$/MWh</span>
                                     </div>
                                 </div>
+                                <!-- NEW: RNG (Biogas) Incentive Slider -->
                                 <div>
                                     <label for="rng-incentive-slider" class="block text-sm font-medium text-gray-700">RNG (Biogas) (PTC)</label>
-                                    <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-2 mt-2">
                                         <input type="range" id="rng-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-rng">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="rng-incentive-value">$0/MWh</span>
+                                        <input type="number" id="rng-incentive-input" min="0" max="50" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="rng-incentive-unit">$/MWh</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label for="storage-incentive-slider" class="block text-sm font-medium text-gray-700">Storage (ITC)</label>
-                                    <div class="flex items-center space-x-4 mt-2">
-                                        <input type="range" id="storage-incentive-slider" min="0" max="100" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="storage-incentive-value">$0/kWh</span>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="storage-incentive-slider" min="0" max="100" value="0" class="w-full form-input thumb-storage">
+                                        <input type="number" id="storage-incentive-input" min="0" max="100" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="storage-incentive-unit">$/kWh</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label for="dac-incentive-slider" class="block text-sm font-medium text-gray-700">Direct Air Capture (45Q)</label>
-                                    <div class="flex items-center space-x-4 mt-2">
-                                        <input type="range" id="dac-incentive-slider" min="0" max="200" value="0" class="w-full form-input">
-                                        <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md text-sm" id="dac-incentive-value">$0/ton</span>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="dac-incentive-slider" min="0" max="200" value="0" class="w-full form-input thumb-neutral">
+                                        <input type="number" id="dac-incentive-input" min="0" max="200" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="dac-incentive-unit">$/ton</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div class="border-t border-gray-300 pt-6">
                             <label for="dac-slider" class="block text-md font-medium text-gray-700">Direct Air Capture Deployment</label>
-                            <div class="flex items-center space-x-4 mt-2">
-                                <input type="range" id="dac-slider" min="0" max="10000" value="0" class="w-full form-input">
-                                <span class="font-semibold text-gray-900 w-24 text-center bg-gray-100/80 py-1 rounded-md" id="dac-value">0 t/hr</span>
+                            <div class="flex items-center space-x-2 mt-2">
+                                <input type="range" id="dac-slider" min="0" max="10000" value="0" class="w-full form-input thumb-neutral">
+                                <input type="number" id="dac-input" min="0" max="10000" value="0" class="value-input">
+                                <span class="font-semibold text-gray-900 w-12 text-left" id="dac-unit">t/hr</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -399,7 +612,27 @@
             </main>
         </div>
     </div>
-
-        <script src="grid-decarbonization.js"></script>
+    <!-- Copyright Footer -->
+    <footer class="container mx-auto p-4 mt-12 text-center border-t border-gray-200">
+        <p class="text-sm text-gray-600">
+            © 2025 <a href="https://eshansingh.xyz" class="font-medium text-gray-800 hover:text-blue-600">Dr. Eshan Singh</a>. All rights reserved.
+        </p>
+        <p class="text-xs text-gray-500 mt-1">
+            For licensing inquiries: <a href="mailto:hello@eshansingh.xyz" class="text-blue-600 hover:text-blue-700 underline">hello@eshansingh.xyz</a>
+        </p>
+    </footer>    
+    <script type="module" src="grid-decarbonization.js"></script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
