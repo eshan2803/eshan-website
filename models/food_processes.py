@@ -19,6 +19,8 @@ Each function returns a standardized 8-tuple:
 import math
 import numpy as np
 
+from models.insurance_model import calculate_total_insurance_cost
+
 
 def food_harvest_and_prep(A, args):
     """
