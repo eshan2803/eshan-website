@@ -555,7 +555,17 @@ def run_lca_model(inputs):
 
     # Continue with sea route calculation (not parallelized as it depends on ports)
     _, hydrogen_production_cost = openai_get_hydrogen_cost(f"{coor_start_lat},{coor_start_lng}")
-    route = sr.searoute((start_port_lng, start_port_lat), (end_port_lng, end_port_lat), units="nm")
+
+    # Cache searoute calculation (expensive operation: 1-3 seconds)
+    route_cache_key = f"searoute_{start_port_lat:.4f},{start_port_lng:.4f}_{end_port_lat:.4f},{end_port_lng:.4f}"
+    if route_cache_key in api_cache:
+        print(f"[CACHE HIT] Searoute cache hit for {route_cache_key}")
+        route = api_cache[route_cache_key]
+    else:
+        print(f"[CACHE MISS] Computing searoute for {route_cache_key}")
+        route = sr.searoute((start_port_lng, start_port_lat), (end_port_lng, end_port_lat), units="nm")
+        api_cache[route_cache_key] = route
+
     searoute_coor = [[lat, lon] for lon, lat in route.geometry['coordinates']]
     port_to_port_dis = route.properties['length'] * 1.852
     canal_transits = detect_canal_transit(route)
@@ -914,14 +924,35 @@ def run_lca_model(inputs):
             all_shared_params_tuple
         )
 
-        initial_guess = [target_weight / 0.9]
+        # Improved initial guess based on empirical loss factors for each fuel type
+        # Loss factors account for BOG (Boil-Off Gas), pumping, and handling losses
+        # These factors were derived from typical supply chain simulations:
+        # - LH2 (fuel_type=0): ~15-18% losses due to high BOG rate (0.5%/day)
+        # - NH3 (fuel_type=1): ~8-12% losses due to moderate BOG (0.024%/day)
+        # - MeOH (fuel_type=2): ~5-8% losses due to very low BOG (0.0005%/day)
+
+        if fuel_type == 0:  # Liquid Hydrogen
+            # Higher losses due to cryogenic nature and high BOG rate
+            typical_loss_factor = 1.17  # Expect ~17% loss
+        elif fuel_type == 1:  # Ammonia
+            typical_loss_factor = 1.10  # Expect ~10% loss
+        else:  # Methanol (fuel_type == 2)
+            typical_loss_factor = 1.07  # Expect ~7% loss
+
+        initial_guess = [target_weight * typical_loss_factor]
+
+        print(f"[OPTIMIZATION] Starting optimization for {selected_fuel_name}")
+        print(f"[OPTIMIZATION] Target delivery: {target_weight:.0f} kg, Initial guess: {initial_guess[0]:.0f} kg (loss factor: {typical_loss_factor})")
 
         result = minimize(optimization_chem_weight,
                         initial_guess,
                         args=(args_for_optimizer_tuple, target_weight),
                         method='SLSQP',
                         bounds=[(0, None)],
-                        constraints=[con])
+                        constraints=[con],
+                        options={'ftol': 1e-6, 'maxiter': 30})  # Tighter tolerance, reasonable max iterations
+
+        print(f"[OPTIMIZATION] Completed in {result.nit} iterations, success={result.success}")
 
         if result.success:
             chem_weight = result.x[0]
@@ -1250,15 +1281,6 @@ def run_lca_model(inputs):
         total_insurance_money = sum(row[1] for row in data_raw if row[0] == "Insurance") # Sum value stored in 'opex_m' for 'Insurance' row
 
         final_commodity_kg = data_raw[-1][6] if data_raw and len(data_raw[-1]) > 6 else 0.0 # From the last (TOTAL) row
-
-        # Calculate total_money as the sum of all distinct cost components
-        total_money = total_opex_money + total_capex_money + total_carbon_tax_money + total_insurance_money
-
-        # Sum total insurance from the dedicated "Insurance" row in data_raw
-        total_insurance_money = sum(row[1] for row in data_raw if row[0] == "Insurance") # Sum value stored in 'opex_m' for 'Insurance' row
-
-        # Final delivered quantity from the last (TOTAL) row of data_raw
-        final_commodity_kg = data_raw[-1][6] if data_raw and len(data_raw[-1]) > 6 else 0.0
 
         # Calculate total_money as the sum of all distinct cost components
         total_money = total_opex_money + total_capex_money + total_carbon_tax_money + total_insurance_money
