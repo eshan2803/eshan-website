@@ -1786,16 +1786,25 @@ const AnimationController = {
         overlay.style.display = 'block';
         cloudContainer.classList.remove('hidden');
 
-        // Create 4 clouds at different heights
-        const cloudPositions = [15, 35, 55, 75]; // Y positions in %
+        // Create darkening overlay effect
+        const darkenOverlay = document.createElement('div');
+        darkenOverlay.className = 'cloud-darken-overlay';
+        cloudContainer.appendChild(darkenOverlay);
 
-        cloudPositions.forEach((yPos, index) => {
+        // Create multiple large clouds covering the screen
+        const cloudPositions = [
+            { left: '15%', delay: 0 },
+            { left: '35%', delay: 0.2 },
+            { left: '55%', delay: 0.4 },
+            { left: '75%', delay: 0.6 }
+        ];
+
+        cloudPositions.forEach((pos) => {
             const cloud = document.createElement('div');
             cloud.textContent = '☁️';
             cloud.className = 'cloud-element';
-            cloud.style.top = `${yPos}%`;
-            cloud.style.animationDelay = `${index * 0.3}s`;
-            cloud.style.animationDuration = `${3 + index * 0.5}s`;
+            cloud.style.left = pos.left;
+            cloud.style.animationDelay = `${pos.delay}s`;
             cloudContainer.appendChild(cloud);
         });
 
