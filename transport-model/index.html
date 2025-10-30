@@ -439,11 +439,13 @@
                     <div class="grid md:grid-cols-2 gap-8 mb-8">
                         <div>
                             <h4 class="text-lg font-semibold mb-4">Cost Breakdown</h4>
-                            <div id="costChart" class="w-full rounded-lg" style="height: 500px;"></div>
+                            <div id="costChart" class="w-full rounded-lg" style="height: 500px; position: relative; z-index: 1;"></div>
+                            <div id="costChartContext" class="mt-4 text-sm text-gray-700 leading-relaxed" style="display: none;"></div>
                         </div>
                         <div>
                             <h4 class="text-lg font-semibold mb-4">Emission Breakdown</h4>
-                            <div id="emissionChart" class="w-full rounded-lg" style="height: 500px;"></div>
+                            <div id="emissionChart" class="w-full rounded-lg" style="height: 500px; position: relative; z-index: 1;"></div>
+                            <div id="emissionChartContext" class="mt-4 text-sm text-gray-700 leading-relaxed" style="display: none;"></div>
                         </div>
                     </div>
 
