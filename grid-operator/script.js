@@ -1927,6 +1927,74 @@ function triggerDemandSpikeEvent() {
     console.log(`Demand Spike Event! Demand increased by ${Math.round(spikeMW)} MW for next tick`);
 }
 
+// --- RANDOM EVENT SCHEDULING ---
+let scheduledCloudCoverTicks = [];
+let scheduledDemandSpikeTicks = [];
+
+function scheduleRandomEvents() {
+    // Clear any previously scheduled events
+    scheduledCloudCoverTicks = [];
+    scheduledDemandSpikeTicks = [];
+
+    // Determine solar hours (hours where solar generation is significant)
+    // Typically hours 6-18 (ticks 72-216 in 5-min intervals)
+    // But we'll be more precise and check actual solar output
+    const solarHours = [];
+    for (let i = 0; i < forecastData.length; i++) {
+        if (forecastData[i].solar_mw > 100) { // Only count hours with meaningful solar output
+            solarHours.push(i);
+        }
+    }
+
+    // Randomly select 0-2 cloud cover events during solar hours
+    const numCloudEvents = Math.floor(Math.random() * 3); // 0, 1, or 2
+    if (numCloudEvents > 0 && solarHours.length > 0) {
+        for (let i = 0; i < numCloudEvents; i++) {
+            // Pick a random tick during solar hours, avoiding the last few ticks
+            const randomIndex = Math.floor(Math.random() * Math.max(1, solarHours.length - 12));
+            const scheduledTick = solarHours[randomIndex];
+
+            // Ensure we don't schedule duplicates at the same tick
+            if (!scheduledCloudCoverTicks.includes(scheduledTick)) {
+                scheduledCloudCoverTicks.push(scheduledTick);
+            }
+        }
+    }
+
+    // Randomly select 0-2 demand spike events anytime during the day
+    const numDemandEvents = Math.floor(Math.random() * 3); // 0, 1, or 2
+    const maxTick = forecastData.length - 12; // Avoid scheduling too close to end
+    if (numDemandEvents > 0 && maxTick > 0) {
+        for (let i = 0; i < numDemandEvents; i++) {
+            const scheduledTick = Math.floor(Math.random() * maxTick);
+
+            // Ensure we don't schedule duplicates at the same tick
+            if (!scheduledDemandSpikeTicks.includes(scheduledTick)) {
+                scheduledDemandSpikeTicks.push(scheduledTick);
+            }
+        }
+    }
+
+    console.log(`Scheduled Random Events - Cloud Cover at ticks: ${scheduledCloudCoverTicks.join(', ') || 'none'}`);
+    console.log(`Scheduled Random Events - Demand Spike at ticks: ${scheduledDemandSpikeTicks.join(', ') || 'none'}`);
+}
+
+function checkAndTriggerScheduledEvents(currentTick) {
+    // Check if current tick should trigger a cloud cover event
+    if (scheduledCloudCoverTicks.includes(currentTick)) {
+        triggerCloudCoverEvent();
+        // Remove this tick from scheduled list
+        scheduledCloudCoverTicks = scheduledCloudCoverTicks.filter(t => t !== currentTick);
+    }
+
+    // Check if current tick should trigger a demand spike event
+    if (scheduledDemandSpikeTicks.includes(currentTick)) {
+        triggerDemandSpikeEvent();
+        // Remove this tick from scheduled list
+        scheduledDemandSpikeTicks = scheduledDemandSpikeTicks.filter(t => t !== currentTick);
+    }
+}
+
 // --- 13. GAME LOGIC ---
 function gameLoop() {
     if (gameTick >= forecastData.length) {
@@ -1955,6 +2023,9 @@ function gameLoop() {
 
     // Process unit startup timers at the beginning of each tick
     processStartupTimers();
+
+    // Check and trigger any scheduled random events for this tick
+    checkAndTriggerScheduledEvents(gameTick);
 
     const currentNetDemand = forecastData[gameTick].net_demand_mw;
 
@@ -2267,6 +2338,9 @@ function startGame() {
     cloudCoverBtn.disabled = false;
     demandSpikeBtn.disabled = false;
 
+    // Schedule random events for this game session
+    scheduleRandomEvents();
+
     // Switch from hourly forecast to 5-min actual data
     switchToActualData();
 
@@ -2313,6 +2387,10 @@ function resetGame() {
     batterySOC = 0.2; // Reset to 20%
     prevHydro = 0; // Reset ramp tracking
     totalCost = 0; // Reset cost tracking
+
+    // Clear scheduled random events
+    scheduledCloudCoverTicks = [];
+    scheduledDemandSpikeTicks = [];
 
     // Reset game speed to default (index 2 = 5s/tick)
     const speedSteps = [0.1, 1, 5, 10, 20, 30];
