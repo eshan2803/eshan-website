@@ -913,7 +913,7 @@ def run_lca_model(inputs):
 
         result = minimize(optimization_chem_weight,
                         initial_guess,
-                        args=(args_for_optimizer_tuple,),
+                        args=(args_for_optimizer_tuple, target_weight),
                         method='SLSQP',
                         bounds=[(0, None)],
                         constraints=[con])
