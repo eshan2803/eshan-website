@@ -1,3 +1,253 @@
+        // --- FIREBASE IMPORTS ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, runTransaction, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- HARDCODED FIREBASE CONFIGURATION ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyCdEeu0VugTfZD-R-62pFvBdb313TeM4xs",
+          authDomain: "grid-decarbonization.firebaseapp.com",
+          projectId: "grid-decarbonization",
+          storageBucket: "grid-decarbonization.appspot.com",
+          messagingSenderId: "902419724670",
+          appId: "1:902419724670:web:b636a75ea44325946a9b2f",
+          measurementId: "G-3Q9HE19CGN"
+        };
+        
+        // --- INITIALIZE FIREBASE & DEFINE KEY VARIABLES ---
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const appId = firebaseConfig.appId;
+
+        // --- MODEL PARAMETERS & DATA (GLOBAL SCOPE) ---
+        const HOURS = Array.from({ length: 24 }, (_, i) => `${i}:00`);
+        
+        const countryGridMixData = {
+            "California": { 
+                totalCapacityMW: 89223, 
+                peakLoadsMW: { summer: 52061, winter: 47500, fall: 46000, spring: 41000 },
+                mix: { coal: 0.1, naturalGas: 43.4, hydro: 15.7, wind: 7.1, offshoreWind: 0, solar: 26.1, nuclear: 2.7, geothermal: 3.0, biomass: 1.0 , rng: 0.4},
+                storageGWh: { battery4hr: 53.0 },
+                defaultExportPrice: -20
+            },
+            "China": { 
+                totalCapacityMW: 3400000, 
+                peakLoadsMW: { summer: 1340000, winter: 1206000, fall: 1179200, spring: 1072000 },
+                mix: { coal: 40.0, naturalGas: 8.0, hydro: 12.5, wind: 14.0, offshoreWind: 1.6, solar: 20.0, nuclear: 2.5, geothermal: 0.1, biomass: 0.9 , rng: 0.4},
+                storageGWh: { battery4hr: 222 }
+            },
+            "United States": { 
+                totalCapacityMW: 1275000, 
+                peakLoadsMW: { summer: 800000, winter: 720000, fall: 704000, spring: 640000 },
+                mix: { coal: 15.0, naturalGas: 48.0, hydro: 7.8, wind: 11.5, offshoreWind: 0.2, solar: 9.0, nuclear: 8.0, geothermal: 0.3, biomass: 0.8 , rng: 0.4},
+                storageGWh: { battery4hr: 95 }
+            },
+            "India": { 
+                totalCapacityMW: 476000, 
+                peakLoadsMW: { summer: 243000, winter: 206550, fall: 213840, spring: 194400 },
+                mix: { coal: 50.0, naturalGas: 6.0, hydro: 10.0, wind: 9.5, offshoreWind: 0, solar: 18.0, nuclear: 1.8, geothermal: 0.0, biomass: 1.9 , rng: 0.8},
+                storageGWh: { battery4hr: 1 }
+            },
+            "Japan": { 
+                totalCapacityMW: 295000, 
+                peakLoadsMW: { summer: 181000, winter: 162900, fall: 159280, spring: 144800 },
+                mix: { coal: 20.0, naturalGas: 35.0, hydro: 17.0, wind: 1.6, offshoreWind: 0.1, solar: 15.5, nuclear: 10.5, geothermal: 0.2, biomass: 1.1 , rng: 0.5},
+                storageGWh: { battery4hr: 1.2 }
+            },
+            "Russia": { 
+                totalCapacityMW: 248000, 
+                peakLoadsMW: { winter: 160000, summer: 144000, fall: 140800, spring: 128000 },
+                mix: { coal: 15.0, naturalGas: 52.0, hydro: 20.0, wind: 0.9, offshoreWind: 0, solar: 0.8, nuclear: 11.3, geothermal: 0.0, biomass: 0.1 , rng: 0.1} 
+            },
+            "Brazil": { 
+                totalCapacityMW: 180000, 
+                peakLoadsMW: { summer: 101860, winter: 91674, fall: 89637, spring: 81488 },
+                mix: { coal: 2.0, naturalGas: 18.0, hydro: 59.0, wind: 10.5, offshoreWind: 0, solar: 9.5, nuclear: 1.0, geothermal: 0.0, biomass: 5.6 , rng: 2.4} 
+            },
+            "Germany": { 
+                totalCapacityMW: 210000, 
+                peakLoadsMW: { winter: 84000, summer: 75600, fall: 73920, spring: 67200 },
+                mix: { coal: 14.0, naturalGas: 38.0, hydro: 4.0, wind: 22.0, offshoreWind: 4.0, solar: 12.0, nuclear: 5.0, geothermal: 0.0, biomass: 4.2 , rng: 1.8},
+                storageGWh: { battery4hr: 22.1 }
+            },
+            "Canada": { 
+                totalCapacityMW: 165000, 
+                peakLoadsMW: { winter: 140000, summer: 126000, fall: 123200, spring: 112000 },
+                mix: { coal: 4.5, naturalGas: 13.5, hydro: 57.0, wind: 8.5, offshoreWind: 0, solar: 2.5, nuclear: 14.0, geothermal: 0.0, biomass: 1.4 , rng: 0.6},
+                storageGWh: { battery4hr: 1 }
+            },
+            "South Korea": { 
+                totalCapacityMW: 125000, 
+                peakLoadsMW: { summer: 93000, winter: 83700, fall: 81840, spring: 74400 },
+                mix: { coal: 34.0, naturalGas: 20.0, hydro: 5.0, wind: 1.4, offshoreWind: 0.1, solar: 12.5, nuclear: 27.0, geothermal: 0.0, biomass: 0.7 , rng: 0.3},
+                storageGWh: { battery4hr: 9 }
+            },
+            "France": { 
+                totalCapacityMW: 115000, 
+                peakLoadsMW: { winter: 102000, summer: 91800, fall: 89760, spring: 81600 },
+                mix: { coal: 1.0, naturalGas: 10.0, hydro: 10.0, wind: 8.0, offshoreWind: 0.5, solar: 6.0, nuclear: 64.0, geothermal: 0.0, biomass: 0.3 , rng: 0.1},
+                storageGWh: { battery4hr: 1.0 }
+            },
+            "United Kingdom": { 
+                totalCapacityMW: 78000, 
+                peakLoadsMW: { winter: 60000, summer: 54000, fall: 52800, spring: 48000 },
+                mix: { coal: 1.0, naturalGas: 38.0, hydro: 2.0, wind: 15.0, offshoreWind: 14.0, solar: 19.0, nuclear: 9.0, geothermal: 0.0, biomass: 4.2 , rng: 1.8},
+                 storageGWh: { battery4hr: 16.0 }
+            },
+            "Australia": { 
+                totalCapacityMW: 65000, 
+                peakLoadsMW: { summer: 47000, winter: 42300, fall: 41360, spring: 37600 },
+                mix: { coal: 45.0, naturalGas: 18.0, hydro: 13.0, wind: 10.0, offshoreWind: 0, solar: 13.0, nuclear: 0.0, geothermal: 0.0, biomass: 0.7 , rng: 0.3},
+                storageGWh: { battery4hr: 5.6 }
+            },
+            "Spain": { 
+                totalCapacityMW: 120000, 
+                peakLoadsMW: { summer: 45000, winter: 40500, fall: 39600, spring: 36000 },
+                mix: { coal: 2.0, naturalGas: 22.0, hydro: 17.0, wind: 27.5, offshoreWind: 0, solar: 21.5, nuclear: 7.0, geothermal: 0.0, biomass: 1.0 , rng: 0.4},
+                storageGWh: { battery4hr: 1.7 }
+            },
+            "Italy": { 
+                totalCapacityMW: 122000, 
+                peakLoadsMW: { summer: 60000, winter: 54000, fall: 52800, spring: 48000 },
+                mix: { coal: 4.0, naturalGas: 47.0, hydro: 18.0, wind: 10.0, offshoreWind: 0, solar: 19.0, nuclear: 0.0, geothermal: 1.0, biomass: 1.4 , rng: 0.6},
+                storageGWh: { battery4hr: 6 }
+            },
+            "Indonesia": { 
+                totalCapacityMW: 75000, 
+                peakLoadsMW: { summer: 50000, winter: 45000, fall: 44000, spring: 40000 },
+                mix: { coal: 48.0, naturalGas: 28.0, hydro: 9.0, wind: 0.2, offshoreWind: 0, solar: 2.8, nuclear: 0.0, geothermal: 3.0, biomass: 0.7 , rng: 0.3} 
+            },
+            "South Africa": { 
+                totalCapacityMW: 60000, 
+                peakLoadsMW: { winter: 34000, summer: 30600, fall: 29920, spring: 27200 },
+                mix: { coal: 78.0, naturalGas: 6.0, hydro: 6.0, wind: 5.5, offshoreWind: 0, solar: 3.5, nuclear: 0.0, geothermal: 0.0, biomass: 0.3 , rng: 0.1},
+                storageGWh: { battery4hr: 2 }
+            },
+            "Mexico": { 
+                totalCapacityMW: 88000, 
+                peakLoadsMW: { summer: 50000, winter: 45000, fall: 44000, spring: 40000 },
+                mix: { coal: 5.0, naturalGas: 58.0, hydro: 15.0, wind: 9.0, offshoreWind: 0, solar: 11.0, nuclear: 1.0, geothermal: 1.0, biomass: 0.3 , rng: 0.1} ,
+                storageGWh: { battery4hr: 0.6 }
+            },
+            "Norway": { 
+                totalCapacityMW: 39000, 
+                peakLoadsMW: { winter: 25000, summer: 22500, fall: 22000, spring: 20000 },
+                mix: { coal: 0.0, naturalGas: 0.0, hydro: 91.0, wind: 8.5, offshoreWind: 0, solar: 0.5, nuclear: 0.0, geothermal: 0.0, biomass: 0.0 , rng: 0.0} ,
+                storageGWh: { battery4hr: 0.2 }
+            },
+            "New Zealand": { 
+                totalCapacityMW: 9800, 
+                peakLoadsMW: { winter: 7000, summer: 6300, fall: 6160, spring: 5600 },
+                mix: { coal: 0.0, naturalGas: 14.0, hydro: 56.0, wind: 7.5, offshoreWind: 0, solar: 1.5, nuclear: 0.0, geothermal: 20.0, biomass: 0.7 , rng: 0.3},
+                storageGWh: { battery4hr: 0.4 } 
+            },
+            "Vietnam": { 
+                totalCapacityMW: 80000, 
+                peakLoadsMW: { summer: 45000, winter: 40500, fall: 39600, spring: 36000 },
+                mix: { coal: 32.0, naturalGas: 9.0, hydro: 28.0, wind: 6.0, offshoreWind: 0, solar: 24.0, nuclear: 0.0, geothermal: 0.0, biomass: 0.7 , rng: 0.3},
+                storageGWh: { battery4hr: 0.1 } 
+            }
+        };
+
+        const carbonTaxes = {
+            "California": 26, "Canada": 61, "China": 8, "France": 48, "Germany": 43, "Japan": 2, 
+            "South Korea": 22, "Spain": 16, "United Kingdom": 22, "South Africa": 9,
+            "Mexico": 3, "Norway": 85, "New Zealand": 50
+        };
+        const SEASONAL_DEMAND_PROFILES = {
+            'spring-high':    [28, 26, 25, 24, 24, 25, 28, 32, 33, 32, 30, 28, 27, 28, 30, 34, 39, 45, 48, 46, 42, 38, 34, 30],
+            'summer-high':    [30, 28, 27, 26, 26, 27, 29, 33, 37, 40, 42, 44, 46, 48, 50, 52, 55, 56, 55, 52, 48, 43, 38, 33],
+            'fall-high':      [27, 25, 24, 23, 23, 24, 27, 31, 34, 36, 37, 38, 39, 40, 41, 43, 46, 50, 49, 46, 42, 37, 32, 29],
+            'winter-high':    [32, 30, 29, 29, 30, 34, 40, 45, 44, 42, 40, 39, 39, 40, 41, 43, 45, 46, 45, 42, 39, 36, 34, 32]
+        };
+        
+        // This object will hold the calculated POTENTIAL generation, not a pre-dispatched baseline.
+        let BASELINE_POTENTIAL_GENERATION = {}; 
+        let currentCountryInstalledCapacity = {};
+        let currentBaselineStorage = {};
+        let dailyGenerationTotalsGWh = {}; // For tooltips
+
+        const SOLAR_CF_PROFILE = [0,0,0,0,0,0.05,0.15,0.3,0.5,0.7,0.8,0.85,0.9,0.85,0.8,0.7,0.3,0.05,0,0,0,0,0,0];
+        const WIND_CF_PROFILE = [0.4,0.42,0.45,0.46,0.45,0.4,0.35,0.3,0.25,0.2,0.2,0.2,0.25,0.3,0.35,0.4,0.5,0.6,0.65,0.6,0.55,0.5,0.45,0.4];
+        const OFFSHORE_WIND_CF_PROFILE = [0.55,0.56,0.57,0.58,0.58,0.57,0.55,0.52,0.5,0.48,0.47,0.46,0.47,0.48,0.5,0.52,0.55,0.6,0.62,0.61,0.6,0.58,0.57,0.56];
+
+        const SEASONAL_HYDRO_CF = {
+            spring: 0.50,
+            summer: 0.30,
+            fall: 0.25,
+            winter: 0.35
+        };
+
+        const SEASONAL_MULTIPLIERS = {
+            spring: { solar: 1.0, wind: 1.0, offshoreWind: 1.0 },
+            summer: { solar: 1.1, wind: 0.8, offshoreWind: 0.9 },
+            fall: { solar: 0.8, wind: 1.0, offshoreWind: 1.0 },
+            winter: { solar: 0.6, wind: 1.1, offshoreWind: 1.1 }
+        };
+        const countryProfiles = {
+            "California": { // Using default CA profile
+                solar: SOLAR_CF_PROFILE,
+                wind: WIND_CF_PROFILE,
+                offshoreWind: OFFSHORE_WIND_CF_PROFILE
+            },
+            "Germany": {
+                solar: [0,0,0,0,0,0.02,0.1,0.25,0.45,0.6,0.7,0.75,0.7,0.6,0.4,0.15,0.05,0,0,0,0,0,0,0],
+                wind: [0.5,0.52,0.55,0.56,0.55,0.5,0.45,0.4,0.35,0.3,0.3,0.3,0.35,0.4,0.45,0.5,0.6,0.7,0.75,0.7,0.65,0.6,0.55,0.5],
+                offshoreWind: [0.6,0.62,0.65,0.66,0.65,0.6,0.55,0.5,0.45,0.4,0.4,0.4,0.45,0.5,0.55,0.6,0.7,0.8,0.85,0.8,0.75,0.7,0.65,0.6]
+            },
+            "United Kingdom": {
+                solar: [0,0,0,0,0,0.01,0.08,0.2,0.4,0.55,0.65,0.7,0.65,0.55,0.35,0.1,0.02,0,0,0,0,0,0,0],
+                wind: [0.6,0.62,0.65,0.68,0.66,0.6,0.55,0.5,0.45,0.4,0.4,0.4,0.45,0.5,0.55,0.6,0.7,0.8,0.85,0.8,0.75,0.7,0.65,0.6],
+                offshoreWind: [0.7,0.72,0.75,0.78,0.76,0.7,0.65,0.6,0.55,0.5,0.5,0.5,0.55,0.6,0.65,0.7,0.8,0.9,0.95,0.9,0.85,0.8,0.75,0.7]
+            },
+            "Australia": {
+                solar: [0,0,0,0,0,0.08,0.2,0.4,0.6,0.8,0.9,0.95,0.9,0.8,0.6,0.3,0.1,0,0,0,0,0,0,0],
+                wind: [0.3,0.3,0.3,0.25,0.2,0.2,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.45,0.4,0.35,0.3,0.3,0.3,0.35,0.4,0.4,0.35,0.3],
+                offshoreWind: [0.4,0.4,0.4,0.35,0.3,0.3,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.55,0.5,0.45,0.4,0.4,0.4,0.45,0.5,0.5,0.45,0.4]
+            },
+            "default": {
+                solar: SOLAR_CF_PROFILE,
+                wind: WIND_CF_PROFILE,
+                offshoreWind: OFFSHORE_WIND_CF_PROFILE
+            }
+        };
+        const EMISSION_FACTORS = { naturalGas: 395, hydro: 0, nuclear: 0, solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, coal: 850, biomass: 0, rng: 0 };
+        
+        const COST_DATA = {
+            capex: { 
+                solar: 1200, wind: 1500, offshoreWind: 5000, nuclear: 7242, geothermal: 3329, biomass: 3500, rng: 3000,
+                naturalGas: 1300, hydro: 3336, coal: 4407,
+                battery4hr: 350, battery8hr: 300, longduration: 300, // $/kWh
+                dac: 1000 // $/ton/year
+            },
+            fixed_om: {
+                solar: 15, wind: 35, offshoreWind: 100, nuclear: 140, geothermal: 120, biomass: 100, rng: 95, // $/kW-year
+                naturalGas: 20, hydro: 20, coal: 40,
+                battery4hr: 15, battery8hr: 15, longduration: 60, // $/kW-year
+                dac: 20 // $/ton/year
+            },
+            variable_om: { 
+                solar: 0, wind: 1, offshoreWind: 0, nuclear: 10, geothermal: 5, biomass: 10, rng: 50, // $/MWh
+                naturalGasCCGT: { start: 35, end: 80 }, // NEW: $/MWh
+                naturalGasCT: { start: 100, end: 150 }, // NEW: $/MWh
+                hydro: 5, coal: 30, // $/MWh 
+                battery4hr: 0, battery8hr: 2, longduration: 1,
+                dac: 400, // $/ton
+                storage: 30 // $/MWh - an assumed opportunity cost for dispatching storage
+            },
+            lifetime: {
+                solar: 30, wind: 30, offshoreWind: 30, nuclear: 60, geothermal: 30, biomass: 25, rng: 25,
+                naturalGas: 30, hydro: 80, coal: 40,
+                battery4hr: 15, battery8hr: 15, longduration: 25, dac: 25
+            },
+            capacity_factor: {
+                solar: 0.25, wind: 0.35, offshoreWind: 0.50, nuclear: 0.9, geothermal: 0.9, biomass: 0.85, rng: 0.85,
+                naturalGas: 0.55, hydro: 0.45, coal: 0.6
+            },
+            discount_rate: 0.07
+        };
+
         document.addEventListener('DOMContentLoaded', async function() {
             setLogLevel('debug');
 
@@ -5,13 +255,13 @@
             const sliders = {
                 solar: document.getElementById('solar-slider'), wind: document.getElementById('wind-slider'), offshoreWind: document.getElementById('offshoreWind-slider'),
                 geothermal: document.getElementById('geothermal-slider'), nuclear: document.getElementById('nuclear-slider'),
-                biomass: document.getElementById('biomass-slider'), rng: document.getElementById('rng-slider'),
+                biomass: document.getElementById('biomass-slider') rng: document.getElementById('rng-slider'),
                 battery4hr: document.getElementById('battery4hr-slider'), battery8hr: document.getElementById('battery8hr-slider'),
                 longduration: document.getElementById('longduration-slider'), demandflex: document.getElementById('demandflex-slider'),
                 dac: document.getElementById('dac-slider'), solarIncentive: document.getElementById('solar-incentive-slider'),
                 windIncentive: document.getElementById('wind-incentive-slider'), offshoreWindIncentive: document.getElementById('offshoreWind-incentive-slider'),
                 geothermalIncentive: document.getElementById('geothermal-incentive-slider'),
-                nuclearIncentive: document.getElementById('nuclear-incentive-slider'), biomassIncentive: document.getElementById('biomass-incentive-slider'),
+                nuclearIncentive: document.getElementById('nuclear-incentive-slider'), biomassIncentive: document.getElementById('biomass-incentive-slider')
                 rngIncentive: document.getElementById('rng-incentive-slider'),
                 storageIncentive: document.getElementById('storage-incentive-slider'),
                 dacIncentive: document.getElementById('dac-incentive-slider'), carbonTax: document.getElementById('carbon-tax-slider'),
@@ -20,13 +270,13 @@
             const inputs = {
                 solar: document.getElementById('solar-input'), wind: document.getElementById('wind-input'), offshoreWind: document.getElementById('offshoreWind-input'),
                 geothermal: document.getElementById('geothermal-input'), nuclear: document.getElementById('nuclear-input'),
-                biomass: document.getElementById('biomass-input'), rng: document.getElementById('rng-input'),
+                biomass: document.getElementById('biomass-input') rng: document.getElementById('rng-input'),
                 battery4hr: document.getElementById('battery4hr-input'), battery8hr: document.getElementById('battery8hr-input'),
                 longduration: document.getElementById('longduration-input'), demandflex: document.getElementById('demandflex-input'),
                 dac: document.getElementById('dac-input'), solarIncentive: document.getElementById('solar-incentive-input'),
                 windIncentive: document.getElementById('wind-incentive-input'), offshoreWindIncentive: document.getElementById('offshoreWind-incentive-input'),
                 geothermalIncentive: document.getElementById('geothermal-incentive-input'),
-                nuclearIncentive: document.getElementById('nuclear-incentive-input'), biomassIncentive: document.getElementById('biomass-incentive-input'),
+                nuclearIncentive: document.getElementById('nuclear-incentive-input'), biomassIncentive: document.getElementById('biomass-incentive-input')
                 rngIncentive: document.getElementById('rng-incentive-input'),
                 storageIncentive: document.getElementById('storage-incentive-input'),
                 dacIncentive: document.getElementById('dac-incentive-input'), carbonTax: document.getElementById('carbon-tax-input'),
@@ -98,13 +348,13 @@
             const capacityFactorCtx = document.getElementById('capacityFactorChart').getContext('2d');
             
             const COLORS = {
-                naturalGas: 'rgba(107, 114, 128, 0.8)', hydro: 'rgba(59, 130, 246, 0.8)',
-                nuclear: 'rgba(239, 68, 68, 0.8)', solar: 'rgba(251, 191, 36, 1)',
+                naturalGas: 'rgba(107, 114, 128, 0.8)', hydro: 'rgba(59, 130, 246, 0.8)', 
+                nuclear: 'rgba(239, 68, 68, 0.8)', solar: 'rgba(251, 191, 36, 1)', 
                 wind: 'rgba(52, 211, 153, 0.8)', /* CHANGE: Lighter green for Onshore Wind */
-                offshoreWind: 'rgba(12, 148, 103, 0.8)',
+                offshoreWind: 'rgba(12, 148, 103, 0.8)', 
                 geothermal: 'rgba(120, 40, 40, 0.8)',
-                biomass: 'rgba(101, 67, 33, 0.8)',
-                rng: 'rgba(132, 204, 22, 0.8)', // Lime green for RNG
+                biomass: 'rgba(101,
+                rng: 'rgba(132, 204, 22, 0.8)', 67, 33, 0.8)',
                 storage: 'rgba(168, 85, 247, 0.8)', demand: 'rgba(17, 24, 39, 1)',
                 curtailment: 'rgba(253, 186, 116, 0.8)', coal: 'rgba(0, 0, 0, 0.8)',
                 price: 'rgba(79, 70, 229, 1)' // NEW for price chart
@@ -890,8 +1140,8 @@
                 const chartData = generationChart.data.datasets;
                 
                 const techMap = {
-                    nuclear: 0, geothermal: 1, biomass: 2, rng: 3, hydro: 4,
-                    wind: 5, offshoreWind: 6, solar: 7,
+                    nuclear: 0, geothermal: 1, biomass: 2, rng: 3, hydro: 3: 4, 
+                    wind: 5, offshoreWind: 6, solar: 7, 
                     naturalGas: 8, coal: 9, storage: 10, curtailment: 11,
                     solarToStorage: 12, windToStorage: 13, offshoreWindToStorage: 14
                 };
