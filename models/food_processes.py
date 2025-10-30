@@ -444,7 +444,7 @@ def food_sea_transport(A, args):
     capex_money = 0
     carbon_tax_money = 0
 
-    reefer_service_cost_per_container, _, _, reefer_service_energy_per_container, reefer_service_emissions_per_container, _, _, _ = calculate_single_reefer_service_cost(duration_hrs, food_params)
+    reefer_service_cost_per_container, _, _, reefer_service_energy_per_container, reefer_service_emissions_per_container, _, _, _ = calculate_single_reefer_service_cost(duration_hrs, food_params, selected_fuel)
     total_reefer_cost_shipment = reefer_service_cost_per_container * shipment_size_containers_arg
     total_reefer_energy_shipment = reefer_service_energy_per_container * shipment_size_containers_arg
     total_reefer_emissions_shipment = reefer_service_emissions_per_container * shipment_size_containers_arg
@@ -641,7 +641,7 @@ def calculate_food_infra_capex(process_name, capacity_tons_per_day, A, storage_d
     return capex_per_kg
 
 
-def calculate_single_reefer_service_cost(duration_hrs, food_params):
+def calculate_single_reefer_service_cost(duration_hrs, food_params, auxiliary_fuel_params):
     """
     Calculate costs and emissions for a single reefer container service.
 
@@ -659,6 +659,10 @@ def calculate_single_reefer_service_cost(duration_hrs, food_params):
             - general_params (dict): Contains:
                 - reefer_container_power_kw: Reefer power consumption (kW)
             - ca_params (dict): CA system parameters (if CA is needed)
+        auxiliary_fuel_params (dict): Auxiliary fuel parameters containing:
+            - price_usd_per_ton: Fuel price in USD per ton
+            - hhv_mj_per_kg: Higher heating value in MJ per kg
+            - co2_emissions_factor_kg_per_kg_fuel: CO2 emissions factor
 
     Returns:
         tuple: (opex_money, capex_money, carbon_tax_money, energy, emissions,
@@ -674,8 +678,6 @@ def calculate_single_reefer_service_cost(duration_hrs, food_params):
 
     Notes:
         - Assumes auxiliary generator SFOC of 200 g/kWh
-        - Uses auxiliary_fuel_params for fuel price, HHV, and emissions factor
-        - auxiliary_fuel_params must be available in the calling scope
         - This is a "per container" calculation (current_weight = 1)
         - Spoilage is not calculated at this granular level
         - Carbon tax is handled at the food_sea_transport level
