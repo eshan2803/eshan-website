@@ -345,6 +345,8 @@ def run_lca_model(inputs):
     openai_get_electricity_price = openai_get_electricity_price_helper_module
     openai_get_hydrogen_cost = openai_get_hydrogen_cost_helper_module
     openai_get_marine_fuel_price = openai_get_marine_fuel_price_helper_module
+    openai_get_food_price = openai_get_food_price_helper_module
+    openai_get_nearest_farm_region = openai_get_nearest_farm_region_helper_module
     calculate_ship_power_kw = calculate_ship_power_kw_helper_module
     decode_polyline = decode_polyline_module
     time_to_minutes = time_to_minutes_module
