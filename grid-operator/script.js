@@ -2373,7 +2373,7 @@ function resetGame() {
     clearInterval(gameInterval);
 
     // Reset button states
-    startButton.textContent = 'Start Game';
+    startButton.textContent = 'Start The Day';
     startButton.disabled = false;
     startButton.classList.remove('hidden');
     pauseButtons.classList.add('hidden');
@@ -2779,7 +2779,7 @@ const tutorialSteps = [
     },
     {
         title: 'Ready to Play!',
-        text: 'Set up your resources, click Start Game, and balance the grid! Aim for zero alerts and blackouts to win the confetti celebration. Good luck!',
+        text: 'Set up your resources, click Start The Day, and balance the grid! Aim for zero alerts and blackouts to win the confetti celebration. Good luck!',
         position: 'center'
     }
 ];
@@ -2927,5 +2927,6 @@ initialize().then(() => {
     // Start tutorial after a short delay to let the page fully load
     setTimeout(startTutorial, 500);
 });
+
 
 
