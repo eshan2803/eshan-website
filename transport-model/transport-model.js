@@ -164,44 +164,59 @@ function renderCostChart(chartData) {
         });
     }
 
+    // Calculate dynamic height
+    const numRows = chartData.labels.length;
+    const baseHeight = 350;
+    const rowHeight = 30;
+    const totalHeight = baseHeight + (numRows * rowHeight);
+
     const layout = {
         title: {
             text: chartData.title,
-            font: { size: 16, weight: 'bold' }
+            font: { size: 18, family: 'Inter, sans-serif', color: '#1f2937', weight: 600 },
+            x: 0,
+            xanchor: 'left',
+            y: 0.98,
+            yanchor: 'top'
         },
         xaxis: {
-            title: chartData.x_label,
-            titlefont: { size: 14, weight: 'bold' }
+            title: {
+                text: chartData.x_label,
+                font: { size: 13, family: 'Inter, sans-serif', color: '#4b5563' }
+            },
+            gridcolor: '#e5e7eb',
+            showline: true,
+            linecolor: '#d1d5db',
+            linewidth: 1,
+            zeroline: false,
+            automargin: true
         },
         yaxis: {
-            autorange: 'reversed' // Top to bottom
+            autorange: 'reversed',
+            gridcolor: 'rgba(0,0,0,0)',
+            showline: false,
+            tickfont: { size: 11, family: 'Inter, sans-serif', color: '#374151' },
+            automargin: true
         },
         barmode: 'stack',
         hovermode: 'closest',
         showlegend: true,
         legend: {
-            orientation: 'h',
-            y: 1.15,
-            x: 0.5,
-            xanchor: 'center'
-        },
-        margin: { l: 200, r: 50, t: 80, b: 60 },
-        height: 500,
-        annotations: chartData.overlay_text ? [{
-            xref: 'paper',
-            yref: 'paper',
-            x: 0.95,
-            y: 0.5,
+            orientation: 'v',
+            yanchor: 'bottom',
+            y: 0.02,
             xanchor: 'right',
-            yanchor: 'middle',
-            text: chartData.overlay_text.replace(/\n/g, '<br>'),
-            showarrow: false,
-            font: { size: 12 },
-            bgcolor: 'rgba(255, 255, 200, 0.6)',
-            borderpad: 8,
-            bordercolor: '#FFC107',
+            x: 0.98,
+            font: { size: 10, family: 'Inter, sans-serif' },
+            bgcolor: 'rgba(255, 255, 255, 0.95)',
+            bordercolor: '#d1d5db',
             borderwidth: 1
-        }] : []
+        },
+        margin: { t: 70, b: 80 },
+        height: totalHeight,
+        plot_bgcolor: '#fafafa',
+        paper_bgcolor: '#ffffff',
+        autosize: true
     };
 
     const config = {
@@ -212,6 +227,13 @@ function renderCostChart(chartData) {
     };
 
     Plotly.newPlot('costChart', traces, layout, config);
+
+    // Display context text in HTML div below chart
+    const contextDiv = document.getElementById('costChartContext');
+    if (chartData.overlay_text && contextDiv) {
+        contextDiv.innerHTML = chartData.overlay_text.split('\n').map(line => `<p>${line}</p>`).join('');
+        contextDiv.style.display = 'block';
+    }
 }
 
 function renderEmissionChart(chartData) {
@@ -230,37 +252,47 @@ function renderEmissionChart(chartData) {
         hovertemplate: '%{y}<br>Emissions: %{x:.4f} kg CO₂eq/kg<extra></extra>'
     };
 
+    // Calculate dynamic height
+    const numRows = chartData.labels.length;
+    const baseHeight = 350;
+    const rowHeight = 30;
+    const totalHeight = baseHeight + (numRows * rowHeight);
+
     const layout = {
         title: {
             text: chartData.title,
-            font: { size: 16, weight: 'bold' }
+            font: { size: 18, family: 'Inter, sans-serif', color: '#1f2937', weight: 600 },
+            x: 0,
+            xanchor: 'left',
+            y: 0.98,
+            yanchor: 'top'
         },
         xaxis: {
-            title: chartData.x_label,
-            titlefont: { size: 14, weight: 'bold' }
+            title: {
+                text: chartData.x_label,
+                font: { size: 13, family: 'Inter, sans-serif', color: '#4b5563' }
+            },
+            gridcolor: '#e5e7eb',
+            showline: true,
+            linecolor: '#d1d5db',
+            linewidth: 1,
+            zeroline: false,
+            automargin: true
         },
         yaxis: {
-            autorange: 'reversed'
+            autorange: 'reversed',
+            gridcolor: 'rgba(0,0,0,0)',
+            showline: false,
+            tickfont: { size: 11, family: 'Inter, sans-serif', color: '#374151' },
+            automargin: true
         },
         hovermode: 'closest',
         showlegend: false,
-        margin: { l: 200, r: 50, t: 80, b: 60 },
-        height: 500,
-        annotations: chartData.overlay_text ? [{
-            xref: 'paper',
-            yref: 'paper',
-            x: 0.95,
-            y: 0.5,
-            xanchor: 'right',
-            yanchor: 'middle',
-            text: chartData.overlay_text.replace(/\n/g, '<br>'),
-            showarrow: false,
-            font: { size: 12 },
-            bgcolor: 'rgba(255, 255, 200, 0.6)',
-            borderpad: 8,
-            bordercolor: '#FFC107',
-            borderwidth: 1
-        }] : []
+        margin: { t: 70, b: 80 },
+        height: totalHeight,
+        plot_bgcolor: '#fafafa',
+        paper_bgcolor: '#ffffff',
+        autosize: true
     };
 
     const config = {
@@ -271,6 +303,13 @@ function renderEmissionChart(chartData) {
     };
 
     Plotly.newPlot('emissionChart', [trace], layout, config);
+
+    // Display context text in HTML div below chart
+    const contextDiv = document.getElementById('emissionChartContext');
+    if (chartData.overlay_text && contextDiv) {
+        contextDiv.innerHTML = chartData.overlay_text.split('\n').map(line => `<p>${line}</p>`).join('');
+        contextDiv.style.display = 'block';
+    }
 }
 
 // Form Submission Handler
@@ -409,6 +448,12 @@ async function handleCalculation(e) {
                 console.log("✅ Using new Plotly data format");
                 renderCostChart(results.charts.cost_chart_data);
                 renderEmissionChart(results.charts.emission_chart_data);
+
+                // Force Plotly to resize charts after a short delay to ensure proper rendering
+                setTimeout(() => {
+                    Plotly.Plots.resize('costChart');
+                    Plotly.Plots.resize('emissionChart');
+                }, 100);
             }
             // Fallback to old base64 format if backend not yet deployed
             else if (results.charts.cost_chart_base64) {
