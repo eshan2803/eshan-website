@@ -115,7 +115,13 @@
             </span>Other
         </div>
         <div class="legend-item" style="margin-top: 10px;"><span class="legend-color" style="background-color: #808080;"></span>OFF (Grey)</div>
-        <div class="legend-item"><span class="legend-color" style="background-color: #39FF14;"></span>Electricity Flow</div>
+        <div class="legend-item"><span class="legend-color" style="background-color: #39FF14;"></span>Active Flow</div>
+        <div class="legend-item"><span class="legend-color" style="background-color: #4A90A4;"></span>Transmission Lines</div>
+        <div class="legend-item">
+            <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
+                <svg width="20" height="20"><circle cx="10" cy="10" r="4" fill="#39FF14" stroke="#000" stroke-width="1"/></svg>
+            </span>Substations
+        </div>
     </div>
     <div id="map"></div>
     <script>
@@ -434,15 +440,15 @@
             staticLinesLayer = L.layerGroup().addTo(map);
             animatedLinesLayer = L.layerGroup();
 
-            // Render transmission lines (all grey initially)
+            // Render transmission lines (visible but subtle initially)
             networkGraph.lines.forEach(lineData => {
                 const coords = lineData.coords.map(c => [c[1], c[0]]); // Convert to [lat, lng]
 
-                // Static grey line
+                // Static line in subtle cyan/teal color (visible on greyscale)
                 const staticLine = L.polyline(coords, {
-                    color: '#808080',
+                    color: '#4A90A4',  // Muted teal-blue that shows on greyscale
                     weight: 2,
-                    opacity: 0.5
+                    opacity: 0.6
                 });
                 staticLine.lineId = lineData.id;
                 staticLinesLayer.addLayer(staticLine);
@@ -461,15 +467,15 @@
                 lineData.antPath = antPath;
             });
 
-            // Render substations (grey triangles)
+            // Render substations (neon green circles)
             networkGraph.substations.forEach(subData => {
                 const marker = L.circleMarker(subData.latlng, {
                     radius: 4,
-                    fillColor: '#808080',
+                    fillColor: '#39FF14', // Neon green
                     color: '#000',
                     weight: 1,
                     opacity: 0.7,
-                    fillOpacity: 0.5
+                    fillOpacity: 0.6
                 });
 
                 const props = subData.feature.properties;
@@ -561,6 +567,10 @@
                 // Click handler to toggle plant on/off
                 marker.on('click', function(e) {
                     L.DomEvent.stopPropagation(e); // Prevent map click
+
+                    // Close any open tooltips to prevent lingering
+                    marker.closeTooltip();
+
                     plantData.isOn = !plantData.isOn;
 
                     if (plantData.isOn) {
@@ -616,20 +626,46 @@
 
         // Fit map bounds to show all California data
         function fitMapToData() {
-            // Create a feature group with all layers
-            const allLayers = L.featureGroup([
-                staticLinesLayer,
-                substationsLayer,
-                plantsLayer
-            ]);
+            try {
+                // Calculate bounds manually from all coordinates
+                let minLat = Infinity, maxLat = -Infinity;
+                let minLng = Infinity, maxLng = -Infinity;
 
-            // Fit map to bounds with some padding
-            map.fitBounds(allLayers.getBounds(), {
-                padding: [50, 50],  // 50px padding on all sides
-                maxZoom: 7          // Don't zoom in too much
-            });
+                // Get bounds from substations
+                networkGraph.substations.forEach(sub => {
+                    const lat = sub.latlng[0];
+                    const lng = sub.latlng[1];
+                    if (lat < minLat) minLat = lat;
+                    if (lat > maxLat) maxLat = lat;
+                    if (lng < minLng) minLng = lng;
+                    if (lng > maxLng) maxLng = lng;
+                });
 
-            console.log('Map fitted to data bounds');
+                // Get bounds from plants
+                networkGraph.plants.forEach(plant => {
+                    const lat = plant.latlng[0];
+                    const lng = plant.latlng[1];
+                    if (lat < minLat) minLat = lat;
+                    if (lat > maxLat) maxLat = lat;
+                    if (lng < minLng) minLng = lng;
+                    if (lng > maxLng) maxLng = lng;
+                });
+
+                // Create bounds
+                const bounds = [[minLat, minLng], [maxLat, maxLng]];
+
+                // Fit map to bounds with some padding
+                map.fitBounds(bounds, {
+                    padding: [50, 50],  // 50px padding on all sides
+                    maxZoom: 7          // Don't zoom in too much
+                });
+
+                console.log('Map fitted to data bounds:', bounds);
+            } catch (error) {
+                console.error('Error fitting map to bounds:', error);
+                // Fallback to California center
+                map.setView([36.7783, -119.4179], 6);
+            }
         }
 
         // Updated function to show flow only on connected lines
