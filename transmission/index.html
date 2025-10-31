@@ -91,6 +91,9 @@
         <p id="status" style="margin-top: 10px; padding: 5px; background-color: #f0f0f0; border-radius: 4px; text-align: center;">
             <strong>Active Plants: <span id="activeCount">0</span></strong>
         </p>
+        <button id="toggleAllBtn" style="width: 100%; margin-top: 10px; padding: 8px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            Turn All Plants ON
+        </button>
     </div>
     <div id="legend">
         <strong>Power Plant Types:</strong>
@@ -101,7 +104,7 @@
         </div>
         <div class="legend-item">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
-                <svg width="20" height="20"><polygon points="10,3 17,17 3,17" fill="#00FF00" stroke="#000" stroke-width="1"/></svg>
+                <svg width="20" height="20"><polygon points="10,3 17,17 3,17" fill="#1E90FF" stroke="#000" stroke-width="1"/></svg>
             </span>Wind (WIND)
         </div>
         <div class="legend-item">
@@ -111,7 +114,12 @@
         </div>
         <div class="legend-item">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
-                <svg width="20" height="20"><circle cx="10" cy="10" r="5" fill="#808080" stroke="#000" stroke-width="1"/></svg>
+                <svg width="20" height="20"><circle cx="10" cy="10" r="5" fill="#9370DB" stroke="#000" stroke-width="1"/></svg>
+            </span>Petroleum Coke (PC)
+        </div>
+        <div class="legend-item">
+            <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
+                <svg width="20" height="20"><circle cx="10" cy="10" r="5" fill="#FF1493" stroke="#000" stroke-width="1"/></svg>
             </span>Other
         </div>
         <div class="legend-item" style="margin-top: 10px;"><span class="legend-color" style="background-color: #808080;"></span>OFF (Grey)</div>
@@ -213,11 +221,83 @@
                 try {
                     buildNetworkGraph();
                     renderMap();
+                    setupToggleAllButton();
                     console.log('Network graph built and map rendered.');
                 } catch (error) {
                     console.error('Error building network or rendering map:', error);
                 }
             });
+
+        // Setup toggle all plants button
+        function setupToggleAllButton() {
+            const toggleBtn = document.getElementById('toggleAllBtn');
+            let allOn = false;
+
+            toggleBtn.addEventListener('click', function() {
+                allOn = !allOn;
+
+                console.log(`Toggling all ${networkGraph.plants.length} plants ${allOn ? 'ON' : 'OFF'}...`);
+
+                // Toggle all plants
+                networkGraph.plants.forEach(plantData => {
+                    if (plantData.isOn !== allOn) {
+                        const color = getFuelColor(plantData.fuel);
+                        const fuelType = (plantData.fuel || 'UNKNOWN').toUpperCase();
+                        const marker = plantData.marker;
+
+                        plantData.isOn = allOn;
+
+                        if (allOn) {
+                            activeGenerators++;
+                            // Update marker color based on type
+                            if (marker instanceof L.CircleMarker) {
+                                marker.setStyle({ fillColor: color });
+                            } else {
+                                const html = fuelType === 'WIND'
+                                    ? `<div style="width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 14px solid ${color}; margin-left: -8px; margin-top: -7px; filter: drop-shadow(0 0 1px #000);"></div>`
+                                    : `<div style="width: 14px; height: 14px; background-color: ${color}; border: 1px solid #000; margin-left: -7px; margin-top: -7px;"></div>`;
+                                marker.setIcon(L.divIcon({
+                                    className: 'custom-div-icon',
+                                    html: html,
+                                    iconSize: [16, 16],
+                                    iconAnchor: [8, 8]
+                                }));
+                            }
+                        } else {
+                            activeGenerators--;
+                            // Reset to grey
+                            if (marker instanceof L.CircleMarker) {
+                                marker.setStyle({ fillColor: '#808080' });
+                            } else {
+                                const html = fuelType === 'WIND'
+                                    ? `<div style="width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 14px solid #808080; margin-left: -8px; margin-top: -7px; filter: drop-shadow(0 0 1px #000);"></div>`
+                                    : `<div style="width: 14px; height: 14px; background-color: #808080; border: 1px solid #000; margin-left: -7px; margin-top: -7px;"></div>`;
+                                marker.setIcon(L.divIcon({
+                                    className: 'custom-div-icon',
+                                    html: html,
+                                    iconSize: [16, 16],
+                                    iconAnchor: [8, 8]
+                                }));
+                            }
+                        }
+                    }
+                });
+
+                // Update button text and color
+                if (allOn) {
+                    toggleBtn.textContent = 'Turn All Plants OFF';
+                    toggleBtn.style.backgroundColor = '#f44336'; // Red
+                } else {
+                    toggleBtn.textContent = 'Turn All Plants ON';
+                    toggleBtn.style.backgroundColor = '#4CAF50'; // Green
+                }
+
+                // Update flow visualization
+                updateFlow();
+
+                console.log(`All plants toggled ${allOn ? 'ON' : 'OFF'}. Active: ${activeGenerators}`);
+            });
+        }
 
         // Removed custom generator functionality - we're using real power plant data
 
@@ -427,10 +507,10 @@
         function getFuelColor(fuel) {
             switch ((fuel || 'UNKNOWN').toUpperCase()) {
                 case 'SUN': return '#FFD700'; // Solar - Gold
-                case 'WIND': return '#00FF00'; // Wind - Green
+                case 'WIND': return '#1E90FF'; // Wind - Dodger Blue
                 case 'NG': return '#FF4500'; // Natural Gas - Orange-Red
-                case 'PC': return '#808080'; // Petroleum Coke - Gray
-                default: return '#808080'; // Unknown - Gray
+                case 'PC': return '#9370DB'; // Petroleum Coke - Medium Purple
+                default: return '#FF1493'; // Unknown/Other - Deep Pink
             }
         }
 
