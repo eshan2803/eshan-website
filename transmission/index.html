@@ -693,6 +693,20 @@
 
                 console.log(`${activePlants.length} active plants, ${allConnectedLineIds.size} lines to animate`);
 
+                // Update static lines: hide animated ones, show others in teal-blue
+                staticLinesLayer.eachLayer(function(layer) {
+                    if (allConnectedLineIds.has(layer.lineId)) {
+                        // Hide this static line (will be replaced by animated version)
+                        layer.setStyle({ opacity: 0 });
+                    } else {
+                        // Show this static line in teal-blue
+                        layer.setStyle({
+                            color: '#4A90A4',
+                            opacity: 0.6
+                        });
+                    }
+                });
+
                 // Add animated ant paths for connected lines
                 allConnectedLineIds.forEach(lineId => {
                     const lineData = networkGraph.lines.find(l => l.id === lineId);
@@ -701,20 +715,22 @@
                     }
                 });
 
-                // Show animated layer, hide static layer
+                // Show animated layer (static layer stays visible)
                 if (!map.hasLayer(animatedLinesLayer)) {
                     animatedLinesLayer.addTo(map);
                 }
-                if (map.hasLayer(staticLinesLayer)) {
-                    map.removeLayer(staticLinesLayer);
-                }
             } else {
-                // No active generators - show static layer
+                // No active generators - restore all static lines to teal-blue
+                staticLinesLayer.eachLayer(function(layer) {
+                    layer.setStyle({
+                        color: '#4A90A4',
+                        opacity: 0.6
+                    });
+                });
+
+                // Remove animated layer
                 if (map.hasLayer(animatedLinesLayer)) {
                     map.removeLayer(animatedLinesLayer);
-                }
-                if (!map.hasLayer(staticLinesLayer)) {
-                    staticLinesLayer.addTo(map);
                 }
             }
         }
