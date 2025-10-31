@@ -49,18 +49,22 @@
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/leaflet-ant-path@1.3.0/dist/leaflet-ant-path.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 </head>
 <body>
     <div id="controls">
-        <p>Click on the map to add a generator. Click existing generators to toggle on/off.</p>
+        <p><strong>California Power Grid Simulator</strong></p>
+        <p>Click on power plants to turn them ON/OFF.</p>
+        <p>Watch electricity flow through connected transmission lines!</p>
     </div>
     <div id="legend">
-        <strong>Generator Legend:</strong>
+        <strong>Power Plant Types:</strong>
         <div class="legend-item"><span class="legend-color" style="background-color: #FFD700;"></span>Solar (SUN)</div>
         <div class="legend-item"><span class="legend-color" style="background-color: #00FF00;"></span>Wind (WIND)</div>
         <div class="legend-item"><span class="legend-color" style="background-color: #FF4500;"></span>Natural Gas (NG)</div>
-        <div class="legend-item"><span class="legend-color" style="background-color: #808080;"></span>Petroleum Coke (PC)</div>
-        <div class="legend-item"><span class="legend-color" style="background-color: #808080;"></span>Unknown/Other</div>
+        <div class="legend-item"><span class="legend-color" style="background-color: #808080;"></span>Other</div>
+        <div class="legend-item" style="margin-top: 10px;"><span class="legend-color" style="background-color: #808080;"></span>OFF (Grey)</div>
+        <div class="legend-item"><span class="legend-color" style="background-color: #39FF14;"></span>Electricity Flow</div>
     </div>
     <div id="map"></div>
     <script>
@@ -88,59 +92,41 @@
         // Track active generators
         let activeGenerators = 0;
 
+        // Network graph data structures
+        let networkGraph = {
+            substations: [], // {id, latlng, name, voltage, connectedLines: [], marker}
+            plants: [],      // {id, latlng, name, fuel, capacity, nearestSubstationId, marker, isOn}
+            lines: [],       // {id, coords, startNodeId, endNodeId, feature, antPath}
+            linesBySubstation: {} // Map of substationId -> [lineIds]
+        };
+
+        // Data loading promises
+        let transmissionData, substationsData, plantsData;
+
         // Fetch transmission lines
-        fetch(transmissionUrl)
+        let transmissionPromise = fetch(transmissionUrl)
             .then(response => {
                 if (!response.ok) throw new Error('Failed to fetch transmission lines');
                 return response.json();
             })
             .then(data => {
-                staticLinesLayer = L.geoJSON(data, { style: { color: '#39FF14', weight: 2, opacity: 0.7 } });
-                animatedLinesLayer = L.layerGroup(); // Change to layerGroup
-                data.features.forEach(feature => {
-                    const coords = feature.geometry.coordinates;
-                    L.polyline.antPath(coords, {
-                        color: '#39FF14', // Neon green flow
-                        weight: 3,
-                        opacity: 0.8,
-                        delay: 500,
-                        dashArray: [10, 20],
-                        pulseColor: '#FFFFFF',
-                        hardwareAccelerated: true
-                    }).addTo(animatedLinesLayer);
-                });
-                staticLinesLayer.addTo(map); // Start with static lines
+                transmissionData = data;
+                console.log(`Loaded ${data.features.length} transmission lines`);
             })
             .catch(error => {
                 console.error('Error loading transmission lines:', error);
                 alert('Failed to load transmission lines. Check console for details.');
             });
 
-        // Fetch substations (commented out due to missing data)
-        fetch(substationsUrl)
+        // Fetch substations
+        let substationsPromise = fetch(substationsUrl)
             .then(response => {
                 if (!response.ok) throw new Error('Failed to fetch substations');
                 return response.json();
             })
             .then(data => {
-                substationsLayer = L.geoJSON(data, {
-                    pointToLayer: function (feature, latlng) {
-                        return L.triangleMarker(latlng, {
-                            radius: 6,
-                            fillColor: '#000000',
-                            color: '#000',
-                            weight: 1,
-                            opacity: 1,
-                            fillOpacity: 0.7,
-                            rotation: 0
-                        });
-                    },
-                    onEachFeature: function (feature, layer) {
-                        const props = feature.properties || {};
-                        const name = props.SubstationName || 'Unknown Substation';
-                        layer.bindPopup(`<b>${name}</b>`);
-                    }
-                }).addTo(map);
+                substationsData = data;
+                console.log(`Loaded ${data.features.length} substations`);
             })
             .catch(error => {
                 console.error('Error loading substations:', error);
@@ -148,84 +134,30 @@
             });
 
         // Fetch power plants
-        fetch(plantsUrl)
+        let plantsPromise = fetch(plantsUrl)
             .then(response => {
                 if (!response.ok) throw new Error('Failed to fetch power plants');
                 return response.json();
             })
             .then(data => {
-                L.geoJSON(data, {
-                    pointToLayer: function (feature, latlng) {
-                        let color = '#808080'; // Default gray
-                        const props = feature.properties || {};
-                        const fuel = props.PriEnergySource || 'UNKNOWN';
-                        switch (fuel.toUpperCase()) {
-                            case 'SUN': color = '#FFD700'; break; // Solar
-                            case 'WIND': color = '#00FF00'; break; // Wind
-                            case 'NG': color = '#FF4500'; break; // Natural Gas
-                            case 'PC': color = '#808080'; break; // Petroleum Coke
-                        }
-                        return L.circleMarker(latlng, {
-                            radius: 8,
-                            fillColor: color,
-                            color: '#000',
-                            weight: 1,
-                            opacity: 1,
-                            fillOpacity: 0.8
-                        });
-                    },
-                    onEachFeature: function (feature, layer) {
-                        const props = feature.properties || {};
-                        const name = props.PlantName || 'Unknown Plant';
-                        const fuel = props.PriEnergySource || 'Unknown';
-                        const capacity = props.Capacity_Latest !== undefined ? props.Capacity_Latest : 'Unknown';
-                        layer.bindPopup(`<b>${name}</b><br>Type: ${fuel}<br>Capacity: ${capacity} MW`);
-                        layer.isOn = false;
-                        layer.on('click', function () {
-                            layer.isOn = !layer.isOn;
-                            activeGenerators += layer.isOn ? 1 : -1;
-                            layer.setStyle({
-                                fillColor: layer.isOn ? '#FFFF00' : (
-                                    (props.PriEnergySource || '').toUpperCase() === 'SUN' ? '#FFD700' :
-                                    (props.PriEnergySource || '').toUpperCase() === 'WIND' ? '#00FF00' :
-                                    (props.PriEnergySource || '').toUpperCase() === 'NG' ? '#FF4500' :
-                                    (props.PriEnergySource || '').toUpperCase() === 'PC' ? '#808080' : '#808080'
-                                )
-                            });
-                            updateFlow();
-                        });
-                    }
-                }).addTo(plantsLayer);
+                plantsData = data;
+                console.log(`Loaded ${data.features.length} power plants`);
             })
             .catch(error => {
                 console.error('Error loading power plants:', error);
                 alert('Failed to load power plants. Check console for details.');
             });
 
-        // Allow user to place new generators
-        map.on('click', function (e) {
-            const type = prompt('Enter generator type (e.g., solar, wind, natural gas):');
-            if (type) {
-                const marker = L.circleMarker(e.latlng, {
-                    radius: 8,
-                    fillColor: '#808080',
-                    color: '#000',
-                    weight: 1,
-                    opacity: 1,
-                    fillOpacity: 0.8
-                }).addTo(customGenerators);
-                marker.bindPopup(`<b>Custom Generator</b><br>Type: ${type}`);
-                marker.isOn = false;
-                marker.on('click', function () {
-                    marker.isOn = !marker.isOn;
-                    activeGenerators += marker.isOn ? 1 : -1;
-                    marker.setStyle({
-                        fillColor: marker.isOn ? '#FFFF00' : '#808080'
-                    });
-                    updateFlow();
-                });
-            }
-        });
+        // Wait for all data to load, then build network and render
+        Promise.all([transmissionPromise, substationsPromise, plantsPromise])
+            .then(() => {
+                console.log('All data loaded. Building network graph...');
+                buildNetworkGraph();
+                renderMap();
+                console.log('Network graph built and map rendered.');
+            });
+
+        // Removed custom generator functionality - we're using real power plant data
 
         // Custom triangle marker
         L.TriangleMarker = L.CircleMarker.extend({
@@ -235,14 +167,306 @@
             return new L.TriangleMarker(latlng, options);
         };
 
-        // New function to toggle animation
+        // Build network graph from loaded data
+        function buildNetworkGraph() {
+            const TOLERANCE = 0.01; // ~1km tolerance for matching line endpoints to substations
+
+            // 1. Build substations nodes
+            substationsData.features.forEach((feature, idx) => {
+                const props = feature.properties;
+                const coords = feature.geometry.coordinates;
+                networkGraph.substations.push({
+                    id: `sub_${idx}`,
+                    latlng: [coords[1], coords[0]], // Leaflet uses [lat, lng]
+                    name: props.Name || 'Unknown',
+                    voltage: props.Max_Voltage || 0,
+                    connectedLines: [],
+                    feature: feature
+                });
+            });
+
+            // 2. Build transmission lines and connect to substations
+            transmissionData.features.forEach((feature, idx) => {
+                const coords = feature.geometry.coordinates;
+                if (!coords || coords.length < 2) return;
+
+                // Get start and end points
+                const startPoint = turf.point(coords[0]);
+                const endPoint = turf.point(coords[coords.length - 1]);
+
+                // Find nearest substations to start and end
+                const substationPoints = turf.featureCollection(
+                    networkGraph.substations.map(sub =>
+                        turf.point([sub.latlng[1], sub.latlng[0]], {id: sub.id})
+                    )
+                );
+
+                const nearestStart = turf.nearestPoint(startPoint, substationPoints);
+                const nearestEnd = turf.nearestPoint(endPoint, substationPoints);
+
+                // Only connect if within tolerance
+                const distStart = turf.distance(startPoint, nearestStart, {units: 'kilometers'});
+                const distEnd = turf.distance(endPoint, nearestEnd, {units: 'kilometers'});
+
+                let startNodeId = null, endNodeId = null;
+
+                if (distStart < TOLERANCE) {
+                    startNodeId = nearestStart.properties.id;
+                }
+                if (distEnd < TOLERANCE) {
+                    endNodeId = nearestEnd.properties.id;
+                }
+
+                const lineId = `line_${idx}`;
+                networkGraph.lines.push({
+                    id: lineId,
+                    coords: coords,
+                    startNodeId: startNodeId,
+                    endNodeId: endNodeId,
+                    feature: feature
+                });
+
+                // Add line to substations' connected lines
+                if (startNodeId) {
+                    const sub = networkGraph.substations.find(s => s.id === startNodeId);
+                    if (sub) sub.connectedLines.push(lineId);
+                    if (!networkGraph.linesBySubstation[startNodeId]) {
+                        networkGraph.linesBySubstation[startNodeId] = [];
+                    }
+                    networkGraph.linesBySubstation[startNodeId].push(lineId);
+                }
+                if (endNodeId && endNodeId !== startNodeId) {
+                    const sub = networkGraph.substations.find(s => s.id === endNodeId);
+                    if (sub) sub.connectedLines.push(lineId);
+                    if (!networkGraph.linesBySubstation[endNodeId]) {
+                        networkGraph.linesBySubstation[endNodeId] = [];
+                    }
+                    networkGraph.linesBySubstation[endNodeId].push(lineId);
+                }
+            });
+
+            // 3. Connect plants to nearest substations
+            plantsData.features.forEach((feature, idx) => {
+                const props = feature.properties;
+                const coords = feature.geometry.coordinates;
+                const plantPoint = turf.point(coords);
+
+                const substationPoints = turf.featureCollection(
+                    networkGraph.substations.map(sub =>
+                        turf.point([sub.latlng[1], sub.latlng[0]], {id: sub.id})
+                    )
+                );
+
+                const nearest = turf.nearestPoint(plantPoint, substationPoints);
+
+                networkGraph.plants.push({
+                    id: `plant_${idx}`,
+                    latlng: [coords[1], coords[0]],
+                    name: props.PlantName || 'Unknown',
+                    fuel: props.PriEnergySource || 'UNKNOWN',
+                    capacity: props.Capacity_Latest || 0,
+                    nearestSubstationId: nearest.properties.id,
+                    feature: feature,
+                    isOn: false
+                });
+            });
+
+            console.log(`Network graph built: ${networkGraph.substations.length} substations, ${networkGraph.plants.length} plants, ${networkGraph.lines.length} lines`);
+
+            // Log connectivity stats
+            const connectedLines = networkGraph.lines.filter(l => l.startNodeId || l.endNodeId).length;
+            console.log(`${connectedLines} lines connected to substations (${(connectedLines/networkGraph.lines.length*100).toFixed(1)}%)`);
+        }
+
+        // BFS to find all lines connected to a substation
+        function getConnectedLines(startSubstationId) {
+            const visited = new Set();
+            const connectedLineIds = new Set();
+            const queue = [startSubstationId];
+
+            while (queue.length > 0) {
+                const currentSubId = queue.shift();
+
+                if (visited.has(currentSubId)) continue;
+                visited.add(currentSubId);
+
+                // Get all lines connected to this substation
+                const lines = networkGraph.linesBySubstation[currentSubId] || [];
+
+                lines.forEach(lineId => {
+                    connectedLineIds.add(lineId);
+
+                    // Find the line and get the other end substation
+                    const line = networkGraph.lines.find(l => l.id === lineId);
+                    if (!line) return;
+
+                    // Add the other end to the queue
+                    if (line.startNodeId === currentSubId && line.endNodeId) {
+                        if (!visited.has(line.endNodeId)) {
+                            queue.push(line.endNodeId);
+                        }
+                    } else if (line.endNodeId === currentSubId && line.startNodeId) {
+                        if (!visited.has(line.startNodeId)) {
+                            queue.push(line.startNodeId);
+                        }
+                    }
+                });
+            }
+
+            return Array.from(connectedLineIds);
+        }
+
+        // Get fuel color for plant
+        function getFuelColor(fuel) {
+            switch ((fuel || 'UNKNOWN').toUpperCase()) {
+                case 'SUN': return '#FFD700'; // Solar - Gold
+                case 'WIND': return '#00FF00'; // Wind - Green
+                case 'NG': return '#FF4500'; // Natural Gas - Orange-Red
+                case 'PC': return '#808080'; // Petroleum Coke - Gray
+                default: return '#808080'; // Unknown - Gray
+            }
+        }
+
+        // Render map with all layers
+        function renderMap() {
+            // Initialize layers
+            staticLinesLayer = L.layerGroup().addTo(map);
+            animatedLinesLayer = L.layerGroup();
+
+            // Render transmission lines (all grey initially)
+            networkGraph.lines.forEach(lineData => {
+                const coords = lineData.coords.map(c => [c[1], c[0]]); // Convert to [lat, lng]
+
+                // Static grey line
+                const staticLine = L.polyline(coords, {
+                    color: '#808080',
+                    weight: 2,
+                    opacity: 0.5
+                });
+                staticLine.lineId = lineData.id;
+                staticLinesLayer.addLayer(staticLine);
+
+                // Pre-create animated line (hidden initially)
+                const antPath = L.polyline.antPath(coords, {
+                    color: '#39FF14', // Neon green flow
+                    weight: 3,
+                    opacity: 0.8,
+                    delay: 500,
+                    dashArray: [10, 20],
+                    pulseColor: '#FFFFFF',
+                    hardwareAccelerated: true
+                });
+                antPath.lineId = lineData.id;
+                lineData.antPath = antPath;
+            });
+
+            // Render substations (grey triangles)
+            networkGraph.substations.forEach(subData => {
+                const marker = L.circleMarker(subData.latlng, {
+                    radius: 4,
+                    fillColor: '#808080',
+                    color: '#000',
+                    weight: 1,
+                    opacity: 0.7,
+                    fillOpacity: 0.5
+                });
+
+                const props = subData.feature.properties;
+                const name = props.Name || 'Unknown Substation';
+                const voltage = props.Max_Voltage || 'Unknown';
+                const county = props.COUNTY || 'Unknown';
+                marker.bindPopup(`<b>${name}</b><br>Voltage: ${voltage} kV<br>County: ${county}`);
+
+                substationsLayer.addLayer(marker);
+                subData.marker = marker;
+            });
+
+            // Render power plants (grey initially, colored by fuel type)
+            networkGraph.plants.forEach(plantData => {
+                const color = getFuelColor(plantData.fuel);
+
+                const marker = L.circleMarker(plantData.latlng, {
+                    radius: 8,
+                    fillColor: '#808080', // Start grey (off)
+                    color: '#000',
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                });
+
+                const name = plantData.name;
+                const fuel = plantData.fuel;
+                const capacity = plantData.capacity;
+                marker.bindPopup(`<b>${name}</b><br>Type: ${fuel}<br>Capacity: ${capacity} MW`);
+
+                // Click handler to toggle plant on/off
+                marker.on('click', function(e) {
+                    L.DomEvent.stopPropagation(e); // Prevent map click
+                    plantData.isOn = !plantData.isOn;
+
+                    if (plantData.isOn) {
+                        activeGenerators++;
+                        marker.setStyle({ fillColor: color }); // Turn on with fuel color
+                    } else {
+                        activeGenerators--;
+                        marker.setStyle({ fillColor: '#808080' }); // Turn off to grey
+                    }
+
+                    updateFlow();
+                });
+
+                plantsLayer.addLayer(marker);
+                plantData.marker = marker;
+            });
+
+            console.log('Map rendered with all layers.');
+        }
+
+        // Updated function to show flow only on connected lines
         function updateFlow() {
+            // Clear animated layer
+            animatedLinesLayer.clearLayers();
+
             if (activeGenerators > 0) {
-                if (map.hasLayer(staticLinesLayer)) map.removeLayer(staticLinesLayer);
-                if (!map.hasLayer(animatedLinesLayer)) animatedLinesLayer.addTo(map);
+                // Find all active plants
+                const activePlants = networkGraph.plants.filter(p => p.isOn);
+
+                // Collect all connected line IDs from all active plants
+                const allConnectedLineIds = new Set();
+
+                activePlants.forEach(plant => {
+                    const substationId = plant.nearestSubstationId;
+                    if (substationId) {
+                        const connectedLines = getConnectedLines(substationId);
+                        connectedLines.forEach(lineId => allConnectedLineIds.add(lineId));
+                    }
+                });
+
+                console.log(`${activePlants.length} active plants, ${allConnectedLineIds.size} lines to animate`);
+
+                // Add animated ant paths for connected lines
+                allConnectedLineIds.forEach(lineId => {
+                    const lineData = networkGraph.lines.find(l => l.id === lineId);
+                    if (lineData && lineData.antPath) {
+                        animatedLinesLayer.addLayer(lineData.antPath);
+                    }
+                });
+
+                // Show animated layer, hide static layer
+                if (!map.hasLayer(animatedLinesLayer)) {
+                    animatedLinesLayer.addTo(map);
+                }
+                if (map.hasLayer(staticLinesLayer)) {
+                    map.removeLayer(staticLinesLayer);
+                }
             } else {
-                if (map.hasLayer(animatedLinesLayer)) map.removeLayer(animatedLinesLayer);
-                if (!map.hasLayer(staticLinesLayer)) staticLinesLayer.addTo(map);
+                // No active generators - show static layer
+                if (map.hasLayer(animatedLinesLayer)) {
+                    map.removeLayer(animatedLinesLayer);
+                }
+                if (!map.hasLayer(staticLinesLayer)) {
+                    staticLinesLayer.addTo(map);
+                }
             }
         }
     </script>
