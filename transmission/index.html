@@ -152,9 +152,14 @@
         Promise.all([transmissionPromise, substationsPromise, plantsPromise])
             .then(() => {
                 console.log('All data loaded. Building network graph...');
-                buildNetworkGraph();
-                renderMap();
-                console.log('Network graph built and map rendered.');
+                try {
+                    buildNetworkGraph();
+                    renderMap();
+                    console.log('Network graph built and map rendered.');
+                } catch (error) {
+                    console.error('Error building network or rendering map:', error);
+                    alert('Error building network. Check console for details.');
+                }
             });
 
         // Removed custom generator functionality - we're using real power plant data
@@ -175,6 +180,15 @@
             substationsData.features.forEach((feature, idx) => {
                 const props = feature.properties;
                 const coords = feature.geometry.coordinates;
+
+                // Validate coordinates
+                if (!coords || coords.length < 2 ||
+                    typeof coords[0] !== 'number' || typeof coords[1] !== 'number' ||
+                    isNaN(coords[0]) || isNaN(coords[1])) {
+                    console.warn(`Invalid substation coordinates at index ${idx}:`, coords);
+                    return;
+                }
+
                 networkGraph.substations.push({
                     id: `sub_${idx}`,
                     latlng: [coords[1], coords[0]], // Leaflet uses [lat, lng]
@@ -185,22 +199,46 @@
                 });
             });
 
+            // Create substation points collection once (outside the loop for efficiency)
+            const substationPoints = turf.featureCollection(
+                networkGraph.substations.map(sub =>
+                    turf.point([sub.latlng[1], sub.latlng[0]], {id: sub.id})
+                )
+            );
+
+            if (substationPoints.features.length === 0) {
+                console.error('No valid substations found!');
+                return;
+            }
+
             // 2. Build transmission lines and connect to substations
             transmissionData.features.forEach((feature, idx) => {
                 const coords = feature.geometry.coordinates;
                 if (!coords || coords.length < 2) return;
 
+                // Validate start and end coordinates
+                const startCoord = coords[0];
+                const endCoord = coords[coords.length - 1];
+
+                if (!startCoord || startCoord.length < 2 ||
+                    typeof startCoord[0] !== 'number' || typeof startCoord[1] !== 'number' ||
+                    isNaN(startCoord[0]) || isNaN(startCoord[1])) {
+                    console.warn(`Invalid start coord for line ${idx}:`, startCoord);
+                    return;
+                }
+
+                if (!endCoord || endCoord.length < 2 ||
+                    typeof endCoord[0] !== 'number' || typeof endCoord[1] !== 'number' ||
+                    isNaN(endCoord[0]) || isNaN(endCoord[1])) {
+                    console.warn(`Invalid end coord for line ${idx}:`, endCoord);
+                    return;
+                }
+
                 // Get start and end points
-                const startPoint = turf.point(coords[0]);
-                const endPoint = turf.point(coords[coords.length - 1]);
+                const startPoint = turf.point(startCoord);
+                const endPoint = turf.point(endCoord);
 
                 // Find nearest substations to start and end
-                const substationPoints = turf.featureCollection(
-                    networkGraph.substations.map(sub =>
-                        turf.point([sub.latlng[1], sub.latlng[0]], {id: sub.id})
-                    )
-                );
-
                 const nearestStart = turf.nearestPoint(startPoint, substationPoints);
                 const nearestEnd = turf.nearestPoint(endPoint, substationPoints);
 
@@ -249,14 +287,18 @@
             plantsData.features.forEach((feature, idx) => {
                 const props = feature.properties;
                 const coords = feature.geometry.coordinates;
+
+                // Validate coordinates
+                if (!coords || coords.length < 2 ||
+                    typeof coords[0] !== 'number' || typeof coords[1] !== 'number' ||
+                    isNaN(coords[0]) || isNaN(coords[1])) {
+                    console.warn(`Invalid plant coordinates at index ${idx}:`, coords);
+                    return;
+                }
+
                 const plantPoint = turf.point(coords);
 
-                const substationPoints = turf.featureCollection(
-                    networkGraph.substations.map(sub =>
-                        turf.point([sub.latlng[1], sub.latlng[0]], {id: sub.id})
-                    )
-                );
-
+                // Reuse substationPoints already created above
                 const nearest = turf.nearestPoint(plantPoint, substationPoints);
 
                 networkGraph.plants.push({
