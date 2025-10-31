@@ -483,11 +483,8 @@
                 const voltage = props.Max_Voltage || 'Unknown';
                 const county = props.COUNTY || 'Unknown';
 
-                // Bind popup (shows on click)
-                marker.bindPopup(`<b>${name}</b><br>Voltage: ${voltage} kV<br>County: ${county}`);
-
-                // Bind tooltip (shows on hover)
-                marker.bindTooltip(`<b>${name}</b> Substation<br>${voltage} kV`, {
+                // Only bind tooltip (shows on hover) - no popup needed
+                marker.bindTooltip(`<b>${name}</b> Substation<br>${voltage} kV<br>${county}`, {
                     direction: 'top',
                     offset: [0, -5],
                     opacity: 0.9
@@ -554,10 +551,7 @@
                 const fuel = plantData.fuel;
                 const capacity = plantData.capacity;
 
-                // Bind popup (shows on click)
-                marker.bindPopup(`<b>${name}</b><br>Type: ${fuel}<br>Capacity: ${capacity} MW`);
-
-                // Bind tooltip (shows on hover)
+                // Only bind tooltip (shows on hover) - no popup needed
                 marker.bindTooltip(`<b>${name}</b><br>Type: ${fuel}<br>Capacity: ${capacity} MW<br><i>Click to turn ON/OFF</i>`, {
                     direction: 'top',
                     offset: [0, -10],
