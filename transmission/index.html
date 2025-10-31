@@ -99,30 +99,32 @@
         <strong>Power Plant Types:</strong>
         <div class="legend-item">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
-                <svg width="20" height="20"><circle cx="10" cy="10" r="7" fill="#FFD700" stroke="#000" stroke-width="1"/></svg>
-            </span>Solar (SUN)
+                <svg width="20" height="20"><circle cx="10" cy="10" r="5" fill="#FFD700" stroke="#000" stroke-width="1"/></svg>
+            </span>Solar
         </div>
         <div class="legend-item">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
-                <svg width="20" height="20"><polygon points="10,3 17,17 3,17" fill="#1E90FF" stroke="#000" stroke-width="1"/></svg>
-            </span>Wind (WIND)
+                <svg width="20" height="20"><polygon points="10,5 16,15 4,15" fill="#1E90FF" stroke="#000" stroke-width="1"/></svg>
+            </span>Wind
         </div>
         <div class="legend-item">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
-                <svg width="20" height="20"><rect x="4" y="4" width="12" height="12" fill="#FF4500" stroke="#000" stroke-width="1"/></svg>
-            </span>Natural Gas (NG)
+                <svg width="20" height="20"><rect x="5" y="5" width="10" height="10" fill="#FF4500" stroke="#000" stroke-width="1"/></svg>
+            </span>Natural Gas
         </div>
         <div class="legend-item">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
-                <svg width="20" height="20"><circle cx="10" cy="10" r="5" fill="#9370DB" stroke="#000" stroke-width="1"/></svg>
-            </span>Petroleum Coke (PC)
+                <svg width="20" height="20"><rect x="6" y="6" width="8" height="8" fill="#9370DB" stroke="#000" stroke-width="1" transform="rotate(45 10 10)"/></svg>
+            </span>Petroleum Coke
         </div>
         <div class="legend-item">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
-                <svg width="20" height="20"><circle cx="10" cy="10" r="5" fill="#FF1493" stroke="#000" stroke-width="1"/></svg>
-            </span>Other
+                <svg width="20" height="20">
+                    <polygon points="10,4 12,9 17,10 12,11 10,16 8,11 3,10 8,9" fill="#FF1493" stroke="#000" stroke-width="1"/>
+                </svg>
+            </span>Others
         </div>
-        <div class="legend-item" style="margin-top: 10px;"><span class="legend-color" style="background-color: #808080;"></span>OFF (Grey)</div>
+        <div class="legend-item" style="margin-top: 10px;"><span class="legend-color" style="background-color: #808080;"></span>OFF</div>
         <div class="legend-item"><span class="legend-color" style="background-color: #39FF14;"></span>Active Flow</div>
         <div class="legend-item"><span class="legend-color" style="background-color: #4A90A4;"></span>Transmission Lines</div>
         <div class="legend-item">
@@ -253,14 +255,21 @@
                             if (marker instanceof L.CircleMarker) {
                                 marker.setStyle({ fillColor: color });
                             } else {
-                                const html = fuelType === 'WIND'
-                                    ? `<div style="width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 14px solid ${color}; margin-left: -8px; margin-top: -7px; filter: drop-shadow(0 0 1px #000);"></div>`
-                                    : `<div style="width: 14px; height: 14px; background-color: ${color}; border: 1px solid #000; margin-left: -7px; margin-top: -7px;"></div>`;
+                                let html;
+                                if (fuelType === 'WIND') {
+                                    html = `<div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid ${color}; margin-left: -6px; margin-top: -5px; filter: drop-shadow(0 0 1px #000);"></div>`;
+                                } else if (fuelType === 'NG') {
+                                    html = `<div style="width: 10px; height: 10px; background-color: ${color}; border: 1px solid #000; margin-left: -5px; margin-top: -5px;"></div>`;
+                                } else if (fuelType === 'PC') {
+                                    html = `<div style="width: 8px; height: 8px; background-color: ${color}; border: 1px solid #000; transform: rotate(45deg); margin-left: -4px; margin-top: -4px;"></div>`;
+                                } else {
+                                    html = `<div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid ${color}; position: relative; margin-left: -6px; margin-top: -3px; filter: drop-shadow(0 0 1px #000);"><div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 10px solid ${color}; position: absolute; top: 3px; left: -6px;"></div></div>`;
+                                }
                                 marker.setIcon(L.divIcon({
                                     className: 'custom-div-icon',
                                     html: html,
-                                    iconSize: [16, 16],
-                                    iconAnchor: [8, 8]
+                                    iconSize: [12, 12],
+                                    iconAnchor: [6, 6]
                                 }));
                             }
                         } else {
@@ -269,14 +278,21 @@
                             if (marker instanceof L.CircleMarker) {
                                 marker.setStyle({ fillColor: '#808080' });
                             } else {
-                                const html = fuelType === 'WIND'
-                                    ? `<div style="width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 14px solid #808080; margin-left: -8px; margin-top: -7px; filter: drop-shadow(0 0 1px #000);"></div>`
-                                    : `<div style="width: 14px; height: 14px; background-color: #808080; border: 1px solid #000; margin-left: -7px; margin-top: -7px;"></div>`;
+                                let html;
+                                if (fuelType === 'WIND') {
+                                    html = `<div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #808080; margin-left: -6px; margin-top: -5px; filter: drop-shadow(0 0 1px #000);"></div>`;
+                                } else if (fuelType === 'NG') {
+                                    html = `<div style="width: 10px; height: 10px; background-color: #808080; border: 1px solid #000; margin-left: -5px; margin-top: -5px;"></div>`;
+                                } else if (fuelType === 'PC') {
+                                    html = `<div style="width: 8px; height: 8px; background-color: #808080; border: 1px solid #000; transform: rotate(45deg); margin-left: -4px; margin-top: -4px;"></div>`;
+                                } else {
+                                    html = `<div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #808080; position: relative; margin-left: -6px; margin-top: -3px; filter: drop-shadow(0 0 1px #000);"><div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 10px solid #808080; position: absolute; top: 3px; left: -6px;"></div></div>`;
+                                }
                                 marker.setIcon(L.divIcon({
                                     className: 'custom-div-icon',
                                     html: html,
-                                    iconSize: [16, 16],
-                                    iconAnchor: [8, 8]
+                                    iconSize: [12, 12],
+                                    iconAnchor: [6, 6]
                                 }));
                             }
                         }
@@ -574,18 +590,18 @@
                 subData.marker = marker;
             });
 
-            // Render power plants with different shapes based on fuel type
+            // Render power plants with different shapes based on fuel type (all same small size)
             networkGraph.plants.forEach(plantData => {
                 const color = getFuelColor(plantData.fuel);
                 const fuelType = (plantData.fuel || 'UNKNOWN').toUpperCase();
 
                 let marker;
 
-                // Create different shapes based on fuel type
+                // Create different shapes based on fuel type (all size 12px)
                 switch(fuelType) {
                     case 'SUN': // Solar - Circle
                         marker = L.circleMarker(plantData.latlng, {
-                            radius: 8,
+                            radius: 6,
                             fillColor: '#808080',
                             color: '#000',
                             weight: 1,
@@ -598,9 +614,9 @@
                         marker = L.marker(plantData.latlng, {
                             icon: L.divIcon({
                                 className: 'custom-div-icon',
-                                html: `<div style="width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 14px solid #808080; margin-left: -8px; margin-top: -7px; filter: drop-shadow(0 0 1px #000);"></div>`,
-                                iconSize: [16, 16],
-                                iconAnchor: [8, 8]
+                                html: `<div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #808080; margin-left: -6px; margin-top: -5px; filter: drop-shadow(0 0 1px #000);"></div>`,
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
                             })
                         });
                         break;
@@ -609,21 +625,34 @@
                         marker = L.marker(plantData.latlng, {
                             icon: L.divIcon({
                                 className: 'custom-div-icon',
-                                html: `<div style="width: 14px; height: 14px; background-color: #808080; border: 1px solid #000; margin-left: -7px; margin-top: -7px;"></div>`,
-                                iconSize: [16, 16],
-                                iconAnchor: [8, 8]
+                                html: `<div style="width: 10px; height: 10px; background-color: #808080; border: 1px solid #000; margin-left: -5px; margin-top: -5px;"></div>`,
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
                             })
                         });
                         break;
 
-                    default: // Other - Small circle
-                        marker = L.circleMarker(plantData.latlng, {
-                            radius: 6,
-                            fillColor: '#808080',
-                            color: '#000',
-                            weight: 1,
-                            opacity: 1,
-                            fillOpacity: 0.8
+                    case 'PC': // Petroleum Coke - Diamond (rotated square)
+                        marker = L.marker(plantData.latlng, {
+                            icon: L.divIcon({
+                                className: 'custom-div-icon',
+                                html: `<div style="width: 8px; height: 8px; background-color: #808080; border: 1px solid #000; transform: rotate(45deg); margin-left: -4px; margin-top: -4px;"></div>`,
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
+                            })
+                        });
+                        break;
+
+                    default: // Other - Star (pentagon shape)
+                        marker = L.marker(plantData.latlng, {
+                            icon: L.divIcon({
+                                className: 'custom-div-icon',
+                                html: `<div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #808080; position: relative; margin-left: -6px; margin-top: -3px; filter: drop-shadow(0 0 1px #000);">
+                                    <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 10px solid #808080; position: absolute; top: 3px; left: -6px;"></div>
+                                </div>`,
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
+                            })
                         });
                 }
 
@@ -654,16 +683,21 @@
                         if (marker instanceof L.CircleMarker) {
                             marker.setStyle({ fillColor: color });
                         } else {
-                            // Update divIcon color
-                            const shape = fuelType === 'WIND' ? 'triangle' : 'square';
-                            const html = fuelType === 'WIND'
-                                ? `<div style="width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 14px solid ${color}; margin-left: -8px; margin-top: -7px; filter: drop-shadow(0 0 1px #000);"></div>`
-                                : `<div style="width: 14px; height: 14px; background-color: ${color}; border: 1px solid #000; margin-left: -7px; margin-top: -7px;"></div>`;
+                            let html;
+                            if (fuelType === 'WIND') {
+                                html = `<div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid ${color}; margin-left: -6px; margin-top: -5px; filter: drop-shadow(0 0 1px #000);"></div>`;
+                            } else if (fuelType === 'NG') {
+                                html = `<div style="width: 10px; height: 10px; background-color: ${color}; border: 1px solid #000; margin-left: -5px; margin-top: -5px;"></div>`;
+                            } else if (fuelType === 'PC') {
+                                html = `<div style="width: 8px; height: 8px; background-color: ${color}; border: 1px solid #000; transform: rotate(45deg); margin-left: -4px; margin-top: -4px;"></div>`;
+                            } else {
+                                html = `<div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid ${color}; position: relative; margin-left: -6px; margin-top: -3px; filter: drop-shadow(0 0 1px #000);"><div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 10px solid ${color}; position: absolute; top: 3px; left: -6px;"></div></div>`;
+                            }
                             marker.setIcon(L.divIcon({
                                 className: 'custom-div-icon',
                                 html: html,
-                                iconSize: [16, 16],
-                                iconAnchor: [8, 8]
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
                             }));
                         }
                     } else {
@@ -673,14 +707,21 @@
                         if (marker instanceof L.CircleMarker) {
                             marker.setStyle({ fillColor: '#808080' });
                         } else {
-                            const html = fuelType === 'WIND'
-                                ? `<div style="width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 14px solid #808080; margin-left: -8px; margin-top: -7px; filter: drop-shadow(0 0 1px #000);"></div>`
-                                : `<div style="width: 14px; height: 14px; background-color: #808080; border: 1px solid #000; margin-left: -7px; margin-top: -7px;"></div>`;
+                            let html;
+                            if (fuelType === 'WIND') {
+                                html = `<div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #808080; margin-left: -6px; margin-top: -5px; filter: drop-shadow(0 0 1px #000);"></div>`;
+                            } else if (fuelType === 'NG') {
+                                html = `<div style="width: 10px; height: 10px; background-color: #808080; border: 1px solid #000; margin-left: -5px; margin-top: -5px;"></div>`;
+                            } else if (fuelType === 'PC') {
+                                html = `<div style="width: 8px; height: 8px; background-color: #808080; border: 1px solid #000; transform: rotate(45deg); margin-left: -4px; margin-top: -4px;"></div>`;
+                            } else {
+                                html = `<div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #808080; position: relative; margin-left: -6px; margin-top: -3px; filter: drop-shadow(0 0 1px #000);"><div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 10px solid #808080; position: absolute; top: 3px; left: -6px;"></div></div>`;
+                            }
                             marker.setIcon(L.divIcon({
                                 className: 'custom-div-icon',
                                 html: html,
-                                iconSize: [16, 16],
-                                iconAnchor: [8, 8]
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
                             }));
                         }
                     }
