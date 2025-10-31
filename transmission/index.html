@@ -117,35 +117,35 @@
             });
 
         // Fetch substations (commented out due to missing data)
-        // fetch(substationsUrl)
-        //     .then(response => {
-        //         if (!response.ok) throw new Error('Failed to fetch substations');
-        //         return response.json();
-        //     })
-        //     .then(data => {
-        //         substationsLayer = L.geoJSON(data, {
-        //             pointToLayer: function (feature, latlng) {
-        //                 return L.triangleMarker(latlng, {
-        //                     radius: 6,
-        //                     fillColor: '#000000',
-        //                     color: '#000',
-        //                     weight: 1,
-        //                     opacity: 1,
-        //                     fillOpacity: 0.7,
-        //                     rotation: 0
-        //                 });
-        //             },
-        //             onEachFeature: function (feature, layer) {
-        //                 const props = feature.properties || {};
-        //                 const name = props.SubstationName || 'Unknown Substation';
-        //                 layer.bindPopup(`<b>${name}</b>`);
-        //             }
-        //         }).addTo(map);
-        //     })
-        //     .catch(error => {
-        //         console.error('Error loading substations:', error);
-        //         alert('Failed to load substations. Check console for details.');
-        //     });
+        fetch(substationsUrl)
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch substations');
+                return response.json();
+            })
+            .then(data => {
+                substationsLayer = L.geoJSON(data, {
+                    pointToLayer: function (feature, latlng) {
+                        return L.triangleMarker(latlng, {
+                            radius: 6,
+                            fillColor: '#000000',
+                            color: '#000',
+                            weight: 1,
+                            opacity: 1,
+                            fillOpacity: 0.7,
+                            rotation: 0
+                        });
+                    },
+                    onEachFeature: function (feature, layer) {
+                        const props = feature.properties || {};
+                        const name = props.SubstationName || 'Unknown Substation';
+                        layer.bindPopup(`<b>${name}</b>`);
+                    }
+                }).addTo(map);
+            })
+            .catch(error => {
+                console.error('Error loading substations:', error);
+                alert('Failed to load substations. Check console for details.');
+            });
 
         // Fetch power plants
         fetch(plantsUrl)
@@ -248,3 +248,4 @@
     </script>
 </body>
 </html>
+
