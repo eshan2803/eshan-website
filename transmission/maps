@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>California Power Grid Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            height: 100vh; /* Full viewport height */
+            width: 100%; /* Full width */
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            max-width: 300px;
+        }
+        #controls p {
+            margin: 5px 0;
+        }
+        .grayscale {
+            filter: grayscale(100%);
+            -webkit-filter: grayscale(100%);
+        }
+        #legend {
+            position: absolute;
+            bottom: 20px;
+            left: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            max-width: 220px;
+        }
+        .legend-item {
+            margin: 3px 0;
+            font-size: 13px;
+        }
+        #legend strong {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .legend-color {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+        .custom-div-icon {
+            background: transparent !important;
+            border: none !important;
+        }
+        .leaflet-tooltip {
+            background-color: rgba(255, 255, 255, 0.95);
+            border: 2px solid #333;
+            border-radius: 6px;
+            padding: 8px;
+            font-size: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        /* Position zoom controls at top-left */
+        .leaflet-top.leaflet-left {
+            top: 10px;
+            left: 10px;
+        }
+        /* Basemap toggle control in bottom-right */
+        #basemap-toggle {
+            position: absolute;
+            bottom: 20px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .basemap-option {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #ccc;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            text-align: center;
+            padding: 4px;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .basemap-option:hover {
+            border-color: #666;
+            transform: scale(1.05);
+        }
+        .basemap-option.active {
+            border-color: #4A90A4;
+            border-width: 3px;
+            box-shadow: 0 0 8px rgba(74, 144, 164, 0.5);
+        }
+        .basemap-option .label {
+            position: absolute;
+            bottom: 2px;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2px;
+            font-weight: bold;
+            font-size: 9px;
+        }
+        /* Basemap preview styles */
+        #basemap-grayscale {
+            background: linear-gradient(135deg, #e0e0e0 0%, #909090 100%);
+        }
+        #basemap-satellite {
+            background: linear-gradient(135deg, #4a7c59 0%, #2d5a3d 50%, #1a3d2e 100%);
+        }
+        #basemap-population {
+            background: linear-gradient(135deg, #fff7ec 0%, #fc8d59 50%, #7f0000 100%);
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-ant-path@1.3.0/dist/leaflet-ant-path.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+</head>
+<body>
+    <div id="controls">
+        <p><strong>California Power Grid Simulator</strong></p>
+        <p>Hover over plants to see details.</p>
+        <p>Click on plants to turn them ON/OFF.</p>
+        <p id="status" style="margin-top: 10px; padding: 5px; background-color: #f0f0f0; border-radius: 4px; text-align: center;">
+            <strong>Active Plants: <span id="activeCount">0</span></strong>
+        </p>
+        <button id="toggleAllBtn" style="width: 100%; margin-top: 10px; padding: 8px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            Turn All Plants ON
+        </button>
+    </div>
+    <div id="legend">
+        <strong>Power Plant Types:</strong>
+        <div class="legend-item fuel-filter" data-fuel="SUN" style="cursor: pointer; padding: 2px; border-radius: 3px;">
+            <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
+                <svg width="20" height="20"><circle cx="10" cy="10" r="5" fill="#FFD700" stroke="#000" stroke-width="1"/></svg>
+            </span>Solar (986)
+        </div>
+        <div class="legend-item fuel-filter" data-fuel="WND" style="cursor: pointer; padding: 2px; border-radius: 3px;">
+            <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
+                <svg width="20" height="20"><polygon points="10,5 16,15 4,15" fill="#1E90FF" stroke="#000" stroke-width="1"/></svg>
+            </span>Wind (163)
+        </div>
+        <div class="legend-item fuel-filter" data-fuel="NG,GAS,OGW,OG" style="cursor: pointer; padding: 2px; border-radius: 3px;" title="Includes: Natural Gas (NG), Gas, Other Gas from Waste">
+            <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
+                <svg width="20" height="20"><rect x="5" y="5" width="10" height="10" fill="#FF4500" stroke="#000" stroke-width="1"/></svg>
+            </span>Natural Gas (361)
+        </div>
+        <div class="legend-item fuel-filter" data-fuel="WAT" style="cursor: pointer; padding: 2px; border-radius: 3px;">
+            <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
+                <svg width="20" height="20"><polygon points="5,2 15,2 18.5,10 15,18 5,18 1.5,10" fill="#00CED1" stroke="#000" stroke-width="1"/></svg>
+            </span>Hydro (298)
+        </div>
+        <div class="legend-item fuel-filter" data-fuel="GEO,WH" style="cursor: pointer; padding: 2px; border-radius: 3px;" title="Includes: Geothermal, Waste Heat">
+            <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
+                <svg width="20" height="20"><rect x="6" y="6" width="8" height="8" fill="#DC143C" stroke="#000" stroke-width="1" transform="rotate(45 10 10)"/></svg>
+            </span>Geothermal (49)
+        </div>
+        <div class="legend-item fuel-filter" data-fuel="NUC" style="cursor: pointer; padding: 2px; border-radius: 3px;">
+            <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
+                <svg width="20" height="20"><polygon points="10,2 17,6 15,16 5,16 3,6" fill="#9370DB" stroke="#000" stroke-width="1"/></svg>
+            </span>Nuclear (2)
+        </div>
+        <div class="legend-item fuel-filter" data-fuel="LFG,WDS,OBG,MSW,AB,OBS" style="cursor: pointer; padding: 2px; border-radius: 3px;" title="Includes: Landfill Gas, Wood, Other Biogas, Municipal Solid Waste, Agricultural Byproduct, Other Biomass Solids">
+            <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
+                <svg width="20" height="20"><rect x="9" y="2" width="2" height="16" fill="#8B4513" stroke="#000" stroke-width="0.5"/><rect x="2" y="9" width="16" height="2" fill="#8B4513" stroke="#000" stroke-width="0.5"/></svg>
+            </span>Biomass (173)
+        </div>
+        <div class="legend-item fuel-filter" data-fuel="BIT,OIL,DFO,SUB,JF,BLQ,PC" style="cursor: pointer; padding: 2px; border-radius: 3px;" title="Includes: Bituminous Coal, Oil, Distillate Fuel Oil, Sub-Bituminous Coal, Jet Fuel, Black Liquor, Petroleum Coke">
+            <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
+                <svg width="20" height="20">
+                    <line x1="4" y1="4" x2="16" y2="16" stroke="#000" stroke-width="2.5"/>
+                    <line x1="16" y1="4" x2="4" y2="16" stroke="#000" stroke-width="2.5"/>
+                    <line x1="4" y1="4" x2="16" y2="16" stroke="#000000" stroke-width="2"/>
+                    <line x1="16" y1="4" x2="4" y2="16" stroke="#000000" stroke-width="2"/>
+                </svg>
+            </span>Coal/Petcoke/Oil (28)
+        </div>
+        <div class="legend-item fuel-filter" data-fuel="BAT,OTH" style="cursor: pointer; padding: 2px; border-radius: 3px;" title="Includes: Battery Storage and Other (BAT, OTH)">
+            <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
+                <svg width="20" height="20"><rect x="3" y="7" width="14" height="8" fill="#FFD700" stroke="#000" stroke-width="1"/><rect x="6" y="5" width="8" height="2" fill="#FFD700" stroke="#000" stroke-width="0.5"/></svg>
+            </span>Battery (13)
+        </div>
+        <div class="legend-item" style="margin-top: 10px;"><span class="legend-color" style="background-color: #808080;"></span>OFF</div>
+        <div class="legend-item"><span class="legend-color" style="background-color: #39FF14;"></span>Active Flow</div>
+        <div class="legend-item"><span class="legend-color" style="background-color: #4A90A4;"></span>Transmission Lines</div>
+        <div class="legend-item">
+            <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
+                <svg width="20" height="20"><circle cx="10" cy="10" r="2" fill="#39FF14" stroke="#000" stroke-width="0.5"/></svg>
+            </span>Substations (4442)
+        </div>
+    </div>
+    <div id="basemap-toggle">
+        <div class="basemap-option active" id="basemap-grayscale" data-layer="grayscale" title="Grayscale Map">
+            <span class="label">Street</span>
+        </div>
+        <div class="basemap-option" id="basemap-satellite" data-layer="satellite" title="Satellite View">
+            <span class="label">Satellite</span>
+        </div>
+        <div class="basemap-option" id="basemap-population" data-layer="population" title="Population Density">
+            <span class="label">Population</span>
+        </div>
+    </div>
+    <div id="map"></div>
+    <script>
+        // Initialize the map centered on California with smooth zoom
+        var map = L.map('map', {
+            zoomSnap: 0.25,      // Allow zoom in 0.25 increments for smoother control
+            zoomDelta: 0.5,      // Zoom in/out by 0.5 levels per click
+            wheelPxPerZoomLevel: 120  // Smoother mouse wheel zoom
+        }).setView([36.7783, -119.4179], 6);
+
+        // Define basemap layers
+        var baseLayers = {
+            grayscale: L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }),
+            satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '&copy; <a href="https://www.esri.com/">Esri</a>'
+            }),
+            population: L.tileLayer('https://tiles.stadiamaps.com/tiles/stamen_toner_lite/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://stamen.com/">Stamen Design</a>'
+            })
+        };
+
+        // Add default grayscale layer
+        var currentBaseLayer = baseLayers.grayscale.addTo(map);
+        currentBaseLayer.getContainer().classList.add('grayscale');
+
+        // URLs for local data
+        const transmissionUrl = './transmission.geojson';
+        const substationsUrl = './substations.geojson'; // No data yet
+        const plantsUrl = './powerplant.geojson';
+
+        // Layers (declared globally)
+        let transmissionLayer = L.layerGroup().addTo(map);
+        let substationsLayer = L.layerGroup().addTo(map);
+        let plantsLayer = L.layerGroup().addTo(map);
+        let customGenerators = L.layerGroup().addTo(map);
+        let staticLinesLayer, animatedLinesLayer;
+
+        // Track active generators
+        let activeGenerators = 0;
+
+        // Network graph data structures
+        let networkGraph = {
+            substations: [], // {id, latlng, name, voltage, connectedLines: [], marker}
+            plants: [],      // {id, latlng, name, fuel, capacity, nearestSubstationId, marker, isOn}
+            lines: [],       // {id, coords, startNodeId, endNodeId, feature, antPath}
+            linesBySubstation: {} // Map of substationId -> [lineIds]
+        };
+
+        // Data loading promises
+        let transmissionData, substationsData, plantsData;
+
+        // Fetch transmission lines
+        let transmissionPromise = fetch(transmissionUrl)
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch transmission lines');
+                return response.json();
+            })
+            .then(data => {
+                transmissionData = data;
+                console.log(`Loaded ${data.features.length} transmission lines`);
+            })
+            .catch(error => {
+                console.error('Error loading transmission lines:', error);
+            });
+
+        // Fetch substations
+        let substationsPromise = fetch(substationsUrl)
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch substations');
+                return response.json();
+            })
+            .then(data => {
+                substationsData = data;
+                console.log(`Loaded ${data.features.length} substations`);
+            })
+            .catch(error => {
+                console.error('Error loading substations:', error);
+            });
+
+        // Fetch power plants
+        let plantsPromise = fetch(plantsUrl)
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch power plants');
+                return response.json();
+            })
+            .then(data => {
+                plantsData = data;
+                console.log(`Loaded ${data.features.length} power plants`);
+            })
+            .catch(error => {
+                console.error('Error loading power plants:', error);
+            });
+
+        // Wait for all data to load, then build network and render
+        Promise.all([transmissionPromise, substationsPromise, plantsPromise])
+            .then(() => {
+                console.log('All data loaded. Building network graph...');
+                try {
+                    buildNetworkGraph();
+                    renderMap();
+                    setupToggleAllButton();
+                    setupLegendInteractivity();
+                    setupBasemapToggle();
+                    console.log('Network graph built and map rendered.');
+                } catch (error) {
+                    console.error('Error building network or rendering map:', error);
+                }
+            });
+
+        // Setup toggle all plants button
+        function setupToggleAllButton() {
+            const toggleBtn = document.getElementById('toggleAllBtn');
+            let allOn = false;
+
+            toggleBtn.addEventListener('click', function() {
+                allOn = !allOn;
+
+                console.log(`Toggling all ${networkGraph.plants.length} plants ${allOn ? 'ON' : 'OFF'}...`);
+
+                // Toggle all plants
+                networkGraph.plants.forEach(plantData => {
+                    if (plantData.isOn !== allOn) {
+                        const color = getFuelColor(plantData.fuel);
+                        const fuelType = (plantData.fuel || 'UNKNOWN').toUpperCase();
+                        const marker = plantData.marker;
+
+                        plantData.isOn = allOn;
+
+                        if (allOn) {
+                            activeGenerators++;
+                            // Update marker color based on type
+                            if (marker instanceof L.CircleMarker) {
+                                marker.setStyle({ fillColor: color });
+                            } else {
+                                marker.setIcon(L.divIcon({
+                                    className: 'custom-div-icon',
+                                    html: getMarkerHTML(fuelType, color),
+                                    iconSize: [12, 12],
+                                    iconAnchor: [6, 6]
+                                }));
+                            }
+                        } else {
+                            activeGenerators--;
+                            // Reset to grey
+                            if (marker instanceof L.CircleMarker) {
+                                marker.setStyle({ fillColor: '#808080' });
+                            } else {
+                                marker.setIcon(L.divIcon({
+                                    className: 'custom-div-icon',
+                                    html: getMarkerHTML(fuelType, '#808080'),
+                                    iconSize: [12, 12],
+                                    iconAnchor: [6, 6]
+                                }));
+                            }
+                        }
+                    }
+                });
+
+                // Update button text and color
+                if (allOn) {
+                    toggleBtn.textContent = 'Turn All Plants OFF';
+                    toggleBtn.style.backgroundColor = '#f44336'; // Red
+                } else {
+                    toggleBtn.textContent = 'Turn All Plants ON';
+                    toggleBtn.style.backgroundColor = '#4CAF50'; // Green
+                }
+
+                // Update flow visualization
+                updateFlow();
+
+                console.log(`All plants toggled ${allOn ? 'ON' : 'OFF'}. Active: ${activeGenerators}`);
+            });
+        }
+
+        // Setup interactive legend functionality
+        function setupLegendInteractivity() {
+            let currentFilter = null; // Track active filter
+            let stateBeforeFilter = {}; // Track plant states before filtering
+
+            // Get all legend filter items
+            const filterItems = document.querySelectorAll('.fuel-filter');
+
+            filterItems.forEach(item => {
+                const fuelTypes = item.getAttribute('data-fuel').split(',');
+
+                // 1. Hover highlighting - fade non-matching plants
+                item.addEventListener('mouseenter', () => {
+                    networkGraph.plants.forEach(plant => {
+                        const plantFuel = (plant.fuel || '').toUpperCase();
+                        const isMatching = fuelTypes.includes(plantFuel);
+
+                        if (!isMatching && plant.marker) {
+                            // Fade non-matching plants
+                            if (plant.marker instanceof L.CircleMarker) {
+                                plant.marker.setStyle({ fillOpacity: 0.2, opacity: 0.2 });
+                            } else {
+                                plant.marker.setOpacity(0.2);
+                            }
+                        }
+                    });
+
+                    // Highlight legend item
+                    item.style.backgroundColor = '#f0f0f0';
+                });
+
+                item.addEventListener('mouseleave', () => {
+                    networkGraph.plants.forEach(plant => {
+                        if (plant.marker) {
+                            // Restore full opacity
+                            if (plant.marker instanceof L.CircleMarker) {
+                                plant.marker.setStyle({ fillOpacity: 0.8, opacity: 1 });
+                            } else {
+                                plant.marker.setOpacity(1);
+                            }
+                        }
+                    });
+
+                    // Remove hover highlight if not actively filtered
+                    if (currentFilter !== item) {
+                        item.style.backgroundColor = '';
+                    }
+                });
+
+                // 2. Click filtering - show only selected fuel type
+                item.addEventListener('click', () => {
+                    if (currentFilter === item) {
+                        // Clicking same filter - restore previous state
+                        restorePreviousState();
+                        currentFilter = null;
+
+                        // Remove all filter highlights
+                        filterItems.forEach(i => i.style.backgroundColor = '');
+
+                        console.log('Filter removed, restored previous state');
+                    } else {
+                        // Save state before filtering (only on first filter)
+                        if (!currentFilter) {
+                            saveCurrentState();
+                        }
+
+                        // Apply new filter
+                        applyFilter(fuelTypes);
+                        currentFilter = item;
+
+                        // Update visual highlighting
+                        filterItems.forEach(i => i.style.backgroundColor = '');
+                        item.style.backgroundColor = '#d0d0d0';
+
+                        console.log(`Filter applied: ${fuelTypes.join(', ')}`);
+                    }
+                });
+            });
+
+            // Save current plant states before filtering
+            function saveCurrentState() {
+                stateBeforeFilter = {};
+                networkGraph.plants.forEach(plant => {
+                    stateBeforeFilter[plant.id] = plant.isOn;
+                });
+            }
+
+            // Apply filter to show only selected fuel types
+            function applyFilter(fuelTypes) {
+                let matchingPlants = 0;
+
+                networkGraph.plants.forEach(plant => {
+                    const plantFuel = (plant.fuel || '').toUpperCase();
+                    const isMatching = fuelTypes.includes(plantFuel);
+
+                    if (isMatching) {
+                        matchingPlants++;
+
+                        // Show matching plant
+                        if (plant.marker) {
+                            if (!map.hasLayer(plant.marker)) {
+                                plantsLayer.addLayer(plant.marker);
+                            }
+                        }
+
+                        // Turn ON matching plant if not already
+                        if (!plant.isOn) {
+                            plant.isOn = true;
+                            activeGenerators++;
+
+                            const color = getFuelColor(plant.fuel);
+                            const fuelType = plantFuel;
+
+                            if (plant.marker instanceof L.CircleMarker) {
+                                plant.marker.setStyle({ fillColor: color });
+                            } else {
+                                plant.marker.setIcon(L.divIcon({
+                                    className: 'custom-div-icon',
+                                    html: getMarkerHTML(fuelType, color),
+                                    iconSize: [12, 12],
+                                    iconAnchor: [6, 6]
+                                }));
+                            }
+                        }
+                    } else {
+                        // Hide non-matching plant
+                        if (plant.marker && map.hasLayer(plant.marker)) {
+                            plantsLayer.removeLayer(plant.marker);
+                        }
+
+                        // Turn OFF non-matching plant if it was on
+                        if (plant.isOn) {
+                            plant.isOn = false;
+                            activeGenerators--;
+                        }
+                    }
+                });
+
+                // Update flow visualization with filtered plants
+                updateFlow();
+
+                console.log(`${matchingPlants} plants matching filter, ${activeGenerators} active`);
+            }
+
+            // Restore plant states from before filtering
+            function restorePreviousState() {
+                networkGraph.plants.forEach(plant => {
+                    const previousState = stateBeforeFilter[plant.id];
+
+                    // Restore marker visibility
+                    if (plant.marker && !map.hasLayer(plant.marker)) {
+                        plantsLayer.addLayer(plant.marker);
+                    }
+
+                    // Restore ON/OFF state
+                    if (previousState !== undefined && plant.isOn !== previousState) {
+                        const color = getFuelColor(plant.fuel);
+                        const fuelType = (plant.fuel || 'UNKNOWN').toUpperCase();
+
+                        plant.isOn = previousState;
+
+                        if (previousState) {
+                            activeGenerators++;
+
+                            // Turn ON
+                            if (plant.marker instanceof L.CircleMarker) {
+                                plant.marker.setStyle({ fillColor: color });
+                            } else {
+                                plant.marker.setIcon(L.divIcon({
+                                    className: 'custom-div-icon',
+                                    html: getMarkerHTML(fuelType, color),
+                                    iconSize: [12, 12],
+                                    iconAnchor: [6, 6]
+                                }));
+                            }
+                        } else {
+                            activeGenerators--;
+
+                            // Turn OFF
+                            if (plant.marker instanceof L.CircleMarker) {
+                                plant.marker.setStyle({ fillColor: '#808080' });
+                            } else {
+                                plant.marker.setIcon(L.divIcon({
+                                    className: 'custom-div-icon',
+                                    html: getMarkerHTML(fuelType, '#808080'),
+                                    iconSize: [12, 12],
+                                    iconAnchor: [6, 6]
+                                }));
+                            }
+                        }
+                    }
+                });
+
+                // Update flow visualization
+                updateFlow();
+
+                // Clear saved state
+                stateBeforeFilter = {};
+            }
+        }
+
+        // Setup basemap toggle functionality
+        function setupBasemapToggle() {
+            const basemapOptions = document.querySelectorAll('.basemap-option');
+
+            basemapOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    const layerType = option.getAttribute('data-layer');
+
+                    // Remove active class from all options
+                    basemapOptions.forEach(opt => opt.classList.remove('active'));
+
+                    // Add active class to clicked option
+                    option.classList.add('active');
+
+                    // Remove current base layer
+                    map.removeLayer(currentBaseLayer);
+
+                    // Remove grayscale filter if present
+                    if (currentBaseLayer.getContainer()) {
+                        currentBaseLayer.getContainer().classList.remove('grayscale');
+                    }
+
+                    // Add new base layer
+                    currentBaseLayer = baseLayers[layerType].addTo(map);
+
+                    // Apply grayscale filter only to grayscale layer
+                    if (layerType === 'grayscale') {
+                        currentBaseLayer.getContainer().classList.add('grayscale');
+                    }
+
+                    // Move base layer to back (behind all other layers)
+                    currentBaseLayer.bringToBack();
+
+                    console.log(`Switched to ${layerType} basemap`);
+                });
+            });
+        }
+
+        // Removed custom generator functionality - we're using real power plant data
+
+        // Custom triangle marker
+        L.TriangleMarker = L.CircleMarker.extend({
+            options: { rotation: 0 }
+        });
+        L.triangleMarker = function (latlng, options) {
+            return new L.TriangleMarker(latlng, options);
+        };
+
+        // Build network graph from loaded data
+        function buildNetworkGraph() {
+            const TOLERANCE = 0.01; // ~1km tolerance for matching line endpoints to substations
+
+            // 1. Build substations nodes
+            substationsData.features.forEach((feature, idx) => {
+                const props = feature.properties;
+                const coords = feature.geometry.coordinates;
+
+                // Validate coordinates
+                if (!coords || coords.length < 2 ||
+                    typeof coords[0] !== 'number' || typeof coords[1] !== 'number' ||
+                    isNaN(coords[0]) || isNaN(coords[1])) {
+                    console.warn(`Invalid substation coordinates at index ${idx}:`, coords);
+                    return;
+                }
+
+                networkGraph.substations.push({
+                    id: `sub_${idx}`,
+                    latlng: [coords[1], coords[0]], // Leaflet uses [lat, lng]
+                    name: props.Name || 'Unknown',
+                    voltage: props.Max_Voltage || 0,
+                    connectedLines: [],
+                    feature: feature
+                });
+            });
+
+            // Create substation points collection once (outside the loop for efficiency)
+            const substationPoints = turf.featureCollection(
+                networkGraph.substations.map(sub =>
+                    turf.point([sub.latlng[1], sub.latlng[0]], {id: sub.id})
+                )
+            );
+
+            if (substationPoints.features.length === 0) {
+                console.error('No valid substations found!');
+                return;
+            }
+
+            // 2. Build transmission lines and connect to substations
+            transmissionData.features.forEach((feature, idx) => {
+                const coords = feature.geometry.coordinates;
+                if (!coords || coords.length < 2) return;
+
+                // Handle MultiLineString (nested arrays) - flatten to first linestring
+                let actualCoords = coords;
+                if (Array.isArray(coords[0][0])) {
+                    // This is a MultiLineString - use the first line
+                    actualCoords = coords[0];
+                    if (!actualCoords || actualCoords.length < 2) return;
+                }
+
+                // Validate start and end coordinates
+                const startCoord = actualCoords[0];
+                const endCoord = actualCoords[actualCoords.length - 1];
+
+                if (!startCoord || startCoord.length < 2 ||
+                    typeof startCoord[0] !== 'number' || typeof startCoord[1] !== 'number' ||
+                    isNaN(startCoord[0]) || isNaN(startCoord[1])) {
+                    console.warn(`Invalid start coord for line ${idx}:`, startCoord);
+                    return;
+                }
+
+                if (!endCoord || endCoord.length < 2 ||
+                    typeof endCoord[0] !== 'number' || typeof endCoord[1] !== 'number' ||
+                    isNaN(endCoord[0]) || isNaN(endCoord[1])) {
+                    console.warn(`Invalid end coord for line ${idx}:`, endCoord);
+                    return;
+                }
+
+                // Get start and end points
+                const startPoint = turf.point(startCoord);
+                const endPoint = turf.point(endCoord);
+
+                // Find nearest substations to start and end
+                const nearestStart = turf.nearestPoint(startPoint, substationPoints);
+                const nearestEnd = turf.nearestPoint(endPoint, substationPoints);
+
+                // Only connect if within tolerance
+                const distStart = turf.distance(startPoint, nearestStart, {units: 'kilometers'});
+                const distEnd = turf.distance(endPoint, nearestEnd, {units: 'kilometers'});
+
+                let startNodeId = null, endNodeId = null;
+
+                if (distStart < TOLERANCE) {
+                    startNodeId = nearestStart.properties.id;
+                }
+                if (distEnd < TOLERANCE) {
+                    endNodeId = nearestEnd.properties.id;
+                }
+
+                const lineId = `line_${idx}`;
+                networkGraph.lines.push({
+                    id: lineId,
+                    coords: actualCoords, // Use actualCoords instead of coords
+                    startNodeId: startNodeId,
+                    endNodeId: endNodeId,
+                    feature: feature
+                });
+
+                // Add line to substations' connected lines
+                if (startNodeId) {
+                    const sub = networkGraph.substations.find(s => s.id === startNodeId);
+                    if (sub) sub.connectedLines.push(lineId);
+                    if (!networkGraph.linesBySubstation[startNodeId]) {
+                        networkGraph.linesBySubstation[startNodeId] = [];
+                    }
+                    networkGraph.linesBySubstation[startNodeId].push(lineId);
+                }
+                if (endNodeId && endNodeId !== startNodeId) {
+                    const sub = networkGraph.substations.find(s => s.id === endNodeId);
+                    if (sub) sub.connectedLines.push(lineId);
+                    if (!networkGraph.linesBySubstation[endNodeId]) {
+                        networkGraph.linesBySubstation[endNodeId] = [];
+                    }
+                    networkGraph.linesBySubstation[endNodeId].push(lineId);
+                }
+            });
+
+            // 3. Connect plants to nearest substations
+            plantsData.features.forEach((feature, idx) => {
+                const props = feature.properties;
+                const coords = feature.geometry.coordinates;
+
+                // Validate coordinates
+                if (!coords || coords.length < 2 ||
+                    typeof coords[0] !== 'number' || typeof coords[1] !== 'number' ||
+                    isNaN(coords[0]) || isNaN(coords[1])) {
+                    console.warn(`Invalid plant coordinates at index ${idx}:`, coords);
+                    return;
+                }
+
+                const plantPoint = turf.point(coords);
+
+                // Reuse substationPoints already created above
+                const nearest = turf.nearestPoint(plantPoint, substationPoints);
+
+                networkGraph.plants.push({
+                    id: `plant_${idx}`,
+                    latlng: [coords[1], coords[0]],
+                    name: props.PlantName || 'Unknown',
+                    fuel: props.PriEnergySource || 'UNKNOWN',
+                    capacity: props.Capacity_Latest || 0,
+                    nearestSubstationId: nearest.properties.id,
+                    feature: feature,
+                    isOn: false
+                });
+            });
+
+            console.log(`Network graph built: ${networkGraph.substations.length} substations, ${networkGraph.plants.length} plants, ${networkGraph.lines.length} lines`);
+
+            // Log connectivity stats
+            const connectedLines = networkGraph.lines.filter(l => l.startNodeId || l.endNodeId).length;
+            console.log(`${connectedLines} lines connected to substations (${(connectedLines/networkGraph.lines.length*100).toFixed(1)}%)`);
+        }
+
+        // BFS to find all lines connected to a substation
+        function getConnectedLines(startSubstationId) {
+            const visited = new Set();
+            const connectedLineIds = new Set();
+            const queue = [startSubstationId];
+
+            while (queue.length > 0) {
+                const currentSubId = queue.shift();
+
+                if (visited.has(currentSubId)) continue;
+                visited.add(currentSubId);
+
+                // Get all lines connected to this substation
+                const lines = networkGraph.linesBySubstation[currentSubId] || [];
+
+                lines.forEach(lineId => {
+                    connectedLineIds.add(lineId);
+
+                    // Find the line and get the other end substation
+                    const line = networkGraph.lines.find(l => l.id === lineId);
+                    if (!line) return;
+
+                    // Add the other end to the queue
+                    if (line.startNodeId === currentSubId && line.endNodeId) {
+                        if (!visited.has(line.endNodeId)) {
+                            queue.push(line.endNodeId);
+                        }
+                    } else if (line.endNodeId === currentSubId && line.startNodeId) {
+                        if (!visited.has(line.startNodeId)) {
+                            queue.push(line.startNodeId);
+                        }
+                    }
+                });
+            }
+
+            return Array.from(connectedLineIds);
+        }
+
+        // Generate HTML for plant marker based on fuel type and color
+        function getMarkerHTML(fuelType, color) {
+            switch (fuelType.toUpperCase()) {
+                case 'WND':
+                case 'WIND':
+                    return `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><polygon points="6,2 11,10 1,10" fill="${color}" stroke="#000" stroke-width="1"/></svg>`;
+
+                case 'NG':
+                case 'GAS':
+                case 'OGW':
+                case 'OG':
+                    return `<div style="width: 10px; height: 10px; background-color: ${color}; border: 1px solid #000; margin-left: -5px; margin-top: -5px;"></div>`;
+
+                case 'WAT':
+                    return `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><polygon points="3,1 9,1 11.5,6 9,11 3,11 0.5,6" fill="${color}" stroke="#000" stroke-width="1"/></svg>`;
+
+                case 'GEO':
+                case 'WH':
+                    return `<div style="width: 8px; height: 8px; background-color: ${color}; border: 1px solid #000; transform: rotate(45deg); margin-left: -4px; margin-top: -4px;"></div>`;
+
+                case 'NUC':
+                    return `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><polygon points="6,1 11,4 9,10 3,10 1,4" fill="${color}" stroke="#000" stroke-width="1"/></svg>`;
+
+                case 'LFG':
+                case 'WDS':
+                case 'OBG':
+                case 'MSW':
+                case 'AB':
+                case 'OBS':
+                    return `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><rect x="5" y="1" width="2" height="10" fill="${color}" stroke="#000" stroke-width="0.5"/><rect x="1" y="5" width="10" height="2" fill="${color}" stroke="#000" stroke-width="0.5"/></svg>`;
+
+                case 'BIT':
+                case 'OIL':
+                case 'DFO':
+                case 'SUB':
+                case 'JF':
+                case 'BLQ':
+                case 'PC': // Petroleum Coke - grouped with Coal/Oil
+                    return `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><line x1="2" y1="2" x2="10" y2="10" stroke="#000" stroke-width="2"/><line x1="10" y1="2" x2="2" y2="10" stroke="#000" stroke-width="2"/><line x1="2" y1="2" x2="10" y2="10" stroke="${color}" stroke-width="1.5"/><line x1="10" y1="2" x2="2" y2="10" stroke="${color}" stroke-width="1.5"/></svg>`;
+
+                case 'BAT':
+                case 'OTH': // Vaca Dixon Battery Storage is marked as OTH
+                    return `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><rect x="2" y="4" width="8" height="5" fill="${color}" stroke="#000" stroke-width="1"/><rect x="4" y="3" width="4" height="1" fill="${color}" stroke="#000" stroke-width="0.5"/></svg>`;
+
+                default:
+                    return `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><polygon points="4,1 8,1 11,4 11,8 8,11 4,11 1,8 1,4" fill="${color}" stroke="#000" stroke-width="1"/></svg>`;
+            }
+        }
+
+        // Get fuel color for plant
+        function getFuelColor(fuel) {
+            switch ((fuel || 'UNKNOWN').toUpperCase()) {
+                case 'SUN': return '#FFD700'; // Solar - Gold
+                case 'WND': return '#1E90FF'; // Wind - Dodger Blue
+                case 'WIND': return '#1E90FF'; // Wind alternate
+                case 'NG': return '#FF4500'; // Natural Gas - Orange-Red
+                case 'GAS': return '#FF4500'; // Natural Gas alternate
+                case 'WAT': return '#00CED1'; // Water/Hydro - Dark Turquoise
+                case 'LFG': return '#8B4513'; // Landfill Gas - Saddle Brown
+                case 'GEO': return '#DC143C'; // Geothermal - Crimson
+                case 'WDS': return '#8B4513'; // Wood/Biomass - Saddle Brown
+                case 'OBG': return '#8B4513'; // Other Biogas - Saddle Brown
+                case 'BAT': return '#FFD700'; // Battery Storage - Gold (energy storage)
+                case 'OTH': return '#FFD700'; // Other (Vaca Dixon Battery) - Gold
+                case 'BIT': return '#000000'; // Bituminous Coal - Black
+                case 'PC': return '#000000'; // Petroleum Coke - Black (grouped with Coal/Oil)
+                case 'OGW': return '#FF4500'; // Other Gas - Orange-Red
+                case 'OIL': return '#000000'; // Oil - Black
+                case 'DFO': return '#000000'; // Distillate Fuel Oil - Black
+                case 'MSW': return '#8B4513'; // Municipal Solid Waste - Saddle Brown
+                case 'WH': return '#DC143C'; // Waste Heat - Crimson
+                case 'NUC': return '#9370DB'; // Nuclear - Medium Purple
+                case 'AB': return '#8B4513'; // Agricultural Byproduct - Saddle Brown
+                case 'SUB': return '#000000'; // Sub-Bituminous Coal - Black
+                case 'JF': return '#000000'; // Jet Fuel - Black
+                case 'BLQ': return '#000000'; // Black Liquor - Black
+                case 'OBS': return '#8B4513'; // Other Biomass Solids - Saddle Brown
+                case 'OG': return '#FF4500'; // Other Gas - Orange-Red
+                default: return '#FF1493'; // Unknown - Deep Pink
+            }
+        }
+
+        // Render map with all layers
+        function renderMap() {
+            // Initialize layers
+            staticLinesLayer = L.layerGroup().addTo(map);
+            animatedLinesLayer = L.layerGroup();
+
+            // Render transmission lines (visible but subtle initially)
+            networkGraph.lines.forEach(lineData => {
+                const coords = lineData.coords.map(c => [c[1], c[0]]); // Convert to [lat, lng]
+
+                // Static line in subtle cyan/teal color (visible on greyscale)
+                const staticLine = L.polyline(coords, {
+                    color: '#4A90A4',  // Muted teal-blue that shows on greyscale
+                    weight: 2,
+                    opacity: 0.6
+                });
+                staticLine.lineId = lineData.id;
+                staticLinesLayer.addLayer(staticLine);
+
+                // Pre-create animated line (hidden initially)
+                const antPath = L.polyline.antPath(coords, {
+                    color: '#39FF14', // Neon green flow
+                    weight: 3,
+                    opacity: 0.8,
+                    delay: 500,
+                    dashArray: [10, 20],
+                    pulseColor: '#FFFFFF',
+                    hardwareAccelerated: true
+                });
+                antPath.lineId = lineData.id;
+                lineData.antPath = antPath;
+            });
+
+            // Render substations (smaller neon green circles)
+            networkGraph.substations.forEach(subData => {
+                const marker = L.circleMarker(subData.latlng, {
+                    radius: 2,  // Reduced from 4 to 2
+                    fillColor: '#39FF14', // Neon green
+                    color: '#000',
+                    weight: 0.5,  // Thinner border
+                    opacity: 0.8,
+                    fillOpacity: 0.7
+                });
+
+                const props = subData.feature.properties;
+                const name = props.Name || 'Unknown Substation';
+                const voltage = props.Max_Voltage || 'Unknown';
+                const county = props.COUNTY || 'Unknown';
+
+                // Only bind tooltip (shows on hover) - no popup needed
+                marker.bindTooltip(`<b>${name}</b> Substation<br>${voltage} kV<br>${county}`, {
+                    direction: 'top',
+                    offset: [0, -5],
+                    opacity: 0.9
+                });
+
+                substationsLayer.addLayer(marker);
+                subData.marker = marker;
+            });
+
+            // Render power plants with different shapes based on fuel type (all same small size)
+            networkGraph.plants.forEach(plantData => {
+                const color = getFuelColor(plantData.fuel);
+                const fuelType = (plantData.fuel || 'UNKNOWN').toUpperCase();
+
+                let marker;
+
+                // Create different shapes based on fuel type (all size 12px)
+                switch(fuelType) {
+                    case 'SUN': // Solar - Circle
+                        marker = L.circleMarker(plantData.latlng, {
+                            radius: 6,
+                            fillColor: '#808080',
+                            color: '#000',
+                            weight: 1,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        });
+                        break;
+
+                    case 'WND': // Wind - Triangle pointing up (SVG for consistent border)
+                    case 'WIND':
+                        marker = L.marker(plantData.latlng, {
+                            icon: L.divIcon({
+                                className: 'custom-div-icon',
+                                html: `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><polygon points="6,2 11,10 1,10" fill="#808080" stroke="#000" stroke-width="1"/></svg>`,
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
+                            })
+                        });
+                        break;
+
+                    case 'NG': // Natural Gas - Square
+                    case 'GAS':
+                    case 'OGW':
+                    case 'OG':
+                        marker = L.marker(plantData.latlng, {
+                            icon: L.divIcon({
+                                className: 'custom-div-icon',
+                                html: `<div style="width: 10px; height: 10px; background-color: #808080; border: 1px solid #000; margin-left: -5px; margin-top: -5px;"></div>`,
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
+                            })
+                        });
+                        break;
+
+                    case 'WAT': // Hydro - Hexagon with border
+                        marker = L.marker(plantData.latlng, {
+                            icon: L.divIcon({
+                                className: 'custom-div-icon',
+                                html: `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><polygon points="3,1 9,1 11.5,6 9,11 3,11 0.5,6" fill="#808080" stroke="#000" stroke-width="1"/></svg>`,
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
+                            })
+                        });
+                        break;
+
+                    case 'GEO': // Geothermal - Diamond with border
+                    case 'WH':
+                        marker = L.marker(plantData.latlng, {
+                            icon: L.divIcon({
+                                className: 'custom-div-icon',
+                                html: `<div style="width: 8px; height: 8px; background-color: #808080; border: 1px solid #000; transform: rotate(45deg); margin-left: -4px; margin-top: -4px;"></div>`,
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
+                            })
+                        });
+                        break;
+
+                    case 'PC': // Petroleum Coke - Pentagon with border
+                    case 'NUC':
+                        marker = L.marker(plantData.latlng, {
+                            icon: L.divIcon({
+                                className: 'custom-div-icon',
+                                html: `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><polygon points="6,1 11,4 9,10 3,10 1,4" fill="#808080" stroke="#000" stroke-width="1"/></svg>`,
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
+                            })
+                        });
+                        break;
+
+                    case 'LFG': // Landfill Gas - Plus sign
+                    case 'WDS':
+                    case 'OBG':
+                    case 'MSW':
+                    case 'AB':
+                    case 'OBS':
+                        marker = L.marker(plantData.latlng, {
+                            icon: L.divIcon({
+                                className: 'custom-div-icon',
+                                html: `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><rect x="5" y="1" width="2" height="10" fill="#808080" stroke="#000" stroke-width="0.5"/><rect x="1" y="5" width="10" height="2" fill="#808080" stroke="#000" stroke-width="0.5"/></svg>`,
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
+                            })
+                        });
+                        break;
+
+                    case 'BIT': // Coal/Oil - X shape
+                    case 'OIL':
+                    case 'DFO':
+                    case 'SUB':
+                    case 'JF':
+                    case 'BLQ':
+                        marker = L.marker(plantData.latlng, {
+                            icon: L.divIcon({
+                                className: 'custom-div-icon',
+                                html: `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><line x1="2" y1="2" x2="10" y2="10" stroke="#000" stroke-width="2"/><line x1="10" y1="2" x2="2" y2="10" stroke="#000" stroke-width="2"/><line x1="2" y1="2" x2="10" y2="10" stroke="#808080" stroke-width="1.5"/><line x1="10" y1="2" x2="2" y2="10" stroke="#808080" stroke-width="1.5"/></svg>`,
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
+                            })
+                        });
+                        break;
+
+                    case 'BAT': // Battery - Rectangle with border
+                        marker = L.marker(plantData.latlng, {
+                            icon: L.divIcon({
+                                className: 'custom-div-icon',
+                                html: `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><rect x="2" y="4" width="8" height="5" fill="#808080" stroke="#000" stroke-width="1"/><rect x="4" y="3" width="4" height="1" fill="#808080" stroke="#000" stroke-width="0.5"/></svg>`,
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
+                            })
+                        });
+                        break;
+
+                    default: // Other - Octagon with border
+                        marker = L.marker(plantData.latlng, {
+                            icon: L.divIcon({
+                                className: 'custom-div-icon',
+                                html: `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><polygon points="4,1 8,1 11,4 11,8 8,11 4,11 1,8 1,4" fill="#808080" stroke="#000" stroke-width="1"/></svg>`,
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
+                            })
+                        });
+                }
+
+                const name = plantData.name;
+                const fuel = plantData.fuel;
+                const capacity = plantData.capacity;
+
+                // Only bind tooltip (shows on hover) - no popup needed
+                marker.bindTooltip(`<b>${name}</b><br>Type: ${fuel}<br>Capacity: ${capacity} MW<br><i>Click to turn ON/OFF</i>`, {
+                    direction: 'top',
+                    offset: [0, -10],
+                    opacity: 0.9
+                });
+
+                // Click handler to toggle plant on/off
+                marker.on('click', function(e) {
+                    L.DomEvent.stopPropagation(e); // Prevent map click
+
+                    // Close any open tooltips to prevent lingering
+                    marker.closeTooltip();
+
+                    plantData.isOn = !plantData.isOn;
+
+                    if (plantData.isOn) {
+                        activeGenerators++;
+
+                        // Update marker color based on type
+                        if (marker instanceof L.CircleMarker) {
+                            marker.setStyle({ fillColor: color });
+                        } else {
+                            marker.setIcon(L.divIcon({
+                                className: 'custom-div-icon',
+                                html: getMarkerHTML(fuelType, color),
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
+                            }));
+                        }
+                    } else {
+                        activeGenerators--;
+
+                        // Reset to grey
+                        if (marker instanceof L.CircleMarker) {
+                            marker.setStyle({ fillColor: '#808080' });
+                        } else {
+                            marker.setIcon(L.divIcon({
+                                className: 'custom-div-icon',
+                                html: getMarkerHTML(fuelType, '#808080'),
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
+                            }));
+                        }
+                    }
+
+                    updateFlow();
+                });
+
+                plantsLayer.addLayer(marker);
+                plantData.marker = marker;
+            });
+
+            console.log('Map rendered with all layers.');
+
+            // Fit map to show all data points
+            fitMapToData();
+        }
+
+        // Fit map bounds to show all California data
+        function fitMapToData() {
+            try {
+                // Calculate bounds manually from all coordinates
+                let minLat = Infinity, maxLat = -Infinity;
+                let minLng = Infinity, maxLng = -Infinity;
+
+                // Get bounds from substations
+                networkGraph.substations.forEach(sub => {
+                    const lat = sub.latlng[0];
+                    const lng = sub.latlng[1];
+                    if (lat < minLat) minLat = lat;
+                    if (lat > maxLat) maxLat = lat;
+                    if (lng < minLng) minLng = lng;
+                    if (lng > maxLng) maxLng = lng;
+                });
+
+                // Get bounds from plants
+                networkGraph.plants.forEach(plant => {
+                    const lat = plant.latlng[0];
+                    const lng = plant.latlng[1];
+                    if (lat < minLat) minLat = lat;
+                    if (lat > maxLat) maxLat = lat;
+                    if (lng < minLng) minLng = lng;
+                    if (lng > maxLng) maxLng = lng;
+                });
+
+                // Create bounds
+                const bounds = [[minLat, minLng], [maxLat, maxLng]];
+
+                // Fit map to bounds with some padding
+                map.fitBounds(bounds, {
+                    padding: [50, 50],  // 50px padding on all sides
+                    maxZoom: 7          // Don't zoom in too much
+                });
+
+                console.log('Map fitted to data bounds:', bounds);
+            } catch (error) {
+                console.error('Error fitting map to bounds:', error);
+                // Fallback to California center
+                map.setView([36.7783, -119.4179], 6);
+            }
+        }
+
+        // Updated function to show flow only on connected lines
+        function updateFlow() {
+            // Update counter display
+            document.getElementById('activeCount').textContent = activeGenerators;
+
+            // Clear animated layer
+            animatedLinesLayer.clearLayers();
+
+            if (activeGenerators > 0) {
+                // Find all active plants
+                const activePlants = networkGraph.plants.filter(p => p.isOn);
+
+                // Collect all connected line IDs from all active plants
+                const allConnectedLineIds = new Set();
+
+                activePlants.forEach(plant => {
+                    const substationId = plant.nearestSubstationId;
+                    if (substationId) {
+                        const connectedLines = getConnectedLines(substationId);
+                        connectedLines.forEach(lineId => allConnectedLineIds.add(lineId));
+                    }
+                });
+
+                console.log(`${activePlants.length} active plants, ${allConnectedLineIds.size} lines to animate`);
+
+                // Update static lines: hide animated ones, show others in teal-blue
+                staticLinesLayer.eachLayer(function(layer) {
+                    if (allConnectedLineIds.has(layer.lineId)) {
+                        // Hide this static line (will be replaced by animated version)
+                        layer.setStyle({ opacity: 0 });
+                    } else {
+                        // Show this static line in teal-blue
+                        layer.setStyle({
+                            color: '#4A90A4',
+                            opacity: 0.6
+                        });
+                    }
+                });
+
+                // Add animated ant paths for connected lines
+                allConnectedLineIds.forEach(lineId => {
+                    const lineData = networkGraph.lines.find(l => l.id === lineId);
+                    if (lineData && lineData.antPath) {
+                        animatedLinesLayer.addLayer(lineData.antPath);
+                    }
+                });
+
+                // Show animated layer (static layer stays visible)
+                if (!map.hasLayer(animatedLinesLayer)) {
+                    animatedLinesLayer.addTo(map);
+                }
+            } else {
+                // No active generators - restore all static lines to teal-blue
+                staticLinesLayer.eachLayer(function(layer) {
+                    layer.setStyle({
+                        color: '#4A90A4',
+                        opacity: 0.6
+                    });
+                });
+
+                // Remove animated layer
+                if (map.hasLayer(animatedLinesLayer)) {
+                    map.removeLayer(animatedLinesLayer);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
+
