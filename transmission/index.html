@@ -97,42 +97,42 @@
     </div>
     <div id="legend">
         <strong>Power Plant Types:</strong>
-        <div class="legend-item">
+        <div class="legend-item fuel-filter" data-fuel="SUN" style="cursor: pointer; padding: 2px; border-radius: 3px;">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
                 <svg width="20" height="20"><circle cx="10" cy="10" r="5" fill="#FFD700" stroke="#000" stroke-width="1"/></svg>
             </span>Solar (986)
         </div>
-        <div class="legend-item">
+        <div class="legend-item fuel-filter" data-fuel="WND" style="cursor: pointer; padding: 2px; border-radius: 3px;">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
                 <svg width="20" height="20"><polygon points="10,5 16,15 4,15" fill="#1E90FF" stroke="#000" stroke-width="1"/></svg>
             </span>Wind (163)
         </div>
-        <div class="legend-item">
+        <div class="legend-item fuel-filter" data-fuel="NG,GAS,OGW,OG" style="cursor: pointer; padding: 2px; border-radius: 3px;" title="Includes: Natural Gas (NG), Gas, Other Gas from Waste">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
                 <svg width="20" height="20"><rect x="5" y="5" width="10" height="10" fill="#FF4500" stroke="#000" stroke-width="1"/></svg>
             </span>Natural Gas (361)
         </div>
-        <div class="legend-item">
+        <div class="legend-item fuel-filter" data-fuel="WAT" style="cursor: pointer; padding: 2px; border-radius: 3px;">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
                 <svg width="20" height="20"><polygon points="5,2 15,2 18.5,10 15,18 5,18 1.5,10" fill="#00CED1" stroke="#000" stroke-width="1"/></svg>
             </span>Hydro (298)
         </div>
-        <div class="legend-item">
+        <div class="legend-item fuel-filter" data-fuel="GEO,WH" style="cursor: pointer; padding: 2px; border-radius: 3px;" title="Includes: Geothermal, Waste Heat">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
                 <svg width="20" height="20"><rect x="6" y="6" width="8" height="8" fill="#DC143C" stroke="#000" stroke-width="1" transform="rotate(45 10 10)"/></svg>
             </span>Geothermal (49)
         </div>
-        <div class="legend-item">
+        <div class="legend-item fuel-filter" data-fuel="PC,NUC" style="cursor: pointer; padding: 2px; border-radius: 3px;" title="Includes: Petroleum Coke, Nuclear">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
                 <svg width="20" height="20"><polygon points="10,2 17,6 15,16 5,16 3,6" fill="#9370DB" stroke="#000" stroke-width="1"/></svg>
             </span>Nuclear/PC (11)
         </div>
-        <div class="legend-item">
+        <div class="legend-item fuel-filter" data-fuel="LFG,WDS,OBG,MSW,AB,OBS" style="cursor: pointer; padding: 2px; border-radius: 3px;" title="Includes: Landfill Gas, Wood, Other Biogas, Municipal Solid Waste, Agricultural Byproduct, Other Biomass Solids">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
                 <svg width="20" height="20"><rect x="9" y="2" width="2" height="16" fill="#8B4513" stroke="#000" stroke-width="0.5"/><rect x="2" y="9" width="16" height="2" fill="#8B4513" stroke="#000" stroke-width="0.5"/></svg>
             </span>Biomass (173)
         </div>
-        <div class="legend-item">
+        <div class="legend-item fuel-filter" data-fuel="BIT,OIL,DFO,SUB,JF,BLQ" style="cursor: pointer; padding: 2px; border-radius: 3px;" title="Includes: Bituminous Coal, Oil, Distillate Fuel Oil, Sub-Bituminous Coal, Jet Fuel, Black Liquor">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
                 <svg width="20" height="20">
                     <line x1="4" y1="4" x2="16" y2="16" stroke="#000" stroke-width="2.5"/>
@@ -142,12 +142,12 @@
                 </svg>
             </span>Coal/Oil (27)
         </div>
-        <div class="legend-item">
+        <div class="legend-item fuel-filter" data-fuel="BAT" style="cursor: pointer; padding: 2px; border-radius: 3px;">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
                 <svg width="20" height="20"><rect x="3" y="7" width="14" height="8" fill="#FFD700" stroke="#000" stroke-width="1"/><rect x="6" y="5" width="8" height="2" fill="#FFD700" stroke="#000" stroke-width="0.5"/></svg>
             </span>Battery (12)
         </div>
-        <div class="legend-item">
+        <div class="legend-item fuel-filter" data-fuel="OTH" style="cursor: pointer; padding: 2px; border-radius: 3px;" title="Includes: Other miscellaneous fuel types">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
                 <svg width="20" height="20"><polygon points="7,2 13,2 17,7 17,13 13,18 7,18 3,13 3,7" fill="#FF1493" stroke="#000" stroke-width="1"/></svg>
             </span>Others (19)
@@ -252,6 +252,7 @@
                     buildNetworkGraph();
                     renderMap();
                     setupToggleAllButton();
+                    setupLegendInteractivity();
                     console.log('Network graph built and map rendered.');
                 } catch (error) {
                     console.error('Error building network or rendering map:', error);
@@ -321,6 +322,207 @@
 
                 console.log(`All plants toggled ${allOn ? 'ON' : 'OFF'}. Active: ${activeGenerators}`);
             });
+        }
+
+        // Setup interactive legend functionality
+        function setupLegendInteractivity() {
+            let currentFilter = null; // Track active filter
+            let stateBeforeFilter = {}; // Track plant states before filtering
+
+            // Get all legend filter items
+            const filterItems = document.querySelectorAll('.fuel-filter');
+
+            filterItems.forEach(item => {
+                const fuelTypes = item.getAttribute('data-fuel').split(',');
+
+                // 1. Hover highlighting - fade non-matching plants
+                item.addEventListener('mouseenter', () => {
+                    networkGraph.plants.forEach(plant => {
+                        const plantFuel = (plant.fuel || '').toUpperCase();
+                        const isMatching = fuelTypes.includes(plantFuel);
+
+                        if (!isMatching && plant.marker) {
+                            // Fade non-matching plants
+                            if (plant.marker instanceof L.CircleMarker) {
+                                plant.marker.setStyle({ fillOpacity: 0.2, opacity: 0.2 });
+                            } else {
+                                plant.marker.setOpacity(0.2);
+                            }
+                        }
+                    });
+
+                    // Highlight legend item
+                    item.style.backgroundColor = '#f0f0f0';
+                });
+
+                item.addEventListener('mouseleave', () => {
+                    networkGraph.plants.forEach(plant => {
+                        if (plant.marker) {
+                            // Restore full opacity
+                            if (plant.marker instanceof L.CircleMarker) {
+                                plant.marker.setStyle({ fillOpacity: 0.8, opacity: 1 });
+                            } else {
+                                plant.marker.setOpacity(1);
+                            }
+                        }
+                    });
+
+                    // Remove hover highlight if not actively filtered
+                    if (currentFilter !== item) {
+                        item.style.backgroundColor = '';
+                    }
+                });
+
+                // 2. Click filtering - show only selected fuel type
+                item.addEventListener('click', () => {
+                    if (currentFilter === item) {
+                        // Clicking same filter - restore previous state
+                        restorePreviousState();
+                        currentFilter = null;
+
+                        // Remove all filter highlights
+                        filterItems.forEach(i => i.style.backgroundColor = '');
+
+                        console.log('Filter removed, restored previous state');
+                    } else {
+                        // Save state before filtering (only on first filter)
+                        if (!currentFilter) {
+                            saveCurrentState();
+                        }
+
+                        // Apply new filter
+                        applyFilter(fuelTypes);
+                        currentFilter = item;
+
+                        // Update visual highlighting
+                        filterItems.forEach(i => i.style.backgroundColor = '');
+                        item.style.backgroundColor = '#d0d0d0';
+
+                        console.log(`Filter applied: ${fuelTypes.join(', ')}`);
+                    }
+                });
+            });
+
+            // Save current plant states before filtering
+            function saveCurrentState() {
+                stateBeforeFilter = {};
+                networkGraph.plants.forEach(plant => {
+                    stateBeforeFilter[plant.id] = plant.isOn;
+                });
+            }
+
+            // Apply filter to show only selected fuel types
+            function applyFilter(fuelTypes) {
+                let matchingPlants = 0;
+
+                networkGraph.plants.forEach(plant => {
+                    const plantFuel = (plant.fuel || '').toUpperCase();
+                    const isMatching = fuelTypes.includes(plantFuel);
+
+                    if (isMatching) {
+                        matchingPlants++;
+
+                        // Show matching plant
+                        if (plant.marker) {
+                            if (!map.hasLayer(plant.marker)) {
+                                plantsLayer.addLayer(plant.marker);
+                            }
+                        }
+
+                        // Turn ON matching plant if not already
+                        if (!plant.isOn) {
+                            plant.isOn = true;
+                            activeGenerators++;
+
+                            const color = getFuelColor(plant.fuel);
+                            const fuelType = plantFuel;
+
+                            if (plant.marker instanceof L.CircleMarker) {
+                                plant.marker.setStyle({ fillColor: color });
+                            } else {
+                                plant.marker.setIcon(L.divIcon({
+                                    className: 'custom-div-icon',
+                                    html: getMarkerHTML(fuelType, color),
+                                    iconSize: [12, 12],
+                                    iconAnchor: [6, 6]
+                                }));
+                            }
+                        }
+                    } else {
+                        // Hide non-matching plant
+                        if (plant.marker && map.hasLayer(plant.marker)) {
+                            plantsLayer.removeLayer(plant.marker);
+                        }
+
+                        // Turn OFF non-matching plant if it was on
+                        if (plant.isOn) {
+                            plant.isOn = false;
+                            activeGenerators--;
+                        }
+                    }
+                });
+
+                // Update flow visualization with filtered plants
+                updateFlow();
+
+                console.log(`${matchingPlants} plants matching filter, ${activeGenerators} active`);
+            }
+
+            // Restore plant states from before filtering
+            function restorePreviousState() {
+                networkGraph.plants.forEach(plant => {
+                    const previousState = stateBeforeFilter[plant.id];
+
+                    // Restore marker visibility
+                    if (plant.marker && !map.hasLayer(plant.marker)) {
+                        plantsLayer.addLayer(plant.marker);
+                    }
+
+                    // Restore ON/OFF state
+                    if (previousState !== undefined && plant.isOn !== previousState) {
+                        const color = getFuelColor(plant.fuel);
+                        const fuelType = (plant.fuel || 'UNKNOWN').toUpperCase();
+
+                        plant.isOn = previousState;
+
+                        if (previousState) {
+                            activeGenerators++;
+
+                            // Turn ON
+                            if (plant.marker instanceof L.CircleMarker) {
+                                plant.marker.setStyle({ fillColor: color });
+                            } else {
+                                plant.marker.setIcon(L.divIcon({
+                                    className: 'custom-div-icon',
+                                    html: getMarkerHTML(fuelType, color),
+                                    iconSize: [12, 12],
+                                    iconAnchor: [6, 6]
+                                }));
+                            }
+                        } else {
+                            activeGenerators--;
+
+                            // Turn OFF
+                            if (plant.marker instanceof L.CircleMarker) {
+                                plant.marker.setStyle({ fillColor: '#808080' });
+                            } else {
+                                plant.marker.setIcon(L.divIcon({
+                                    className: 'custom-div-icon',
+                                    html: getMarkerHTML(fuelType, '#808080'),
+                                    iconSize: [12, 12],
+                                    iconAnchor: [6, 6]
+                                }));
+                            }
+                        }
+                    }
+                });
+
+                // Update flow visualization
+                updateFlow();
+
+                // Clear saved state
+                stateBeforeFilter = {};
+            }
         }
 
         // Removed custom generator functionality - we're using real power plant data
