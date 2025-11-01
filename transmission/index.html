@@ -211,21 +211,21 @@
         </div>
         <div class="legend-item fuel-filter" data-fuel="NUC" style="cursor: pointer; padding: 2px; border-radius: 3px;">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
-                <svg width="20" height="20"><polygon points="10,2 17,6 15,16 5,16 3,6" fill="#9370DB" stroke="#000" stroke-width="1"/></svg>
+                <svg width="20" height="20"><polygon points="10,2 17,6 15,16 5,16 3,6" fill="#BA55D3" stroke="#000" stroke-width="1"/></svg>
             </span>Nuclear (2)
         </div>
         <div class="legend-item fuel-filter" data-fuel="LFG,WDS,OBG,MSW,AB,OBS" style="cursor: pointer; padding: 2px; border-radius: 3px;" title="Includes: Landfill Gas, Wood, Other Biogas, Municipal Solid Waste, Agricultural Byproduct, Other Biomass Solids">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
-                <svg width="20" height="20"><rect x="9" y="2" width="2" height="16" fill="#8B4513" stroke="#000" stroke-width="0.5"/><rect x="2" y="9" width="16" height="2" fill="#8B4513" stroke="#000" stroke-width="0.5"/></svg>
+                <svg width="20" height="20"><rect x="9" y="2" width="2" height="16" fill="#D2691E" stroke="#000" stroke-width="0.5"/><rect x="2" y="9" width="16" height="2" fill="#D2691E" stroke="#000" stroke-width="0.5"/></svg>
             </span>Biomass (173)
         </div>
         <div class="legend-item fuel-filter" data-fuel="BIT,OIL,DFO,SUB,JF,BLQ,PC" style="cursor: pointer; padding: 2px; border-radius: 3px;" title="Includes: Bituminous Coal, Oil, Distillate Fuel Oil, Sub-Bituminous Coal, Jet Fuel, Black Liquor, Petroleum Coke">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
                 <svg width="20" height="20">
-                    <line x1="4" y1="4" x2="16" y2="16" stroke="#000" stroke-width="2.5"/>
-                    <line x1="16" y1="4" x2="4" y2="16" stroke="#000" stroke-width="2.5"/>
-                    <line x1="4" y1="4" x2="16" y2="16" stroke="#000000" stroke-width="2"/>
-                    <line x1="16" y1="4" x2="4" y2="16" stroke="#000000" stroke-width="2"/>
+                    <line x1="4" y1="4" x2="16" y2="16" stroke="#FF6347" stroke-width="2.5"/>
+                    <line x1="16" y1="4" x2="4" y2="16" stroke="#FF6347" stroke-width="2.5"/>
+                    <line x1="4" y1="4" x2="16" y2="16" stroke="#FF6347" stroke-width="2"/>
+                    <line x1="16" y1="4" x2="4" y2="16" stroke="#FF6347" stroke-width="2"/>
                 </svg>
             </span>Coal/Petcoke/Oil (28)
         </div>
@@ -446,7 +446,7 @@
 
         // Setup interactive legend functionality
         function setupLegendInteractivity() {
-            let currentFilter = null; // Track active filter
+            let activeFilters = new Set(); // Track active filters (for multi-select)
             let stateBeforeFilter = {}; // Track plant states before filtering
 
             // Get all legend filter items
@@ -488,37 +488,63 @@
                     });
 
                     // Remove hover highlight if not actively filtered
-                    if (currentFilter !== item) {
+                    if (!activeFilters.has(item)) {
                         item.style.backgroundColor = '';
                     }
                 });
 
-                // 2. Click filtering - show only selected fuel type
-                item.addEventListener('click', () => {
-                    if (currentFilter === item) {
-                        // Clicking same filter - restore previous state
-                        restorePreviousState();
-                        currentFilter = null;
+                // 2. Click filtering - show only selected fuel type(s)
+                // Support multi-select with Ctrl/Cmd key
+                item.addEventListener('click', (e) => {
+                    const isMultiSelect = e.ctrlKey || e.metaKey; // Ctrl on Windows/Linux, Cmd on Mac
 
-                        // Remove all filter highlights
-                        filterItems.forEach(i => i.style.backgroundColor = '');
-
-                        console.log('Filter removed, restored previous state');
-                    } else {
-                        // Save state before filtering (only on first filter)
-                        if (!currentFilter) {
-                            saveCurrentState();
+                    if (isMultiSelect) {
+                        // Multi-select mode: toggle this filter
+                        if (activeFilters.has(item)) {
+                            // Remove this filter
+                            activeFilters.delete(item);
+                            item.style.backgroundColor = '';
+                        } else {
+                            // Add this filter
+                            if (activeFilters.size === 0) {
+                                // First filter - save state
+                                saveCurrentState();
+                            }
+                            activeFilters.add(item);
+                            item.style.backgroundColor = '#d0d0d0';
                         }
 
-                        // Apply new filter
-                        applyFilter(fuelTypes);
-                        currentFilter = item;
+                        // Apply combined filters or restore if none selected
+                        if (activeFilters.size > 0) {
+                            applyCombinedFilters();
+                        } else {
+                            restorePreviousState();
+                        }
+                    } else {
+                        // Single-select mode (no Ctrl/Cmd)
+                        if (activeFilters.size === 1 && activeFilters.has(item)) {
+                            // Clicking same single filter - restore previous state
+                            restorePreviousState();
+                            activeFilters.clear();
+                            filterItems.forEach(i => i.style.backgroundColor = '');
+                            console.log('Filter removed, restored previous state');
+                        } else {
+                            // Apply new single filter
+                            if (activeFilters.size === 0) {
+                                saveCurrentState();
+                            }
 
-                        // Update visual highlighting
-                        filterItems.forEach(i => i.style.backgroundColor = '');
-                        item.style.backgroundColor = '#d0d0d0';
+                            // Clear all previous filters
+                            activeFilters.clear();
+                            filterItems.forEach(i => i.style.backgroundColor = '');
 
-                        console.log(`Filter applied: ${fuelTypes.join(', ')}`);
+                            // Add this filter
+                            activeFilters.add(item);
+                            item.style.backgroundColor = '#d0d0d0';
+
+                            applyCombinedFilters();
+                            console.log(`Filter applied: ${fuelTypes.join(', ')}`);
+                        }
                     }
                 });
             });
@@ -529,6 +555,20 @@
                 networkGraph.plants.forEach(plant => {
                     stateBeforeFilter[plant.id] = plant.isOn;
                 });
+            }
+
+            // Apply combined filters from multiple selections
+            function applyCombinedFilters() {
+                // Collect all fuel types from active filters
+                const allFuelTypes = new Set();
+                activeFilters.forEach(item => {
+                    const fuelTypes = item.getAttribute('data-fuel').split(',');
+                    fuelTypes.forEach(type => allFuelTypes.add(type));
+                });
+
+                applyFilter(Array.from(allFuelTypes));
+
+                console.log(`Combined filters applied: ${Array.from(allFuelTypes).join(', ')}`);
             }
 
             // Apply filter to show only selected fuel types
@@ -988,25 +1028,25 @@
                 case 'NG': return '#FF4500'; // Natural Gas - Orange-Red
                 case 'GAS': return '#FF4500'; // Natural Gas alternate
                 case 'WAT': return '#00CED1'; // Water/Hydro - Dark Turquoise
-                case 'LFG': return '#8B4513'; // Landfill Gas - Saddle Brown
+                case 'LFG': return '#D2691E'; // Landfill Gas - Chocolate (brighter brown)
                 case 'GEO': return '#DC143C'; // Geothermal - Crimson
-                case 'WDS': return '#8B4513'; // Wood/Biomass - Saddle Brown
-                case 'OBG': return '#8B4513'; // Other Biogas - Saddle Brown
+                case 'WDS': return '#D2691E'; // Wood/Biomass - Chocolate (brighter brown)
+                case 'OBG': return '#D2691E'; // Other Biogas - Chocolate (brighter brown)
                 case 'BAT': return '#FFD700'; // Battery Storage - Gold (energy storage)
                 case 'OTH': return '#FFD700'; // Other (Vaca Dixon Battery) - Gold
-                case 'BIT': return '#000000'; // Bituminous Coal - Black
-                case 'PC': return '#000000'; // Petroleum Coke - Black (grouped with Coal/Oil)
+                case 'BIT': return '#FF6347'; // Bituminous Coal - Tomato (bright red-orange)
+                case 'PC': return '#FF6347'; // Petroleum Coke - Tomato (bright red-orange)
                 case 'OGW': return '#FF4500'; // Other Gas - Orange-Red
-                case 'OIL': return '#000000'; // Oil - Black
-                case 'DFO': return '#000000'; // Distillate Fuel Oil - Black
-                case 'MSW': return '#8B4513'; // Municipal Solid Waste - Saddle Brown
+                case 'OIL': return '#FF6347'; // Oil - Tomato (bright red-orange)
+                case 'DFO': return '#FF6347'; // Distillate Fuel Oil - Tomato (bright red-orange)
+                case 'MSW': return '#D2691E'; // Municipal Solid Waste - Chocolate (brighter brown)
                 case 'WH': return '#DC143C'; // Waste Heat - Crimson
-                case 'NUC': return '#9370DB'; // Nuclear - Medium Purple
-                case 'AB': return '#8B4513'; // Agricultural Byproduct - Saddle Brown
-                case 'SUB': return '#000000'; // Sub-Bituminous Coal - Black
-                case 'JF': return '#000000'; // Jet Fuel - Black
-                case 'BLQ': return '#000000'; // Black Liquor - Black
-                case 'OBS': return '#8B4513'; // Other Biomass Solids - Saddle Brown
+                case 'NUC': return '#BA55D3'; // Nuclear - Medium Orchid (brighter purple)
+                case 'AB': return '#D2691E'; // Agricultural Byproduct - Chocolate (brighter brown)
+                case 'SUB': return '#FF6347'; // Sub-Bituminous Coal - Tomato (bright red-orange)
+                case 'JF': return '#FF6347'; // Jet Fuel - Tomato (bright red-orange)
+                case 'BLQ': return '#FF6347'; // Black Liquor - Tomato (bright red-orange)
+                case 'OBS': return '#D2691E'; // Other Biomass Solids - Chocolate (brighter brown)
                 case 'OG': return '#FF4500'; // Other Gas - Orange-Red
                 default: return '#FF1493'; // Unknown - Deep Pink
             }
