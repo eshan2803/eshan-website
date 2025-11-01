@@ -256,7 +256,8 @@
         // NASA's Black Marble (nighttime lights) as proxy for population density
         var populationOverlay = L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg', {
             attribution: '&copy; <a href="https://earthdata.nasa.gov/">NASA</a>',
-            maxZoom: 8,
+            maxZoom: 19,
+            maxNativeZoom: 8, // Actual data only goes to zoom 8
             opacity: 0.7
         });
 
