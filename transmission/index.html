@@ -80,6 +80,30 @@
             top: 10px;
             left: 10px;
         }
+        /* Custom home button */
+        .leaflet-control-home {
+            background: white;
+            border: 2px solid rgba(0,0,0,0.2);
+            border-radius: 4px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-top: 10px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.2);
+            transition: all 0.2s;
+        }
+        .leaflet-control-home:hover {
+            background: #f4f4f4;
+            transform: scale(1.05);
+        }
+        .leaflet-control-home svg {
+            width: 18px;
+            height: 18px;
+            fill: #333;
+        }
         /* Basemap toggle control in bottom-right */
         #basemap-toggle {
             position: absolute;
@@ -348,6 +372,7 @@
                     setupToggleAllButton();
                     setupLegendInteractivity();
                     setupBasemapToggle();
+                    setupHomeButton();
                     console.log('Network graph built and map rendered.');
                 } catch (error) {
                     console.error('Error building network or rendering map:', error);
@@ -670,6 +695,35 @@
                     console.log(`Switched to ${layerType} basemap`);
                 });
             });
+        }
+
+        // Setup home button to reset view to default California bounds
+        function setupHomeButton() {
+            // Create custom control for home button
+            L.Control.Home = L.Control.extend({
+                onAdd: function(map) {
+                    var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-home');
+                    container.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>';
+                    container.title = 'Reset to default view';
+
+                    L.DomEvent.disableClickPropagation(container);
+                    L.DomEvent.on(container, 'click', function() {
+                        fitMapToData();
+                    });
+
+                    return container;
+                },
+                onRemove: function(map) {
+                    // Nothing to do here
+                }
+            });
+
+            L.control.home = function(opts) {
+                return new L.Control.Home(opts);
+            }
+
+            // Add the home button to the map
+            L.control.home({ position: 'topleft' }).addTo(map);
         }
 
         // Removed custom generator functionality - we're using real power plant data
@@ -1329,4 +1383,3 @@
     </script>
 </body>
 </html>
-
