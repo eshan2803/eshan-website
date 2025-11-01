@@ -114,8 +114,23 @@
         </div>
         <div class="legend-item">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
-                <svg width="20" height="20"><rect x="6" y="6" width="8" height="8" fill="#9370DB" stroke="#000" stroke-width="1" transform="rotate(45 10 10)"/></svg>
-            </span>Petroleum Coke
+                <svg width="20" height="20">
+                    <clipPath id="hexClip"><polygon points="7,4 13,4 16,10 13,16 7,16 4,10"/></clipPath>
+                    <rect x="4" y="4" width="12" height="12" fill="#00CED1" stroke="#000" stroke-width="1" clip-path="url(#hexClip)"/>
+                </svg>
+            </span>Hydro/Water
+        </div>
+        <div class="legend-item">
+            <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
+                <svg width="20" height="20">
+                    <polygon points="10,4 12,9 17,10 12,11 10,16 8,11 3,10 8,9" fill="#8B4513" stroke="#000" stroke-width="1"/>
+                </svg>
+            </span>Biomass/Biogas
+        </div>
+        <div class="legend-item">
+            <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
+                <svg width="20" height="20"><rect x="6" y="6" width="8" height="8" fill="#DC143C" stroke="#000" stroke-width="1" transform="rotate(45 10 10)"/></svg>
+            </span>Geothermal
         </div>
         <div class="legend-item">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
@@ -256,11 +271,13 @@
                                 marker.setStyle({ fillColor: color });
                             } else {
                                 let html;
-                                if (fuelType === 'WIND') {
+                                if (fuelType === 'WND' || fuelType === 'WIND') {
                                     html = `<div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid ${color}; margin-left: -6px; margin-top: -5px; filter: drop-shadow(0 0 1px #000);"></div>`;
-                                } else if (fuelType === 'NG') {
+                                } else if (fuelType === 'NG' || fuelType === 'GAS' || fuelType === 'OGW' || fuelType === 'OG') {
                                     html = `<div style="width: 10px; height: 10px; background-color: ${color}; border: 1px solid #000; margin-left: -5px; margin-top: -5px;"></div>`;
-                                } else if (fuelType === 'PC') {
+                                } else if (fuelType === 'WAT') {
+                                    html = `<div style="width: 10px; height: 12px; background-color: ${color}; clip-path: polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%); margin-left: -5px; margin-top: -6px; filter: drop-shadow(0 0 1px #000);"></div>`;
+                                } else if (fuelType === 'PC' || fuelType === 'NUC') {
                                     html = `<div style="width: 8px; height: 8px; background-color: ${color}; border: 1px solid #000; transform: rotate(45deg); margin-left: -4px; margin-top: -4px;"></div>`;
                                 } else {
                                     html = `<div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid ${color}; position: relative; margin-left: -6px; margin-top: -3px; filter: drop-shadow(0 0 1px #000);"><div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 10px solid ${color}; position: absolute; top: 3px; left: -6px;"></div></div>`;
@@ -279,11 +296,13 @@
                                 marker.setStyle({ fillColor: '#808080' });
                             } else {
                                 let html;
-                                if (fuelType === 'WIND') {
+                                if (fuelType === 'WND' || fuelType === 'WIND') {
                                     html = `<div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #808080; margin-left: -6px; margin-top: -5px; filter: drop-shadow(0 0 1px #000);"></div>`;
-                                } else if (fuelType === 'NG') {
+                                } else if (fuelType === 'NG' || fuelType === 'GAS' || fuelType === 'OGW' || fuelType === 'OG') {
                                     html = `<div style="width: 10px; height: 10px; background-color: #808080; border: 1px solid #000; margin-left: -5px; margin-top: -5px;"></div>`;
-                                } else if (fuelType === 'PC') {
+                                } else if (fuelType === 'WAT') {
+                                    html = `<div style="width: 10px; height: 12px; background-color: #808080; clip-path: polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%); margin-left: -5px; margin-top: -6px; filter: drop-shadow(0 0 1px #000);"></div>`;
+                                } else if (fuelType === 'PC' || fuelType === 'NUC') {
                                     html = `<div style="width: 8px; height: 8px; background-color: #808080; border: 1px solid #000; transform: rotate(45deg); margin-left: -4px; margin-top: -4px;"></div>`;
                                 } else {
                                     html = `<div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #808080; position: relative; margin-left: -6px; margin-top: -3px; filter: drop-shadow(0 0 1px #000);"><div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 10px solid #808080; position: absolute; top: 3px; left: -6px;"></div></div>`;
@@ -523,10 +542,32 @@
         function getFuelColor(fuel) {
             switch ((fuel || 'UNKNOWN').toUpperCase()) {
                 case 'SUN': return '#FFD700'; // Solar - Gold
-                case 'WIND': return '#1E90FF'; // Wind - Dodger Blue
+                case 'WND': return '#1E90FF'; // Wind - Dodger Blue
+                case 'WIND': return '#1E90FF'; // Wind alternate
                 case 'NG': return '#FF4500'; // Natural Gas - Orange-Red
+                case 'GAS': return '#FF4500'; // Natural Gas alternate
                 case 'PC': return '#9370DB'; // Petroleum Coke - Medium Purple
-                default: return '#FF1493'; // Unknown/Other - Deep Pink
+                case 'WAT': return '#00CED1'; // Water/Hydro - Dark Turquoise
+                case 'LFG': return '#8B4513'; // Landfill Gas - Saddle Brown
+                case 'GEO': return '#DC143C'; // Geothermal - Crimson
+                case 'WDS': return '#8B4513'; // Wood/Biomass - Saddle Brown
+                case 'OBG': return '#8B4513'; // Other Biogas - Saddle Brown
+                case 'BAT': return '#FFD700'; // Battery Storage - Gold (energy storage)
+                case 'BIT': return '#000000'; // Bituminous Coal - Black
+                case 'OGW': return '#FF4500'; // Other Gas - Orange-Red
+                case 'OIL': return '#000000'; // Oil - Black
+                case 'DFO': return '#000000'; // Distillate Fuel Oil - Black
+                case 'MSW': return '#8B4513'; // Municipal Solid Waste - Saddle Brown
+                case 'WH': return '#DC143C'; // Waste Heat - Crimson
+                case 'NUC': return '#9370DB'; // Nuclear - Medium Purple
+                case 'AB': return '#8B4513'; // Agricultural Byproduct - Saddle Brown
+                case 'SUB': return '#000000'; // Sub-Bituminous Coal - Black
+                case 'OTH': return '#FF1493'; // Other - Deep Pink
+                case 'JF': return '#000000'; // Jet Fuel - Black
+                case 'BLQ': return '#000000'; // Black Liquor - Black
+                case 'OBS': return '#8B4513'; // Other Biomass Solids - Saddle Brown
+                case 'OG': return '#FF4500'; // Other Gas - Orange-Red
+                default: return '#FF1493'; // Unknown - Deep Pink
             }
         }
 
@@ -610,7 +651,8 @@
                         });
                         break;
 
-                    case 'WIND': // Wind - Triangle pointing up
+                    case 'WND': // Wind - Triangle pointing up
+                    case 'WIND':
                         marker = L.marker(plantData.latlng, {
                             icon: L.divIcon({
                                 className: 'custom-div-icon',
@@ -622,6 +664,9 @@
                         break;
 
                     case 'NG': // Natural Gas - Square
+                    case 'GAS':
+                    case 'OGW':
+                    case 'OG':
                         marker = L.marker(plantData.latlng, {
                             icon: L.divIcon({
                                 className: 'custom-div-icon',
@@ -632,7 +677,19 @@
                         });
                         break;
 
+                    case 'WAT': // Hydro - Hexagon
+                        marker = L.marker(plantData.latlng, {
+                            icon: L.divIcon({
+                                className: 'custom-div-icon',
+                                html: `<div style="width: 10px; height: 12px; background-color: #808080; clip-path: polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%); margin-left: -5px; margin-top: -6px; filter: drop-shadow(0 0 1px #000);"></div>`,
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
+                            })
+                        });
+                        break;
+
                     case 'PC': // Petroleum Coke - Diamond (rotated square)
+                    case 'NUC':
                         marker = L.marker(plantData.latlng, {
                             icon: L.divIcon({
                                 className: 'custom-div-icon',
@@ -684,11 +741,13 @@
                             marker.setStyle({ fillColor: color });
                         } else {
                             let html;
-                            if (fuelType === 'WIND') {
+                            if (fuelType === 'WND' || fuelType === 'WIND') {
                                 html = `<div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid ${color}; margin-left: -6px; margin-top: -5px; filter: drop-shadow(0 0 1px #000);"></div>`;
-                            } else if (fuelType === 'NG') {
+                            } else if (fuelType === 'NG' || fuelType === 'GAS' || fuelType === 'OGW' || fuelType === 'OG') {
                                 html = `<div style="width: 10px; height: 10px; background-color: ${color}; border: 1px solid #000; margin-left: -5px; margin-top: -5px;"></div>`;
-                            } else if (fuelType === 'PC') {
+                            } else if (fuelType === 'WAT') {
+                                html = `<div style="width: 10px; height: 12px; background-color: ${color}; clip-path: polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%); margin-left: -5px; margin-top: -6px; filter: drop-shadow(0 0 1px #000);"></div>`;
+                            } else if (fuelType === 'PC' || fuelType === 'NUC') {
                                 html = `<div style="width: 8px; height: 8px; background-color: ${color}; border: 1px solid #000; transform: rotate(45deg); margin-left: -4px; margin-top: -4px;"></div>`;
                             } else {
                                 html = `<div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid ${color}; position: relative; margin-left: -6px; margin-top: -3px; filter: drop-shadow(0 0 1px #000);"><div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 10px solid ${color}; position: absolute; top: 3px; left: -6px;"></div></div>`;
@@ -708,11 +767,13 @@
                             marker.setStyle({ fillColor: '#808080' });
                         } else {
                             let html;
-                            if (fuelType === 'WIND') {
+                            if (fuelType === 'WND' || fuelType === 'WIND') {
                                 html = `<div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #808080; margin-left: -6px; margin-top: -5px; filter: drop-shadow(0 0 1px #000);"></div>`;
-                            } else if (fuelType === 'NG') {
+                            } else if (fuelType === 'NG' || fuelType === 'GAS' || fuelType === 'OGW' || fuelType === 'OG') {
                                 html = `<div style="width: 10px; height: 10px; background-color: #808080; border: 1px solid #000; margin-left: -5px; margin-top: -5px;"></div>`;
-                            } else if (fuelType === 'PC') {
+                            } else if (fuelType === 'WAT') {
+                                html = `<div style="width: 10px; height: 12px; background-color: #808080; clip-path: polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%); margin-left: -5px; margin-top: -6px; filter: drop-shadow(0 0 1px #000);"></div>`;
+                            } else if (fuelType === 'PC' || fuelType === 'NUC') {
                                 html = `<div style="width: 8px; height: 8px; background-color: #808080; border: 1px solid #000; transform: rotate(45deg); margin-left: -4px; margin-top: -4px;"></div>`;
                             } else {
                                 html = `<div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #808080; position: relative; margin-left: -6px; margin-top: -3px; filter: drop-shadow(0 0 1px #000);"><div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 10px solid #808080; position: absolute; top: 3px; left: -6px;"></div></div>`;
