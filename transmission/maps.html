@@ -252,13 +252,12 @@
             })
         };
 
-        // Population density heatmap using Mapbox population density tiles (free tier)
-        // This shows actual population density as a colored heatmap
-        var populationOverlay = L.tileLayer('https://api.mapbox.com/v4/mapbox.population/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
-            attribution: '&copy; <a href="https://www.mapbox.com/">Mapbox</a>',
-            maxZoom: 19,
-            opacity: 0.7,
-            tileSize: 256
+        // Population density heatmap - create a visual representation using nighttime lights
+        // NASA's Black Marble (nighttime lights) as proxy for population density
+        var populationOverlay = L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg', {
+            attribution: '&copy; <a href="https://earthdata.nasa.gov/">NASA</a>',
+            maxZoom: 8,
+            opacity: 0.7
         });
 
         // Add default grayscale layer
