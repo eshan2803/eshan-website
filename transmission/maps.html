@@ -287,7 +287,7 @@
             grayscale: L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }),
-            satellite: L.esri.tiledMapLayer({
+            satellite: L.esri.imageMapLayer({
                 url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer',
                 attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
             }),
@@ -308,26 +308,26 @@
             pane: 'wmsOverlayPane' // Use custom pane for proper z-ordering
         });
 
-        // Solar irradiation overlay - Using NREL (USA Solar Resource)
+        // Solar irradiation overlay - Using Esri Global Solar Atlas
         var solarOverlay = L.esri.dynamicMapLayer({
-            url: 'https://maps.nrel.gov/server/rest/services/Solar/solar_resource_usa/MapServer',
-            layers: [0], // Layer 0: Annual GHI (Global Horizontal Irradiance)
-            opacity: 0.7,
+            url: 'https://earthobs3.arcgis.com/arcgis/rest/services/GlobalSolarAtlas/Global_Solar_Atlas/MapServer',
+            layers: [0], // Layer 0: PV Power Potential (default heatmap)
+            transparent: true,
+            attribution: 'Esri, World Bank Global Solar Atlas',
             pane: 'wmsOverlayPane',
-            minZoom: 5,
-            maxZoom: 12,
-            attribution: '&copy; <a href="https://www.nrel.gov/">NREL</a>'
+            opacity: 0.8,
+            useCors: true  // Explicitly enable CORS (esri-leaflet handles it)
         });
 
-        // Wind power density overlay - Using NREL (USA Wind Resource)
+        // Wind power density overlay - Using Esri Global Wind Atlas
         var windOverlay = L.esri.dynamicMapLayer({
-            url: 'https://maps.nrel.gov/server/rest/services/Wind/wind_resource_usa/MapServer',
-            layers: [1], // Layer 1: Wind Power Density (100m)
-            opacity: 0.7,
+            url: 'https://services.arcgisonline.com/arcgis/rest/services/GlobalWindAtlas/Wind_Speed/MapServer',
+            layers: [2], // Layer 2: Wind speed at 100m height
+            transparent: true,
+            attribution: 'Esri, DTU Wind Energy, World Bank Global Wind Atlas',
             pane: 'wmsOverlayPane',
-            minZoom: 5,
-            maxZoom: 12,
-            attribution: '&copy; <a href="https://www.nrel.gov/">NREL</a>'
+            opacity: 0.8,
+            useCors: true
         });
 
         // Add error handling for overlays
