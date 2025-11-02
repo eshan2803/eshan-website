@@ -287,7 +287,7 @@
             grayscale: L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }),
-            satellite: L.esri.basemapLayer('Imagery', {  // Use basemapLayer for standard Esri Imagery (fixes 400 errors)
+            satellite: L.esri.basemapLayer('Imagery', {
                 attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
             }),
             population: L.tileLayer.wms('https://sedac.ciesin.columbia.edu/geoserver/wms', {
@@ -298,21 +298,27 @@
                 pane: 'wmsOverlayPane',
                 opacity: 0.8
             }),
-            solar: L.esri.dynamicMapLayer({
-                url: 'https://utility.arcgis.com/usrsvcs/servers/debfba9824d04bfabedc0216ed74b687/rest/services/Global_Solar_Atlas/MapServer',
-                layers: [0],  // Layer 0: PV Power Potential heatmap (adjust to [1] for GHI if needed)
+            solar: L.tileLayer.wms('https://neo.gsfc.nasa.gov/wms/wms', {
+                layers: 'CERES_INSOL_M',  // Monthly average incoming solar radiation (insolation) from CERES satellite
+                format: 'image/png',
                 transparent: true,
-                attribution: 'Esri, World Bank Global Solar Atlas',
+                attribution: 'NASA Earth Observations (NEO)',
                 pane: 'wmsOverlayPane',
-                opacity: 0.8
+                opacity: 0.8,
+                version: '1.3.0',  // Ensures compatibility
+                minZoom: 5,
+                maxZoom: 12
             }),
-            wind: L.esri.dynamicMapLayer({
-                url: 'https://utility.arcgis.com/usrsvcs/servers/08be07c69cd4486995d1dc5d175156e3/rest/services/Global_Wind_Atlas_Wind_Speed/MapServer',
-                layers: [2],  // Layer 2: Wind speed at 100m (check service for others: 0=10m, 1=50m, 3=150m, 4=200m)
+            wind: L.tileLayer.wms('https://neo.gsfc.nasa.gov/wms/wms', {
+                layers: 'MERRA_WIND_50M_M',  // Monthly average wind speed at 50m height from MERRA reanalysis
+                format: 'image/png',
                 transparent: true,
-                attribution: 'Esri, DTU Wind Energy, World Bank Global Wind Atlas',
+                attribution: 'NASA Earth Observations (NEO)',
                 pane: 'wmsOverlayPane',
-                opacity: 0.8
+                opacity: 0.8,
+                version: '1.3.0',
+                minZoom: 5,
+                maxZoom: 12
             })
         };
 
@@ -326,12 +332,12 @@
             pane: 'wmsOverlayPane' // Use custom pane for proper z-ordering
         });
 
-        // Add error handling for solar and wind layers
-        baseLayers.solar.on('load', () => console.log('Solar overlay loaded successfully'));
-        baseLayers.solar.on('requesterror', (e) => console.error('Solar overlay error:', e));
+        // Add error handling for solar and wind WMS layers
+        baseLayers.solar.on('load', () => console.log('Solar WMS layer loaded successfully'));
+        baseLayers.solar.on('tileerror', (e) => console.error('Solar WMS tile error:', e));
 
-        baseLayers.wind.on('load', () => console.log('Wind overlay loaded successfully'));
-        baseLayers.wind.on('requesterror', (e) => console.error('Wind overlay error:', e));
+        baseLayers.wind.on('load', () => console.log('Wind WMS layer loaded successfully'));
+        baseLayers.wind.on('tileerror', (e) => console.error('Wind WMS tile error:', e));
 
         // Add default grayscale layer
         var currentBaseLayer = baseLayers.grayscale.addTo(map);
@@ -768,21 +774,30 @@
                                     container.classList.add('grayscale');
                                 }
                             }
+                            console.log('Switched to grayscale basemap');
                             break;
                         case 'satellite':
                             currentBaseLayer = baseLayers.satellite.addTo(map);
+                            currentBaseLayer.on('load', () => console.log('Satellite basemap loaded'));
+                            currentBaseLayer.on('requesterror', (e) => console.error('Satellite error:', e));
+                            console.log('Switched to satellite basemap');
                             break;
                         case 'population':
                             currentBaseLayer = baseLayers.population.addTo(map);
                             activeOverlay = populationOverlay.addTo(map);
+                            currentBaseLayer.on('load', () => console.log('Population basemap loaded'));
+                            currentBaseLayer.on('tileerror', (e) => console.error('Population WMS error:', e));
+                            console.log('Switched to population basemap');
                             break;
                         case 'solar':
-                            // For solar, add directly as it's a layer with heatmap
+                            // For solar, add directly as it's a WMS layer with heatmap
                             currentBaseLayer = baseLayers.solar.addTo(map);
+                            console.log('Switched to solar basemap');
                             break;
                         case 'wind':
-                            // For wind, add directly as it's a layer with heatmap
+                            // For wind, add directly as it's a WMS layer with heatmap
                             currentBaseLayer = baseLayers.wind.addTo(map);
+                            console.log('Switched to wind basemap');
                             break;
                     }
 
