@@ -287,14 +287,34 @@
             grayscale: L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }),
-            satellite: L.esri.imageMapLayer({
-                url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer',
+            satellite: L.esri.basemapLayer('Imagery', {  // Use basemapLayer for standard Esri Imagery (fixes 400 errors)
                 attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
             }),
-            population: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd',
-                maxZoom: 20
+            population: L.tileLayer.wms('https://sedac.ciesin.columbia.edu/geoserver/wms', {
+                layers: 'gpw-v4:gpw-v4-population-density_2020',
+                format: 'image/png',
+                transparent: true,
+                attribution: 'SEDAC / CIESIN / Columbia University',
+                pane: 'wmsOverlayPane',
+                opacity: 0.8
+            }),
+            solar: L.esri.dynamicMapLayer({
+                url: 'https://utility.arcgis.com/usrsvcs/servers/debfba9824d04bfabedc0216ed74b687/rest/services/Global_Solar_Atlas/MapServer',
+                layers: [0],  // Layer 0: PV Power Potential heatmap (adjust to [1] for GHI if needed)
+                transparent: true,
+                attribution: 'Esri, World Bank Global Solar Atlas',
+                pane: 'wmsOverlayPane',
+                opacity: 0.8,
+                useCors: true
+            }),
+            wind: L.esri.dynamicMapLayer({
+                url: 'https://utility.arcgis.com/usrsvcs/servers/08be07c69cd4486995d1dc5d175156e3/rest/services/Global_Wind_Atlas_Wind_Speed/MapServer',
+                layers: [2],  // Layer 2: Wind speed at 100m (check service for others: 0=10m, 1=50m, 3=150m, 4=200m)
+                transparent: true,
+                attribution: 'Esri, DTU Wind Energy, World Bank Global Wind Atlas',
+                pane: 'wmsOverlayPane',
+                opacity: 0.8,
+                useCors: true
             })
         };
 
@@ -308,34 +328,12 @@
             pane: 'wmsOverlayPane' // Use custom pane for proper z-ordering
         });
 
-        // Solar irradiation overlay - Using Esri Global Solar Atlas
-        var solarOverlay = L.esri.dynamicMapLayer({
-            url: 'https://earthobs3.arcgis.com/arcgis/rest/services/GlobalSolarAtlas/Global_Solar_Atlas/MapServer',
-            layers: [0], // Layer 0: PV Power Potential (default heatmap)
-            transparent: true,
-            attribution: 'Esri, World Bank Global Solar Atlas',
-            pane: 'wmsOverlayPane',
-            opacity: 0.8,
-            useCors: true  // Explicitly enable CORS (esri-leaflet handles it)
-        });
+        // Add error handling for solar and wind layers
+        baseLayers.solar.on('load', () => console.log('Solar overlay loaded successfully'));
+        baseLayers.solar.on('requesterror', (e) => console.error('Solar overlay error:', e));
 
-        // Wind power density overlay - Using Esri Global Wind Atlas
-        var windOverlay = L.esri.dynamicMapLayer({
-            url: 'https://services.arcgisonline.com/arcgis/rest/services/GlobalWindAtlas/Wind_Speed/MapServer',
-            layers: [2], // Layer 2: Wind speed at 100m height
-            transparent: true,
-            attribution: 'Esri, DTU Wind Energy, World Bank Global Wind Atlas',
-            pane: 'wmsOverlayPane',
-            opacity: 0.8,
-            useCors: true
-        });
-
-        // Add error handling for overlays
-        solarOverlay.on('load', () => console.log('Solar overlay loaded successfully'));
-        solarOverlay.on('requesterror', (e) => console.error('Solar overlay error:', e));
-
-        windOverlay.on('load', () => console.log('Wind overlay loaded successfully'));
-        windOverlay.on('requesterror', (e) => console.error('Wind overlay error:', e));
+        baseLayers.wind.on('load', () => console.log('Wind overlay loaded successfully'));
+        baseLayers.wind.on('requesterror', (e) => console.error('Wind overlay error:', e));
 
         // Add default grayscale layer
         var currentBaseLayer = baseLayers.grayscale.addTo(map);
@@ -747,8 +745,8 @@
                     basemapOptions.forEach(opt => opt.classList.remove('active'));
                     if (currentBaseLayer && map.hasLayer(currentBaseLayer)) {
                         map.removeLayer(currentBaseLayer);
-                        // Remove grayscale filter if present
-                        if (currentBaseLayer.getContainer()) {
+                        // Remove grayscale filter if present (only for tile layers)
+                        if (currentBaseLayer.getContainer && typeof currentBaseLayer.getContainer === 'function') {
                             currentBaseLayer.getContainer().classList.remove('grayscale');
                         }
                     }
@@ -763,7 +761,9 @@
                     switch (layerType) {
                         case 'grayscale':
                             currentBaseLayer = baseLayers.grayscale.addTo(map);
-                            currentBaseLayer.getContainer().classList.add('grayscale');
+                            if (currentBaseLayer.getContainer && typeof currentBaseLayer.getContainer === 'function') {
+                                currentBaseLayer.getContainer().classList.add('grayscale');
+                            }
                             break;
                         case 'satellite':
                             currentBaseLayer = baseLayers.satellite.addTo(map);
@@ -773,16 +773,12 @@
                             activeOverlay = populationOverlay.addTo(map);
                             break;
                         case 'solar':
-                            // For solar, use a neutral basemap AND the solar overlay
-                            currentBaseLayer = baseLayers.grayscale.addTo(map);
-                            currentBaseLayer.getContainer().classList.add('grayscale');
-                            activeOverlay = solarOverlay.addTo(map);
+                            // For solar, add directly as it's a layer with heatmap
+                            currentBaseLayer = baseLayers.solar.addTo(map);
                             break;
                         case 'wind':
-                            // For wind, use a neutral basemap AND the wind overlay
-                            currentBaseLayer = baseLayers.grayscale.addTo(map);
-                            currentBaseLayer.getContainer().classList.add('grayscale');
-                            activeOverlay = windOverlay.addTo(map);
+                            // For wind, add directly as it's a layer with heatmap
+                            currentBaseLayer = baseLayers.wind.addTo(map);
                             break;
                     }
 
