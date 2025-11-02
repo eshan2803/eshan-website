@@ -277,6 +277,11 @@
             wheelPxPerZoomLevel: 120  // Smoother mouse wheel zoom
         }).setView([36.7783, -119.4179], 6);
 
+        // Create a new pane for WMS overlays
+        map.createPane('wmsOverlayPane');
+        map.getPane('wmsOverlayPane').style.zIndex = 300; // Above tiles (200), below overlays (400)
+        map.getPane('wmsOverlayPane').style.pointerEvents = 'none'; // Allow clicks to pass through
+
         // Define basemap layers
         var baseLayers = {
             grayscale: L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
@@ -298,7 +303,8 @@
             attribution: '&copy; <a href="https://earthdata.nasa.gov/">NASA</a>',
             maxZoom: 19,
             maxNativeZoom: 8, // Actual data only goes to zoom 8
-            opacity: 0.7
+            opacity: 0.7,
+            pane: 'wmsOverlayPane' // Use custom pane for proper z-ordering
         });
 
         // Solar irradiation overlay - Using Global Solar Atlas WMS
@@ -308,17 +314,36 @@
             transparent: true,
             version: '1.1.0',
             attribution: '&copy; <a href="https://globalsolaratlas.info/">Global Solar Atlas</a>',
-            opacity: 0.6
+            opacity: 0.6,
+            pane: 'wmsOverlayPane' // Use custom pane for proper z-ordering
         });
 
-        // Wind power density overlay - Using Global Wind Atlas API/WMS
+        // Wind power density overlay - Using Global Wind Atlas WMS
         var windOverlay = L.tileLayer.wms('https://globalwindatlas.info/geoserver/gwa/wms', {
             layers: 'gwa:power_density_50m',
             format: 'image/png',
             transparent: true,
             version: '1.1.0',
             attribution: '&copy; <a href="https://globalwindatlas.info/">Global Wind Atlas</a>',
-            opacity: 0.6
+            opacity: 0.6,
+            pane: 'wmsOverlayPane' // Use custom pane for proper z-ordering
+        });
+
+        // Add error handlers to debug loading issues
+        solarOverlay.on('tileerror', function(error, tile) {
+            console.error('Solar tile load error:', error);
+        });
+
+        windOverlay.on('tileerror', function(error, tile) {
+            console.error('Wind tile load error:', error);
+        });
+
+        solarOverlay.on('tileload', function() {
+            console.log('Solar tile loaded successfully');
+        });
+
+        windOverlay.on('tileload', function() {
+            console.log('Wind tile loaded successfully');
         });
 
         // Add default grayscale layer
