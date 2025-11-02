@@ -311,8 +311,8 @@
         // Solar irradiation overlay - Using NREL (USA Solar Resource)
         var solarOverlay = L.esri.dynamicMapLayer({
             url: 'https://maps.nrel.gov/server/rest/services/Solar/solar_resource_usa/MapServer',
+            layers: [0], // Layer 0: Annual GHI (Global Horizontal Irradiance)
             opacity: 0.6,
-            useCors: false, // The plugin handles CORS for us
             pane: 'wmsOverlayPane',
             attribution: '&copy; <a href="https://www.nrel.gov/">NREL</a>'
         });
@@ -320,8 +320,8 @@
         // Wind power density overlay - Using NREL (USA Wind Resource)
         var windOverlay = L.esri.dynamicMapLayer({
             url: 'https://maps.nrel.gov/server/rest/services/Wind/wind_resource_usa/MapServer',
+            layers: [1], // Layer 1: Wind Power Density (100m)
             opacity: 0.6,
-            useCors: false, // The plugin handles CORS for us
             pane: 'wmsOverlayPane',
             attribution: '&copy; <a href="https://www.nrel.gov/">NREL</a>'
         });
@@ -775,15 +775,8 @@
                             break;
                     }
 
-                    // 3. Ensure layers are ordered correctly
-                    // Basemap should always be at the very back
-                    if (currentBaseLayer) {
-                        currentBaseLayer.bringToBack();
-                    }
-                    // Overlay (if it exists) should be in front of the basemap
-                    if (activeOverlay) {
-                        activeOverlay.bringToFront();
-                    }
+                    // 3. NO LONGER NEEDED - The 'pane' system handles z-ordering automatically.
+                    // Layer ordering is now controlled by the z-index values set in the pane definitions
 
                     console.log(`Switched to ${layerType} basemap`);
                 });
