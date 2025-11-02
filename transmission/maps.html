@@ -299,26 +299,24 @@
                 opacity: 0.8
             }),
             solar: L.tileLayer.wms('https://neo.gsfc.nasa.gov/wms/wms', {
-                layers: 'CERES_INSOL_M',  // Monthly average incoming solar radiation (insolation) from CERES satellite
-                format: 'image/png',
-                transparent: true,
-                attribution: 'NASA Earth Observations (NEO)',
-                pane: 'wmsOverlayPane',
-                opacity: 0.8,
-                version: '1.3.0',  // Ensures compatibility
-                minZoom: 5,
-                maxZoom: 12
-            }),
-            wind: L.tileLayer.wms('https://neo.gsfc.nasa.gov/wms/wms', {
-                layers: 'MERRA_WIND_50M_M',  // Monthly average wind speed at 50m height from MERRA reanalysis
+                layers: 'CERES_INSOL_M',
                 format: 'image/png',
                 transparent: true,
                 attribution: 'NASA Earth Observations (NEO)',
                 pane: 'wmsOverlayPane',
                 opacity: 0.8,
                 version: '1.3.0',
-                minZoom: 5,
-                maxZoom: 12
+                time: '2022-06-01'  // Specify a month for climatology data; change for different seasons
+            }),
+            wind: L.tileLayer.wms('https://neo.gsfc.nasa.gov/wms/wms', {
+                layers: 'MERRA_WIND_50M_M',
+                format: 'image/png',
+                transparent: true,
+                attribution: 'NASA Earth Observations (NEO)',
+                pane: 'wmsOverlayPane',
+                opacity: 0.8,
+                version: '1.3.0',
+                time: '2022-06-01'  // Specify a month; e.g., for summer wind patterns
             })
         };
 
@@ -792,11 +790,15 @@
                         case 'solar':
                             // For solar, add directly as it's a WMS layer with heatmap
                             currentBaseLayer = baseLayers.solar.addTo(map);
+                            currentBaseLayer.on('tileerror', (e) => console.error('Solar WMS tile error:', e));
+                            currentBaseLayer.on('load', () => console.log('Solar WMS layer loaded successfully'));
                             console.log('Switched to solar basemap');
                             break;
                         case 'wind':
                             // For wind, add directly as it's a WMS layer with heatmap
                             currentBaseLayer = baseLayers.wind.addTo(map);
+                            currentBaseLayer.on('tileerror', (e) => console.error('Wind WMS tile error:', e));
+                            currentBaseLayer.on('load', () => console.log('Wind WMS layer loaded successfully'));
                             console.log('Switched to wind basemap');
                             break;
                     }
