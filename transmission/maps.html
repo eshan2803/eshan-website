@@ -6,6 +6,7 @@
     <title>California Power Grid Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.js"></script>
     <style>
         html, body {
             height: 100%;
@@ -307,43 +308,22 @@
             pane: 'wmsOverlayPane' // Use custom pane for proper z-ordering
         });
 
-        // Solar irradiation overlay - Using Global Solar Atlas WMS
-        var solarOverlay = L.tileLayer.wms('https://globalsolaratlas.info/geoserver/gsa/wms', {
-            layers: 'gsa:GHI',
-            format: 'image/png',
-            transparent: true,
-            version: '1.1.0',
-            attribution: '&copy; <a href="https://globalsolaratlas.info/">Global Solar Atlas</a>',
+        // Solar irradiation overlay - Using NREL (USA Solar Resource)
+        var solarOverlay = L.esri.dynamicMapLayer({
+            url: 'https://maps.nrel.gov/server/rest/services/Solar/solar_resource_usa/MapServer',
             opacity: 0.6,
-            pane: 'wmsOverlayPane' // Use custom pane for proper z-ordering
+            useCors: false, // The plugin handles CORS for us
+            pane: 'wmsOverlayPane',
+            attribution: '&copy; <a href="https://www.nrel.gov/">NREL</a>'
         });
 
-        // Wind power density overlay - Using Global Wind Atlas WMS
-        var windOverlay = L.tileLayer.wms('https://globalwindatlas.info/geoserver/gwa/wms', {
-            layers: 'gwa:power_density_50m',
-            format: 'image/png',
-            transparent: true,
-            version: '1.1.0',
-            attribution: '&copy; <a href="https://globalwindatlas.info/">Global Wind Atlas</a>',
+        // Wind power density overlay - Using NREL (USA Wind Resource)
+        var windOverlay = L.esri.dynamicMapLayer({
+            url: 'https://maps.nrel.gov/server/rest/services/Wind/wind_resource_usa/MapServer',
             opacity: 0.6,
-            pane: 'wmsOverlayPane' // Use custom pane for proper z-ordering
-        });
-
-        // Add error handlers to debug loading issues
-        solarOverlay.on('tileerror', function(error, tile) {
-            console.error('Solar tile load error:', error);
-        });
-
-        windOverlay.on('tileerror', function(error, tile) {
-            console.error('Wind tile load error:', error);
-        });
-
-        solarOverlay.on('tileload', function() {
-            console.log('Solar tile loaded successfully');
-        });
-
-        windOverlay.on('tileload', function() {
-            console.log('Wind tile loaded successfully');
+            useCors: false, // The plugin handles CORS for us
+            pane: 'wmsOverlayPane',
+            attribution: '&copy; <a href="https://www.nrel.gov/">NREL</a>'
         });
 
         // Add default grayscale layer
@@ -784,11 +764,13 @@
                         case 'solar':
                             // For solar, use a neutral basemap AND the solar overlay
                             currentBaseLayer = baseLayers.grayscale.addTo(map);
+                            currentBaseLayer.getContainer().classList.add('grayscale');
                             activeOverlay = solarOverlay.addTo(map);
                             break;
                         case 'wind':
                             // For wind, use a neutral basemap AND the wind overlay
                             currentBaseLayer = baseLayers.grayscale.addTo(map);
+                            currentBaseLayer.getContainer().classList.add('grayscale');
                             activeOverlay = windOverlay.addTo(map);
                             break;
                     }
