@@ -304,8 +304,7 @@
                 transparent: true,
                 attribution: 'Esri, World Bank Global Solar Atlas',
                 pane: 'wmsOverlayPane',
-                opacity: 0.8,
-                useCors: true
+                opacity: 0.8
             }),
             wind: L.esri.dynamicMapLayer({
                 url: 'https://utility.arcgis.com/usrsvcs/servers/08be07c69cd4486995d1dc5d175156e3/rest/services/Global_Wind_Atlas_Wind_Speed/MapServer',
@@ -313,8 +312,7 @@
                 transparent: true,
                 attribution: 'Esri, DTU Wind Energy, World Bank Global Wind Atlas',
                 pane: 'wmsOverlayPane',
-                opacity: 0.8,
-                useCors: true
+                opacity: 0.8
             })
         };
 
@@ -745,9 +743,12 @@
                     basemapOptions.forEach(opt => opt.classList.remove('active'));
                     if (currentBaseLayer && map.hasLayer(currentBaseLayer)) {
                         map.removeLayer(currentBaseLayer);
-                        // Remove grayscale filter if present (only for tile layers)
+                        // Remove grayscale filter if present (only for tile layers that support it)
                         if (currentBaseLayer.getContainer && typeof currentBaseLayer.getContainer === 'function') {
-                            currentBaseLayer.getContainer().classList.remove('grayscale');
+                            const container = currentBaseLayer.getContainer();
+                            if (container) {
+                                container.classList.remove('grayscale');
+                            }
                         }
                     }
                     if (activeOverlay && map.hasLayer(activeOverlay)) {
@@ -762,7 +763,10 @@
                         case 'grayscale':
                             currentBaseLayer = baseLayers.grayscale.addTo(map);
                             if (currentBaseLayer.getContainer && typeof currentBaseLayer.getContainer === 'function') {
-                                currentBaseLayer.getContainer().classList.add('grayscale');
+                                const container = currentBaseLayer.getContainer();
+                                if (container) {
+                                    container.classList.add('grayscale');
+                                }
                             }
                             break;
                         case 'satellite':
