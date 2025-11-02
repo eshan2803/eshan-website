@@ -264,7 +264,7 @@
         <div class="basemap-option" id="basemap-solar" data-layer="solar" title="Solar Irradiation Potential">
             <span class="label">Solar</span>
         </div>
-        <div class="basemap-option" id="basemap-wind" data-layer="wind" title="Wind Energy Potential">
+        <div class="basemap-option" id="basemap-wind" data-layer="wind" title="Wind Power Density">
             <span class="label">Wind</span>
         </div>
     </div>
@@ -289,16 +289,6 @@
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
                 subdomains: 'abcd',
                 maxZoom: 20
-            }),
-            solar: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd',
-                maxZoom: 20
-            }),
-            wind: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd',
-                maxZoom: 20
             })
         };
 
@@ -311,102 +301,25 @@
             opacity: 0.7
         });
 
-        // Solar irradiation overlay - Create visual representation using terrain data
-        // Southern California (deserts) has highest solar potential
-        var solarOverlay = L.layerGroup();
-
-        // High solar potential zones in California (approximate GeoJSON polygons)
-        var highSolarZones = L.geoJSON({
-            "type": "FeatureCollection",
-            "features": [
-                {
-                    "type": "Feature",
-                    "properties": {"intensity": "high"},
-                    "geometry": {
-                        "type": "Polygon",
-                        "coordinates": [[
-                            [-120, 34], [-116, 34], [-114.5, 32.5],
-                            [-117, 32.5], [-120, 34]
-                        ]]
-                    }
-                },
-                {
-                    "type": "Feature",
-                    "properties": {"intensity": "medium"},
-                    "geometry": {
-                        "type": "Polygon",
-                        "coordinates": [[
-                            [-122, 35.5], [-119, 35.5], [-116, 34],
-                            [-120, 34], [-122, 35.5]
-                        ]]
-                    }
-                }
-            ]
-        }, {
-            style: function(feature) {
-                return {
-                    fillColor: feature.properties.intensity === 'high' ? '#FFD700' : '#FFA500',
-                    fillOpacity: 0.4,
-                    color: '#FF8C00',
-                    weight: 1,
-                    opacity: 0.6
-                };
-            }
+        // Solar irradiation overlay - Using Global Solar Atlas WMS
+        var solarOverlay = L.tileLayer.wms('https://globalsolaratlas.info/geoserver/gsa/wms', {
+            layers: 'gsa:GHI',
+            format: 'image/png',
+            transparent: true,
+            version: '1.1.0',
+            attribution: '&copy; <a href="https://globalsolaratlas.info/">Global Solar Atlas</a>',
+            opacity: 0.6
         });
-        solarOverlay.addLayer(highSolarZones);
 
-        // Wind energy overlay - Mountain passes and coastal areas
-        var windOverlay = L.layerGroup();
-
-        var highWindZones = L.geoJSON({
-            "type": "FeatureCollection",
-            "features": [
-                {
-                    "type": "Feature",
-                    "properties": {"name": "Tehachapi Pass"},
-                    "geometry": {
-                        "type": "Polygon",
-                        "coordinates": [[
-                            [-118.8, 35.2], [-118.2, 35.2], [-118.2, 34.8],
-                            [-118.8, 34.8], [-118.8, 35.2]
-                        ]]
-                    }
-                },
-                {
-                    "type": "Feature",
-                    "properties": {"name": "Altamont Pass"},
-                    "geometry": {
-                        "type": "Polygon",
-                        "coordinates": [[
-                            [-121.8, 37.8], [-121.4, 37.8], [-121.4, 37.6],
-                            [-121.8, 37.6], [-121.8, 37.8]
-                        ]]
-                    }
-                },
-                {
-                    "type": "Feature",
-                    "properties": {"name": "Coastal Wind"},
-                    "geometry": {
-                        "type": "Polygon",
-                        "coordinates": [[
-                            [-122, 40], [-121.5, 40], [-121.5, 38.5],
-                            [-122, 38.5], [-122, 40]
-                        ]]
-                    }
-                }
-            ]
-        }, {
-            style: function(feature) {
-                return {
-                    fillColor: '#4682B4',
-                    fillOpacity: 0.4,
-                    color: '#1E90FF',
-                    weight: 1,
-                    opacity: 0.6
-                };
-            }
+        // Wind power density overlay - Using Global Wind Atlas API/WMS
+        var windOverlay = L.tileLayer.wms('https://globalwindatlas.info/geoserver/gwa/wms', {
+            layers: 'gwa:power_density_50m',
+            format: 'image/png',
+            transparent: true,
+            version: '1.1.0',
+            attribution: '&copy; <a href="https://globalwindatlas.info/">Global Wind Atlas</a>',
+            opacity: 0.6
         });
-        windOverlay.addLayer(highWindZones);
 
         // Add default grayscale layer
         var currentBaseLayer = baseLayers.grayscale.addTo(map);
