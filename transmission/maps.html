@@ -262,7 +262,7 @@
         <div class="basemap-option" id="basemap-population" data-layer="population" title="Population Density">
             <span class="label">Population</span>
         </div>
-        <div class="basemap-option" id="basemap-solar" data-layer="solar" title="Solar Irradiation Potential">
+        <div class="basemap-option" id="basemap-solar" data-layer="solar" title="Solar PV Potential (GHI)">
             <span class="label">Solar</span>
         </div>
         <div class="basemap-option" id="basemap-wind" data-layer="wind" title="Wind Power Density">
@@ -281,15 +281,15 @@
         // Create a new pane for WMS overlays
         map.createPane('wmsOverlayPane');
         map.getPane('wmsOverlayPane').style.zIndex = 300; // Above tiles (200), below overlays (400)
-        map.getPane('wmsOverlayPane').style.pointerEvents = 'none'; // Allow clicks to pass through
 
         // Define basemap layers
         var baseLayers = {
             grayscale: L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }),
-            satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: '&copy; <a href="https://www.esri.com/">Esri</a>'
+            satellite: L.esri.tiledMapLayer({
+                url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer',
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
             }),
             population: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
@@ -312,8 +312,10 @@
         var solarOverlay = L.esri.dynamicMapLayer({
             url: 'https://maps.nrel.gov/server/rest/services/Solar/solar_resource_usa/MapServer',
             layers: [0], // Layer 0: Annual GHI (Global Horizontal Irradiance)
-            opacity: 0.6,
+            opacity: 0.7,
             pane: 'wmsOverlayPane',
+            minZoom: 5,
+            maxZoom: 12,
             attribution: '&copy; <a href="https://www.nrel.gov/">NREL</a>'
         });
 
@@ -321,10 +323,19 @@
         var windOverlay = L.esri.dynamicMapLayer({
             url: 'https://maps.nrel.gov/server/rest/services/Wind/wind_resource_usa/MapServer',
             layers: [1], // Layer 1: Wind Power Density (100m)
-            opacity: 0.6,
+            opacity: 0.7,
             pane: 'wmsOverlayPane',
+            minZoom: 5,
+            maxZoom: 12,
             attribution: '&copy; <a href="https://www.nrel.gov/">NREL</a>'
         });
+
+        // Add error handling for overlays
+        solarOverlay.on('load', () => console.log('Solar overlay loaded successfully'));
+        solarOverlay.on('requesterror', (e) => console.error('Solar overlay error:', e));
+
+        windOverlay.on('load', () => console.log('Wind overlay loaded successfully'));
+        windOverlay.on('requesterror', (e) => console.error('Wind overlay error:', e));
 
         // Add default grayscale layer
         var currentBaseLayer = baseLayers.grayscale.addTo(map);
