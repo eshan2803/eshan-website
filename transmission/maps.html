@@ -727,51 +727,56 @@
                 option.addEventListener('click', () => {
                     const layerType = option.getAttribute('data-layer');
 
-                    // Remove active class from all options
+                    // 1. First, clean up the map from previous selections
                     basemapOptions.forEach(opt => opt.classList.remove('active'));
-
-                    // Add active class to clicked option
-                    option.classList.add('active');
-
-                    // Remove current base layer
-                    map.removeLayer(currentBaseLayer);
-
-                    // Remove grayscale filter if present
-                    if (currentBaseLayer.getContainer()) {
-                        currentBaseLayer.getContainer().classList.remove('grayscale');
+                    if (currentBaseLayer && map.hasLayer(currentBaseLayer)) {
+                        map.removeLayer(currentBaseLayer);
+                        // Remove grayscale filter if present
+                        if (currentBaseLayer.getContainer()) {
+                            currentBaseLayer.getContainer().classList.remove('grayscale');
+                        }
                     }
-
-                    // Remove any active overlay
                     if (activeOverlay && map.hasLayer(activeOverlay)) {
                         map.removeLayer(activeOverlay);
-                        activeOverlay = null;
+                    }
+                    activeOverlay = null; // Reset the active overlay
+
+                    // 2. Add the new layers based on the selection
+                    option.classList.add('active');
+
+                    switch (layerType) {
+                        case 'grayscale':
+                            currentBaseLayer = baseLayers.grayscale.addTo(map);
+                            currentBaseLayer.getContainer().classList.add('grayscale');
+                            break;
+                        case 'satellite':
+                            currentBaseLayer = baseLayers.satellite.addTo(map);
+                            break;
+                        case 'population':
+                            currentBaseLayer = baseLayers.population.addTo(map);
+                            activeOverlay = populationOverlay.addTo(map);
+                            break;
+                        case 'solar':
+                            // For solar, use a neutral basemap AND the solar overlay
+                            currentBaseLayer = baseLayers.grayscale.addTo(map);
+                            activeOverlay = solarOverlay.addTo(map);
+                            break;
+                        case 'wind':
+                            // For wind, use a neutral basemap AND the wind overlay
+                            currentBaseLayer = baseLayers.grayscale.addTo(map);
+                            activeOverlay = windOverlay.addTo(map);
+                            break;
                     }
 
-                    // Add new base layer
-                    currentBaseLayer = baseLayers[layerType].addTo(map);
-
-                    // Apply grayscale filter only to grayscale layer
-                    if (layerType === 'grayscale') {
-                        currentBaseLayer.getContainer().classList.add('grayscale');
+                    // 3. Ensure layers are ordered correctly
+                    // Basemap should always be at the very back
+                    if (currentBaseLayer) {
+                        currentBaseLayer.bringToBack();
                     }
-
-                    // Add appropriate overlay based on layer type
-                    if (layerType === 'population') {
-                        populationOverlay.addTo(map);
-                        activeOverlay = populationOverlay;
-                        populationOverlay.bringToFront();
-                    } else if (layerType === 'solar') {
-                        solarOverlay.addTo(map);
-                        activeOverlay = solarOverlay;
-                        solarOverlay.bringToFront();
-                    } else if (layerType === 'wind') {
-                        windOverlay.addTo(map);
-                        activeOverlay = windOverlay;
-                        windOverlay.bringToFront();
+                    // Overlay (if it exists) should be in front of the basemap
+                    if (activeOverlay) {
+                        activeOverlay.bringToFront();
                     }
-
-                    // Move base layer to back (behind all other layers)
-                    currentBaseLayer.bringToBack();
 
                     console.log(`Switched to ${layerType} basemap`);
                 });
