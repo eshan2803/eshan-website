@@ -20,7 +20,7 @@ const leaderboardEmpty = document.getElementById('leaderboardEmpty');
 const currentUsernameSpan = document.getElementById('currentUsername');
 
 // API Configuration
-const API_BASE_URL = 'https://grid-operator-game.onrender.com/api';
+const API_BASE_URL = 'http://localhost:3000/api';
 
 // Battery controls
 const batterySlider = document.getElementById('batterySlider');
@@ -2133,8 +2133,9 @@ function scheduleRandomEvents() {
         }
     }
 
-    console.log(`Scheduled Random Events - Cloud Cover at ticks: ${scheduledCloudCoverTicks.join(', ') || 'none'}`);
-    console.log(`Scheduled Random Events - Demand Spike at ticks: ${scheduledDemandSpikeTicks.join(', ') || 'none'}`);
+    // Events are scheduled but not revealed to maintain surprise element
+    // console.log(`Scheduled Random Events - Cloud Cover at ticks: ${scheduledCloudCoverTicks.join(', ') || 'none'}`);
+    // console.log(`Scheduled Random Events - Demand Spike at ticks: ${scheduledDemandSpikeTicks.join(', ') || 'none'}`);
 }
 
 function checkAndTriggerScheduledEvents(currentTick) {
@@ -2186,6 +2187,9 @@ function gameLoop() {
 
     // Process unit startup timers at the beginning of each tick
     processStartupTimers();
+
+    // Execute scheduled events from scheduler (Phase 2)
+    executeScheduledEvents(gameTick);
 
     // Check and trigger any scheduled random events for this tick
     checkAndTriggerScheduledEvents(gameTick);
@@ -2498,6 +2502,13 @@ function startGame() {
     // Hide scheduler button during gameplay
     hideSchedulerButton();
 
+    // Show active schedule indicator if events are scheduled
+    showActiveScheduleIndicator();
+    if (scheduledEvents.length > 0) {
+        updateUpcomingEventsList(0);
+        updateNextEventTicker(0);
+    }
+
     editProfileButton.disabled = true;
     gameTick = 0;
     batterySOC = 0.2; // Reset to 20%
@@ -2565,6 +2576,10 @@ function resetGame() {
     // Clear scheduled random events
     scheduledCloudCoverTicks = [];
     scheduledDemandSpikeTicks = [];
+
+    // Hide active schedule indicator and next event ticker
+    hideActiveScheduleIndicator();
+    document.getElementById('nextEventTicker').classList.add('hidden');
 
     // Reset game speed to default (index 2 = 5s/tick)
     const speedSteps = [0.1, 1, 5, 10, 20, 30];
@@ -2959,23 +2974,16 @@ const tutorialSteps = [
     },
     {
         element: '#tutorial-step-4',
-        title: '☀️ Renewable Curtailment (NEW!)',
+        title: '☀️ Renewable Curtailment',
         text: 'Solar & Wind Curtailment: When renewables exceed demand and your battery is full, curtail excess generation to avoid oversupply. Cost: $20/MWh. Range adjusts each tick based on actual generation. Use sparingly!',
         position: 'left',
         highlightClass: 'rounded-lg'
     },
     {
         element: '#tutorial-step-gauges',
-        title: '📈 Live Gauges - Delta',
-        text: 'Delta = Your Supply - Net Demand. Keep this NEAR ZERO! Green (< 500 MW) = Grid Stable ✓. Yellow (500-1000 MW) = Emergency Alert ⚠️. Red (> 1000 MW) = Blackout ⚠️⚠️. Every 5 minutes counts!',
-        position: 'bottom',
-        highlightClass: 'rounded-lg'
-    },
-    {
-        element: '#tutorial-step-gauges',
-        title: '⚡ Live Gauges - Frequency',
-        text: 'Grid frequency shows system health. 60 Hz = perfect balance. Too low (undersupply) or too high (oversupply) means instability. Watch this gauge to see how your decisions affect the grid in real-time!',
-        position: 'bottom',
+        title: '📈 Live Gauges - Monitor Grid Health',
+        text: 'Delta Gauge: Keep this NEAR ZERO!\n• Green (< 500 MW) = Grid Stable ✓\n• Yellow (500-1500 MW) = Emergency ⚠️\n• Red (> 1500 MW) = Blackout ⚠️⚠️\n\nFrequency Gauge: 60 Hz = perfect balance. Too low (undersupply) or too high (oversupply) means instability. Both gauges update in real-time!',
+        position: 'right',
         highlightClass: 'rounded-lg'
     },
     {
@@ -2986,18 +2994,30 @@ const tutorialSteps = [
         highlightClass: 'rounded-lg'
     },
     {
-        element: '#tutorial-step-3',
         title: '🎲 Random Events',
         text: 'Expect the unexpected! Cloud cover can suddenly reduce solar generation. Demand spikes can hit without warning. The game schedules 0-2 random events during your 24-hour shift. Stay alert and keep backup capacity ready!',
-        position: 'left',
+        position: 'center',
+        onShow: () => {
+            // Play both animations to demonstrate random events
+            AnimationController.playCloudCover();
+            setTimeout(() => {
+                AnimationController.playDemandSpike();
+            }, 2000); // Stagger the second animation
+        }
+    },
+    {
+        element: '#tutorial-step-game-speed',
+        title: '⏱️ Game Speed Control',
+        text: 'Adjust game speed from 0.1s to 30s per tick (each tick = 5 real-world minutes). Start slow to learn, then speed up for faster gameplay. You can pause anytime to plan your next moves!',
+        position: 'bottom',
         highlightClass: 'rounded-lg'
     },
     {
-        element: '#tutorial-step-3',
-        title: '⏱️ Game Speed Control',
-        text: 'Adjust game speed from 0.1s to 30s per tick (each tick = 5 real-world minutes). Start slow to learn, then speed up for faster gameplay. You can pause anytime to plan your next moves!',
-        position: 'left',
-        highlightClass: 'rounded-lg'
+        element: '#openSchedulerBtn',
+        title: '📅 Unit Commitment Scheduler (OPTIONAL)',
+        text: 'Want to plan ahead? Schedule your entire day\'s dispatch BEFORE starting the game. Click to open the scheduler, plan your commits, shutdowns, and MW setpoints at 5-minute precision. When ready, hit "Apply Schedule" and watch the game execute your strategy automatically! Perfect for mastering those tricky morning ramps and evening demand peaks.',
+        position: 'bottom',
+        highlightClass: 'rounded-full'
     },
     {
         title: '🚦 Starting the Game',
@@ -3005,13 +3025,13 @@ const tutorialSteps = [
         position: 'center'
     },
     {
-        title: '🏆 Global Leaderboard',
-        text: 'Perfect games (0 Emergency Alerts + 0 Blackouts) automatically qualify for the leaderboard! Compete globally for the LOWEST COST. Only the top 10 most efficient operators are displayed. Can you make it to the top?',
+        title: '💡 Pro Tips',
+        text: 'Strategy: Plan ahead! CCGT takes 75 min to start. Anticipate the evening peak (18-21h) when solar fades and demand spikes. Charge battery during solar hours (11-14h). Use cheap hydro for baseload. Save expensive CT peakers for emergencies!',
         position: 'center'
     },
     {
-        title: '💡 Pro Tips',
-        text: 'Strategy: Plan ahead! CCGT takes 75 min to start. Anticipate the evening peak (18-21h) when solar fades and demand spikes. Charge battery during solar hours (11-14h). Use cheap hydro for baseload. Save expensive CT peakers for emergencies!',
+        title: '🏆 Global Leaderboard',
+        text: 'Perfect games (0 Emergency Alerts + 0 Blackouts) automatically qualify for the leaderboard! Compete globally for the LOWEST COST. Only the top 10 most efficient operators are displayed. Can you make it to the top?',
         position: 'center'
     },
     {
@@ -3045,7 +3065,18 @@ function endTutorial() {
     tutorialOverlay.style.display = 'none';
     tutorialPopover.style.display = 'none';
     if (highlightedTutorialElement) {
-        highlightedTutorialElement.classList.remove('tutorial-highlight-active', 'rounded-full', 'rounded-lg');
+        // Remove tutorial-highlight-active
+        highlightedTutorialElement.classList.remove('tutorial-highlight-active');
+        // Only remove the highlight class if we added it (not if it was already there)
+        const addedClass = highlightedTutorialElement.getAttribute('data-tutorial-added-class');
+        if (addedClass) {
+            highlightedTutorialElement.classList.remove(addedClass);
+            highlightedTutorialElement.removeAttribute('data-tutorial-added-class');
+        }
+        // Reset inline styles
+        highlightedTutorialElement.style.position = '';
+        highlightedTutorialElement.style.zIndex = '';
+        highlightedTutorialElement = null;
     }
     localStorage.setItem('gridOperatorTutorialSeen', 'true');
 }
@@ -3111,27 +3142,57 @@ function showTutorialStep(stepIndex) {
     const step = tutorialSteps[stepIndex];
 
     if (highlightedTutorialElement) {
-        highlightedTutorialElement.classList.remove('tutorial-highlight-active', 'rounded-full', 'rounded-lg');
+        // Remove tutorial-highlight-active
+        highlightedTutorialElement.classList.remove('tutorial-highlight-active');
+        // Only remove the highlight class if we added it (not if it was already there)
+        const addedClass = highlightedTutorialElement.getAttribute('data-tutorial-added-class');
+        if (addedClass) {
+            highlightedTutorialElement.classList.remove(addedClass);
+            highlightedTutorialElement.removeAttribute('data-tutorial-added-class');
+        }
+        // Reset inline styles that may have been added
+        highlightedTutorialElement.style.position = '';
+        highlightedTutorialElement.style.zIndex = '';
         highlightedTutorialElement = null;
     }
 
     tutorialTitleEl.textContent = step.title;
     tutorialTextEl.textContent = step.text;
 
+    // Execute onShow callback if provided
+    if (step.onShow && typeof step.onShow === 'function') {
+        step.onShow();
+    }
+
     if (step.element) {
         const targetElement = document.querySelector(step.element);
         if (targetElement) {
             tutorialOverlay.style.display = 'none';
             highlightedTutorialElement = targetElement;
+
+            // Force positioning for highlight to work properly
+            const currentPosition = window.getComputedStyle(targetElement).position;
+            if (currentPosition === 'static') {
+                highlightedTutorialElement.style.position = 'relative';
+            }
+            highlightedTutorialElement.style.zIndex = '9999';
+
             highlightedTutorialElement.classList.add('tutorial-highlight-active');
-            if (step.highlightClass) {
+            // Store if the element already had the highlight class
+            if (step.highlightClass && !highlightedTutorialElement.classList.contains(step.highlightClass)) {
                 highlightedTutorialElement.classList.add(step.highlightClass);
+                highlightedTutorialElement.setAttribute('data-tutorial-added-class', step.highlightClass);
             }
 
             highlightedTutorialElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
             setTimeout(() => {
                 positionTutorialPopover(targetElement, tutorialPopover, step.position);
             }, 300);
+        } else {
+            // If element not found, show as center popup instead
+            console.warn(`Tutorial element not found: ${step.element}`);
+            tutorialOverlay.style.display = 'block';
+            positionTutorialPopover(null, tutorialPopover, 'center');
         }
     } else {
         tutorialOverlay.style.display = 'block';
@@ -3329,9 +3390,8 @@ const clearScheduleBtn = document.getElementById('clearScheduleBtn');
 const schedulerButtonContainer = document.getElementById('schedulerButtonContainer');
 const scheduledEventsList = document.getElementById('scheduledEventsList');
 const resourceSelectionPanel = document.getElementById('resourceSelectionPanel');
-const cancelEventBtn = document.getElementById('cancelEventBtn');
 const selectedTimeSpan = document.getElementById('selectedTime');
-const selectedTickSpan = document.getElementById('selectedTick');
+const totalScheduledMWSpan = document.getElementById('totalScheduledMW');
 
 // Open scheduler modal
 openSchedulerBtn.addEventListener('click', () => {
@@ -3339,64 +3399,172 @@ openSchedulerBtn.addEventListener('click', () => {
     if (!schedulerChart) {
         createSchedulerChart();
     }
+
+    // Set default selected time to 12:00 AM (tick 0) for easy start
+    selectedScheduleTick = 0;
+    selectedTimeSpan.textContent = '12:00 AM';
+
+    // Update panel to show current state at 12:00 AM
+    updateResourcePanelValues();
+    updateShutdownButtonStates();
+
+    // Show scheduler tutorial on first visit
+    const schedulerTutorialSeen = localStorage.getItem('gridOperatorSchedulerTutorialSeen');
+    if (!schedulerTutorialSeen) {
+        setTimeout(() => {
+            showSchedulerQuickGuide();
+        }, 500);
+    }
 });
+
+// Show scheduler tutorial button event listener
+document.getElementById('showSchedulerTutorialBtn').addEventListener('click', () => {
+    showSchedulerQuickGuide();
+});
+
+// Scheduler quick guide
+function showSchedulerQuickGuide() {
+    const guide = `
+        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10000; background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 500px; border: 3px solid #8b5cf6;">
+            <h2 style="font-size: 1.5rem; font-weight: bold; color: #8b5cf6; margin-bottom: 1rem;">📅 Quick Scheduler Guide</h2>
+            <div style="color: #374151; line-height: 1.6; margin-bottom: 1.5rem;">
+                <p style="margin-bottom: 0.75rem;"><strong>1. Click Timeline</strong> - Select any 5-minute interval</p>
+                <p style="margin-bottom: 0.75rem;"><strong>2. Add Resources</strong> - Commit/shutdown units or set MW levels</p>
+                <p style="margin-bottom: 0.75rem;"><strong>3. Watch Chart</strong> - See your schedule visualized in real-time</p>
+                <p style="margin-bottom: 0.75rem;"><strong>4. Apply Schedule</strong> - Lock it in and watch it execute automatically!</p>
+                <p style="margin-top: 1rem; padding: 0.75rem; background: #f3f4f6; border-radius: 6px; font-size: 0.875rem;">
+                    <strong>💡 Pro Tip:</strong> Hour 0 (12:00 AM) units start instantly. All other times respect startup delays (CCGT: 75 min, CT: 15 min).
+                </p>
+            </div>
+            <button id="closeSchedulerGuide" style="width: 100%; padding: 0.75rem; background: linear-gradient(to right, #8b5cf6, #7c3aed); color: white; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; font-size: 1rem;">
+                Got it! Let's Schedule 🚀
+            </button>
+        </div>
+        <div id="guideOverlay" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 9999;"></div>
+    `;
+
+    const guideContainer = document.createElement('div');
+    guideContainer.id = 'schedulerGuideContainer';
+    guideContainer.innerHTML = guide;
+    document.body.appendChild(guideContainer);
+
+    document.getElementById('closeSchedulerGuide').addEventListener('click', () => {
+        document.getElementById('schedulerGuideContainer').remove();
+        localStorage.setItem('gridOperatorSchedulerTutorialSeen', 'true');
+    });
+
+    document.getElementById('guideOverlay').addEventListener('click', () => {
+        document.getElementById('schedulerGuideContainer').remove();
+        localStorage.setItem('gridOperatorSchedulerTutorialSeen', 'true');
+    });
+}
 
 // Close scheduler modal
 closeSchedulerBtn.addEventListener('click', () => {
     schedulerModal.classList.add('hidden');
-    hideResourcePanel();
 });
-
-// Cancel event selection
-cancelEventBtn.addEventListener('click', hideResourcePanel);
 
 // Clear all scheduled events
 clearScheduleBtn.addEventListener('click', () => {
     if (confirm('Are you sure you want to clear all scheduled events?')) {
         scheduledEvents = [];
         updateScheduledEventsList();
-        updateSchedulerChartMarkers();
+        updateSchedulerChartVisuals();
+        updateResourcePanelValues();
+        updateShutdownButtonStates();
     }
 });
 
 // Apply schedule
 applyScheduleBtn.addEventListener('click', applySchedule);
 
-// Hide resource selection panel
-function hideResourcePanel() {
-    resourceSelectionPanel.classList.add('hidden');
-    selectedScheduleTick = null;
-}
-
 // Create scheduler chart
 function createSchedulerChart() {
     const canvas = document.getElementById('schedulerChart');
     const ctx = canvas.getContext('2d');
 
-    // Generate 288 ticks (24 hours * 12 five-minute intervals)
-    const labels = Array.from({ length: 288 }, (_, i) => {
+    // Generate 289 labels (0 to 288 inclusive, so we show 24:00)
+    const labels = Array.from({ length: 289 }, (_, i) => {
         const hour = Math.floor(i / 12);
         const minute = (i % 12) * 5;
         return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
     });
 
-    // Get net demand data from forecast
-    const netDemandData = forecastData.map(d => d.net_demand_mw);
+    // Get net demand data from forecast - only hourly values (every 12th tick)
+    const hourlyNetDemand = forecastData.filter((d, i) => i % 12 === 0).map(d => d.net_demand_mw);
+
+    // Create sparse array with null values for non-hourly points, extend to 289
+    const sparseNetDemand = Array.from({ length: 289 }, (_, i) => {
+        if (i >= 288) return null; // No data for 24:00
+        return i % 12 === 0 ? forecastData[i].net_demand_mw : null;
+    });
 
     schedulerChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
-            datasets: [{
-                label: 'Net Demand',
-                data: netDemandData,
-                borderColor: 'rgba(255, 99, 132, 1)',
-                backgroundColor: 'rgba(255, 99, 132, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                pointRadius: 0,
-                pointHoverRadius: 5
-            }]
+            datasets: [
+                {
+                    label: 'Net Demand (Hourly Forecast)',
+                    data: sparseNetDemand,
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                    borderWidth: 0,
+                    fill: false,
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    showLine: false,  // Only show points, no connecting lines
+                    spanGaps: false
+                },
+                // CCGT scheduled generation dataset
+                {
+                    label: 'CCGT',
+                    data: Array(289).fill(0),
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.3)',
+                    borderWidth: 2,
+                    fill: true,
+                    pointRadius: 0,
+                    stepped: true,
+                    stack: 'generation'
+                },
+                // CT scheduled generation dataset
+                {
+                    label: 'CT',
+                    data: Array(289).fill(0),
+                    borderColor: 'rgba(249, 115, 22, 1)',
+                    backgroundColor: 'rgba(249, 115, 22, 0.3)',
+                    borderWidth: 2,
+                    fill: true,
+                    pointRadius: 0,
+                    stepped: true,
+                    stack: 'generation'
+                },
+                // Battery scheduled output dataset
+                {
+                    label: 'Battery',
+                    data: Array(289).fill(0),
+                    borderColor: 'rgba(34, 197, 94, 1)',
+                    backgroundColor: 'rgba(34, 197, 94, 0.3)',
+                    borderWidth: 2,
+                    fill: true,
+                    pointRadius: 0,
+                    stepped: true,
+                    stack: 'generation'
+                },
+                // Hydro scheduled output dataset
+                {
+                    label: 'Hydro',
+                    data: Array(289).fill(0),
+                    borderColor: 'rgba(6, 182, 212, 1)',
+                    backgroundColor: 'rgba(6, 182, 212, 0.3)',
+                    borderWidth: 2,
+                    fill: true,
+                    pointRadius: 0,
+                    stepped: true,
+                    stack: 'generation'
+                }
+            ]
         },
         options: {
             responsive: true,
@@ -3418,18 +3586,27 @@ function createSchedulerChart() {
                         display: true,
                         text: 'Time of Day'
                     },
+                    grid: {
+                        color: function(context) {
+                            // Make hour boundaries more visible
+                            return context.index % 12 === 0 ? 'rgba(0, 0, 0, 0.15)' : 'rgba(0, 0, 0, 0.05)';
+                        }
+                    },
                     ticks: {
                         callback: function(value, index) {
-                            // Show every 2 hours (24 ticks)
+                            // Show every 2 hours (24 ticks = every 12*2 = 24)
                             return index % 24 === 0 ? labels[index] : '';
-                        }
+                        },
+                        maxRotation: 0,
+                        autoSkip: false
                     }
                 },
                 y: {
                     title: {
                         display: true,
-                        text: 'Net Demand (MW)'
-                    }
+                        text: 'MW'
+                    },
+                    stacked: true
                 }
             }
         }
@@ -3438,11 +3615,24 @@ function createSchedulerChart() {
 
 // Handle click on scheduler chart
 function handleSchedulerChartClick(event) {
-    const points = schedulerChart.getElementsAtEventForMode(event, 'nearest', { intersect: false }, true);
+    // Get the chart area and calculate the clicked position
+    const chartArea = schedulerChart.chartArea;
+    const canvasPosition = Chart.helpers.getRelativePosition(event, schedulerChart);
 
-    if (points.length > 0) {
-        const firstPoint = points[0];
-        selectedScheduleTick = firstPoint.index;
+    // Only proceed if click was within chart area (with some tolerance on edges)
+    if (canvasPosition.x >= (chartArea.left - 10) && canvasPosition.x <= (chartArea.right + 10) &&
+        canvasPosition.y >= (chartArea.top - 10) && canvasPosition.y <= (chartArea.bottom + 10)) {
+
+        // Calculate which tick was clicked based on x position
+        const xScale = schedulerChart.scales.x;
+        const xValue = xScale.getValueForPixel(canvasPosition.x);
+
+        // Round to nearest tick and ensure it's within valid range
+        selectedScheduleTick = Math.round(xValue);
+
+        // Clamp to valid range: 0 to 287 (don't allow 288 which is 24:00)
+        selectedScheduleTick = Math.max(0, Math.min(287, selectedScheduleTick));
+
 
         // Format time
         const hour = Math.floor(selectedScheduleTick / 12);
@@ -3452,10 +3642,12 @@ function handleSchedulerChartClick(event) {
         const timeString = `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
 
         selectedTimeSpan.textContent = timeString;
-        selectedTickSpan.textContent = selectedScheduleTick;
 
-        // Show resource selection panel
-        resourceSelectionPanel.classList.remove('hidden');
+        // Update right panel to show currently scheduled values at this time
+        updateResourcePanelValues();
+
+        // Update shutdown button states based on current committed units
+        updateShutdownButtonStates();
     }
 }
 
@@ -3467,9 +3659,35 @@ document.querySelectorAll('.resource-action-btn').forEach(btn => {
     });
 });
 
+// Add Enter key listeners for Battery and Hydro inputs
+document.getElementById('batteryMW').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        // Trigger the "Set MW Level" button for battery
+        const batterySetBtn = document.querySelector('[data-action="set_battery"]');
+        if (batterySetBtn) {
+            batterySetBtn.click();
+        }
+    }
+});
+
+document.getElementById('hydroMW').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        // Trigger the "Set MW Level" button for hydro
+        const hydroSetBtn = document.querySelector('[data-action="set_hydro"]');
+        if (hydroSetBtn) {
+            hydroSetBtn.click();
+        }
+    }
+});
+
 // Add scheduled event
 function addScheduledEvent(action) {
-    if (selectedScheduleTick === null) return;
+    if (selectedScheduleTick === null) {
+        alert('Please select a time on the timeline first');
+        return;
+    }
 
     let eventData = {
         tick: selectedScheduleTick,
@@ -3480,18 +3698,20 @@ function addScheduledEvent(action) {
     // Get specific values based on action
     switch(action) {
         case 'commit_ccgt':
-            eventData.count = parseInt(document.getElementById('ccgtCount').value);
-            eventData.effectiveTick = selectedScheduleTick + 15; // 75 min = 15 ticks
+            eventData.count = 1; // Always commit 1 unit per click
+            // Hour 0 (tick 0) has instant startup, otherwise 75 min delay
+            eventData.effectiveTick = selectedScheduleTick === 0 ? 0 : selectedScheduleTick + 15;
             break;
         case 'shutdown_ccgt':
-            eventData.count = parseInt(document.getElementById('ccgtCount').value);
+            eventData.count = 1; // Always shutdown 1 unit per click
             break;
         case 'commit_ct':
-            eventData.count = parseInt(document.getElementById('ctCount').value);
-            eventData.effectiveTick = selectedScheduleTick + 3; // 15 min = 3 ticks
+            eventData.count = 1; // Always commit 1 unit per click
+            // Hour 0 (tick 0) has instant startup, otherwise 15 min delay
+            eventData.effectiveTick = selectedScheduleTick === 0 ? 0 : selectedScheduleTick + 3;
             break;
         case 'shutdown_ct':
-            eventData.count = parseInt(document.getElementById('ctCount').value);
+            eventData.count = 1; // Always shutdown 1 unit per click
             break;
         case 'set_battery':
             eventData.value = parseInt(document.getElementById('batteryMW').value);
@@ -3505,8 +3725,9 @@ function addScheduledEvent(action) {
     scheduledEvents.sort((a, b) => a.tick - b.tick); // Keep sorted by tick
 
     updateScheduledEventsList();
-    updateSchedulerChartMarkers();
-    hideResourcePanel();
+    updateSchedulerChartVisuals();
+    updateResourcePanelValues();
+    updateShutdownButtonStates();
 }
 
 // Update scheduled events list display
@@ -3543,12 +3764,16 @@ function updateScheduledEventsList() {
         }
 
         let effectiveInfo = '';
-        if (event.effectiveTick) {
-            const effHour = Math.floor(event.effectiveTick / 12);
-            const effMinute = (event.effectiveTick % 12) * 5;
-            const effPeriod = effHour >= 12 ? 'PM' : 'AM';
-            const effDisplayHour = effHour === 0 ? 12 : effHour > 12 ? effHour - 12 : effHour;
-            effectiveInfo = `<span class="text-xs text-gray-500">→ Online: ${effDisplayHour}:${effMinute.toString().padStart(2, '0')} ${effPeriod}</span>`;
+        if (event.effectiveTick !== undefined) {
+            if (event.effectiveTick === event.tick) {
+                effectiveInfo = `<span class="text-xs text-green-600 font-semibold">⚡ Instant</span>`;
+            } else {
+                const effHour = Math.floor(event.effectiveTick / 12);
+                const effMinute = (event.effectiveTick % 12) * 5;
+                const effPeriod = effHour >= 12 ? 'PM' : 'AM';
+                const effDisplayHour = effHour === 0 ? 12 : effHour > 12 ? effHour - 12 : effHour;
+                effectiveInfo = `<span class="text-xs text-gray-500">→ Online: ${effDisplayHour}:${effMinute.toString().padStart(2, '0')} ${effPeriod}</span>`;
+            }
         }
 
         return `
@@ -3573,14 +3798,176 @@ function updateScheduledEventsList() {
 function deleteScheduledEvent(index) {
     scheduledEvents.splice(index, 1);
     updateScheduledEventsList();
-    updateSchedulerChartMarkers();
+    updateSchedulerChartVisuals();
+    updateResourcePanelValues();
+    updateShutdownButtonStates();
 }
 
-// Update chart markers for scheduled events
-function updateSchedulerChartMarkers() {
-    // This will be implemented to show vertical lines or markers on the chart
-    // For now, just log
-    console.log('Scheduled events:', scheduledEvents);
+// Update chart visuals to show scheduled generation
+function updateSchedulerChartVisuals() {
+    // Initialize arrays for each resource type (289 to include 24:00)
+    const ccgtData = Array(289).fill(0);
+    const ctData = Array(289).fill(0);
+    const batteryData = Array(289).fill(0);
+    const hydroData = Array(289).fill(0);
+
+    // Track current committed units throughout the day
+    let currentCCGT = 0;
+    let currentCT = 0;
+    let currentBattery = 0;
+    let currentHydro = 0;
+
+    // Process each tick and apply scheduled events
+    for (let tick = 0; tick < 289; tick++) {
+        // Only process actual ticks (0-287)
+        if (tick < 288) {
+            // Check for events that become effective at this tick
+            scheduledEvents.forEach(event => {
+                if (event.action === 'commit_ccgt' && event.effectiveTick === tick) {
+                    currentCCGT += event.count;
+                } else if (event.action === 'shutdown_ccgt' && event.tick === tick) {
+                    currentCCGT = Math.max(0, currentCCGT - event.count);
+                } else if (event.action === 'commit_ct' && event.effectiveTick === tick) {
+                    currentCT += event.count;
+                } else if (event.action === 'shutdown_ct' && event.tick === tick) {
+                    currentCT = Math.max(0, currentCT - event.count);
+                } else if (event.action === 'set_battery' && event.tick === tick) {
+                    currentBattery = event.value;
+                } else if (event.action === 'set_hydro' && event.tick === tick) {
+                    currentHydro = event.value;
+                }
+            });
+        }
+
+        // Set data for this tick (carry forward to 24:00)
+        ccgtData[tick] = currentCCGT * CCGT_UNIT_SIZE_MW;
+        ctData[tick] = currentCT * CT_UNIT_SIZE_MW;
+        batteryData[tick] = currentBattery;
+        hydroData[tick] = currentHydro;
+    }
+
+    // Update chart datasets
+    schedulerChart.data.datasets[1].data = ccgtData;  // CCGT
+    schedulerChart.data.datasets[2].data = ctData;    // CT
+    schedulerChart.data.datasets[3].data = batteryData; // Battery
+    schedulerChart.data.datasets[4].data = hydroData;  // Hydro
+    schedulerChart.update('none');
+}
+
+// Update resource panel to show currently scheduled values at selected time
+function updateResourcePanelValues() {
+    if (selectedScheduleTick === null) return;
+
+    // Calculate what resources are scheduled at the selected tick
+    let ccgtOnline = 0;
+    let ctOnline = 0;
+    let batteryMW = 0;
+    let hydroMW = 0;
+
+    // Process all events up to and including the selected tick
+    scheduledEvents.forEach(event => {
+        if (event.action === 'commit_ccgt' && event.effectiveTick !== undefined && event.effectiveTick <= selectedScheduleTick) {
+            ccgtOnline += event.count;
+        } else if (event.action === 'shutdown_ccgt' && event.tick <= selectedScheduleTick) {
+            ccgtOnline = Math.max(0, ccgtOnline - event.count);
+        } else if (event.action === 'commit_ct' && event.effectiveTick !== undefined && event.effectiveTick <= selectedScheduleTick) {
+            ctOnline += event.count;
+        } else if (event.action === 'shutdown_ct' && event.tick <= selectedScheduleTick) {
+            ctOnline = Math.max(0, ctOnline - event.count);
+        } else if (event.action === 'set_battery' && event.tick <= selectedScheduleTick) {
+            batteryMW = event.value;
+        } else if (event.action === 'set_hydro' && event.tick <= selectedScheduleTick) {
+            hydroMW = event.value;
+        }
+    });
+
+    // Update the input values in the panel (only for Battery and Hydro)
+    document.getElementById('batteryMW').value = batteryMW;
+    document.getElementById('hydroMW').value = hydroMW;
+
+    // Calculate total scheduled generation MW at this tick
+    const totalMW = (ccgtOnline * CCGT_UNIT_SIZE_MW) + (ctOnline * CT_UNIT_SIZE_MW) + batteryMW + hydroMW;
+    totalScheduledMWSpan.textContent = totalMW.toLocaleString();
+
+    // Add visual indicators showing current scheduled values
+    const ccgtLabel = document.querySelector('[data-action="commit_ccgt"]').closest('.p-3').querySelector('label');
+    const ctLabel = document.querySelector('[data-action="commit_ct"]').closest('.p-3').querySelector('label');
+    const batteryLabel = document.querySelector('[data-action="set_battery"]').closest('.p-3').querySelector('label');
+    const hydroLabel = document.querySelector('[data-action="set_hydro"]').closest('.p-3').querySelector('label');
+
+    if (ccgtOnline > 0) {
+        ccgtLabel.innerHTML = `⚡ CCGT Units <span class="text-xs text-blue-600 font-semibold">(${ccgtOnline} online @ ${ccgtOnline * CCGT_UNIT_SIZE_MW} MW)</span>`;
+    } else {
+        ccgtLabel.innerHTML = '⚡ CCGT Units';
+    }
+
+    if (ctOnline > 0) {
+        ctLabel.innerHTML = `🔥 CT Peakers <span class="text-xs text-orange-600 font-semibold">(${ctOnline} online @ ${ctOnline * CT_UNIT_SIZE_MW} MW)</span>`;
+    } else {
+        ctLabel.innerHTML = '🔥 CT Peakers';
+    }
+
+    if (batteryMW !== 0) {
+        batteryLabel.innerHTML = `🔋 Battery <span class="text-xs text-green-600 font-semibold">(${batteryMW} MW scheduled)</span>`;
+    } else {
+        batteryLabel.innerHTML = '🔋 Battery';
+    }
+
+    if (hydroMW !== 0) {
+        hydroLabel.innerHTML = `💧 Hydro <span class="text-xs text-cyan-600 font-semibold">(${hydroMW} MW scheduled)</span>`;
+    } else {
+        hydroLabel.innerHTML = '💧 Hydro';
+    }
+}
+
+// Update shutdown button states based on currently committed units
+function updateShutdownButtonStates() {
+    if (selectedScheduleTick === null) return;
+
+    // Calculate what units are online at the selected tick
+    let ccgtOnline = 0;
+    let ctOnline = 0;
+
+    scheduledEvents.forEach(event => {
+        if (event.effectiveTick !== undefined && event.effectiveTick <= selectedScheduleTick) {
+            if (event.action === 'commit_ccgt') {
+                ccgtOnline += event.count;
+            } else if (event.action === 'commit_ct') {
+                ctOnline += event.count;
+            }
+        }
+        if (event.tick <= selectedScheduleTick) {
+            if (event.action === 'shutdown_ccgt') {
+                ccgtOnline = Math.max(0, ccgtOnline - event.count);
+            } else if (event.action === 'shutdown_ct') {
+                ctOnline = Math.max(0, ctOnline - event.count);
+            }
+        }
+    });
+
+    // Update button states
+    const shutdownCCGTBtns = document.querySelectorAll('[data-action="shutdown_ccgt"]');
+    const shutdownCTBtns = document.querySelectorAll('[data-action="shutdown_ct"]');
+
+    shutdownCCGTBtns.forEach(btn => {
+        if (ccgtOnline > 0) {
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    });
+
+    shutdownCTBtns.forEach(btn => {
+        if (ctOnline > 0) {
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    });
 }
 
 // Apply schedule and close modal
@@ -3618,8 +4005,16 @@ function calculateHour0StateFromSchedule() {
                 case 'commit_ccgt':
                     state.ccgtOnline += event.count;
                     break;
+                case 'shutdown_ccgt':
+                    // Shutdowns at Hour 0 reduce the count
+                    state.ccgtOnline = Math.max(0, state.ccgtOnline - event.count);
+                    break;
                 case 'commit_ct':
                     state.ctOnline += event.count;
+                    break;
+                case 'shutdown_ct':
+                    // Shutdowns at Hour 0 reduce the count
+                    state.ctOnline = Math.max(0, state.ctOnline - event.count);
                     break;
                 case 'set_battery':
                     state.battery = event.value;
@@ -3664,6 +4059,290 @@ function applyHour0State(state) {
     updateCCGTDisplay();
     updateCTDisplay();
     updateSupplyValues();
+}
+
+// Show active schedule indicator during gameplay
+function showActiveScheduleIndicator() {
+    const activeScheduleIndicator = document.getElementById('activeScheduleIndicator');
+    const scheduledEventsCount = document.getElementById('scheduledEventsCount');
+
+    if (scheduledEvents.length > 0) {
+        activeScheduleIndicator.classList.remove('hidden');
+        scheduledEventsCount.textContent = `${scheduledEvents.length} event${scheduledEvents.length !== 1 ? 's' : ''}`;
+    } else {
+        activeScheduleIndicator.classList.add('hidden');
+    }
+}
+
+// Hide active schedule indicator
+function hideActiveScheduleIndicator() {
+    const activeScheduleIndicator = document.getElementById('activeScheduleIndicator');
+    activeScheduleIndicator.classList.add('hidden');
+}
+
+// Update upcoming events list in Game Metrics
+function updateUpcomingEventsList(currentTick) {
+    const upcomingEventsList = document.getElementById('upcomingEventsList');
+
+    if (scheduledEvents.length === 0) {
+        upcomingEventsList.innerHTML = '<p class="text-gray-400 italic">No scheduled events</p>';
+        return;
+    }
+
+    // Get upcoming events
+    const upcomingEvents = scheduledEvents.filter(event => {
+        const executionTick = (event.action === 'commit_ccgt' || event.action === 'commit_ct')
+            ? event.effectiveTick
+            : event.tick;
+        return executionTick >= currentTick;
+    });
+
+    if (upcomingEvents.length === 0) {
+        upcomingEventsList.innerHTML = '<p class="text-gray-400 italic">All events executed</p>';
+        return;
+    }
+
+    // Group events by time
+    const eventsByTime = {};
+    upcomingEvents.forEach(event => {
+        if (!eventsByTime[event.time]) {
+            eventsByTime[event.time] = [];
+        }
+        eventsByTime[event.time].push(event);
+    });
+
+    // Get first 5 time slots
+    const timeSlots = Object.keys(eventsByTime).slice(0, 5);
+
+    upcomingEventsList.innerHTML = timeSlots.map(time => {
+        const events = eventsByTime[time];
+
+        // Consolidate same event types
+        const consolidated = {};
+        let totalMWImpact = 0;
+
+        events.forEach(event => {
+            if (!consolidated[event.action]) {
+                consolidated[event.action] = { count: 0, value: 0 };
+            }
+
+            if (event.count) {
+                consolidated[event.action].count += event.count;
+                // Calculate MW impact
+                if (event.action === 'commit_ccgt') {
+                    totalMWImpact += event.count * CCGT_UNIT_SIZE_MW;
+                } else if (event.action === 'shutdown_ccgt') {
+                    totalMWImpact -= event.count * CCGT_UNIT_SIZE_MW;
+                } else if (event.action === 'commit_ct') {
+                    totalMWImpact += event.count * CT_UNIT_SIZE_MW;
+                } else if (event.action === 'shutdown_ct') {
+                    totalMWImpact -= event.count * CT_UNIT_SIZE_MW;
+                }
+            } else if (event.value !== undefined) {
+                consolidated[event.action].value = event.value; // Latest value
+                // Battery and Hydro contribute directly
+                if (event.action === 'set_battery') {
+                    totalMWImpact += event.value;
+                } else if (event.action === 'set_hydro') {
+                    totalMWImpact += event.value;
+                }
+            }
+        });
+
+        const eventIcons = {
+            'commit_ccgt': '⚡',
+            'shutdown_ccgt': '⛔',
+            'commit_ct': '🔥',
+            'shutdown_ct': '⛔',
+            'set_battery': '🔋',
+            'set_hydro': '💧'
+        };
+
+        const eventNames = {
+            'commit_ccgt': 'CCGT',
+            'shutdown_ccgt': 'CCGT Down',
+            'commit_ct': 'CT',
+            'shutdown_ct': 'CT Down',
+            'set_battery': 'Battery',
+            'set_hydro': 'Hydro'
+        };
+
+        // Build event summary
+        const eventSummaries = Object.keys(consolidated).map(action => {
+            const data = consolidated[action];
+            if (data.count > 0) {
+                return `${eventIcons[action]} ${eventNames[action]} ${data.count}x`;
+            } else if (data.value !== 0) {
+                return `${eventIcons[action]} ${eventNames[action]} ${data.value}MW`;
+            }
+            return '';
+        }).filter(s => s).join(', ');
+
+        // Format MW impact
+        const impactColor = totalMWImpact >= 0 ? 'text-green-600' : 'text-red-600';
+        const impactSign = totalMWImpact >= 0 ? '+' : '';
+        const impactText = `${impactSign}${totalMWImpact.toLocaleString()} MW`;
+
+        return `
+            <div class="px-2 py-2 bg-gray-50 rounded border-l-4 border-purple-400">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-xs font-semibold text-gray-700">${time}</span>
+                    <span class="text-xs font-bold ${impactColor}">${impactText}</span>
+                </div>
+                <div class="text-xs text-gray-600">${eventSummaries}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Update next event ticker
+function updateNextEventTicker(currentTick) {
+    const nextEventTicker = document.getElementById('nextEventTicker');
+    const nextEventText = document.getElementById('nextEventText');
+
+    if (scheduledEvents.length === 0) {
+        nextEventTicker.classList.add('hidden');
+        return;
+    }
+
+    // Find the very next event
+    const nextEvent = scheduledEvents.find(event => {
+        const executionTick = (event.action === 'commit_ccgt' || event.action === 'commit_ct')
+            ? event.effectiveTick
+            : event.tick;
+        return executionTick >= currentTick;
+    });
+
+    if (!nextEvent) {
+        nextEventTicker.classList.add('hidden');
+        return;
+    }
+
+    const eventIcons = {
+        'commit_ccgt': '⚡',
+        'shutdown_ccgt': '⛔',
+        'commit_ct': '🔥',
+        'shutdown_ct': '⛔',
+        'set_battery': '🔋',
+        'set_hydro': '💧'
+    };
+
+    const eventNames = {
+        'commit_ccgt': 'CCGT Commit',
+        'shutdown_ccgt': 'CCGT Shutdown',
+        'commit_ct': 'CT Commit',
+        'shutdown_ct': 'CT Shutdown',
+        'set_battery': 'Battery',
+        'set_hydro': 'Hydro'
+    };
+
+    let details = '';
+    let mwImpact = 0;
+    if (nextEvent.count) {
+        details = `${nextEvent.count}x`;
+        if (nextEvent.action === 'commit_ccgt') mwImpact = nextEvent.count * CCGT_UNIT_SIZE_MW;
+        else if (nextEvent.action === 'shutdown_ccgt') mwImpact = -nextEvent.count * CCGT_UNIT_SIZE_MW;
+        else if (nextEvent.action === 'commit_ct') mwImpact = nextEvent.count * CT_UNIT_SIZE_MW;
+        else if (nextEvent.action === 'shutdown_ct') mwImpact = -nextEvent.count * CT_UNIT_SIZE_MW;
+    } else if (nextEvent.value !== undefined) {
+        details = `${nextEvent.value}MW`;
+        mwImpact = nextEvent.value;
+    }
+
+    const mwText = mwImpact !== 0 ? ` (${mwImpact >= 0 ? '+' : ''}${mwImpact.toLocaleString()} MW)` : '';
+
+    nextEventText.innerHTML = `${eventIcons[nextEvent.action]} ${eventNames[nextEvent.action]} ${details} @ ${nextEvent.time}${mwText}`;
+    nextEventTicker.classList.remove('hidden');
+}
+
+// Execute scheduled events during gameplay (Phase 2)
+function executeScheduledEvents(currentTick) {
+    if (scheduledEvents.length === 0) return;
+
+    // Update the upcoming events display and next event ticker
+    updateUpcomingEventsList(currentTick);
+    updateNextEventTicker(currentTick);
+
+    // Filter events that should execute at this tick
+    // IMPORTANT: Skip tick 0 events as they're already applied via applyHour0State
+    const eventsToExecute = scheduledEvents.filter(event => {
+        // Skip Hour 0 events - they're handled by applyHour0State
+        if (event.tick === 0 || (event.effectiveTick !== undefined && event.effectiveTick === 0)) {
+            return false;
+        }
+
+        // For commits, check effectiveTick (when unit becomes online)
+        if (event.action === 'commit_ccgt' || event.action === 'commit_ct') {
+            return event.effectiveTick === currentTick;
+        }
+        // For shutdowns and setpoints, check tick (when action is initiated)
+        return event.tick === currentTick;
+    });
+
+    eventsToExecute.forEach(event => {
+        switch(event.action) {
+            case 'commit_ccgt':
+                // Find offline units and commit them
+                let ccgtCommitted = 0;
+                for (let unit of ccgtUnits) {
+                    if (unit.state === 'offline' && ccgtCommitted < event.count) {
+                        commitCCGTUnit(unit);
+                        ccgtCommitted++;
+                    }
+                }
+                break;
+
+            case 'shutdown_ccgt':
+                // Find online units and shut them down
+                let ccgtShutdown = 0;
+                for (let i = ccgtUnits.length - 1; i >= 0; i--) {
+                    if (ccgtUnits[i].state === 'online' && ccgtShutdown < event.count) {
+                        shutdownCCGTUnit(ccgtUnits[i]);
+                        ccgtShutdown++;
+                    }
+                }
+                break;
+
+            case 'commit_ct':
+                // Find offline units and commit them
+                let ctCommitted = 0;
+                for (let unit of ctUnits) {
+                    if (unit.state === 'offline' && ctCommitted < event.count) {
+                        commitCTUnit(unit);
+                        ctCommitted++;
+                    }
+                }
+                break;
+
+            case 'shutdown_ct':
+                // Find online units and shut them down
+                let ctShutdown = 0;
+                for (let i = ctUnits.length - 1; i >= 0; i--) {
+                    if (ctUnits[i].state === 'online' && ctShutdown < event.count) {
+                        shutdownCTUnit(ctUnits[i]);
+                        ctShutdown++;
+                    }
+                }
+                break;
+
+            case 'set_battery':
+                batterySlider.value = event.value;
+                updateSupplyValues();
+                break;
+
+            case 'set_hydro':
+                hydroSlider.value = event.value;
+                updateSupplyValues();
+                break;
+        }
+    });
+
+    // Update displays if any events were executed
+    if (eventsToExecute.length > 0) {
+        updateCCGTDisplay();
+        updateCTDisplay();
+        updateSupplyValues();
+    }
 }
 
 // Hide scheduler button when game starts
