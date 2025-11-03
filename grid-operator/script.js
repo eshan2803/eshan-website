@@ -6,6 +6,22 @@ const pauseButtons = document.getElementById('pauseButtons');
 const resumeButton = document.getElementById('resumeButton');
 const restartButton = document.getElementById('restartButton');
 
+// Leaderboard elements
+const usernameModal = document.getElementById('usernameModal');
+const usernameInput = document.getElementById('usernameInput');
+const submitUsernameBtn = document.getElementById('submitUsernameBtn');
+const leaderboardBtn = document.getElementById('leaderboardBtn');
+const leaderboardModal = document.getElementById('leaderboardModal');
+const closeLeaderboardBtn = document.getElementById('closeLeaderboardBtn');
+const leaderboardLoading = document.getElementById('leaderboardLoading');
+const leaderboardContent = document.getElementById('leaderboardContent');
+const leaderboardList = document.getElementById('leaderboardList');
+const leaderboardEmpty = document.getElementById('leaderboardEmpty');
+const currentUsernameSpan = document.getElementById('currentUsername');
+
+// API Configuration
+const API_BASE_URL = 'http://localhost:3000/api';
+
 // Battery controls
 const batterySlider = document.getElementById('batterySlider');
 const batteryInput = document.getElementById('batteryInput');
@@ -35,6 +51,16 @@ const hydroSlider = document.getElementById('hydroSlider');
 const hydroInput = document.getElementById('hydroInput');
 const hydroCondition = document.getElementById('hydroCondition');
 const hydroMaxDisplay = document.getElementById('hydroMaxDisplay');
+
+// Solar Curtailment controls
+const solarCurtailmentSlider = document.getElementById('solarCurtailmentSlider');
+const solarCurtailmentInput = document.getElementById('solarCurtailmentInput');
+const solarCurtailmentMaxDisplay = document.getElementById('solarCurtailmentMaxDisplay');
+
+// Wind Curtailment controls
+const windCurtailmentSlider = document.getElementById('windCurtailmentSlider');
+const windCurtailmentInput = document.getElementById('windCurtailmentInput');
+const windCurtailmentMaxDisplay = document.getElementById('windCurtailmentMaxDisplay');
 
 const totalSupplyValueSpan = document.getElementById('totalSupplyValue');
 
@@ -68,9 +94,7 @@ let currentSeason = 'spring';
 let isLoadProfileModified = false;
 let isCFProfileModified = false;
 
-// Event buttons
-const cloudCoverBtn = document.getElementById('cloudCoverBtn');
-const demandSpikeBtn = document.getElementById('demandSpikeBtn');
+// Event buttons removed - events now trigger randomly
 
 // Gauge elements
 const deltaNeedle = document.getElementById('deltaNeedle');
@@ -132,6 +156,8 @@ let prevHydro = 0;
 // Operating costs in $/MWh (mainly fuel costs for thermal plants)
 const BATTERY_OPCOST = 5;   // Battery storage (minimal O&M, efficiency losses)
 const HYDRO_OPCOST = 2;     // Hydro (minimal O&M, no fuel cost)
+const SOLAR_CURTAILMENT_OPCOST = 20;   // Solar curtailment (opportunity cost of wasted energy)
+const WIND_CURTAILMENT_OPCOST = 20;  // Wind curtailment (opportunity cost of wasted energy)
 
 // Linear cost function parameters for CCGT and CT (simulating heat rate degradation)
 // CCGT: starts at $35/MWh for first 500MW, then increases by $5/MWh for each additional 500MW
@@ -685,9 +711,11 @@ async function initialize() {
         resumeButton.addEventListener('click', resumeGame);
         restartButton.addEventListener('click', resetGame);
 
-        // Battery and Hydro slider event listeners
+        // Battery, Hydro, and Curtailment slider event listeners
         batterySlider.addEventListener('input', updateSupplyValues);
         hydroSlider.addEventListener('input', updateSupplyValues);
+        solarCurtailmentSlider.addEventListener('input', updateSupplyValues);
+        windCurtailmentSlider.addEventListener('input', updateSupplyValues);
 
         // Battery and Hydro input field event listeners
         batteryInput.addEventListener('input', () => {
@@ -700,6 +728,20 @@ async function initialize() {
             const value = parseFloat(hydroInput.value) || 0;
             const clamped = Math.max(0, Math.min(currentHydroMaxMW, value));
             hydroSlider.value = clamped;
+            updateSupplyValues();
+        });
+        solarCurtailmentInput.addEventListener('input', () => {
+            const value = parseFloat(solarCurtailmentInput.value) || 0;
+            const maxCurtailment = parseFloat(solarCurtailmentSlider.max);
+            const clamped = Math.max(0, Math.min(maxCurtailment, value));
+            solarCurtailmentSlider.value = clamped;
+            updateSupplyValues();
+        });
+        windCurtailmentInput.addEventListener('input', () => {
+            const value = parseFloat(windCurtailmentInput.value) || 0;
+            const maxCurtailment = parseFloat(windCurtailmentSlider.max);
+            const clamped = Math.max(0, Math.min(maxCurtailment, value));
+            windCurtailmentSlider.value = clamped;
             updateSupplyValues();
         });
 
@@ -750,16 +792,16 @@ async function initialize() {
         batteryInput.disabled = false;
         hydroSlider.disabled = false;
         hydroInput.disabled = false;
+        solarCurtailmentSlider.disabled = false;
+        solarCurtailmentInput.disabled = false;
+        windCurtailmentSlider.disabled = false;
+        windCurtailmentInput.disabled = false;
         ccgtCommitBtn.disabled = false;
         ctCommitBtn.disabled = false;
 
         // Initialize unit displays
         updateCCGTDisplay();
         updateCTDisplay();
-
-        // Event button listeners
-        cloudCoverBtn.addEventListener('click', triggerCloudCoverEvent);
-        demandSpikeBtn.addEventListener('click', triggerDemandSpikeEvent);
 
         // Hydro condition dropdown listener
         hydroCondition.addEventListener('change', updateHydroCapacity);
@@ -801,11 +843,54 @@ async function initialize() {
     }
 }
 
+// Update curtailment slider ranges based on current solar/wind generation
+function updateCurtailmentRanges(tick = 0) {
+    if (forecastData.length === 0) return;
+
+    const currentData = forecastData[tick];
+    const maxSolarCurtailment = Math.max(0, Math.round(currentData.solar_mw));
+    const maxWindCurtailment = Math.max(0, Math.round(currentData.wind_mw));
+
+    // Format the time for the current tick
+    const hour = Math.floor(tick / 12);
+    const minute = (tick % 12) * 5;
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    const timeString = `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
+
+    // Update solar curtailment slider
+    solarCurtailmentSlider.max = maxSolarCurtailment;
+    solarCurtailmentInput.max = maxSolarCurtailment;
+    solarCurtailmentMaxDisplay.textContent = `Max: ${maxSolarCurtailment.toLocaleString()} MW (at ${timeString})`;
+
+    // Clamp current value if it exceeds new max
+    const currentSolarCurtailment = parseFloat(solarCurtailmentSlider.value);
+    if (currentSolarCurtailment > maxSolarCurtailment) {
+        solarCurtailmentSlider.value = maxSolarCurtailment;
+        solarCurtailmentInput.value = maxSolarCurtailment;
+    }
+
+    // Update wind curtailment slider
+    windCurtailmentSlider.max = maxWindCurtailment;
+    windCurtailmentInput.max = maxWindCurtailment;
+    windCurtailmentMaxDisplay.textContent = `Max: ${maxWindCurtailment.toLocaleString()} MW (at ${timeString})`;
+
+    // Clamp current value if it exceeds new max
+    const currentWindCurtailment = parseFloat(windCurtailmentSlider.value);
+    if (currentWindCurtailment > maxWindCurtailment) {
+        windCurtailmentSlider.value = maxWindCurtailment;
+        windCurtailmentInput.value = maxWindCurtailment;
+    }
+}
+
 // Show initial demand before game starts
 function showInitialDemand() {
     if (forecastData.length > 0) {
         const initialNetDemand = forecastData[0].net_demand_mw;
         demandValueSpan.textContent = Math.round(initialNetDemand);
+
+        // Update curtailment ranges for tick 0
+        updateCurtailmentRanges(0);
 
         // Update delta based on current supply (units + battery + hydro)
         const totalSupply = parseFloat(batterySlider.value) + getTotalOnlineMW(ccgtUnits) +
@@ -822,6 +907,22 @@ function showInitialDemand() {
             deltaElement.className = 'text-2xl font-bold text-yellow-600';
         } else {
             deltaElement.className = 'text-2xl font-bold text-red-600';
+        }
+
+        // Enable/disable Start button based on grid stability
+        // Grid is stable if delta is within ±500 MW (green zone)
+        if (!gameStarted) {
+            if (absDelta < 500) {
+                startButton.disabled = false;
+                startButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                startButton.classList.add('bg-gradient-to-r', 'from-blue-600', 'to-purple-600', 'hover:from-blue-700', 'hover:to-purple-700');
+                startButton.removeAttribute('title'); // Remove tooltip when enabled
+            } else {
+                startButton.disabled = true;
+                startButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+                startButton.classList.remove('bg-gradient-to-r', 'from-blue-600', 'to-purple-600', 'hover:from-blue-700', 'hover:to-purple-700');
+                startButton.setAttribute('title', 'Match the Net Demand with Generation at 12:00 AM to start the game.'); // Show tooltip when disabled
+            }
         }
 
         // Update gauges (delta and frequency) during pre-game
@@ -1001,6 +1102,32 @@ function createChart() {
                     pointHoverRadius: 0,
                     stack: 'renewable',
                     order: 4
+                },
+                {
+                    label: 'Solar Curtailment',
+                    type: 'line',
+                    data: [],
+                    borderColor: 'rgba(245, 158, 11, 1)',
+                    backgroundColor: 'rgba(245, 158, 11, 0.5)',
+                    borderWidth: 2,
+                    fill: true,
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    stack: 'renewable',
+                    order: 6
+                },
+                {
+                    label: 'Wind Curtailment',
+                    type: 'line',
+                    data: [],
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.5)',
+                    borderWidth: 2,
+                    fill: true,
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    stack: 'renewable',
+                    order: 6
                 }
             ]
         },
@@ -1074,14 +1201,15 @@ function createChart() {
                     labels: {
                         filter: function(legendItem, chartData) {
                             // During gameplay, hide the forecast dot datasets from legend
-                            // Only show the actual line datasets
+                            // Also hide Total Demand and Net Demand lines (they're obvious in the chart)
                             const totalDatasets = chartData.datasets.length;
 
                             // If we have more than 11 datasets, game has started (actual lines added)
                             if (totalDatasets > 11) {
                                 // Hide forecast dots (indices 5 and 6) during gameplay
-                                // The actual demand lines are at indices 7 and 8
-                                if (legendItem.datasetIndex === 5 || legendItem.datasetIndex === 6) {
+                                // Hide Total Demand and Net Demand lines (indices 7 and 8)
+                                if (legendItem.datasetIndex === 5 || legendItem.datasetIndex === 6 ||
+                                    legendItem.datasetIndex === 7 || legendItem.datasetIndex === 8) {
                                     return false;
                                 }
                             }
@@ -1106,11 +1234,11 @@ function createChart() {
                                 };
                             });
 
-                            // Define custom order: Demand first, then renewables, then flexible
+                            // Define custom order: Demand first, then renewables, then flexible, then curtailment
                             const order = [
                                 'Total Demand', 'Net Demand',  // Row 1
                                 'Solar', 'Wind', 'Geothermal', 'Nuclear', 'Biomass',  // Row 2
-                                'CCGT', 'CT', 'Hydro', 'Battery'  // Row 3
+                                'CCGT', 'CT', 'Hydro', 'Battery', 'Solar Curtailment', 'Wind Curtailment'  // Row 3 & 4
                             ];
 
                             // Remove "(Forecast)" and "(Actual)" suffixes from labels
@@ -1239,6 +1367,8 @@ function updateChartData() {
     myChart.data.datasets[8].data = []; // CCGT
     myChart.data.datasets[9].data = []; // CT
     myChart.data.datasets[10].data = []; // Hydro
+    myChart.data.datasets[11].data = []; // Solar Curtailment
+    myChart.data.datasets[12].data = []; // Wind Curtailment
     myChart.update();
 
     // Update demand and gauges after chart data changes
@@ -1447,11 +1577,18 @@ function updateSupplyValues() {
     const ccgt = getTotalOnlineMW(ccgtUnits);
     const ct = getTotalOnlineMW(ctUnits);
     const hydro = parseFloat(hydroSlider.value);
-    const total = battery + ccgt + ct + hydro;
+    const solarCurtailment = parseFloat(solarCurtailmentSlider.value);
+    const windCurtailment = parseFloat(windCurtailmentSlider.value);
+
+    // Curtailment acts as negative supply (reduces renewable generation)
+    // So total supply = flexible resources - curtailment
+    const total = battery + ccgt + ct + hydro - solarCurtailment - windCurtailment;
 
     // Update input fields to match sliders
     batteryInput.value = Math.round(battery);
     hydroInput.value = Math.round(hydro);
+    solarCurtailmentInput.value = Math.round(solarCurtailment);
+    windCurtailmentInput.value = Math.round(windCurtailment);
     totalSupplyValueSpan.textContent = Math.round(total);
 
     // Update delta display and chart if game hasn't started yet
@@ -1469,6 +1606,22 @@ function updateSupplyValues() {
             deltaElement.className = 'text-2xl font-bold text-yellow-600';
         } else {
             deltaElement.className = 'text-2xl font-bold text-red-600';
+        }
+
+        // Enable/disable Start button based on grid stability
+        // Grid is stable if delta is within ±500 MW (green zone)
+        if (!gameStarted && !isEditMode) {
+            if (absDelta < 500) {
+                startButton.disabled = false;
+                startButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                startButton.classList.add('bg-gradient-to-r', 'from-blue-600', 'to-purple-600', 'hover:from-blue-700', 'hover:to-purple-700');
+                startButton.removeAttribute('title'); // Remove tooltip when enabled
+            } else {
+                startButton.disabled = true;
+                startButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+                startButton.classList.remove('bg-gradient-to-r', 'from-blue-600', 'to-purple-600', 'hover:from-blue-700', 'hover:to-purple-700');
+                startButton.setAttribute('title', 'Match the Net Demand with Generation at 12:00 AM to start the game.'); // Show tooltip when disabled
+            }
         }
 
         // Calculate battery SOC change for tick 0
@@ -1495,7 +1648,9 @@ function updateSupplyValues() {
         const ccgtCost = calculateCCGTCost(ccgt) * (1/12);
         const ctCost = calculateCTCost(ct) * (1/12);
         const hydroCost = hydro * HYDRO_OPCOST * (1/12);
-        const currentIntervalCost = batteryCost + ccgtCost + ctCost + hydroCost;
+        const solarCurtailmentCost = solarCurtailment * SOLAR_CURTAILMENT_OPCOST * (1/12);
+        const windCurtailmentCost = windCurtailment * WIND_CURTAILMENT_OPCOST * (1/12);
+        const currentIntervalCost = batteryCost + ccgtCost + ctCost + hydroCost + solarCurtailmentCost + windCurtailmentCost;
 
         // Before game starts, total cost is just tick 0 cost (not extrapolated)
         const totalCostBeforeGame = currentIntervalCost;
@@ -1530,6 +1685,8 @@ function updateSupplyValues() {
             myChart.data.datasets[8].data[0] = ccgt;     // CCGT
             myChart.data.datasets[9].data[0] = ct;       // CT
             myChart.data.datasets[10].data[0] = hydro;   // Hydro
+            myChart.data.datasets[11].data[0] = -solarCurtailment;   // Solar Curtailment (negative)
+            myChart.data.datasets[12].data[0] = -windCurtailment;    // Wind Curtailment (negative)
             myChart.update('none'); // Update without animation
         }
 
@@ -1557,7 +1714,7 @@ function updateBatterySOCDisplay() {
 function updateTipsBanner() {
     if (!gameStarted) {
         // Pre-game tip
-        tipsBanner.textContent = '💡 Ensure you match the demand and supply before you Start the Day';
+        tipsBanner.textContent = '💡 Match the Net Demand with Generation at 12:00 AM to start the game.';
         tipsBanner.className = 'mb-4 px-4 py-2 rounded-lg text-center text-sm font-medium transition-all duration-300 bg-blue-50 text-blue-800 border border-blue-200';
         return;
     }
@@ -1692,7 +1849,19 @@ function updateHydroCapacity() {
 function updateStatusBanner(delta) {
     const absDelta = Math.abs(delta);
 
-    if (absDelta >= 1500) {
+    // Check if we're in initial state (no resources configured yet)
+    const battery = parseFloat(batterySlider.value);
+    const ccgt = getTotalOnlineMW(ccgtUnits);
+    const ct = getTotalOnlineMW(ctUnits);
+    const hydro = parseFloat(hydroSlider.value);
+    const totalSupply = battery + ccgt + ct + hydro;
+    const isInitialState = !gameStarted && totalSupply === 0;
+
+    if (isInitialState) {
+        // Initial state - show instruction to match delta
+        statusBanner.className = 'mb-4 px-4 py-3 rounded-lg text-center font-semibold text-lg transition-all duration-300 bg-blue-100 text-blue-800';
+        statusBanner.textContent = '⚙️ Grid Unstable: Match Net Demand with Resources';
+    } else if (absDelta >= 1500) {
         // Blackout
         statusBanner.className = 'mb-4 px-4 py-3 rounded-lg text-center font-semibold text-lg transition-all duration-300 bg-red-100 text-red-800 animate-pulse';
         statusBanner.textContent = '⚠️ BLACKOUT';
@@ -1876,16 +2045,6 @@ function triggerCloudCoverEvent() {
     myChart.data.datasets[4].data[nextTick] = reducedSolarMW;
     myChart.update('none');
 
-    // Disable button temporarily
-    cloudCoverBtn.disabled = true;
-    cloudCoverBtn.textContent = '☁️ Cloud Active!';
-
-    // Re-enable after event passes (after next tick)
-    setTimeout(() => {
-        cloudCoverBtn.disabled = false;
-        cloudCoverBtn.textContent = '☁️ Cloud Cover';
-    }, 1000);
-
     console.log(`Cloud Cover Event! Solar reduced by ${Math.round(reductionFactor * 100)}% for next tick`);
 }
 
@@ -1922,16 +2081,6 @@ function triggerDemandSpikeEvent() {
         myChart.data.datasets[6].data[nextTick] = forecastData[nextTick].net_demand_mw;
     }
     myChart.update('none');
-
-    // Disable button temporarily
-    demandSpikeBtn.disabled = true;
-    demandSpikeBtn.textContent = '⚡ Spike Active!';
-
-    // Re-enable after event passes (after next tick)
-    setTimeout(() => {
-        demandSpikeBtn.disabled = false;
-        demandSpikeBtn.textContent = '⚡ Demand Spike';
-    }, 1000);
 
     console.log(`Demand Spike Event! Demand increased by ${Math.round(spikeMW)} MW for next tick`);
 }
@@ -2021,6 +2170,11 @@ function gameLoop() {
 
         alert(`Day complete! You suffered ${emergencyMinutes} mins of Emergency Alerts and ${blackoutMinutes} minutes of Blackouts.`);
 
+        // Submit score to leaderboard if perfect game
+        if (emergencyAlertCount === 0 && blackoutCount === 0) {
+            submitScore();
+        }
+
         // Change button to "Reset" after user clicks OK
         // Keep game in "started" state so button knows to call resetGame
         startButton.textContent = 'Reset';
@@ -2038,11 +2192,16 @@ function gameLoop() {
 
     const currentNetDemand = forecastData[gameTick].net_demand_mw;
 
-    // Get current supply from all sources (units + battery + hydro)
+    // Get current supply from all sources (units + battery + hydro + curtailment)
     const batteryMW = parseFloat(batterySlider.value);
     const ccgtMW = getTotalOnlineMW(ccgtUnits);
     const ctMW = getTotalOnlineMW(ctUnits);
     let hydroMW = parseFloat(hydroSlider.value);
+    const solarCurtailmentMW = parseFloat(solarCurtailmentSlider.value);
+    const windCurtailmentMW = parseFloat(windCurtailmentSlider.value);
+
+    // Update curtailment ranges for next tick
+    updateCurtailmentRanges(gameTick);
 
     // Apply ramp rate constraints for Hydro only (units handle their own ramping)
     const hydroRampChange = hydroMW - prevHydro;
@@ -2063,7 +2222,8 @@ function gameLoop() {
     // Update displays after ramp constraints applied
     updateSupplyValues();
 
-    const totalSupply = batteryMW + ccgtMW + ctMW + hydroMW;
+    // Curtailment acts as negative supply (reduces net demand effectively)
+    const totalSupply = batteryMW + ccgtMW + ctMW + hydroMW - solarCurtailmentMW - windCurtailmentMW;
 
     // Update battery state of charge
     // Negative battery value = charging (increasing SOC)
@@ -2094,7 +2254,9 @@ function gameLoop() {
     const ccgtCost = calculateCCGTCost(ccgtMW) * (1/12);  // Linear cost function * time
     const ctCost = calculateCTCost(ctMW) * (1/12);        // Linear cost function * time
     const hydroCost = hydroMW * HYDRO_OPCOST * (1/12);
-    const currentIntervalCost = batteryCost + ccgtCost + ctCost + hydroCost;
+    const solarCurtailmentCost = solarCurtailmentMW * SOLAR_CURTAILMENT_OPCOST * (1/12);
+    const windCurtailmentCost = windCurtailmentMW * WIND_CURTAILMENT_OPCOST * (1/12);
+    const currentIntervalCost = batteryCost + ccgtCost + ctCost + hydroCost + solarCurtailmentCost + windCurtailmentCost;
 
     // Accumulate total cost
     totalCost += currentIntervalCost;
@@ -2124,11 +2286,13 @@ function gameLoop() {
     }
 
     // Update chart data
-    // Note: After switchToActualData(), datasets 7-8 are actual demand lines, 9-12 are supply
+    // Note: After switchToActualData(), datasets 7-8 are actual demand lines, 9-14 are supply/curtailment
     myChart.data.datasets[9].data.push(batteryMW);  // Battery
     myChart.data.datasets[10].data.push(ccgtMW);     // CCGT
     myChart.data.datasets[11].data.push(ctMW);       // CT
     myChart.data.datasets[12].data.push(hydroMW);   // Hydro
+    myChart.data.datasets[13].data.push(-solarCurtailmentMW);   // Solar Curtailment (negative)
+    myChart.data.datasets[14].data.push(-windCurtailmentMW);    // Wind Curtailment (negative)
 
     // Update the ACTUAL demand lines for the CURRENT tick
     // This ensures the array has valid data up to the point being rendered
@@ -2326,9 +2490,10 @@ function startGame() {
     gameStarted = true; // Mark game as started
     gamePaused = false; // Mark game as not paused
 
-    // Change button to "Pause"
+    // Change button to "Pause" with distinct gradient (yellow to orange - less distracting)
     startButton.textContent = 'Pause';
     startButton.disabled = false;
+    startButton.className = 'w-full px-6 py-3 text-lg font-medium text-white bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 rounded-full transition-colors shadow-md';
 
     editProfileButton.disabled = true;
     gameTick = 0;
@@ -2342,10 +2507,6 @@ function startGame() {
     updateTipsBanner();
     currentCostValueSpan.textContent = '0';
     totalCostValueSpan.textContent = '0';
-
-    // Enable event buttons during gameplay
-    cloudCoverBtn.disabled = false;
-    demandSpikeBtn.disabled = false;
 
     // Schedule random events for this game session
     scheduleRandomEvents();
@@ -2381,9 +2542,10 @@ function resetGame() {
     gamePaused = false; // Mark game as not paused
     clearInterval(gameInterval);
 
-    // Reset button states
+    // Reset button states and restore initial styling
     startButton.textContent = 'Start The Day';
-    startButton.disabled = false;
+    startButton.disabled = true; // Will be enabled when grid is stable
+    startButton.className = 'w-full px-6 py-3 text-lg font-medium text-white bg-gray-400 cursor-not-allowed rounded-full transition-colors shadow-md';
     startButton.classList.remove('hidden');
     pauseButtons.classList.add('hidden');
 
@@ -2425,6 +2587,10 @@ function resetGame() {
     hydroSlider.value = 0;
     batteryInput.value = 0;
     hydroInput.value = 0;
+    solarCurtailmentSlider.value = 0;
+    solarCurtailmentInput.value = 0;
+    windCurtailmentSlider.value = 0;
+    windCurtailmentInput.value = 0;
     updateSupplyValues();
     updateBatterySOCDisplay();
     updateCCGTDisplay();
@@ -2447,47 +2613,53 @@ function resetGame() {
     emergencyCountSpan.textContent = '0';
     blackoutCountSpan.textContent = '0';
 
-    // Reset status banner to stable
-    statusBanner.className = 'mb-4 px-4 py-3 rounded-lg text-center font-semibold text-lg transition-all duration-300 bg-green-100 text-green-800';
-    statusBanner.textContent = '✓ Grid Stable';
-
-    // Disable event buttons when game is not running
-    cloudCoverBtn.disabled = true;
-    demandSpikeBtn.disabled = true;
+    // Reset status banner to initial unstable state
+    statusBanner.className = 'mb-4 px-4 py-3 rounded-lg text-center font-semibold text-lg transition-all duration-300 bg-blue-100 text-blue-800';
+    statusBanner.textContent = '⚙️ Grid Unstable: Match Net Demand with Resources';
 
     // Re-enable controls for pre-game setup
     batterySlider.disabled = false;
     batteryInput.disabled = false;
     hydroSlider.disabled = false;
     hydroInput.disabled = false;
+    solarCurtailmentSlider.disabled = false;
+    solarCurtailmentInput.disabled = false;
+    windCurtailmentSlider.disabled = false;
+    windCurtailmentInput.disabled = false;
     ccgtCommitBtn.disabled = false;
     ctCommitBtn.disabled = false;
 
     // Clear supply chart data BEFORE switching back to forecast
-    // During game, actual demand datasets are at 7-8, pushing supply to 9-12
-    // We need to clear 9-12 if they exist, or 7-10 if game never started
-    if (myChart.data.datasets.length > 11) {
-        // Game was running: clear datasets at indices 9-12 (Battery, CCGT, CT, Hydro)
+    // During game, actual demand datasets are at 7-8, pushing supply to 9-14
+    // We need to clear 9-14 if they exist, or 7-12 if game never started
+    if (myChart.data.datasets.length > 13) {
+        // Game was running: clear datasets at indices 9-14 (Battery, CCGT, CT, Hydro, Solar Curtailment, Wind Curtailment)
         myChart.data.datasets[9].data = []; // Battery
         myChart.data.datasets[10].data = []; // CCGT
         myChart.data.datasets[11].data = []; // CT
         myChart.data.datasets[12].data = []; // Hydro
+        myChart.data.datasets[13].data = []; // Solar Curtailment
+        myChart.data.datasets[14].data = []; // Wind Curtailment
     } else {
-        // Game never started: clear datasets at indices 7-10
+        // Game never started: clear datasets at indices 7-12
         myChart.data.datasets[7].data = []; // Battery
         myChart.data.datasets[8].data = []; // CCGT
         myChart.data.datasets[9].data = []; // CT
         myChart.data.datasets[10].data = []; // Hydro
+        myChart.data.datasets[11].data = []; // Solar Curtailment
+        myChart.data.datasets[12].data = []; // Wind Curtailment
     }
 
     // Switch back to hourly forecast dots (removes actual demand datasets 7-8)
     switchToForecastData();
 
-    // Now clear supply data at their reset positions (7-10)
+    // Now clear supply data at their reset positions (7-12)
     myChart.data.datasets[7].data = []; // Battery
     myChart.data.datasets[8].data = []; // CCGT
     myChart.data.datasets[9].data = []; // CT
     myChart.data.datasets[10].data = []; // Hydro
+    myChart.data.datasets[11].data = []; // Solar Curtailment
+    myChart.data.datasets[12].data = []; // Wind Curtailment
 
     myChart.update();
 
@@ -2754,41 +2926,91 @@ function applyCFSeasonPreset(presetSeason) {
 // --- TUTORIAL LOGIC ---
 const tutorialSteps = [
     {
-        title: 'Welcome to the Grid Operator Game!',
-        text: 'Your mission: Balance California\'s electricity grid for 24 hours by matching supply to net demand exactly. Let\'s take a quick tour!',
+        title: '🎮 Welcome to Grid Operator!',
+        text: 'You\'re in charge of California\'s electricity grid for 24 hours. Your mission: Match supply to net demand exactly while minimizing costs and avoiding blackouts. Perfect games qualify for the global leaderboard!',
         position: 'center'
     },
     {
         element: '#tutorial-step-2',
-        title: 'The Generation & Demand Chart',
-        text: 'This shows the hourly demand and renewable generation (solar, wind, nuclear, etc.). The red line is Net Demand - your target to match with flexible resources.',
+        title: '📊 Understanding the Chart',
+        text: 'This chart shows 24-hour demand and generation. Renewable sources (solar, wind, nuclear, geothermal, biomass) are shown as colored areas. The RED LINE is Net Demand - what you need to match with flexible resources!',
         position: 'right',
         highlightClass: 'rounded-lg'
     },
     {
-        element: '#tutorial-step-3',
-        title: 'Game Controls',
-        text: 'Control game speed, start/pause the game, and trigger random events like cloud cover (reduces solar) or demand spikes (sudden load increase).',
+        element: '#tutorial-step-4',
+        title: '⚡ Fast-Starting Gas Units',
+        text: 'CCGT Units: 500 MW each, 75-min startup, 50% minimum load, $35+/MWh. CT Peakers: 200 MW each, 15-min startup, no minimum load, $65+/MWh. Click "Commit Unit" to start them up. These are expensive but reliable!',
         position: 'left',
         highlightClass: 'rounded-lg'
     },
     {
         element: '#tutorial-step-4',
-        title: 'Flexible Generation Resources',
-        text: 'Use Battery (instant), Hydro (fast ramp), CCGT (60-90 min startup), and CT Peakers (10-20 min startup) to fill the gap between demand and renewables.',
+        title: '🔋 Fast-Response Resources',
+        text: 'Battery: ±13 GW, instant response, $5/MWh, 52 GWh capacity (watch SOC!). Hydro: 0-6 GW, very fast ramp, $2/MWh (cheapest!). Use these to follow rapid changes in demand and smooth out renewable variability.',
         position: 'left',
         highlightClass: 'rounded-lg'
     },
     {
-        element: '#tutorial-step-5',
-        title: 'Game Metrics & Monitoring',
-        text: 'Track your performance: Keep Delta (Supply - Demand) near zero to avoid Emergency Alerts (±500 MW) and Blackouts (±1500 MW). Minimize total cost!',
+        element: '#tutorial-step-4',
+        title: '☀️ Renewable Curtailment (NEW!)',
+        text: 'Solar & Wind Curtailment: When renewables exceed demand and your battery is full, curtail excess generation to avoid oversupply. Cost: $20/MWh. Range adjusts each tick based on actual generation. Use sparingly!',
+        position: 'left',
+        highlightClass: 'rounded-lg'
+    },
+    {
+        element: '#tutorial-step-gauges',
+        title: '📈 Live Gauges - Delta',
+        text: 'Delta = Your Supply - Net Demand. Keep this NEAR ZERO! Green (< 500 MW) = Grid Stable ✓. Yellow (500-1000 MW) = Emergency Alert ⚠️. Red (> 1000 MW) = Blackout ⚠️⚠️. Every 5 minutes counts!',
         position: 'bottom',
         highlightClass: 'rounded-lg'
     },
     {
-        title: 'Ready to Play!',
-        text: 'Set up your resources, click Start The Day, and balance the grid! Aim for zero alerts and blackouts to win the confetti celebration. Good luck!',
+        element: '#tutorial-step-gauges',
+        title: '⚡ Live Gauges - Frequency',
+        text: 'Grid frequency shows system health. 60 Hz = perfect balance. Too low (undersupply) or too high (oversupply) means instability. Watch this gauge to see how your decisions affect the grid in real-time!',
+        position: 'bottom',
+        highlightClass: 'rounded-lg'
+    },
+    {
+        element: '#tutorial-step-5',
+        title: '💰 Cost Tracking',
+        text: 'Every resource has an operating cost. Minimize your total cost while maintaining stability! Costs per MWh: Hydro ($2), Battery ($5), Curtailment ($20), CCGT ($35+), CT ($65+). Strategy matters!',
+        position: 'bottom',
+        highlightClass: 'rounded-lg'
+    },
+    {
+        element: '#tutorial-step-3',
+        title: '🎲 Random Events',
+        text: 'Expect the unexpected! Cloud cover can suddenly reduce solar generation. Demand spikes can hit without warning. The game schedules 0-2 random events during your 24-hour shift. Stay alert and keep backup capacity ready!',
+        position: 'left',
+        highlightClass: 'rounded-lg'
+    },
+    {
+        element: '#tutorial-step-3',
+        title: '⏱️ Game Speed Control',
+        text: 'Adjust game speed from 0.1s to 30s per tick (each tick = 5 real-world minutes). Start slow to learn, then speed up for faster gameplay. You can pause anytime to plan your next moves!',
+        position: 'left',
+        highlightClass: 'rounded-lg'
+    },
+    {
+        title: '🚦 Starting the Game',
+        text: 'IMPORTANT: The "Start The Day" button is DISABLED until you achieve grid stability (delta < 500 MW). Set up your resources for 12:00 AM, watch the delta turn GREEN, then click start. This prevents starting with an unbalanced grid!',
+        position: 'center'
+    },
+    {
+        title: '🏆 Global Leaderboard',
+        text: 'Perfect games (0 Emergency Alerts + 0 Blackouts) automatically qualify for the leaderboard! Compete globally for the LOWEST COST. Only the top 10 most efficient operators are displayed. Can you make it to the top?',
+        position: 'center'
+    },
+    {
+        title: '💡 Pro Tips',
+        text: 'Strategy: Plan ahead! CCGT takes 75 min to start. Anticipate the evening peak (18-21h) when solar fades and demand spikes. Charge battery during solar hours (11-14h). Use cheap hydro for baseload. Save expensive CT peakers for emergencies!',
+        position: 'center'
+    },
+    {
+        title: '🎯 Ready to Operate!',
+        text: 'You\'re now ready to run the grid! Balance supply and demand, minimize costs, avoid blackouts, and aim for a perfect game. Remember: Every decision counts. Good luck, Operator!',
         position: 'center'
     }
 ];
@@ -2931,8 +3153,164 @@ showTutorialBtn.addEventListener('click', () => {
     startTutorial();
 });
 
+// --- LEADERBOARD FUNCTIONS ---
+let playerUsername = localStorage.getItem('gridOperatorUsername') || '';
+
+// Show username modal if no username is saved
+function checkUsername() {
+    if (!playerUsername) {
+        usernameModal.classList.remove('hidden');
+    } else {
+        currentUsernameSpan.textContent = playerUsername;
+    }
+}
+
+// Submit username
+submitUsernameBtn.addEventListener('click', () => {
+    const username = usernameInput.value.trim();
+    if (username.length < 3) {
+        alert('Username must be at least 3 characters long');
+        return;
+    }
+
+    playerUsername = username;
+    localStorage.setItem('gridOperatorUsername', username);
+    currentUsernameSpan.textContent = username;
+    usernameModal.classList.add('hidden');
+});
+
+// Allow Enter key to submit username
+usernameInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        submitUsernameBtn.click();
+    }
+});
+
+// Fetch and display leaderboard
+async function fetchLeaderboard() {
+    try {
+        leaderboardLoading.classList.remove('hidden');
+        leaderboardContent.classList.add('hidden');
+
+        const response = await fetch(`${API_BASE_URL}/leaderboard`);
+        const data = await response.json();
+
+        leaderboardLoading.classList.add('hidden');
+        leaderboardContent.classList.remove('hidden');
+
+        if (data.success && data.leaderboard.length > 0) {
+            displayLeaderboard(data.leaderboard);
+            leaderboardEmpty.classList.add('hidden');
+        } else {
+            leaderboardList.innerHTML = '';
+            leaderboardEmpty.classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Error fetching leaderboard:', error);
+        leaderboardLoading.classList.add('hidden');
+        leaderboardContent.classList.remove('hidden');
+        leaderboardList.innerHTML = '<p class="text-center text-red-500">Failed to load leaderboard. Make sure the backend server is running.</p>';
+    }
+}
+
+// Display leaderboard entries
+function displayLeaderboard(entries) {
+    leaderboardList.innerHTML = entries.map((entry, index) => {
+        const rank = index + 1;
+        const isCurrentPlayer = entry.username === playerUsername;
+        const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+
+        return `
+            <div class="flex items-center justify-between p-4 rounded-lg ${
+                isCurrentPlayer ? 'bg-blue-50 border-2 border-blue-500' : 'bg-gray-50'
+            } transition-all hover:shadow-md">
+                <div class="flex items-center gap-4">
+                    <span class="text-2xl font-bold ${rank <= 3 ? '' : 'text-gray-600'}">${rankEmoji}</span>
+                    <div>
+                        <p class="font-semibold text-gray-800 ${isCurrentPlayer ? 'text-blue-600' : ''}">
+                            ${entry.username} ${isCurrentPlayer ? '(You!)' : ''}
+                        </p>
+                        <p class="text-xs text-gray-500">
+                            ${new Date(entry.timestamp).toLocaleDateString()} • ${entry.season}
+                        </p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="font-bold text-green-600">$${entry.totalCost.toLocaleString()}</p>
+                    <p class="text-xs text-gray-500">Total Cost</p>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Submit score to leaderboard
+async function submitScore() {
+    if (!playerUsername) {
+        alert('Please set a username first!');
+        usernameModal.classList.remove('hidden');
+        return;
+    }
+
+    // Only submit perfect games
+    if (emergencyAlertCount !== 0 || blackoutCount !== 0) {
+        return; // Don't submit imperfect games
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/leaderboard`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: playerUsername,
+                totalCost: totalCost,
+                emergencyAlerts: emergencyAlertCount,
+                blackouts: blackoutCount,
+                season: currentSeason
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.rank) {
+            // Show congratulations message
+            alert(`🎉 ${data.message}\n\nYour cost: $${Math.round(totalCost).toLocaleString()}\n\nClick OK to view the leaderboard!`);
+            showLeaderboard();
+        }
+    } catch (error) {
+        console.error('Error submitting score:', error);
+        alert('Failed to submit score to leaderboard. Make sure the backend server is running.');
+    }
+}
+
+// Show leaderboard modal
+function showLeaderboard() {
+    leaderboardModal.classList.remove('hidden');
+    fetchLeaderboard();
+}
+
+// Close leaderboard modal
+closeLeaderboardBtn.addEventListener('click', () => {
+    leaderboardModal.classList.add('hidden');
+});
+
+// Leaderboard button click
+leaderboardBtn.addEventListener('click', showLeaderboard);
+
+// Close modal when clicking outside
+leaderboardModal.addEventListener('click', (e) => {
+    if (e.target === leaderboardModal) {
+        leaderboardModal.classList.add('hidden');
+    }
+});
+
 // --- 11. KICK EVERYTHING OFF ---
 initialize().then(() => {
+    // Check for username
+    checkUsername();
+
     // Start tutorial after a short delay to let the page fully load
     setTimeout(startTutorial, 500);
 });
