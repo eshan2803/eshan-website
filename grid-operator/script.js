@@ -2495,6 +2495,9 @@ function startGame() {
     startButton.disabled = false;
     startButton.className = 'w-full px-6 py-3 text-lg font-medium text-white bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 rounded-full transition-colors shadow-md';
 
+    // Hide scheduler button during gameplay
+    hideSchedulerButton();
+
     editProfileButton.disabled = true;
     gameTick = 0;
     batterySOC = 0.2; // Reset to 20%
@@ -2616,6 +2619,9 @@ function resetGame() {
     // Reset status banner to initial unstable state
     statusBanner.className = 'mb-4 px-4 py-3 rounded-lg text-center font-semibold text-lg transition-all duration-300 bg-blue-100 text-blue-800';
     statusBanner.textContent = '⚙️ Grid Unstable: Match Net Demand with Resources';
+
+    // Show scheduler button for pre-game planning
+    showSchedulerButton();
 
     // Re-enable controls for pre-game setup
     batterySlider.disabled = false;
@@ -3177,6 +3183,9 @@ submitUsernameBtn.addEventListener('click', () => {
     localStorage.setItem('gridOperatorUsername', username);
     currentUsernameSpan.textContent = username;
     usernameModal.classList.add('hidden');
+
+    // Start tutorial after username is submitted (for new users)
+    setTimeout(startTutorial, 500);
 });
 
 // Allow Enter key to submit username
@@ -3306,16 +3315,378 @@ leaderboardModal.addEventListener('click', (e) => {
     }
 });
 
+// --- SCHEDULER MODULE ---
+let schedulerChart = null;
+let scheduledEvents = [];
+let selectedScheduleTick = null;
+
+// Scheduler DOM elements
+const schedulerModal = document.getElementById('schedulerModal');
+const openSchedulerBtn = document.getElementById('openSchedulerBtn');
+const closeSchedulerBtn = document.getElementById('closeSchedulerBtn');
+const applyScheduleBtn = document.getElementById('applyScheduleBtn');
+const clearScheduleBtn = document.getElementById('clearScheduleBtn');
+const schedulerButtonContainer = document.getElementById('schedulerButtonContainer');
+const scheduledEventsList = document.getElementById('scheduledEventsList');
+const resourceSelectionPanel = document.getElementById('resourceSelectionPanel');
+const cancelEventBtn = document.getElementById('cancelEventBtn');
+const selectedTimeSpan = document.getElementById('selectedTime');
+const selectedTickSpan = document.getElementById('selectedTick');
+
+// Open scheduler modal
+openSchedulerBtn.addEventListener('click', () => {
+    schedulerModal.classList.remove('hidden');
+    if (!schedulerChart) {
+        createSchedulerChart();
+    }
+});
+
+// Close scheduler modal
+closeSchedulerBtn.addEventListener('click', () => {
+    schedulerModal.classList.add('hidden');
+    hideResourcePanel();
+});
+
+// Cancel event selection
+cancelEventBtn.addEventListener('click', hideResourcePanel);
+
+// Clear all scheduled events
+clearScheduleBtn.addEventListener('click', () => {
+    if (confirm('Are you sure you want to clear all scheduled events?')) {
+        scheduledEvents = [];
+        updateScheduledEventsList();
+        updateSchedulerChartMarkers();
+    }
+});
+
+// Apply schedule
+applyScheduleBtn.addEventListener('click', applySchedule);
+
+// Hide resource selection panel
+function hideResourcePanel() {
+    resourceSelectionPanel.classList.add('hidden');
+    selectedScheduleTick = null;
+}
+
+// Create scheduler chart
+function createSchedulerChart() {
+    const canvas = document.getElementById('schedulerChart');
+    const ctx = canvas.getContext('2d');
+
+    // Generate 288 ticks (24 hours * 12 five-minute intervals)
+    const labels = Array.from({ length: 288 }, (_, i) => {
+        const hour = Math.floor(i / 12);
+        const minute = (i % 12) * 5;
+        return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+    });
+
+    // Get net demand data from forecast
+    const netDemandData = forecastData.map(d => d.net_demand_mw);
+
+    schedulerChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Net Demand',
+                data: netDemandData,
+                borderColor: 'rgba(255, 99, 132, 1)',
+                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                pointRadius: 0,
+                pointHoverRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            onClick: handleSchedulerChartClick,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Time of Day'
+                    },
+                    ticks: {
+                        callback: function(value, index) {
+                            // Show every 2 hours (24 ticks)
+                            return index % 24 === 0 ? labels[index] : '';
+                        }
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Net Demand (MW)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Handle click on scheduler chart
+function handleSchedulerChartClick(event) {
+    const points = schedulerChart.getElementsAtEventForMode(event, 'nearest', { intersect: false }, true);
+
+    if (points.length > 0) {
+        const firstPoint = points[0];
+        selectedScheduleTick = firstPoint.index;
+
+        // Format time
+        const hour = Math.floor(selectedScheduleTick / 12);
+        const minute = (selectedScheduleTick % 12) * 5;
+        const period = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+        const timeString = `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
+
+        selectedTimeSpan.textContent = timeString;
+        selectedTickSpan.textContent = selectedScheduleTick;
+
+        // Show resource selection panel
+        resourceSelectionPanel.classList.remove('hidden');
+    }
+}
+
+// Add event listeners for resource action buttons
+document.querySelectorAll('.resource-action-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const action = this.getAttribute('data-action');
+        addScheduledEvent(action);
+    });
+});
+
+// Add scheduled event
+function addScheduledEvent(action) {
+    if (selectedScheduleTick === null) return;
+
+    let eventData = {
+        tick: selectedScheduleTick,
+        action: action,
+        time: selectedTimeSpan.textContent
+    };
+
+    // Get specific values based on action
+    switch(action) {
+        case 'commit_ccgt':
+            eventData.count = parseInt(document.getElementById('ccgtCount').value);
+            eventData.effectiveTick = selectedScheduleTick + 15; // 75 min = 15 ticks
+            break;
+        case 'shutdown_ccgt':
+            eventData.count = parseInt(document.getElementById('ccgtCount').value);
+            break;
+        case 'commit_ct':
+            eventData.count = parseInt(document.getElementById('ctCount').value);
+            eventData.effectiveTick = selectedScheduleTick + 3; // 15 min = 3 ticks
+            break;
+        case 'shutdown_ct':
+            eventData.count = parseInt(document.getElementById('ctCount').value);
+            break;
+        case 'set_battery':
+            eventData.value = parseInt(document.getElementById('batteryMW').value);
+            break;
+        case 'set_hydro':
+            eventData.value = parseInt(document.getElementById('hydroMW').value);
+            break;
+    }
+
+    scheduledEvents.push(eventData);
+    scheduledEvents.sort((a, b) => a.tick - b.tick); // Keep sorted by tick
+
+    updateScheduledEventsList();
+    updateSchedulerChartMarkers();
+    hideResourcePanel();
+}
+
+// Update scheduled events list display
+function updateScheduledEventsList() {
+    if (scheduledEvents.length === 0) {
+        scheduledEventsList.innerHTML = '<p class="text-sm text-gray-400 italic">No events scheduled yet. Click on the timeline to add events.</p>';
+        return;
+    }
+
+    const eventIcons = {
+        'commit_ccgt': '⚡',
+        'shutdown_ccgt': '⛔',
+        'commit_ct': '🔥',
+        'shutdown_ct': '⛔',
+        'set_battery': '🔋',
+        'set_hydro': '💧'
+    };
+
+    const eventNames = {
+        'commit_ccgt': 'Commit CCGT',
+        'shutdown_ccgt': 'Shutdown CCGT',
+        'commit_ct': 'Commit CT',
+        'shutdown_ct': 'Shutdown CT',
+        'set_battery': 'Set Battery',
+        'set_hydro': 'Set Hydro'
+    };
+
+    scheduledEventsList.innerHTML = scheduledEvents.map((event, index) => {
+        let details = '';
+        if (event.count) {
+            details = `${event.count} unit(s)`;
+        } else if (event.value !== undefined) {
+            details = `${event.value} MW`;
+        }
+
+        let effectiveInfo = '';
+        if (event.effectiveTick) {
+            const effHour = Math.floor(event.effectiveTick / 12);
+            const effMinute = (event.effectiveTick % 12) * 5;
+            const effPeriod = effHour >= 12 ? 'PM' : 'AM';
+            const effDisplayHour = effHour === 0 ? 12 : effHour > 12 ? effHour - 12 : effHour;
+            effectiveInfo = `<span class="text-xs text-gray-500">→ Online: ${effDisplayHour}:${effMinute.toString().padStart(2, '0')} ${effPeriod}</span>`;
+        }
+
+        return `
+            <div class="flex items-center justify-between p-2 bg-white rounded border border-gray-200 hover:border-blue-400 transition-colors">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg">${eventIcons[event.action]}</span>
+                        <span class="text-sm font-medium">${eventNames[event.action]}</span>
+                        <span class="text-sm text-gray-600">${details}</span>
+                    </div>
+                    <div class="text-xs text-gray-500 ml-7">@ ${event.time} ${effectiveInfo}</div>
+                </div>
+                <button onclick="deleteScheduledEvent(${index})" class="text-red-500 hover:text-red-700 px-2">
+                    🗑️
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+
+// Delete scheduled event
+function deleteScheduledEvent(index) {
+    scheduledEvents.splice(index, 1);
+    updateScheduledEventsList();
+    updateSchedulerChartMarkers();
+}
+
+// Update chart markers for scheduled events
+function updateSchedulerChartMarkers() {
+    // This will be implemented to show vertical lines or markers on the chart
+    // For now, just log
+    console.log('Scheduled events:', scheduledEvents);
+}
+
+// Apply schedule and close modal
+function applySchedule() {
+    if (scheduledEvents.length === 0) {
+        alert('No events scheduled. Add events to the timeline first.');
+        return;
+    }
+
+    // Calculate Hour 0 state from schedule
+    const hour0State = calculateHour0StateFromSchedule();
+
+    // Apply Hour 0 state to sliders
+    applyHour0State(hour0State);
+
+    // Close modal
+    schedulerModal.classList.add('hidden');
+
+    alert(`Schedule applied! ${scheduledEvents.length} events will execute during gameplay.`);
+}
+
+// Calculate what the Hour 0 state should be based on schedule
+function calculateHour0StateFromSchedule() {
+    const state = {
+        ccgtOnline: 0,
+        ctOnline: 0,
+        battery: 0,
+        hydro: 0
+    };
+
+    // Process events that would be effective by tick 0
+    scheduledEvents.forEach(event => {
+        if (event.tick === 0 || (event.effectiveTick && event.effectiveTick <= 0)) {
+            switch(event.action) {
+                case 'commit_ccgt':
+                    state.ccgtOnline += event.count;
+                    break;
+                case 'commit_ct':
+                    state.ctOnline += event.count;
+                    break;
+                case 'set_battery':
+                    state.battery = event.value;
+                    break;
+                case 'set_hydro':
+                    state.hydro = event.value;
+                    break;
+            }
+        }
+    });
+
+    return state;
+}
+
+// Apply Hour 0 state to the game controls
+function applyHour0State(state) {
+    // Reset all units first
+    ccgtUnits.forEach(unit => {
+        unit.state = 'offline';
+        unit.outputMW = 0;
+    });
+    ctUnits.forEach(unit => {
+        unit.state = 'offline';
+        unit.outputMW = 0;
+    });
+
+    // Commit required units
+    for (let i = 0; i < state.ccgtOnline && i < ccgtUnits.length; i++) {
+        ccgtUnits[i].state = 'online';
+        ccgtUnits[i].outputMW = CCGT_UNIT_SIZE_MW;
+    }
+    for (let i = 0; i < state.ctOnline && i < ctUnits.length; i++) {
+        ctUnits[i].state = 'online';
+        ctUnits[i].outputMW = CT_UNIT_SIZE_MW;
+    }
+
+    // Set battery and hydro
+    batterySlider.value = state.battery;
+    hydroSlider.value = state.hydro;
+
+    // Update displays
+    updateCCGTDisplay();
+    updateCTDisplay();
+    updateSupplyValues();
+}
+
+// Hide scheduler button when game starts
+function hideSchedulerButton() {
+    schedulerButtonContainer.classList.add('hidden');
+}
+
+// Show scheduler button when game resets
+function showSchedulerButton() {
+    schedulerButtonContainer.classList.remove('hidden');
+}
+
 // --- 11. KICK EVERYTHING OFF ---
 initialize().then(() => {
     // Check for username
     checkUsername();
 
-    // Start tutorial after a short delay to let the page fully load
-    setTimeout(startTutorial, 500);
+    // Start tutorial after a short delay, but only if user already has a username
+    // (new users will see tutorial after entering username)
+    if (playerUsername) {
+        setTimeout(startTutorial, 500);
+    }
 });
-
-
 
 
 
