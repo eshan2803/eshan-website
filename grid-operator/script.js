@@ -20,7 +20,7 @@ const leaderboardEmpty = document.getElementById('leaderboardEmpty');
 const currentUsernameSpan = document.getElementById('currentUsername');
 
 // API Configuration
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'https://grid-operator-game.onrender.com';
 
 // Battery controls
 const batterySlider = document.getElementById('batterySlider');
@@ -3314,6 +3314,7 @@ initialize().then(() => {
     // Start tutorial after a short delay to let the page fully load
     setTimeout(startTutorial, 500);
 });
+
 
 
 
