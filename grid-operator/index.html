@@ -273,6 +273,9 @@
                     <button id="showTutorialBtn" class="px-6 py-2.5 text-base font-medium text-green-600 bg-green-50 rounded-full hover:bg-green-100 transition-colors shadow-sm">
                         🛠️ Show Tutorial
                     </button>
+                    <button id="leaderboardBtn" class="px-6 py-2.5 text-base font-medium text-purple-600 bg-purple-50 rounded-full hover:bg-purple-100 transition-colors shadow-sm">
+                        🏆 Leaderboard
+                    </button>
                 </div>
                 <p class="text-sm text-gray-600">
                     Send your queries at <a href="mailto:hello@eshansingh.xyz" class="text-blue-600 hover:text-blue-700 underline">hello@eshansingh.xyz</a>
@@ -338,10 +341,9 @@
 
                         <!-- Start/Pause Game Button -->
                         <div class="mb-3">
-                            <button 
-                                id="startButton" 
+                            <button
+                                id="startButton"
                                 class="w-full px-6 py-3 text-lg font-medium text-white bg-blue-600 rounded-full hover:bg-blue-700 transition-colors shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                title="Match the Net Demand with Generation in Hour 0 before you press Start The Day."
                             >
                                 Start The Day
                             </button>
@@ -349,27 +351,17 @@
 
                         <!-- Resume/Restart Buttons (shown when paused) -->
                         <div id="pauseButtons" class="mb-3 hidden flex gap-3">
-                            <button id="resumeButton" class="flex-1 px-6 py-3 text-lg font-medium text-white bg-green-600 rounded-full hover:bg-green-700 transition-colors shadow-md">
+                            <button id="resumeButton" class="flex-1 px-6 py-3 text-lg font-medium text-white bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 rounded-full transition-colors shadow-md">
                                 Resume
                             </button>
-                            <button id="restartButton" class="flex-1 px-6 py-3 text-lg font-medium text-white bg-red-600 rounded-full hover:bg-red-700 transition-colors shadow-md">
+                            <button id="restartButton" class="flex-1 px-6 py-3 text-lg font-medium text-white bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 rounded-full transition-colors shadow-md">
                                 Restart
-                            </button>
-                        </div>
-
-                        <!-- Event Buttons -->
-                        <div class="flex gap-3">
-                            <button id="cloudCoverBtn" class="flex-1 px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-lg hover:bg-gray-700 transition-colors shadow-sm disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
-                                ☁️ Cloud Cover
-                            </button>
-                            <button id="demandSpikeBtn" class="flex-1 px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-lg hover:bg-gray-700 transition-colors shadow-sm disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
-                                ⚡ Demand Spike
                             </button>
                         </div>
                     </section>
 
                     <!-- Dial Gauges -->
-                    <section class="glass-card" style="padding: 1rem;">
+                    <section id="tutorial-step-gauges" class="glass-card" style="padding: 1rem;">
                         <h3 class="font-lora text-xl font-semibold text-gray-800 mb-2">Live Gauges</h3>
                         <div class="grid grid-cols-2 gap-4">
                             <!-- Delta Gauge -->
@@ -480,49 +472,7 @@
                     <section id="tutorial-step-4" class="glass-card">
                         <h3 class="font-lora text-xl font-semibold text-gray-800 mb-4">Flexible Generation</h3>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <!-- Battery Slider (First row, left) -->
-                            <div class="p-4 bg-green-50 rounded-lg">
-                                <div class="flex justify-between items-center mb-2">
-                                    <label for="batterySlider" class="text-sm font-medium text-green-700">🔋 Battery</label>
-                                    <div class="flex items-center gap-1">
-                                        <input type="number" id="batteryInput" class="w-20 px-2 py-1 text-sm font-semibold text-green-600 bg-white border border-green-300 rounded text-right" min="-13000" max="13000" value="0" disabled>
-                                        <span class="text-sm text-green-600">MW</span>
-                                    </div>
-                                </div>
-                                <input type="range" id="batterySlider" class="form-input" min="-13000" max="13000" value="0" step="1" disabled>
-                                <div class="text-xs text-gray-500 mt-2">
-                                    <div>Max: ±13,000 MW</div>
-                                    <div>Capacity: 52,000 MWh</div>
-                                    <div class="text-green-600 font-medium">Ramp: Instant ⚡</div>
-                                    <div class="text-gray-600 font-medium">Op Cost: $5/MWh</div>
-                                </div>
-                            </div>
-
-                            <!-- Hydro Slider (First row, right) -->
-                            <div class="p-4 bg-cyan-50 rounded-lg">
-                                <div class="flex justify-between items-center mb-2">
-                                    <label for="hydroSlider" class="text-sm font-medium text-cyan-700">💧 Hydro</label>
-                                    <div class="flex items-center gap-1">
-                                        <input type="number" id="hydroInput" class="w-20 px-2 py-1 text-sm font-semibold text-cyan-600 bg-white border border-cyan-300 rounded text-right" min="0" max="6000" value="0" disabled>
-                                        <span class="text-sm text-cyan-600">MW</span>
-                                    </div>
-                                </div>
-                                <input type="range" id="hydroSlider" class="form-input" min="0" max="6000" value="0" step="1" disabled>
-                                <div class="text-xs text-gray-500 mt-2">
-                                    <div id="hydroMaxDisplay">Max: 4,000 MW</div>
-                                    <div class="text-cyan-600 font-medium">Ramp: Full capacity/hr</div>
-                                    <div class="text-gray-600 font-medium">Op Cost: $2/MWh</div>
-                                </div>
-                                <div class="mt-2">
-                                    <select id="hydroCondition" class="px-2 py-1 text-xs font-medium text-cyan-700 bg-white border border-cyan-300 rounded focus:outline-none focus:ring-1 focus:ring-cyan-500">
-                                        <option value="wet">Wet</option>
-                                        <option value="normal" selected>Normal</option>
-                                        <option value="dry">Dry</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- CCGT Unit Dispatch (Second row, left) -->
+                            <!-- CCGT Unit Dispatch (First row, left) -->
                             <div class="p-4 bg-blue-50 rounded-lg">
                                 <div class="flex justify-between items-center mb-2">
                                     <label class="text-sm font-medium text-blue-700">⚡ CCGT Units</label>
@@ -563,7 +513,7 @@
                                 </div>
                             </div>
 
-                            <!-- CT Unit Dispatch -->
+                            <!-- CT Unit Dispatch (First row, right) -->
                             <div class="p-4 bg-orange-50 rounded-lg">
                                 <div class="flex justify-between items-center mb-2">
                                     <label class="text-sm font-medium text-orange-700">🔥 CT Peakers</label>
@@ -603,6 +553,82 @@
                                     <div class="text-gray-600 font-medium">Cost: $65+$5/200MW</div>
                                 </div>
                             </div>
+
+                            <!-- Battery Slider (Second row, left) -->
+                            <div class="p-4 bg-green-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label for="batterySlider" class="text-sm font-medium text-green-700">🔋 Battery</label>
+                                    <div class="flex items-center gap-1">
+                                        <input type="number" id="batteryInput" class="w-20 px-2 py-1 text-sm font-semibold text-green-600 bg-white border border-green-300 rounded text-right" min="-13000" max="13000" value="0" disabled>
+                                        <span class="text-sm text-green-600">MW</span>
+                                    </div>
+                                </div>
+                                <input type="range" id="batterySlider" class="form-input" min="-13000" max="13000" value="0" step="1" disabled>
+                                <div class="text-xs text-gray-500 mt-2">
+                                    <div>Max: ±13,000 MW</div>
+                                    <div>Capacity: 52,000 MWh</div>
+                                    <div class="text-green-600 font-medium">Ramp: Instant ⚡</div>
+                                    <div class="text-gray-600 font-medium">Op Cost: $5/MWh</div>
+                                </div>
+                            </div>
+
+                            <!-- Hydro Slider (Second row, right) -->
+                            <div class="p-4 bg-cyan-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label for="hydroSlider" class="text-sm font-medium text-cyan-700">💧 Hydro</label>
+                                    <div class="flex items-center gap-1">
+                                        <input type="number" id="hydroInput" class="w-20 px-2 py-1 text-sm font-semibold text-cyan-600 bg-white border border-cyan-300 rounded text-right" min="0" max="6000" value="0" disabled>
+                                        <span class="text-sm text-cyan-600">MW</span>
+                                    </div>
+                                </div>
+                                <input type="range" id="hydroSlider" class="form-input" min="0" max="6000" value="0" step="1" disabled>
+                                <div class="text-xs text-gray-500 mt-2">
+                                    <div id="hydroMaxDisplay">Max: 4,000 MW</div>
+                                    <div class="text-cyan-600 font-medium">Ramp: Full capacity/hr</div>
+                                    <div class="text-gray-600 font-medium">Op Cost: $2/MWh</div>
+                                </div>
+                                <div class="mt-2">
+                                    <select id="hydroCondition" class="px-2 py-1 text-xs font-medium text-cyan-700 bg-white border border-cyan-300 rounded focus:outline-none focus:ring-1 focus:ring-cyan-500">
+                                        <option value="wet">Wet</option>
+                                        <option value="normal" selected>Normal</option>
+                                        <option value="dry">Dry</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Solar Curtailment Slider (Third row, left) -->
+                            <div class="p-4 bg-amber-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label for="solarCurtailmentSlider" class="text-sm font-medium text-amber-700">☀️ Solar Curtailment</label>
+                                    <div class="flex items-center gap-1">
+                                        <input type="number" id="solarCurtailmentInput" class="w-20 px-2 py-1 text-sm font-semibold text-amber-600 bg-white border border-amber-300 rounded text-right" min="0" max="0" value="0" disabled>
+                                        <span class="text-sm text-amber-600">MW</span>
+                                    </div>
+                                </div>
+                                <input type="range" id="solarCurtailmentSlider" class="form-input" min="0" max="0" value="0" step="1" disabled>
+                                <div class="text-xs text-gray-500 mt-2">
+                                    <div id="solarCurtailmentMaxDisplay">Max: 0 MW (at 12:00 AM)</div>
+                                    <div class="text-amber-600 font-medium">Ramp: Instant ⚡</div>
+                                    <div class="text-gray-600 font-medium">Op Cost: $20/MWh</div>
+                                </div>
+                            </div>
+
+                            <!-- Wind Curtailment Slider (Third row, right) -->
+                            <div class="p-4 bg-emerald-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label for="windCurtailmentSlider" class="text-sm font-medium text-emerald-700">🌬️ Wind Curtailment</label>
+                                    <div class="flex items-center gap-1">
+                                        <input type="number" id="windCurtailmentInput" class="w-20 px-2 py-1 text-sm font-semibold text-emerald-600 bg-white border border-emerald-300 rounded text-right" min="0" max="0" value="0" disabled>
+                                        <span class="text-sm text-emerald-600">MW</span>
+                                    </div>
+                                </div>
+                                <input type="range" id="windCurtailmentSlider" class="form-input" min="0" max="0" value="0" step="1" disabled>
+                                <div class="text-xs text-gray-500 mt-2">
+                                    <div id="windCurtailmentMaxDisplay">Max: 0 MW (at 12:00 AM)</div>
+                                    <div class="text-emerald-600 font-medium">Ramp: Instant ⚡</div>
+                                    <div class="text-gray-600 font-medium">Op Cost: $20/MWh</div>
+                                </div>
+                            </div>
                         </div>
                     </section>
 
@@ -612,7 +638,7 @@
 
                         <!-- Contextual Tips Banner -->
                         <div id="tipsBanner" class="mb-4 px-4 py-2 rounded-lg text-center text-sm font-medium transition-all duration-300 bg-blue-50 text-blue-800 border border-blue-200">
-                            💡 Match the Net Demand with Generation in Hour 0 before you press Start The Day.
+                            💡 Match the Net Demand with Generation at 12:00 AM to start the game.
                         </div>
 
                         <!-- Live Time Display -->
@@ -622,8 +648,8 @@
                         </div>
 
                         <!-- Live Status Banner -->
-                        <div id="statusBanner" class="mb-4 px-4 py-3 rounded-lg text-center font-semibold text-lg transition-all duration-300 bg-green-100 text-green-800">
-                            ✓ Grid Stable
+                        <div id="statusBanner" class="mb-4 px-4 py-3 rounded-lg text-center font-semibold text-lg transition-all duration-300 bg-blue-100 text-blue-800">
+                            ⚙️ Grid Unstable: Match Net Demand with Resources
                         </div>
 
                         <div class="grid grid-cols-2 gap-4">
@@ -743,6 +769,66 @@
             <div>
                 <button id="tutorial-prev" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 mr-2">Prev</button>
                 <button id="tutorial-next" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Username Modal -->
+    <div id="usernameModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full mx-4">
+            <h2 class="text-3xl font-bold text-gray-800 mb-4 text-center">🎮 Welcome to Grid Operator!</h2>
+            <p class="text-gray-600 mb-6 text-center">Enter your username to compete on the global leaderboard</p>
+            <input
+                type="text"
+                id="usernameInput"
+                placeholder="Enter your username"
+                maxlength="20"
+                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-lg mb-4"
+            />
+            <button
+                id="submitUsernameBtn"
+                class="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-md"
+            >
+                Start Playing
+            </button>
+            <p class="text-xs text-gray-500 mt-4 text-center">
+                Perfect games (0 alerts, 0 blackouts) qualify for the leaderboard!
+            </p>
+        </div>
+    </div>
+
+    <!-- Leaderboard Modal -->
+    <div id="leaderboardModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-gray-800">🏆 Global Leaderboard</h2>
+                <button id="closeLeaderboardBtn" class="text-gray-500 hover:text-gray-700 text-3xl font-bold">&times;</button>
+            </div>
+
+            <p class="text-gray-600 mb-4 text-center">
+                Top 10 Players with Perfect Games (0 Alerts, 0 Blackouts)
+            </p>
+
+            <div id="leaderboardLoading" class="text-center py-8 text-gray-500">
+                Loading leaderboard...
+            </div>
+
+            <div id="leaderboardContent" class="hidden">
+                <div id="leaderboardList" class="space-y-2">
+                    <!-- Leaderboard entries will be inserted here -->
+                </div>
+
+                <div id="leaderboardEmpty" class="text-center py-12 text-gray-400 hidden">
+                    <div class="text-6xl mb-4">🎯</div>
+                    <p class="text-lg">No perfect games yet!</p>
+                    <p class="text-sm mt-2">Be the first to achieve 0 alerts and 0 blackouts!</p>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-gray-200">
+                <p class="text-xs text-gray-500 text-center">
+                    Current Player: <span id="currentUsername" class="font-semibold text-blue-600">Guest</span>
+                </p>
             </div>
         </div>
     </div>
