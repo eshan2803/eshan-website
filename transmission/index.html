@@ -6,6 +6,7 @@
     <title>California Power Grid Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.js"></script>
     <style>
         html, body {
             height: 100%;
@@ -163,6 +164,9 @@
         #basemap-satellite {
             background: linear-gradient(135deg, #4a7c59 0%, #2d5a3d 50%, #1a3d2e 100%);
         }
+        #basemap-elevation {
+            background: linear-gradient(135deg, #d4e7d4 0%, #8b7355 50%, #5a4a3a 100%);
+        }
         #basemap-population {
             background: linear-gradient(135deg, #fff7ec 0%, #fc8d59 50%, #7f0000 100%);
         }
@@ -252,6 +256,9 @@
         <div class="basemap-option" id="basemap-satellite" data-layer="satellite" title="Satellite View">
             <span class="label">Satellite</span>
         </div>
+        <div class="basemap-option" id="basemap-elevation" data-layer="elevation" title="Topographic Elevation">
+            <span class="label">Elevation</span>
+        </div>
         <div class="basemap-option" id="basemap-population" data-layer="population" title="Population Density">
             <span class="label">Population</span>
         </div>
@@ -265,18 +272,31 @@
             wheelPxPerZoomLevel: 120  // Smoother mouse wheel zoom
         }).setView([36.7783, -119.4179], 6);
 
+        // Create a new pane for WMS overlays
+        map.createPane('wmsOverlayPane');
+        map.getPane('wmsOverlayPane').style.zIndex = 300; // Above tiles (200), below overlays (400)
+        map.getPane('wmsOverlayPane').style.pointerEvents = 'none';
+
         // Define basemap layers
         var baseLayers = {
             grayscale: L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }),
-            satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: '&copy; <a href="https://www.esri.com/">Esri</a>'
+            satellite: L.esri.basemapLayer('Imagery', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
             }),
-            population: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd',
-                maxZoom: 20
+            elevation: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>',
+                pane: 'wmsOverlayPane',
+                opacity: 0.8
+            }),
+            population: L.tileLayer.wms('https://sedac.ciesin.columbia.edu/geoserver/wms', {
+                layers: 'gpw-v4:gpw-v4-population-density_2020',
+                format: 'image/png',
+                transparent: true,
+                attribution: 'SEDAC / CIESIN / Columbia University',
+                pane: 'wmsOverlayPane',
+                opacity: 0.8
             })
         };
 
@@ -286,15 +306,17 @@
             attribution: '&copy; <a href="https://earthdata.nasa.gov/">NASA</a>',
             maxZoom: 19,
             maxNativeZoom: 8, // Actual data only goes to zoom 8
-            opacity: 0.7
+            opacity: 0.7,
+            pane: 'wmsOverlayPane' // Use custom pane for proper z-ordering
         });
+
 
         // Add default grayscale layer
         var currentBaseLayer = baseLayers.grayscale.addTo(map);
         currentBaseLayer.getContainer().classList.add('grayscale');
 
-        // Track if population overlay is active
-        var isPopulationOverlayActive = false;
+        // Track active overlays
+        var activeOverlay = null; // Can be: populationOverlay, solarOverlay, windOverlay, or null
 
         // URLs for local data
         const transmissionUrl = './transmission.geojson';
@@ -695,44 +717,58 @@
                 option.addEventListener('click', () => {
                     const layerType = option.getAttribute('data-layer');
 
-                    // Remove active class from all options
+                    // 1. First, clean up the map from previous selections
                     basemapOptions.forEach(opt => opt.classList.remove('active'));
+                    if (currentBaseLayer && map.hasLayer(currentBaseLayer)) {
+                        map.removeLayer(currentBaseLayer);
+                        // Remove grayscale filter if present (only for tile layers that support it)
+                        if (currentBaseLayer.getContainer && typeof currentBaseLayer.getContainer === 'function') {
+                            const container = currentBaseLayer.getContainer();
+                            if (container) {
+                                container.classList.remove('grayscale');
+                            }
+                        }
+                    }
+                    if (activeOverlay && map.hasLayer(activeOverlay)) {
+                        map.removeLayer(activeOverlay);
+                    }
+                    activeOverlay = null; // Reset the active overlay
 
-                    // Add active class to clicked option
+                    // 2. Add the new layers based on the selection
                     option.classList.add('active');
 
-                    // Remove current base layer
-                    map.removeLayer(currentBaseLayer);
-
-                    // Remove grayscale filter if present
-                    if (currentBaseLayer.getContainer()) {
-                        currentBaseLayer.getContainer().classList.remove('grayscale');
+                    switch (layerType) {
+                        case 'grayscale':
+                            currentBaseLayer = baseLayers.grayscale.addTo(map);
+                            if (currentBaseLayer.getContainer && typeof currentBaseLayer.getContainer === 'function') {
+                                const container = currentBaseLayer.getContainer();
+                                if (container) {
+                                    container.classList.add('grayscale');
+                                }
+                            }
+                            console.log('Switched to grayscale basemap');
+                            break;
+                        case 'satellite':
+                            currentBaseLayer = baseLayers.satellite.addTo(map);
+                            currentBaseLayer.on('load', () => console.log('Satellite basemap loaded'));
+                            currentBaseLayer.on('requesterror', (e) => console.error('Satellite error:', e));
+                            console.log('Switched to satellite basemap');
+                            break;
+                        case 'elevation':
+                            currentBaseLayer = baseLayers.elevation.addTo(map);
+                            console.log('Switched to elevation/topographic map (OpenTopoMap)');
+                            break;
+                        case 'population':
+                            currentBaseLayer = baseLayers.population.addTo(map);
+                            activeOverlay = populationOverlay.addTo(map);
+                            currentBaseLayer.on('load', () => console.log('Population basemap loaded'));
+                            currentBaseLayer.on('tileerror', (e) => console.error('Population WMS error:', e));
+                            console.log('Switched to population basemap');
+                            break;
                     }
 
-                    // Remove population overlay if active
-                    if (isPopulationOverlayActive && map.hasLayer(populationOverlay)) {
-                        map.removeLayer(populationOverlay);
-                        isPopulationOverlayActive = false;
-                    }
-
-                    // Add new base layer
-                    currentBaseLayer = baseLayers[layerType].addTo(map);
-
-                    // Apply grayscale filter only to grayscale layer
-                    if (layerType === 'grayscale') {
-                        currentBaseLayer.getContainer().classList.add('grayscale');
-                    }
-
-                    // Add population overlay if population basemap selected
-                    if (layerType === 'population') {
-                        populationOverlay.addTo(map);
-                        isPopulationOverlayActive = true;
-                        // Ensure overlay is above base but below data layers
-                        populationOverlay.bringToFront();
-                    }
-
-                    // Move base layer to back (behind all other layers)
-                    currentBaseLayer.bringToBack();
+                    // 3. NO LONGER NEEDED - The 'pane' system handles z-ordering automatically.
+                    // Layer ordering is now controlled by the z-index values set in the pane definitions
 
                     console.log(`Switched to ${layerType} basemap`);
                 });
