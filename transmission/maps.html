@@ -157,21 +157,49 @@
             font-size: 7.5px;
             letter-spacing: 0.2px;
         }
-        /* Basemap preview styles */
+        /* Basemap preview styles - using actual map snippets */
         #basemap-grayscale {
-            background: linear-gradient(135deg, #e0e0e0 0%, #909090 100%);
+            background-image: url('https://a.tile.openstreetmap.org/6/10/24.png');
         }
         #basemap-satellite {
-            background: linear-gradient(135deg, #4a7c59 0%, #2d5a3d 50%, #1a3d2e 100%);
+            background-image: url('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/6/24/10');
+        }
+        #basemap-elevation {
+            background-image: url('https://tile.opentopomap.org/6/10/24.png');
         }
         #basemap-population {
-            background: linear-gradient(135deg, #fff7ec 0%, #fc8d59 50%, #7f0000 100%);
+            background-image: url('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/GoogleMapsCompatible_Level8/6/24/10.jpg');
+        }
+        #basemap-landcover {
+            background-image: url('https://www.mrlc.gov/geoserver/mrlc_display/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&LAYERS=mrlc_display:NLCD_2021_Land_Cover_L48&WIDTH=256&HEIGHT=256&SRS=EPSG:3857&BBOX=-13358338.89519283,4383204.9499851465,-13210795.034662457,4530748.810515519');
+        }
+        #basemap-population-esri {
+            background-image: url('https://services.arcgisonline.com/arcgis/rest/services/Demographics/USA_Population_Density/MapServer/export?bbox=-13358338.89519283,4383204.9499851465,-13210795.034662457,4530748.810515519&bboxSR=3857&imageSR=3857&size=256,256&format=png&transparent=true&f=image');
+        }
+        #basemap-co2storage {
+            background-image: url('https://certmapper.cr.usgs.gov/arcgis/rest/services/project/natcarb/MapServer/export?bbox=-13358338.89519283,4383204.9499851465,-13210795.034662457,4530748.810515519&bboxSR=3857&imageSR=3857&size=256,256&format=png&transparent=true&f=image');
         }
         #basemap-solar {
-            background: linear-gradient(135deg, #FFF9E6 0%, #FFD700 50%, #FF8C00 100%);
+            background-image: url('https://eshan2803.github.io/basemaps/solar_tiles/6/10/24.png');
         }
         #basemap-wind {
-            background: linear-gradient(135deg, #E0F7FF 0%, #87CEEB 50%, #4682B4 100%);
+            background-image: url('https://eshan2803.github.io/basemaps/wind_tiles/6/10/24.png');
+        }
+
+        /* Land cover hover tooltip styling */
+        .land-cover-tooltip {
+            background-color: rgba(255, 255, 255, 0.95);
+            border: 2px solid #333;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 13px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .land-cover-tooltip strong {
+            color: #2c5f2d;
+            font-size: 12px;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/leaflet-ant-path@1.3.0/dist/leaflet-ant-path.min.js"></script>
@@ -259,14 +287,26 @@
         <div class="basemap-option" id="basemap-satellite" data-layer="satellite" title="Satellite View">
             <span class="label">Satellite</span>
         </div>
+        <div class="basemap-option" id="basemap-elevation" data-layer="elevation" title="Topographic Elevation">
+            <span class="label">Elevation</span>
+        </div>
         <div class="basemap-option" id="basemap-population" data-layer="population" title="Population Density">
             <span class="label">Population</span>
         </div>
-        <div class="basemap-option" id="basemap-solar" data-layer="solar" title="Solar PV Potential (GHI)">
+        <div class="basemap-option" id="basemap-landcover" data-layer="landcover" title="Land Cover (NLCD)">
+            <span class="label">Land Cover</span>
+        </div>
+        <div class="basemap-option" id="basemap-solar" data-layer="solarMap" title="Solar Irradiance Map">
             <span class="label">Solar</span>
         </div>
-        <div class="basemap-option" id="basemap-wind" data-layer="wind" title="Wind Power Density">
+        <div class="basemap-option" id="basemap-wind" data-layer="windMap" title="Wind Speed Map">
             <span class="label">Wind</span>
+        </div>
+        <div class="basemap-option" id="basemap-population-esri" data-layer="populationEsri" title="Population Density (ESRI)">
+            <span class="label">Pop. Density</span>
+        </div>
+        <div class="basemap-option" id="basemap-co2storage" data-layer="co2Storage" title="CO2 Storage Sites">
+            <span class="label">CO2 Storage</span>
         </div>
     </div>
     <div id="map"></div>
@@ -281,6 +321,7 @@
         // Create a new pane for WMS overlays
         map.createPane('wmsOverlayPane');
         map.getPane('wmsOverlayPane').style.zIndex = 300; // Above tiles (200), below overlays (400)
+        map.getPane('wmsOverlayPane').style.pointerEvents = 'none';
 
         // Define basemap layers
         var baseLayers = {
@@ -290,6 +331,11 @@
             satellite: L.esri.basemapLayer('Imagery', {
                 attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
             }),
+            elevation: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>',
+                pane: 'wmsOverlayPane',
+                opacity: 0.8
+            }),
             population: L.tileLayer.wms('https://sedac.ciesin.columbia.edu/geoserver/wms', {
                 layers: 'gpw-v4:gpw-v4-population-density_2020',
                 format: 'image/png',
@@ -298,25 +344,45 @@
                 pane: 'wmsOverlayPane',
                 opacity: 0.8
             }),
-            solar: L.tileLayer.wms('https://neo.gsfc.nasa.gov/wms/wms', {
-                layers: 'CERES_INSOL_M',
+            landcover: L.tileLayer.wms('https://www.mrlc.gov/geoserver/wms', {
+                layers: 'mrlc_display:NLCD_2021_Land_Cover_L48',
                 format: 'image/png',
                 transparent: true,
-                attribution: 'NASA Earth Observations (NEO)',
+                attribution: 'USGS MRLC',
                 pane: 'wmsOverlayPane',
-                opacity: 0.8,
-                version: '1.3.0',
-                time: '2022-06-01'  // Specify a month for climatology data; change for different seasons
+                opacity: 0.8
             }),
-            wind: L.tileLayer.wms('https://neo.gsfc.nasa.gov/wms/wms', {
-                layers: 'MERRA_WIND_50M_M',
-                format: 'image/png',
-                transparent: true,
-                attribution: 'NASA Earth Observations (NEO)',
+            solarMap: L.tileLayer('https://eshan2803.github.io/basemaps/solar_tiles/{z}/{x}/{y}.png', {
+                attribution: 'Solar Data from Global Solar Atlas / World Bank Group',
                 pane: 'wmsOverlayPane',
-                opacity: 0.8,
-                version: '1.3.0',
-                time: '2022-06-01'  // Specify a month; e.g., for summer wind patterns
+                opacity: 0.7,
+                minZoom: 0,
+                maxZoom: 10,
+                maxNativeZoom: 10,  // Use zoom 10 tiles even when zoomed further
+                errorTileUrl: '',  // Don't show broken tile images
+                bounds: [[-90, -180], [90, 180]]  // World bounds
+            }),
+            windMap: L.tileLayer('https://eshan2803.github.io/basemaps/wind_tiles/{z}/{x}/{y}.png', {
+                attribution: 'Wind Data from Global Wind Atlas / World Bank Group',
+                pane: 'wmsOverlayPane',
+                opacity: 0.7,
+                minZoom: 0,
+                maxZoom: 10,
+                maxNativeZoom: 10,  // Use zoom 10 tiles even when zoomed further
+                errorTileUrl: '',  // Don't show broken tile images
+                bounds: [[-90, -180], [90, 180]]  // World bounds
+            }),
+            populationEsri: L.esri.tiledMapLayer({
+                url: "https://services.arcgisonline.com/arcgis/rest/services/Demographics/USA_Population_Density/MapServer",
+                attribution: 'Population Data &copy; Esri',
+                pane: 'wmsOverlayPane',
+                opacity: 0.7
+            }),
+            co2Storage: L.esri.dynamicMapLayer({
+                url: "https://certmapper.cr.usgs.gov/arcgis/rest/services/project/natcarb/MapServer",
+                attribution: 'CO2 Storage Data &copy; USGS',
+                pane: 'wmsOverlayPane',
+                opacity: 0.8
             })
         };
 
@@ -330,12 +396,6 @@
             pane: 'wmsOverlayPane' // Use custom pane for proper z-ordering
         });
 
-        // Add error handling for solar and wind WMS layers
-        baseLayers.solar.on('load', () => console.log('Solar WMS layer loaded successfully'));
-        baseLayers.solar.on('tileerror', (e) => console.error('Solar WMS tile error:', e));
-
-        baseLayers.wind.on('load', () => console.log('Wind WMS layer loaded successfully'));
-        baseLayers.wind.on('tileerror', (e) => console.error('Wind WMS tile error:', e));
 
         // Add default grayscale layer
         var currentBaseLayer = baseLayers.grayscale.addTo(map);
@@ -423,6 +483,7 @@
                     setupLegendInteractivity();
                     setupBasemapToggle();
                     setupHomeButton();
+                    setupLandCoverHover();
                     console.log('Network graph built and map rendered.');
                 } catch (error) {
                     console.error('Error building network or rendering map:', error);
@@ -759,6 +820,7 @@
                         map.removeLayer(activeOverlay);
                     }
                     activeOverlay = null; // Reset the active overlay
+                    isLandCoverActive = false; // Reset land cover tracking
 
                     // 2. Add the new layers based on the selection
                     option.classList.add('active');
@@ -780,6 +842,10 @@
                             currentBaseLayer.on('requesterror', (e) => console.error('Satellite error:', e));
                             console.log('Switched to satellite basemap');
                             break;
+                        case 'elevation':
+                            currentBaseLayer = baseLayers.elevation.addTo(map);
+                            console.log('Switched to elevation/topographic map (OpenTopoMap)');
+                            break;
                         case 'population':
                             currentBaseLayer = baseLayers.population.addTo(map);
                             activeOverlay = populationOverlay.addTo(map);
@@ -787,19 +853,81 @@
                             currentBaseLayer.on('tileerror', (e) => console.error('Population WMS error:', e));
                             console.log('Switched to population basemap');
                             break;
-                        case 'solar':
-                            // For solar, add directly as it's a WMS layer with heatmap
-                            currentBaseLayer = baseLayers.solar.addTo(map);
-                            currentBaseLayer.on('tileerror', (e) => console.error('Solar WMS tile error:', e));
-                            currentBaseLayer.on('load', () => console.log('Solar WMS layer loaded successfully'));
-                            console.log('Switched to solar basemap');
+                        case 'landcover':
+                            // Add satellite basemap for context
+                            currentBaseLayer = baseLayers.satellite.addTo(map);
+                            // Add land cover overlay
+                            activeOverlay = baseLayers.landcover.addTo(map);
+                            isLandCoverActive = true;
+                            console.log('Switched to land cover (USGS NLCD)');
                             break;
-                        case 'wind':
-                            // For wind, add directly as it's a WMS layer with heatmap
-                            currentBaseLayer = baseLayers.wind.addTo(map);
-                            currentBaseLayer.on('tileerror', (e) => console.error('Wind WMS tile error:', e));
-                            currentBaseLayer.on('load', () => console.log('Wind WMS layer loaded successfully'));
-                            console.log('Switched to wind basemap');
+                        case 'solarMap':
+                            // Add satellite basemap for context
+                            currentBaseLayer = baseLayers.satellite.addTo(map);
+                            // Add solar irradiance overlay
+                            activeOverlay = baseLayers.solarMap.addTo(map);
+
+                            // Debug: log tile load events
+                            activeOverlay.on('tileload', function(e) {
+                                console.log('Tile loaded:', e.url);
+                            });
+                            activeOverlay.on('tileerror', function(e) {
+                                console.error('Tile error:', e.url, e.tile, e.error);
+                            });
+                            activeOverlay.on('load', function() {
+                                console.log('All tiles loaded for current view');
+                            });
+
+                            console.log('Switched to solar irradiance map');
+                            console.log('Current zoom level:', map.getZoom());
+                            console.log('Current bounds:', map.getBounds());
+                            break;
+                        case 'windMap':
+                            // Add satellite basemap for context
+                            currentBaseLayer = baseLayers.satellite.addTo(map);
+                            // Add wind speed overlay
+                            activeOverlay = baseLayers.windMap.addTo(map);
+
+                            // Debug: log tile load events
+                            activeOverlay.on('tileload', function(e) {
+                                console.log('Tile loaded:', e.url);
+                            });
+                            activeOverlay.on('tileerror', function(e) {
+                                console.error('Tile error:', e.url, e.tile, e.error);
+                            });
+                            activeOverlay.on('load', function() {
+                                console.log('All tiles loaded for current view');
+                            });
+
+                            console.log('Switched to wind speed map');
+                            console.log('Current zoom level:', map.getZoom());
+                            console.log('Current bounds:', map.getBounds());
+                            break;
+                        case 'populationEsri':
+                            // Add grayscale basemap for context
+                            currentBaseLayer = baseLayers.grayscale.addTo(map);
+                            if (currentBaseLayer.getContainer && typeof currentBaseLayer.getContainer === 'function') {
+                                const container = currentBaseLayer.getContainer();
+                                if (container) {
+                                    container.classList.add('grayscale');
+                                }
+                            }
+                            // Add ESRI population density overlay
+                            activeOverlay = baseLayers.populationEsri.addTo(map);
+                            console.log('Switched to ESRI population density map');
+                            break;
+                        case 'co2Storage':
+                            // Add grayscale basemap for context
+                            currentBaseLayer = baseLayers.grayscale.addTo(map);
+                            if (currentBaseLayer.getContainer && typeof currentBaseLayer.getContainer === 'function') {
+                                const container = currentBaseLayer.getContainer();
+                                if (container) {
+                                    container.classList.add('grayscale');
+                                }
+                            }
+                            // Add CO2 storage sites overlay
+                            activeOverlay = baseLayers.co2Storage.addTo(map);
+                            console.log('Switched to CO2 storage sites map');
                             break;
                     }
 
@@ -808,6 +936,194 @@
 
                     console.log(`Switched to ${layerType} basemap`);
                 });
+            });
+        }
+
+        // NLCD Land Cover color mapping from the legend
+        const nlcdColorMap = {
+            '11': { color: [70, 107, 159], name: 'Open Water' },
+            '12': { color: [209, 222, 248], name: 'Perennial Ice/Snow' },
+            '21': { color: [222, 197, 197], name: 'Developed, Open Space' },
+            '22': { color: [217, 146, 130], name: 'Developed, Low Intensity' },
+            '23': { color: [235, 0, 0], name: 'Developed, Medium Intensity' },
+            '24': { color: [171, 0, 0], name: 'Developed, High Intensity' },
+            '31': { color: [179, 172, 159], name: 'Barren Land (Rock/Sand/Clay)' },
+            '41': { color: [104, 171, 95], name: 'Deciduous Forest' },
+            '42': { color: [28, 95, 44], name: 'Evergreen Forest' },
+            '43': { color: [181, 197, 143], name: 'Mixed Forest' },
+            '52': { color: [204, 184, 121], name: 'Shrub/Scrub' },
+            '71': { color: [223, 223, 194], name: 'Grassland/Herbaceous' },
+            '81': { color: [220, 217, 57], name: 'Pasture/Hay' },
+            '82': { color: [171, 108, 40], name: 'Cultivated Crops' },
+            '90': { color: [184, 217, 235], name: 'Woody Wetlands' },
+            '95': { color: [108, 159, 184], name: 'Emergent Herbaceous Wetlands' }
+        };
+
+        // Function to find closest NLCD class from RGB color
+        function getNLCDClass(r, g, b) {
+            let minDistance = Infinity;
+            let closestClass = null;
+
+            for (const [code, data] of Object.entries(nlcdColorMap)) {
+                const [cr, cg, cb] = data.color;
+                // Calculate Euclidean distance in RGB space
+                const distance = Math.sqrt(
+                    Math.pow(r - cr, 2) +
+                    Math.pow(g - cg, 2) +
+                    Math.pow(b - cb, 2)
+                );
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestClass = data.name;
+                }
+            }
+
+            // Only return if color is reasonably close (threshold to avoid noise)
+            return minDistance < 50 ? closestClass : null;
+        }
+
+        // Create land cover hover tooltip
+        var landCoverTooltip = L.tooltip({
+            permanent: false,
+            direction: 'top',
+            className: 'land-cover-tooltip',
+            offset: [0, -10]
+        });
+
+        // Variable to track if land cover layer is active
+        var isLandCoverActive = false;
+
+        // Debounce function to limit GetFeatureInfo requests
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Variable to track if mouse is over a map feature
+        var isOverMapFeature = false;
+
+        // Setup land cover hover functionality using WMS GetFeatureInfo
+        function setupLandCoverHover() {
+            // Debounced function to query WMS for feature info
+            const queryLandCover = debounce(function(latlng) {
+                // Don't show land cover tooltip if:
+                // 1. Land cover layer is not active
+                // 2. Mouse is over a power plant or other map feature
+                if (!isLandCoverActive || !activeOverlay || activeOverlay !== baseLayers.landcover || isOverMapFeature) {
+                    if (map.hasLayer(landCoverTooltip)) {
+                        map.closeTooltip(landCoverTooltip);
+                    }
+                    return;
+                }
+
+                // Get map parameters for GetFeatureInfo request
+                const size = map.getSize();
+                const bounds = map.getBounds();
+                const point = map.latLngToContainerPoint(latlng);
+
+                // Build GetFeatureInfo URL
+                const url = 'https://www.mrlc.gov/geoserver/wms?' +
+                    'SERVICE=WMS&' +
+                    'VERSION=1.1.1&' +
+                    'REQUEST=GetFeatureInfo&' +
+                    'LAYERS=mrlc_display:NLCD_2021_Land_Cover_L48&' +
+                    'QUERY_LAYERS=mrlc_display:NLCD_2021_Land_Cover_L48&' +
+                    'STYLES=&' +
+                    'BBOX=' + bounds.toBBoxString() + '&' +
+                    'WIDTH=' + size.x + '&' +
+                    'HEIGHT=' + size.y + '&' +
+                    'FORMAT=image/png&' +
+                    'INFO_FORMAT=application/json&' +
+                    'TRANSPARENT=true&' +
+                    'X=' + Math.floor(point.x) + '&' +
+                    'Y=' + Math.floor(point.y) + '&' +
+                    'SRS=EPSG:4326&' +
+                    'FEATURE_COUNT=1';
+
+                // Fetch feature info
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Check again if mouse moved over a feature while we were fetching
+                        if (isOverMapFeature) {
+                            if (map.hasLayer(landCoverTooltip)) {
+                                map.closeTooltip(landCoverTooltip);
+                            }
+                            return;
+                        }
+
+                        if (data.features && data.features.length > 0) {
+                            const feature = data.features[0];
+                            const properties = feature.properties;
+
+                            // Get NLCD value from PALETTE_INDEX
+                            let nlcdValue = properties.PALETTE_INDEX ||
+                                          properties.NLCD_Land_Cover_Class ||
+                                          properties.land_cover ||
+                                          properties.value ||
+                                          properties.GRAY_INDEX ||
+                                          properties.grid_code;
+
+                            if (nlcdValue) {
+                                // Convert to string and pad with zero if needed
+                                const nlcdCode = String(nlcdValue).padStart(2, '0');
+                                const landCoverData = nlcdColorMap[nlcdCode];
+
+                                if (landCoverData) {
+                                    landCoverTooltip.setLatLng(latlng)
+                                        .setContent(`<strong>Land Cover:</strong><br>${landCoverData.name}`)
+                                        .addTo(map);
+                                } else {
+                                    // Show raw value if not in our map
+                                    landCoverTooltip.setLatLng(latlng)
+                                        .setContent(`<strong>Land Cover:</strong><br>Class ${nlcdCode}`)
+                                        .addTo(map);
+                                }
+                            } else {
+                                if (map.hasLayer(landCoverTooltip)) {
+                                    map.closeTooltip(landCoverTooltip);
+                                }
+                            }
+                        } else {
+                            if (map.hasLayer(landCoverTooltip)) {
+                                map.closeTooltip(landCoverTooltip);
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        if (map.hasLayer(landCoverTooltip)) {
+                            map.closeTooltip(landCoverTooltip);
+                        }
+                    });
+            }, 150); // Wait 150ms after mouse stops moving
+
+            // Listen to mouse movement
+            map.on('mousemove', function(e) {
+                queryLandCover(e.latlng);
+            });
+
+            // Track when mouse enters/leaves map features (power plants, substations, lines)
+            map.on('mouseover', function(e) {
+                if (e.layer && (e.layer.feature || e.layer instanceof L.Marker || e.layer instanceof L.CircleMarker || e.layer instanceof L.Polyline)) {
+                    isOverMapFeature = true;
+                    if (map.hasLayer(landCoverTooltip)) {
+                        map.closeTooltip(landCoverTooltip);
+                    }
+                }
+            });
+
+            map.on('mouseout', function(e) {
+                if (e.layer && (e.layer.feature || e.layer instanceof L.Marker || e.layer instanceof L.CircleMarker || e.layer instanceof L.Polyline)) {
+                    isOverMapFeature = false;
+                }
             });
         }
 
