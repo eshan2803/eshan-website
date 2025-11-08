@@ -235,7 +235,7 @@
         </div>
         <div class="legend-item fuel-filter" data-fuel="WAT" style="cursor: pointer; padding: 2px; border-radius: 3px;">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
-                <svg width="20" height="20"><polygon points="5,2 15,2 18.5,10 15,18 5,18 1.5,10" fill="#00CED1" stroke="#000" stroke-width="1"/></svg>
+                <svg width="20" height="20"><polygon points="6.5,5 13.5,5 16,10 13.5,15 6.5,15 4,10" fill="#00CED1" stroke="#000" stroke-width="1"/></svg>
             </span>Hydro (298)
         </div>
         <div class="legend-item fuel-filter" data-fuel="GEO,WH" style="cursor: pointer; padding: 2px; border-radius: 3px;" title="Includes: Geothermal, Waste Heat">
@@ -245,7 +245,7 @@
         </div>
         <div class="legend-item fuel-filter" data-fuel="NUC" style="cursor: pointer; padding: 2px; border-radius: 3px;">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
-                <svg width="20" height="20"><polygon points="10,2 17,6 15,16 5,16 3,6" fill="#BA55D3" stroke="#000" stroke-width="1"/></svg>
+                <svg width="20" height="20"><polygon points="10,5 14,7.5 12.5,14 7.5,14 6,7.5" fill="#BA55D3" stroke="#000" stroke-width="1"/></svg>
             </span>Nuclear (2)
         </div>
         <div class="legend-item fuel-filter" data-fuel="LFG,WDS,OBG,MSW,AB,OBS" style="cursor: pointer; padding: 2px; border-radius: 3px;" title="Includes: Landfill Gas, Wood, Other Biogas, Municipal Solid Waste, Agricultural Byproduct, Other Biomass Solids">
@@ -393,8 +393,9 @@
         var currentBaseLayer = baseLayers.grayscale.addTo(map);
         currentBaseLayer.getContainer().classList.add('grayscale');
 
-        // Track active overlays
-        var activeOverlay = null; // Can be: populationOverlay, solarOverlay, windOverlay, or null
+        // Track active overlays - now supports multiple overlays
+        var activeOverlays = []; // Array of active overlay layers
+        var activeBaseOptions = new Set(); // Track which basemap options are selected
 
         // URLs for local data
         const transmissionUrl = './transmission.geojson';
@@ -508,11 +509,15 @@
                             if (marker instanceof L.CircleMarker) {
                                 marker.setStyle({ fillColor: color });
                             } else {
+                                const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
+                                const isWind = ['WND', 'WIND'].includes(fuelType);
+                                const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
+                                const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
                                 marker.setIcon(L.divIcon({
                                     className: 'custom-div-icon',
-                                    html: getMarkerHTML(fuelType, color),
-                                    iconSize: [12, 12],
-                                    iconAnchor: [6, 6]
+                                    html: getMarkerHTML(fuelType, color, 'large'),
+                                    iconSize: [markerSize, markerSize],
+                                    iconAnchor: [markerAnchor, markerAnchor]
                                 }));
                             }
                         } else {
@@ -521,11 +526,15 @@
                             if (marker instanceof L.CircleMarker) {
                                 marker.setStyle({ fillColor: '#808080' });
                             } else {
+                                const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
+                                const isWind = ['WND', 'WIND'].includes(fuelType);
+                                const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
+                                const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
                                 marker.setIcon(L.divIcon({
                                     className: 'custom-div-icon',
-                                    html: getMarkerHTML(fuelType, '#808080'),
-                                    iconSize: [12, 12],
-                                    iconAnchor: [6, 6]
+                                    html: getMarkerHTML(fuelType, '#808080', 'large'),
+                                    iconSize: [markerSize, markerSize],
+                                    iconAnchor: [markerAnchor, markerAnchor]
                                 }));
                             }
                         }
@@ -704,11 +713,15 @@
                             if (plant.marker instanceof L.CircleMarker) {
                                 plant.marker.setStyle({ fillColor: color });
                             } else {
+                                const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
+                                const isWind = ['WND', 'WIND'].includes(fuelType);
+                                const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
+                                const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
                                 plant.marker.setIcon(L.divIcon({
                                     className: 'custom-div-icon',
-                                    html: getMarkerHTML(fuelType, color),
-                                    iconSize: [12, 12],
-                                    iconAnchor: [6, 6]
+                                    html: getMarkerHTML(fuelType, color, 'large'),
+                                    iconSize: [markerSize, markerSize],
+                                    iconAnchor: [markerAnchor, markerAnchor]
                                 }));
                             }
                         }
@@ -756,11 +769,15 @@
                             if (plant.marker instanceof L.CircleMarker) {
                                 plant.marker.setStyle({ fillColor: color });
                             } else {
+                                const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
+                                const isWind = ['WND', 'WIND'].includes(fuelType);
+                                const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
+                                const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
                                 plant.marker.setIcon(L.divIcon({
                                     className: 'custom-div-icon',
-                                    html: getMarkerHTML(fuelType, color),
-                                    iconSize: [12, 12],
-                                    iconAnchor: [6, 6]
+                                    html: getMarkerHTML(fuelType, color, 'large'),
+                                    iconSize: [markerSize, markerSize],
+                                    iconAnchor: [markerAnchor, markerAnchor]
                                 }));
                             }
                         } else {
@@ -770,11 +787,15 @@
                             if (plant.marker instanceof L.CircleMarker) {
                                 plant.marker.setStyle({ fillColor: '#808080' });
                             } else {
+                                const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
+                                const isWind = ['WND', 'WIND'].includes(fuelType);
+                                const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
+                                const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
                                 plant.marker.setIcon(L.divIcon({
                                     className: 'custom-div-icon',
-                                    html: getMarkerHTML(fuelType, '#808080'),
-                                    iconSize: [12, 12],
-                                    iconAnchor: [6, 6]
+                                    html: getMarkerHTML(fuelType, '#808080', 'large'),
+                                    iconSize: [markerSize, markerSize],
+                                    iconAnchor: [markerAnchor, markerAnchor]
                                 }));
                             }
                         }
@@ -874,142 +895,224 @@
             });
         }
 
-        // Setup basemap toggle functionality
+        // Setup basemap toggle functionality with multi-select support
         function setupBasemapToggle() {
             const basemapOptions = document.querySelectorAll('.basemap-option');
 
             basemapOptions.forEach(option => {
-                option.addEventListener('click', () => {
+                option.addEventListener('click', (e) => {
                     const layerType = option.getAttribute('data-layer');
+                    const isMultiSelect = e.ctrlKey || e.metaKey; // Ctrl on Windows/Linux, Cmd on Mac
 
-                    // 1. First, clean up the map from previous selections
-                    basemapOptions.forEach(opt => opt.classList.remove('active'));
-                    if (currentBaseLayer && map.hasLayer(currentBaseLayer)) {
-                        map.removeLayer(currentBaseLayer);
-                        // Remove grayscale filter if present (only for tile layers that support it)
-                        if (currentBaseLayer.getContainer && typeof currentBaseLayer.getContainer === 'function') {
-                            const container = currentBaseLayer.getContainer();
-                            if (container) {
-                                container.classList.remove('grayscale');
-                            }
+                    // Determine if this is an overlay basemap (not a base layer)
+                    const overlayTypes = ['elevation', 'population', 'landcover', 'solarMap', 'windMap', 'populationMap'];
+                    const isOverlayType = overlayTypes.includes(layerType);
+
+                    if (isMultiSelect && isOverlayType) {
+                        // Multi-select mode for overlay basemaps
+                        if (activeBaseOptions.has(layerType)) {
+                            // Remove this overlay
+                            activeBaseOptions.delete(layerType);
+                            option.classList.remove('active');
+                            removeOverlayByType(layerType);
+                        } else {
+                            // Add this overlay
+                            activeBaseOptions.add(layerType);
+                            option.classList.add('active');
+                            addOverlayByType(layerType);
                         }
-                    }
-                    if (activeOverlay && map.hasLayer(activeOverlay)) {
-                        map.removeLayer(activeOverlay);
-                    }
-                    activeOverlay = null; // Reset the active overlay
-                    isLandCoverActive = false; // Reset land cover tracking
 
-                    // 2. Add the new layers based on the selection
-                    option.classList.add('active');
-
-                    switch (layerType) {
-                        case 'grayscale':
-                            currentBaseLayer = baseLayers.grayscale.addTo(map);
+                        console.log(`Multi-select: ${Array.from(activeBaseOptions).join(', ')}`);
+                    } else {
+                        // Single-select mode - clear everything and start fresh
+                        // 1. Clear all previous selections
+                        basemapOptions.forEach(opt => opt.classList.remove('active'));
+                        if (currentBaseLayer && map.hasLayer(currentBaseLayer)) {
+                            map.removeLayer(currentBaseLayer);
+                            // Remove grayscale filter if present
                             if (currentBaseLayer.getContainer && typeof currentBaseLayer.getContainer === 'function') {
                                 const container = currentBaseLayer.getContainer();
                                 if (container) {
-                                    container.classList.add('grayscale');
+                                    container.classList.remove('grayscale');
                                 }
                             }
-                            console.log('Switched to grayscale basemap');
-                            break;
-                        case 'satellite':
-                            currentBaseLayer = baseLayers.satellite.addTo(map);
-                            currentBaseLayer.on('load', () => console.log('Satellite basemap loaded'));
-                            currentBaseLayer.on('requesterror', (e) => console.error('Satellite error:', e));
-                            console.log('Switched to satellite basemap');
-                            break;
-                        case 'elevation':
-                            currentBaseLayer = baseLayers.elevation.addTo(map);
-                            console.log('Switched to elevation/topographic map (OpenTopoMap)');
-                            break;
-                        case 'population':
-                            currentBaseLayer = baseLayers.population.addTo(map);
-                            activeOverlay = populationOverlay.addTo(map);
-                            currentBaseLayer.on('load', () => console.log('Population basemap loaded'));
-                            currentBaseLayer.on('tileerror', (e) => console.error('Population WMS error:', e));
-                            console.log('Switched to population basemap');
-                            break;
-                        case 'landcover':
-                            // Add satellite basemap for context
-                            currentBaseLayer = baseLayers.satellite.addTo(map);
-                            // Add land cover overlay
-                            activeOverlay = baseLayers.landcover.addTo(map);
-                            isLandCoverActive = true;
-                            console.log('Switched to land cover (USGS NLCD)');
-                            break;
-                        case 'solarMap':
-                            // Add satellite basemap for context
-                            currentBaseLayer = baseLayers.satellite.addTo(map);
-                            // Add solar irradiance overlay
-                            activeOverlay = baseLayers.solarMap.addTo(map);
+                        }
 
-                            // Debug: log tile load events
-                            activeOverlay.on('tileload', function(e) {
-                                console.log('Tile loaded:', e.url);
-                            });
-                            activeOverlay.on('tileerror', function(e) {
-                                console.error('Tile error:', e.url, e.tile, e.error);
-                            });
-                            activeOverlay.on('load', function() {
-                                console.log('All tiles loaded for current view');
-                            });
+                        // Remove all active overlays
+                        activeOverlays.forEach(overlay => {
+                            if (map.hasLayer(overlay)) {
+                                map.removeLayer(overlay);
+                            }
+                        });
+                        activeOverlays = [];
+                        activeBaseOptions.clear();
+                        isLandCoverActive = false;
 
-                            console.log('Switched to solar irradiance map');
-                            console.log('Current zoom level:', map.getZoom());
-                            console.log('Current bounds:', map.getBounds());
-                            break;
-                        case 'windMap':
-                            // Add satellite basemap for context
-                            currentBaseLayer = baseLayers.satellite.addTo(map);
-                            // Add wind speed overlay
-                            activeOverlay = baseLayers.windMap.addTo(map);
+                        // 2. Add the new selection
+                        option.classList.add('active');
+                        activeBaseOptions.add(layerType);
 
-                            // Debug: log tile load events
-                            activeOverlay.on('tileload', function(e) {
-                                console.log('Tile loaded:', e.url);
-                            });
-                            activeOverlay.on('tileerror', function(e) {
-                                console.error('Tile error:', e.url, e.tile, e.error);
-                            });
-                            activeOverlay.on('load', function() {
-                                console.log('All tiles loaded for current view');
-                            });
+                        switch (layerType) {
+                            case 'grayscale':
+                                currentBaseLayer = baseLayers.grayscale.addTo(map);
+                                if (currentBaseLayer.getContainer && typeof currentBaseLayer.getContainer === 'function') {
+                                    const container = currentBaseLayer.getContainer();
+                                    if (container) {
+                                        container.classList.add('grayscale');
+                                    }
+                                }
+                                console.log('Switched to grayscale basemap');
+                                break;
+                            case 'satellite':
+                                currentBaseLayer = baseLayers.satellite.addTo(map);
+                                currentBaseLayer.on('load', () => console.log('Satellite basemap loaded'));
+                                currentBaseLayer.on('requesterror', (e) => console.error('Satellite error:', e));
+                                console.log('Switched to satellite basemap');
+                                break;
+                            default:
+                                // For overlay types, use satellite as base
+                                currentBaseLayer = baseLayers.satellite.addTo(map);
+                                addOverlayByType(layerType);
+                                break;
+                        }
 
-                            console.log('Switched to wind speed map');
-                            console.log('Current zoom level:', map.getZoom());
-                            console.log('Current bounds:', map.getBounds());
-                            break;
-                        case 'populationMap':
-                            // Add satellite basemap for context
-                            currentBaseLayer = baseLayers.satellite.addTo(map);
-                            // Add population density overlay
-                            activeOverlay = baseLayers.populationMap.addTo(map);
-
-                            // Debug: log tile load events
-                            activeOverlay.on('tileload', function(e) {
-                                console.log('Tile loaded:', e.url);
-                            });
-                            activeOverlay.on('tileerror', function(e) {
-                                console.error('Tile error:', e.url, e.tile, e.error);
-                            });
-                            activeOverlay.on('load', function() {
-                                console.log('All tiles loaded for current view');
-                            });
-
-                            console.log('Switched to population density map');
-                            console.log('Current zoom level:', map.getZoom());
-                            console.log('Current bounds:', map.getBounds());
-                            break;
+                        console.log(`Switched to ${layerType} basemap`);
                     }
 
-                    // 3. NO LONGER NEEDED - The 'pane' system handles z-ordering automatically.
-                    // Layer ordering is now controlled by the z-index values set in the pane definitions
-
-                    console.log(`Switched to ${layerType} basemap`);
                 });
             });
+        }
+
+        // Helper function to add an overlay by type
+        function addOverlayByType(layerType) {
+            let overlay = null;
+
+            switch (layerType) {
+                case 'elevation':
+                    overlay = baseLayers.elevation.addTo(map);
+                    console.log('Added elevation overlay');
+                    break;
+                case 'population':
+                    overlay = populationOverlay.addTo(map);
+                    console.log('Added population overlay');
+                    break;
+                case 'landcover':
+                    overlay = baseLayers.landcover.addTo(map);
+                    isLandCoverActive = true;
+                    console.log('Added land cover overlay');
+                    break;
+                case 'solarMap':
+                    overlay = baseLayers.solarMap.addTo(map);
+                    overlay.on('tileload', function(e) {
+                        console.log('Solar tile loaded:', e.url);
+                    });
+                    overlay.on('tileerror', function(e) {
+                        console.error('Solar tile error:', e.url);
+                    });
+                    console.log('Added solar overlay');
+                    break;
+                case 'windMap':
+                    overlay = baseLayers.windMap.addTo(map);
+                    overlay.on('tileload', function(e) {
+                        console.log('Wind tile loaded:', e.url);
+                    });
+                    overlay.on('tileerror', function(e) {
+                        console.error('Wind tile error:', e.url);
+                    });
+                    console.log('Added wind overlay');
+                    break;
+                case 'populationMap':
+                    overlay = baseLayers.populationMap.addTo(map);
+                    overlay.on('tileload', function(e) {
+                        console.log('Population tile loaded:', e.url);
+                    });
+                    overlay.on('tileerror', function(e) {
+                        console.error('Population tile error:', e.url);
+                    });
+                    console.log('Added population density overlay');
+                    break;
+            }
+
+            if (overlay) {
+                activeOverlays.push(overlay);
+                // Adjust opacity of all overlays based on count
+                updateOverlayOpacity();
+            }
+        }
+
+        // Helper function to update opacity of all active overlays based on count
+        function updateOverlayOpacity() {
+            const overlayCount = activeOverlays.length;
+
+            if (overlayCount === 0) {
+                return;
+            }
+
+            // Calculate opacity based on number of overlays
+            // With 1 overlay: keep original opacity (0.7-0.9)
+            // With 2 overlays: reduce to 0.5 each for better blending
+            // With 3+ overlays: reduce further to prevent complete occlusion
+            let targetOpacity;
+
+            if (overlayCount === 1) {
+                targetOpacity = 0.8; // Single layer - keep it visible
+            } else if (overlayCount === 2) {
+                targetOpacity = 0.5; // Two layers - 50% each for blending
+            } else if (overlayCount === 3) {
+                targetOpacity = 0.4; // Three layers - reduce more
+            } else {
+                targetOpacity = 0.35; // Four or more - even more transparent
+            }
+
+            // Apply the calculated opacity to all active overlays
+            activeOverlays.forEach(overlay => {
+                if (overlay && overlay.setOpacity) {
+                    overlay.setOpacity(targetOpacity);
+                }
+            });
+
+            console.log(`Updated ${overlayCount} overlay(s) to opacity: ${targetOpacity}`);
+        }
+
+        // Helper function to remove an overlay by type
+        function removeOverlayByType(layerType) {
+            // Find and remove the overlay from the map
+            activeOverlays = activeOverlays.filter(overlay => {
+                // Check if this overlay corresponds to the layer type we want to remove
+                let shouldRemove = false;
+
+                switch (layerType) {
+                    case 'elevation':
+                        shouldRemove = (overlay === baseLayers.elevation);
+                        break;
+                    case 'population':
+                        shouldRemove = (overlay === populationOverlay);
+                        break;
+                    case 'landcover':
+                        shouldRemove = (overlay === baseLayers.landcover);
+                        if (shouldRemove) isLandCoverActive = false;
+                        break;
+                    case 'solarMap':
+                        shouldRemove = (overlay === baseLayers.solarMap);
+                        break;
+                    case 'windMap':
+                        shouldRemove = (overlay === baseLayers.windMap);
+                        break;
+                    case 'populationMap':
+                        shouldRemove = (overlay === baseLayers.populationMap);
+                        break;
+                }
+
+                if (shouldRemove && map.hasLayer(overlay)) {
+                    map.removeLayer(overlay);
+                    console.log(`Removed ${layerType} overlay`);
+                }
+
+                return !shouldRemove; // Keep overlays that don't match
+            });
+
+            // Adjust opacity of remaining overlays
+            updateOverlayOpacity();
         }
 
         // NLCD Land Cover color mapping from the legend
@@ -1434,11 +1537,20 @@
         }
 
         // Generate HTML for plant marker based on fuel type and color
-        function getMarkerHTML(fuelType, color) {
+        // Optional size parameter: 'normal' (12px default) or 'large' (18px for wind, 16px for battery/nuclear)
+        function getMarkerHTML(fuelType, color, size = 'normal') {
+            const isLarge = size === 'large';
+            const windSize = isLarge ? 18 : 12;
+            const windHalfSize = isLarge ? 9 : 6;
+            const batterySize = isLarge ? 16 : 12;
+            const batteryHalfSize = isLarge ? 8 : 6;
+            const nuclearSize = isLarge ? 16 : 12;
+            const nuclearHalfSize = isLarge ? 8 : 6;
+
             switch (fuelType.toUpperCase()) {
                 case 'WND':
                 case 'WIND':
-                    return `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><polygon points="6,2 11,10 1,10" fill="${color}" stroke="#000" stroke-width="1"/></svg>`;
+                    return `<svg width="${windSize}" height="${windSize}" style="margin-left: -${windHalfSize}px; margin-top: -${windHalfSize}px;"><polygon points="${windHalfSize},${isLarge ? 3 : 2} ${isLarge ? 16 : 11},${isLarge ? 15 : 10} ${isLarge ? 2 : 1},${isLarge ? 15 : 10}" fill="${color}" stroke="#000" stroke-width="1"/></svg>`;
 
                 case 'NG':
                 case 'GAS':
@@ -1454,7 +1566,7 @@
                     return `<div style="width: 8px; height: 8px; background-color: ${color}; border: 1px solid #000; transform: rotate(45deg); margin-left: -4px; margin-top: -4px;"></div>`;
 
                 case 'NUC':
-                    return `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><polygon points="6,1 11,4 9,10 3,10 1,4" fill="${color}" stroke="#000" stroke-width="1"/></svg>`;
+                    return `<svg width="${nuclearSize}" height="${nuclearSize}" style="margin-left: -${nuclearHalfSize}px; margin-top: -${nuclearHalfSize}px;"><polygon points="${nuclearHalfSize},${isLarge ? 1.5 : 1} ${isLarge ? 14 : 11},${isLarge ? 5 : 4} ${isLarge ? 12 : 9},${isLarge ? 13 : 10} ${isLarge ? 4 : 3},${isLarge ? 13 : 10} ${isLarge ? 2 : 1},${isLarge ? 5 : 4}" fill="${color}" stroke="#000" stroke-width="1"/></svg>`;
 
                 case 'LFG':
                 case 'WDS':
@@ -1475,7 +1587,7 @@
 
                 case 'BAT':
                 case 'OTH': // Vaca Dixon Battery Storage is marked as OTH
-                    return `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><rect x="2" y="4" width="8" height="5" fill="${color}" stroke="#000" stroke-width="1"/><rect x="4" y="3" width="4" height="1" fill="${color}" stroke="#000" stroke-width="0.5"/></svg>`;
+                    return `<svg width="${batterySize}" height="${batterySize}" style="margin-left: -${batteryHalfSize}px; margin-top: -${batteryHalfSize}px;"><rect x="${isLarge ? 3 : 2}" y="${isLarge ? 5 : 4}" width="${isLarge ? 10 : 8}" height="${isLarge ? 6 : 5}" fill="${color}" stroke="#000" stroke-width="1"/><rect x="${isLarge ? 5 : 4}" y="${isLarge ? 4 : 3}" width="${isLarge ? 6 : 4}" height="1" fill="${color}" stroke="#000" stroke-width="0.5"/></svg>`;
 
                 default:
                     return `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><polygon points="4,1 8,1 11,4 11,8 8,11 4,11 1,8 1,4" fill="${color}" stroke="#000" stroke-width="1"/></svg>`;
@@ -1595,14 +1707,14 @@
                         });
                         break;
 
-                    case 'WND': // Wind - Triangle pointing up (SVG for consistent border)
+                    case 'WND': // Wind - Triangle pointing up (SVG for consistent border) - LARGER SIZE (18px)
                     case 'WIND':
                         marker = L.marker(plantData.latlng, {
                             icon: L.divIcon({
                                 className: 'custom-div-icon',
-                                html: `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><polygon points="6,2 11,10 1,10" fill="#808080" stroke="#000" stroke-width="1"/></svg>`,
-                                iconSize: [12, 12],
-                                iconAnchor: [6, 6]
+                                html: getMarkerHTML(fuelType, '#808080', 'large'),
+                                iconSize: [18, 18],
+                                iconAnchor: [9, 9]
                             })
                         });
                         break;
@@ -1645,13 +1757,23 @@
                         break;
 
                     case 'PC': // Petroleum Coke - Pentagon with border
-                    case 'NUC':
                         marker = L.marker(plantData.latlng, {
                             icon: L.divIcon({
                                 className: 'custom-div-icon',
                                 html: `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><polygon points="6,1 11,4 9,10 3,10 1,4" fill="#808080" stroke="#000" stroke-width="1"/></svg>`,
                                 iconSize: [12, 12],
                                 iconAnchor: [6, 6]
+                            })
+                        });
+                        break;
+
+                    case 'NUC': // Nuclear - Pentagon with border - LARGER SIZE
+                        marker = L.marker(plantData.latlng, {
+                            icon: L.divIcon({
+                                className: 'custom-div-icon',
+                                html: getMarkerHTML(fuelType, '#808080', 'large'),
+                                iconSize: [16, 16],
+                                iconAnchor: [8, 8]
                             })
                         });
                         break;
@@ -1688,13 +1810,14 @@
                         });
                         break;
 
-                    case 'BAT': // Battery - Rectangle with border
+                    case 'BAT': // Battery - Rectangle with border - LARGER SIZE
+                    case 'OTH': // Other (often battery storage)
                         marker = L.marker(plantData.latlng, {
                             icon: L.divIcon({
                                 className: 'custom-div-icon',
-                                html: `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><rect x="2" y="4" width="8" height="5" fill="#808080" stroke="#000" stroke-width="1"/><rect x="4" y="3" width="4" height="1" fill="#808080" stroke="#000" stroke-width="0.5"/></svg>`,
-                                iconSize: [12, 12],
-                                iconAnchor: [6, 6]
+                                html: getMarkerHTML(fuelType, '#808080', 'large'),
+                                iconSize: [16, 16],
+                                iconAnchor: [8, 8]
                             })
                         });
                         break;
@@ -1737,11 +1860,15 @@
                         if (marker instanceof L.CircleMarker) {
                             marker.setStyle({ fillColor: color });
                         } else {
+                            const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
+                            const isWind = ['WND', 'WIND'].includes(fuelType);
+                            const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
+                            const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
                             marker.setIcon(L.divIcon({
                                 className: 'custom-div-icon',
-                                html: getMarkerHTML(fuelType, color),
-                                iconSize: [12, 12],
-                                iconAnchor: [6, 6]
+                                html: getMarkerHTML(fuelType, color, 'large'),
+                                iconSize: [markerSize, markerSize],
+                                iconAnchor: [markerAnchor, markerAnchor]
                             }));
                         }
                     } else {
@@ -1751,11 +1878,15 @@
                         if (marker instanceof L.CircleMarker) {
                             marker.setStyle({ fillColor: '#808080' });
                         } else {
+                            const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
+                            const isWind = ['WND', 'WIND'].includes(fuelType);
+                            const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
+                            const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
                             marker.setIcon(L.divIcon({
                                 className: 'custom-div-icon',
-                                html: getMarkerHTML(fuelType, '#808080'),
-                                iconSize: [12, 12],
-                                iconAnchor: [6, 6]
+                                html: getMarkerHTML(fuelType, '#808080', 'large'),
+                                iconSize: [markerSize, markerSize],
+                                iconAnchor: [markerAnchor, markerAnchor]
                             }));
                         }
                     }
