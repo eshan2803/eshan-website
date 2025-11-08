@@ -157,21 +157,46 @@
             font-size: 7.5px;
             letter-spacing: 0.2px;
         }
-        /* Basemap preview styles */
+        /* Basemap preview styles - using actual map snippets */
         #basemap-grayscale {
-            background: linear-gradient(135deg, #e0e0e0 0%, #909090 100%);
+            background-image: url('https://a.tile.openstreetmap.org/6/10/24.png');
         }
         #basemap-satellite {
-            background: linear-gradient(135deg, #4a7c59 0%, #2d5a3d 50%, #1a3d2e 100%);
+            background-image: url('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/6/24/10');
         }
         #basemap-elevation {
-            background: linear-gradient(135deg, #d4e7d4 0%, #8b7355 50%, #5a4a3a 100%);
+            background-image: url('https://tile.opentopomap.org/6/10/24.png');
         }
         #basemap-population {
-            background: linear-gradient(135deg, #fff7ec 0%, #fc8d59 50%, #7f0000 100%);
+            background-image: url('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_CityLights_2012/default/GoogleMapsCompatible_Level8/6/24/10.jpg');
         }
         #basemap-landcover {
-            background: linear-gradient(135deg, #90ee90 0%, #228b22 50%, #8b4513 100%);
+            background-image: url('https://www.mrlc.gov/geoserver/mrlc_display/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&LAYERS=mrlc_display:NLCD_2021_Land_Cover_L48&WIDTH=256&HEIGHT=256&SRS=EPSG:3857&BBOX=-13358338.89519283,4383204.9499851465,-13210795.034662457,4530748.810515519');
+        }
+        #basemap-solar {
+            background-image: url('https://eshan2803.github.io/basemaps/solar_tiles/6/10/24.png');
+        }
+        #basemap-wind {
+            background-image: url('https://eshan2803.github.io/basemaps/wind_tiles/6/10/24.png');
+        }
+        #basemap-population-density {
+            background-image: url('https://eshan2803.github.io/basemaps/population_tiles/6/10/24.png');
+        }
+
+        /* Land cover hover tooltip styling */
+        .land-cover-tooltip {
+            background-color: rgba(255, 255, 255, 0.95);
+            border: 2px solid #333;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 13px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .land-cover-tooltip strong {
+            color: #2c5f2d;
+            font-size: 12px;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/leaflet-ant-path@1.3.0/dist/leaflet-ant-path.min.js"></script>
@@ -192,7 +217,7 @@
         </button>
     </div>
     <div id="legend">
-        <strong>Power Plant Types:</strong>
+        <strong id="legend-plants-header" style="cursor: pointer; user-select: none;" title="Click to hide/show all plants">Power Plant:</strong>
         <div class="legend-item fuel-filter" data-fuel="SUN" style="cursor: pointer; padding: 2px; border-radius: 3px;">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
                 <svg width="20" height="20"><circle cx="10" cy="10" r="5" fill="#FFD700" stroke="#000" stroke-width="1"/></svg>
@@ -245,8 +270,8 @@
         </div>
         <div class="legend-item" style="margin-top: 10px;"><span class="legend-color" style="background-color: #808080;"></span>OFF</div>
         <div class="legend-item"><span class="legend-color" style="background-color: #39FF14;"></span>Active Flow</div>
-        <div class="legend-item"><span class="legend-color" style="background-color: #4A90A4;"></span>Transmission Lines</div>
-        <div class="legend-item">
+        <div class="legend-item" id="legend-lines-toggle" style="cursor: pointer; user-select: none;" title="Click to hide/show transmission lines"><span class="legend-color" style="background-color: #4A90A4;"></span>Transmission Lines</div>
+        <div class="legend-item" id="legend-substations-toggle" style="cursor: pointer; user-select: none;" title="Click to hide/show substations">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
                 <svg width="20" height="20"><circle cx="10" cy="10" r="2" fill="#39FF14" stroke="#000" stroke-width="0.5"/></svg>
             </span>Substations (4442)
@@ -267,6 +292,15 @@
         </div>
         <div class="basemap-option" id="basemap-landcover" data-layer="landcover" title="Land Cover (NLCD)">
             <span class="label">Land Cover</span>
+        </div>
+        <div class="basemap-option" id="basemap-solar" data-layer="solarMap" title="Solar Irradiance Map">
+            <span class="label">Solar</span>
+        </div>
+        <div class="basemap-option" id="basemap-wind" data-layer="windMap" title="Wind Speed Map">
+            <span class="label">Wind</span>
+        </div>
+        <div class="basemap-option" id="basemap-population-density" data-layer="populationMap" title="Population Density Map">
+            <span class="label">Pop. Density</span>
         </div>
     </div>
     <div id="map"></div>
@@ -311,6 +345,36 @@
                 attribution: 'USGS MRLC',
                 pane: 'wmsOverlayPane',
                 opacity: 0.8
+            }),
+            solarMap: L.tileLayer('https://eshan2803.github.io/basemaps/solar_tiles/{z}/{x}/{y}.png', {
+                attribution: 'Solar Data from Global Solar Atlas / World Bank Group',
+                pane: 'wmsOverlayPane',
+                opacity: 0.7,
+                minZoom: 0,
+                maxZoom: 10,
+                maxNativeZoom: 10,  // Use zoom 10 tiles even when zoomed further
+                errorTileUrl: '',  // Don't show broken tile images
+                bounds: [[-90, -180], [90, 180]]  // World bounds
+            }),
+            windMap: L.tileLayer('https://eshan2803.github.io/basemaps/wind_tiles/{z}/{x}/{y}.png', {
+                attribution: 'Wind Data from Global Wind Atlas / World Bank Group',
+                pane: 'wmsOverlayPane',
+                opacity: 0.7,
+                minZoom: 0,
+                maxZoom: 10,
+                maxNativeZoom: 10,  // Use zoom 10 tiles even when zoomed further
+                errorTileUrl: '',  // Don't show broken tile images
+                bounds: [[-90, -180], [90, 180]]  // World bounds
+            }),
+            populationMap: L.tileLayer('https://eshan2803.github.io/basemaps/population_tiles/{z}/{x}/{y}.png', {
+                attribution: 'Population Density Data',
+                pane: 'wmsOverlayPane',
+                opacity: 0.9,
+                minZoom: 0,
+                maxZoom: 10,
+                maxNativeZoom: 10,  // Use zoom 10 tiles even when zoomed further
+                errorTileUrl: '',  // Don't show broken tile images
+                bounds: [[-90, -180], [90, 180]]  // World bounds
             })
         };
 
@@ -409,8 +473,10 @@
                     renderMap();
                     setupToggleAllButton();
                     setupLegendInteractivity();
+                    setupLayerToggles();
                     setupBasemapToggle();
                     setupHomeButton();
+                    setupLandCoverHover();
                     console.log('Network graph built and map rendered.');
                 } catch (error) {
                     console.error('Error building network or rendering map:', error);
@@ -721,6 +787,91 @@
                 // Clear saved state
                 stateBeforeFilter = {};
             }
+
+            // Setup click handler for Power Plant header to toggle all plants visibility
+            const plantsHeader = document.getElementById('legend-plants-header');
+            let plantsVisible = true;
+
+            plantsHeader.addEventListener('click', () => {
+                plantsVisible = !plantsVisible;
+
+                networkGraph.plants.forEach(plant => {
+                    if (plant.marker) {
+                        if (plantsVisible) {
+                            if (!map.hasLayer(plant.marker)) {
+                                plantsLayer.addLayer(plant.marker);
+                            }
+                        } else {
+                            if (map.hasLayer(plant.marker)) {
+                                plantsLayer.removeLayer(plant.marker);
+                            }
+                        }
+                    }
+                });
+
+                // Update header styling to indicate state
+                plantsHeader.style.opacity = plantsVisible ? '1' : '0.5';
+                plantsHeader.style.textDecoration = plantsVisible ? 'none' : 'line-through';
+
+                console.log(`Plants ${plantsVisible ? 'shown' : 'hidden'}`);
+            });
+        }
+
+        // Setup click handlers for transmission lines and substations toggles
+        function setupLayerToggles() {
+            // Track visibility state
+            let linesVisible = true;
+            let substationsVisible = true;
+
+            // Transmission Lines toggle
+            const linesToggle = document.getElementById('legend-lines-toggle');
+            linesToggle.addEventListener('click', () => {
+                linesVisible = !linesVisible;
+
+                if (linesVisible) {
+                    if (!map.hasLayer(staticLinesLayer)) {
+                        map.addLayer(staticLinesLayer);
+                    }
+                    if (!map.hasLayer(animatedLinesLayer) && activeGenerators > 0) {
+                        map.addLayer(animatedLinesLayer);
+                    }
+                } else {
+                    if (map.hasLayer(staticLinesLayer)) {
+                        map.removeLayer(staticLinesLayer);
+                    }
+                    if (map.hasLayer(animatedLinesLayer)) {
+                        map.removeLayer(animatedLinesLayer);
+                    }
+                }
+
+                // Update styling to indicate state
+                linesToggle.style.opacity = linesVisible ? '1' : '0.5';
+                linesToggle.style.textDecoration = linesVisible ? 'none' : 'line-through';
+
+                console.log(`Transmission lines ${linesVisible ? 'shown' : 'hidden'}`);
+            });
+
+            // Substations toggle
+            const substationsToggle = document.getElementById('legend-substations-toggle');
+            substationsToggle.addEventListener('click', () => {
+                substationsVisible = !substationsVisible;
+
+                if (substationsVisible) {
+                    if (!map.hasLayer(substationsLayer)) {
+                        map.addLayer(substationsLayer);
+                    }
+                } else {
+                    if (map.hasLayer(substationsLayer)) {
+                        map.removeLayer(substationsLayer);
+                    }
+                }
+
+                // Update styling to indicate state
+                substationsToggle.style.opacity = substationsVisible ? '1' : '0.5';
+                substationsToggle.style.textDecoration = substationsVisible ? 'none' : 'line-through';
+
+                console.log(`Substations ${substationsVisible ? 'shown' : 'hidden'}`);
+            });
         }
 
         // Setup basemap toggle functionality
@@ -747,6 +898,7 @@
                         map.removeLayer(activeOverlay);
                     }
                     activeOverlay = null; // Reset the active overlay
+                    isLandCoverActive = false; // Reset land cover tracking
 
                     // 2. Add the new layers based on the selection
                     option.classList.add('active');
@@ -784,7 +936,71 @@
                             currentBaseLayer = baseLayers.satellite.addTo(map);
                             // Add land cover overlay
                             activeOverlay = baseLayers.landcover.addTo(map);
+                            isLandCoverActive = true;
                             console.log('Switched to land cover (USGS NLCD)');
+                            break;
+                        case 'solarMap':
+                            // Add satellite basemap for context
+                            currentBaseLayer = baseLayers.satellite.addTo(map);
+                            // Add solar irradiance overlay
+                            activeOverlay = baseLayers.solarMap.addTo(map);
+
+                            // Debug: log tile load events
+                            activeOverlay.on('tileload', function(e) {
+                                console.log('Tile loaded:', e.url);
+                            });
+                            activeOverlay.on('tileerror', function(e) {
+                                console.error('Tile error:', e.url, e.tile, e.error);
+                            });
+                            activeOverlay.on('load', function() {
+                                console.log('All tiles loaded for current view');
+                            });
+
+                            console.log('Switched to solar irradiance map');
+                            console.log('Current zoom level:', map.getZoom());
+                            console.log('Current bounds:', map.getBounds());
+                            break;
+                        case 'windMap':
+                            // Add satellite basemap for context
+                            currentBaseLayer = baseLayers.satellite.addTo(map);
+                            // Add wind speed overlay
+                            activeOverlay = baseLayers.windMap.addTo(map);
+
+                            // Debug: log tile load events
+                            activeOverlay.on('tileload', function(e) {
+                                console.log('Tile loaded:', e.url);
+                            });
+                            activeOverlay.on('tileerror', function(e) {
+                                console.error('Tile error:', e.url, e.tile, e.error);
+                            });
+                            activeOverlay.on('load', function() {
+                                console.log('All tiles loaded for current view');
+                            });
+
+                            console.log('Switched to wind speed map');
+                            console.log('Current zoom level:', map.getZoom());
+                            console.log('Current bounds:', map.getBounds());
+                            break;
+                        case 'populationMap':
+                            // Add satellite basemap for context
+                            currentBaseLayer = baseLayers.satellite.addTo(map);
+                            // Add population density overlay
+                            activeOverlay = baseLayers.populationMap.addTo(map);
+
+                            // Debug: log tile load events
+                            activeOverlay.on('tileload', function(e) {
+                                console.log('Tile loaded:', e.url);
+                            });
+                            activeOverlay.on('tileerror', function(e) {
+                                console.error('Tile error:', e.url, e.tile, e.error);
+                            });
+                            activeOverlay.on('load', function() {
+                                console.log('All tiles loaded for current view');
+                            });
+
+                            console.log('Switched to population density map');
+                            console.log('Current zoom level:', map.getZoom());
+                            console.log('Current bounds:', map.getBounds());
                             break;
                     }
 
@@ -793,6 +1009,194 @@
 
                     console.log(`Switched to ${layerType} basemap`);
                 });
+            });
+        }
+
+        // NLCD Land Cover color mapping from the legend
+        const nlcdColorMap = {
+            '11': { color: [70, 107, 159], name: 'Open Water' },
+            '12': { color: [209, 222, 248], name: 'Perennial Ice/Snow' },
+            '21': { color: [222, 197, 197], name: 'Developed, Open Space' },
+            '22': { color: [217, 146, 130], name: 'Developed, Low Intensity' },
+            '23': { color: [235, 0, 0], name: 'Developed, Medium Intensity' },
+            '24': { color: [171, 0, 0], name: 'Developed, High Intensity' },
+            '31': { color: [179, 172, 159], name: 'Barren Land (Rock/Sand/Clay)' },
+            '41': { color: [104, 171, 95], name: 'Deciduous Forest' },
+            '42': { color: [28, 95, 44], name: 'Evergreen Forest' },
+            '43': { color: [181, 197, 143], name: 'Mixed Forest' },
+            '52': { color: [204, 184, 121], name: 'Shrub/Scrub' },
+            '71': { color: [223, 223, 194], name: 'Grassland/Herbaceous' },
+            '81': { color: [220, 217, 57], name: 'Pasture/Hay' },
+            '82': { color: [171, 108, 40], name: 'Cultivated Crops' },
+            '90': { color: [184, 217, 235], name: 'Woody Wetlands' },
+            '95': { color: [108, 159, 184], name: 'Emergent Herbaceous Wetlands' }
+        };
+
+        // Function to find closest NLCD class from RGB color
+        function getNLCDClass(r, g, b) {
+            let minDistance = Infinity;
+            let closestClass = null;
+
+            for (const [code, data] of Object.entries(nlcdColorMap)) {
+                const [cr, cg, cb] = data.color;
+                // Calculate Euclidean distance in RGB space
+                const distance = Math.sqrt(
+                    Math.pow(r - cr, 2) +
+                    Math.pow(g - cg, 2) +
+                    Math.pow(b - cb, 2)
+                );
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestClass = data.name;
+                }
+            }
+
+            // Only return if color is reasonably close (threshold to avoid noise)
+            return minDistance < 50 ? closestClass : null;
+        }
+
+        // Create land cover hover tooltip
+        var landCoverTooltip = L.tooltip({
+            permanent: false,
+            direction: 'top',
+            className: 'land-cover-tooltip',
+            offset: [0, -10]
+        });
+
+        // Variable to track if land cover layer is active
+        var isLandCoverActive = false;
+
+        // Debounce function to limit GetFeatureInfo requests
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Variable to track if mouse is over a map feature
+        var isOverMapFeature = false;
+
+        // Setup land cover hover functionality using WMS GetFeatureInfo
+        function setupLandCoverHover() {
+            // Debounced function to query WMS for feature info
+            const queryLandCover = debounce(function(latlng) {
+                // Don't show land cover tooltip if:
+                // 1. Land cover layer is not active
+                // 2. Mouse is over a power plant or other map feature
+                if (!isLandCoverActive || !activeOverlay || activeOverlay !== baseLayers.landcover || isOverMapFeature) {
+                    if (map.hasLayer(landCoverTooltip)) {
+                        map.closeTooltip(landCoverTooltip);
+                    }
+                    return;
+                }
+
+                // Get map parameters for GetFeatureInfo request
+                const size = map.getSize();
+                const bounds = map.getBounds();
+                const point = map.latLngToContainerPoint(latlng);
+
+                // Build GetFeatureInfo URL
+                const url = 'https://www.mrlc.gov/geoserver/wms?' +
+                    'SERVICE=WMS&' +
+                    'VERSION=1.1.1&' +
+                    'REQUEST=GetFeatureInfo&' +
+                    'LAYERS=mrlc_display:NLCD_2021_Land_Cover_L48&' +
+                    'QUERY_LAYERS=mrlc_display:NLCD_2021_Land_Cover_L48&' +
+                    'STYLES=&' +
+                    'BBOX=' + bounds.toBBoxString() + '&' +
+                    'WIDTH=' + size.x + '&' +
+                    'HEIGHT=' + size.y + '&' +
+                    'FORMAT=image/png&' +
+                    'INFO_FORMAT=application/json&' +
+                    'TRANSPARENT=true&' +
+                    'X=' + Math.floor(point.x) + '&' +
+                    'Y=' + Math.floor(point.y) + '&' +
+                    'SRS=EPSG:4326&' +
+                    'FEATURE_COUNT=1';
+
+                // Fetch feature info
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Check again if mouse moved over a feature while we were fetching
+                        if (isOverMapFeature) {
+                            if (map.hasLayer(landCoverTooltip)) {
+                                map.closeTooltip(landCoverTooltip);
+                            }
+                            return;
+                        }
+
+                        if (data.features && data.features.length > 0) {
+                            const feature = data.features[0];
+                            const properties = feature.properties;
+
+                            // Get NLCD value from PALETTE_INDEX
+                            let nlcdValue = properties.PALETTE_INDEX ||
+                                          properties.NLCD_Land_Cover_Class ||
+                                          properties.land_cover ||
+                                          properties.value ||
+                                          properties.GRAY_INDEX ||
+                                          properties.grid_code;
+
+                            if (nlcdValue) {
+                                // Convert to string and pad with zero if needed
+                                const nlcdCode = String(nlcdValue).padStart(2, '0');
+                                const landCoverData = nlcdColorMap[nlcdCode];
+
+                                if (landCoverData) {
+                                    landCoverTooltip.setLatLng(latlng)
+                                        .setContent(`<strong>Land Cover:</strong><br>${landCoverData.name}`)
+                                        .addTo(map);
+                                } else {
+                                    // Show raw value if not in our map
+                                    landCoverTooltip.setLatLng(latlng)
+                                        .setContent(`<strong>Land Cover:</strong><br>Class ${nlcdCode}`)
+                                        .addTo(map);
+                                }
+                            } else {
+                                if (map.hasLayer(landCoverTooltip)) {
+                                    map.closeTooltip(landCoverTooltip);
+                                }
+                            }
+                        } else {
+                            if (map.hasLayer(landCoverTooltip)) {
+                                map.closeTooltip(landCoverTooltip);
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        if (map.hasLayer(landCoverTooltip)) {
+                            map.closeTooltip(landCoverTooltip);
+                        }
+                    });
+            }, 150); // Wait 150ms after mouse stops moving
+
+            // Listen to mouse movement
+            map.on('mousemove', function(e) {
+                queryLandCover(e.latlng);
+            });
+
+            // Track when mouse enters/leaves map features (power plants, substations, lines)
+            map.on('mouseover', function(e) {
+                if (e.layer && (e.layer.feature || e.layer instanceof L.Marker || e.layer instanceof L.CircleMarker || e.layer instanceof L.Polyline)) {
+                    isOverMapFeature = true;
+                    if (map.hasLayer(landCoverTooltip)) {
+                        map.closeTooltip(landCoverTooltip);
+                    }
+                }
+            });
+
+            map.on('mouseout', function(e) {
+                if (e.layer && (e.layer.feature || e.layer instanceof L.Marker || e.layer instanceof L.CircleMarker || e.layer instanceof L.Polyline)) {
+                    isOverMapFeature = false;
+                }
             });
         }
 
