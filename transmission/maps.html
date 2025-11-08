@@ -173,12 +173,6 @@
         #basemap-landcover {
             background-image: url('https://www.mrlc.gov/geoserver/mrlc_display/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&LAYERS=mrlc_display:NLCD_2021_Land_Cover_L48&WIDTH=256&HEIGHT=256&SRS=EPSG:3857&BBOX=-13358338.89519283,4383204.9499851465,-13210795.034662457,4530748.810515519');
         }
-        #basemap-population-esri {
-            background-image: url('https://services.arcgisonline.com/arcgis/rest/services/Demographics/USA_Population_Density/MapServer/export?bbox=-13358338.89519283,4383204.9499851465,-13210795.034662457,4530748.810515519&bboxSR=3857&imageSR=3857&size=256,256&format=png&transparent=true&f=image');
-        }
-        #basemap-co2storage {
-            background-image: url('https://certmapper.cr.usgs.gov/arcgis/rest/services/project/natcarb/MapServer/export?bbox=-13358338.89519283,4383204.9499851465,-13210795.034662457,4530748.810515519&bboxSR=3857&imageSR=3857&size=256,256&format=png&transparent=true&f=image');
-        }
         #basemap-solar {
             background-image: url('https://eshan2803.github.io/basemaps/solar_tiles/6/10/24.png');
         }
@@ -302,12 +296,6 @@
         <div class="basemap-option" id="basemap-wind" data-layer="windMap" title="Wind Speed Map">
             <span class="label">Wind</span>
         </div>
-        <div class="basemap-option" id="basemap-population-esri" data-layer="populationEsri" title="Population Density (ESRI)">
-            <span class="label">Pop. Density</span>
-        </div>
-        <div class="basemap-option" id="basemap-co2storage" data-layer="co2Storage" title="CO2 Storage Sites">
-            <span class="label">CO2 Storage</span>
-        </div>
     </div>
     <div id="map"></div>
     <script>
@@ -371,18 +359,6 @@
                 maxNativeZoom: 10,  // Use zoom 10 tiles even when zoomed further
                 errorTileUrl: '',  // Don't show broken tile images
                 bounds: [[-90, -180], [90, 180]]  // World bounds
-            }),
-            populationEsri: L.esri.tiledMapLayer({
-                url: "https://services.arcgisonline.com/arcgis/rest/services/Demographics/USA_Population_Density/MapServer",
-                attribution: 'Population Data &copy; Esri',
-                pane: 'wmsOverlayPane',
-                opacity: 0.7
-            }),
-            co2Storage: L.esri.dynamicMapLayer({
-                url: "https://certmapper.cr.usgs.gov/arcgis/rest/services/project/natcarb/MapServer",
-                attribution: 'CO2 Storage Data &copy; USGS',
-                pane: 'wmsOverlayPane',
-                opacity: 0.8
             })
         };
 
@@ -902,32 +878,6 @@
                             console.log('Switched to wind speed map');
                             console.log('Current zoom level:', map.getZoom());
                             console.log('Current bounds:', map.getBounds());
-                            break;
-                        case 'populationEsri':
-                            // Add grayscale basemap for context
-                            currentBaseLayer = baseLayers.grayscale.addTo(map);
-                            if (currentBaseLayer.getContainer && typeof currentBaseLayer.getContainer === 'function') {
-                                const container = currentBaseLayer.getContainer();
-                                if (container) {
-                                    container.classList.add('grayscale');
-                                }
-                            }
-                            // Add ESRI population density overlay
-                            activeOverlay = baseLayers.populationEsri.addTo(map);
-                            console.log('Switched to ESRI population density map');
-                            break;
-                        case 'co2Storage':
-                            // Add grayscale basemap for context
-                            currentBaseLayer = baseLayers.grayscale.addTo(map);
-                            if (currentBaseLayer.getContainer && typeof currentBaseLayer.getContainer === 'function') {
-                                const container = currentBaseLayer.getContainer();
-                                if (container) {
-                                    container.classList.add('grayscale');
-                                }
-                            }
-                            // Add CO2 storage sites overlay
-                            activeOverlay = baseLayers.co2Storage.addTo(map);
-                            console.log('Switched to CO2 storage sites map');
                             break;
                     }
 
