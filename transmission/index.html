@@ -371,8 +371,8 @@
                 pane: 'wmsOverlayPane',
                 opacity: 0.9,
                 minZoom: 0,
-                maxZoom: 10,
-                maxNativeZoom: 10,  // Use zoom 10 tiles even when zoomed further
+                maxZoom: 12,
+                maxNativeZoom: 12,  // Use zoom 10 tiles even when zoomed further
                 errorTileUrl: '',  // Don't show broken tile images
                 bounds: [[-90, -180], [90, 180]]  // World bounds
             })
@@ -1193,7 +1193,9 @@
                 // Don't show land cover tooltip if:
                 // 1. Land cover layer is not active
                 // 2. Mouse is over a power plant or other map feature
-                if (!isLandCoverActive || !activeOverlay || activeOverlay !== baseLayers.landcover || isOverMapFeature) {
+                // 3. Land cover overlay is not in the active overlays array
+                const hasLandCoverActive = activeOverlays.includes(baseLayers.landcover);
+                if (!isLandCoverActive || !hasLandCoverActive || isOverMapFeature) {
                     if (map.hasLayer(landCoverTooltip)) {
                         map.closeTooltip(landCoverTooltip);
                     }
