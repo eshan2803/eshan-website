@@ -209,6 +209,7 @@
         <p style="margin: 5px 0; font-size: 13px;">Click on plants to turn them ON/OFF.</p>
         <p style="margin: 5px 0; font-size: 13px;">Select Generator Type by clicking on the Legend Label.</p>
         <p style="margin: 5px 0; font-size: 13px;">Select multiple Generators by Ctrl/Cmd and clicking on Legend Labels.</p>
+        <p style="margin: 5px 0; font-size: 13px;">Select multiple Basemaps by Ctrl/Cmd and clicking on Basemap Toggles.</p>
         <p id="status" style="margin-top: 10px; padding: 5px; background-color: #f0f0f0; border-radius: 4px; text-align: center;">
             <strong>Active Plants: <span id="activeCount">0</span></strong>
         </p>
@@ -1194,8 +1195,10 @@
                 // 1. Land cover layer is not active
                 // 2. Mouse is over a power plant or other map feature
                 // 3. Land cover overlay is not in the active overlays array
+                // 4. Multiple overlays are active (colors blend, making detection inaccurate)
                 const hasLandCoverActive = activeOverlays.includes(baseLayers.landcover);
-                if (!isLandCoverActive || !hasLandCoverActive || isOverMapFeature) {
+                const hasMultipleOverlays = activeOverlays.length > 1;
+                if (!isLandCoverActive || !hasLandCoverActive || isOverMapFeature || hasMultipleOverlays) {
                     if (map.hasLayer(landCoverTooltip)) {
                         map.closeTooltip(landCoverTooltip);
                     }
