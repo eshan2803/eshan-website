@@ -182,6 +182,12 @@
         #basemap-population-density {
             background-image: url('https://eshan2803.github.io/basemaps/population_tiles/6/10/24.png');
         }
+        #basemap-ccus {
+            background-image: url('https://eshan2803.github.io/basemaps/ccus_west_tiles/6/10/24.png');
+        }
+        #basemap-burn-probability {
+            background: linear-gradient(135deg, #ff4500 0%, #ffa500 50%, #ffff00 100%);
+        }
 
         /* Land cover hover tooltip styling */
         .land-cover-tooltip {
@@ -303,6 +309,12 @@
         <div class="basemap-option" id="basemap-population-density" data-layer="populationMap" title="Population Density Map">
             <span class="label">Pop. Density</span>
         </div>
+        <div class="basemap-option" id="basemap-ccus" data-layer="ccusWest" title="CO2 Storage Sites (West)">
+            <span class="label">CO2 Storage</span>
+        </div>
+        <div class="basemap-option" id="basemap-burn-probability" data-layer="burnProbability" title="Wildfire Burn Probability">
+            <span class="label">Burn Prob.</span>
+        </div>
     </div>
     <div id="map"></div>
     <script>
@@ -376,6 +388,22 @@
                 maxNativeZoom: 12,  // Use zoom 10 tiles even when zoomed further
                 errorTileUrl: '',  // Don't show broken tile images
                 bounds: [[-90, -180], [90, 180]]  // World bounds
+            }),
+            ccusWest: L.tileLayer('https://eshan2803.github.io/basemaps/ccus_west_tiles/{z}/{x}/{y}.png', {
+                attribution: 'NATCARB v1502 – DOE',
+                pane: 'wmsOverlayPane',
+                opacity: 0.7,
+                minZoom: 0,
+                maxZoom: 12,
+                maxNativeZoom: 12,
+                errorTileUrl: '',
+                bounds: [[-90, -180], [90, 180]]
+            }),
+            burnProbability: L.esri.imageMapLayer({
+                url: 'https://apps.fs.usda.gov/fsgisx01/rest/services/RDW_Wildfire/RMRS_WRC_BurnProbability/ImageServer',
+                attribution: 'USDA Forest Service',
+                pane: 'wmsOverlayPane',
+                opacity: 0.7
             })
         };
 
@@ -479,6 +507,7 @@
                     setupBasemapToggle();
                     setupHomeButton();
                     setupLandCoverHover();
+                    setupCCSHover();
                     console.log('Network graph built and map rendered.');
                 } catch (error) {
                     console.error('Error building network or rendering map:', error);
@@ -906,7 +935,7 @@
                     const isMultiSelect = e.ctrlKey || e.metaKey; // Ctrl on Windows/Linux, Cmd on Mac
 
                     // Determine if this is an overlay basemap (not a base layer)
-                    const overlayTypes = ['elevation', 'population', 'landcover', 'solarMap', 'windMap', 'populationMap'];
+                    const overlayTypes = ['elevation', 'population', 'landcover', 'solarMap', 'windMap', 'populationMap', 'ccusWest', 'burnProbability'];
                     const isOverlayType = overlayTypes.includes(layerType);
 
                     if (isMultiSelect && isOverlayType) {
@@ -971,8 +1000,19 @@
                                 console.log('Switched to satellite basemap');
                                 break;
                             default:
-                                // For overlay types, use satellite as base
-                                currentBaseLayer = baseLayers.satellite.addTo(map);
+                                // For overlay types, use appropriate base layer
+                                // Use street/grayscale for CCS Storage, satellite for others
+                                if (layerType === 'ccusWest') {
+                                    currentBaseLayer = baseLayers.grayscale.addTo(map);
+                                    if (currentBaseLayer.getContainer && typeof currentBaseLayer.getContainer === 'function') {
+                                        const container = currentBaseLayer.getContainer();
+                                        if (container) {
+                                            container.classList.add('grayscale');
+                                        }
+                                    }
+                                } else {
+                                    currentBaseLayer = baseLayers.satellite.addTo(map);
+                                }
                                 addOverlayByType(layerType);
                                 break;
                         }
@@ -1031,6 +1071,21 @@
                         console.error('Population tile error:', e.url);
                     });
                     console.log('Added population density overlay');
+                    break;
+                case 'ccusWest':
+                    overlay = baseLayers.ccusWest.addTo(map);
+                    isCCSActive = true;
+                    overlay.on('tileload', function(e) {
+                        console.log('CCS Storage tile loaded:', e.url);
+                    });
+                    overlay.on('tileerror', function(e) {
+                        console.error('CCS Storage tile error:', e.url);
+                    });
+                    console.log('Added CCS Storage overlay');
+                    break;
+                case 'burnProbability':
+                    overlay = baseLayers.burnProbability.addTo(map);
+                    console.log('Added Burn Probability overlay');
                     break;
             }
 
@@ -1102,6 +1157,13 @@
                     case 'populationMap':
                         shouldRemove = (overlay === baseLayers.populationMap);
                         break;
+                    case 'ccusWest':
+                        shouldRemove = (overlay === baseLayers.ccusWest);
+                        if (shouldRemove) isCCSActive = false;
+                        break;
+                    case 'burnProbability':
+                        shouldRemove = (overlay === baseLayers.burnProbability);
+                        break;
                 }
 
                 if (shouldRemove && map.hasLayer(overlay)) {
@@ -1114,6 +1176,37 @@
 
             // Adjust opacity of remaining overlays
             updateOverlayOpacity();
+        }
+
+        // CCS Storage color mapping (RGB values from tile colors)
+        const ccsColorMap = {
+            'coal': { color: [139, 69, 19], name: 'Coal Mine Storage' },
+            'oilgas': { color: [255, 140, 0], name: 'Oil-Gas Well Storage' },
+            'saline': { color: [30, 144, 255], name: 'Saline Storage' }
+        };
+
+        // Function to identify CCS storage type from RGB color
+        function getCCSStorageType(r, g, b) {
+            let minDistance = Infinity;
+            let closestType = null;
+
+            for (const [key, data] of Object.entries(ccsColorMap)) {
+                const [cr, cg, cb] = data.color;
+                // Calculate Euclidean distance in RGB space
+                const distance = Math.sqrt(
+                    Math.pow(r - cr, 2) +
+                    Math.pow(g - cg, 2) +
+                    Math.pow(b - cb, 2)
+                );
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestType = data.name;
+                }
+            }
+
+            // Only return if color is reasonably close (threshold to avoid noise)
+            return minDistance < 50 ? closestType : null;
         }
 
         // NLCD Land Cover color mapping from the legend
@@ -1168,8 +1261,18 @@
             offset: [0, -10]
         });
 
+        // Create CCS storage hover tooltip
+        var ccsTooltip = L.tooltip({
+            permanent: false,
+            direction: 'top',
+            className: 'land-cover-tooltip',
+            offset: [0, -10]
+        });
+
         // Variable to track if land cover layer is active
         var isLandCoverActive = false;
+        // Variable to track if CCS storage layer is active
+        var isCCSActive = false;
 
         // Debounce function to limit GetFeatureInfo requests
         function debounce(func, wait) {
@@ -1305,6 +1408,94 @@
                 if (e.layer && (e.layer.feature || e.layer instanceof L.Marker || e.layer instanceof L.CircleMarker || e.layer instanceof L.Polyline)) {
                     isOverMapFeature = false;
                 }
+            });
+        }
+
+        // Setup CCS Storage hover functionality
+        function setupCCSHover() {
+            // Create a canvas to sample pixel colors
+            let canvas = document.createElement('canvas');
+            let ctx = canvas.getContext('2d');
+
+            // Debounced function to query CCS layer for storage type
+            const queryCCS = debounce(function(latlng) {
+                // Don't show CCS tooltip if:
+                // 1. CCS layer is not active
+                // 2. Mouse is over a power plant or other map feature
+                // 3. CCS overlay is not in the active overlays array
+                // 4. Multiple overlays are active (colors blend, making detection inaccurate)
+                const hasCCSActive = activeOverlays.includes(baseLayers.ccusWest);
+                const hasMultipleOverlays = activeOverlays.length > 1;
+                if (!isCCSActive || !hasCCSActive || isOverMapFeature || hasMultipleOverlays) {
+                    if (map.hasLayer(ccsTooltip)) {
+                        map.closeTooltip(ccsTooltip);
+                    }
+                    return;
+                }
+
+                // Get the pixel at the mouse position from the CCS tile layer
+                const point = map.latLngToContainerPoint(latlng);
+                const zoom = map.getZoom();
+                const tilePoint = map.project(latlng, zoom).divideBy(256).floor();
+
+                // Build URL for the CCS tile
+                const tileUrl = `https://eshan2803.github.io/basemaps/ccus_west_tiles/${zoom}/${tilePoint.x}/${tilePoint.y}.png`;
+
+                // Load the tile image and sample the color
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.onload = function() {
+                    try {
+                        canvas.width = 256;
+                        canvas.height = 256;
+                        ctx.drawImage(img, 0, 0);
+
+                        // Get pixel position within the tile
+                        const tilePixel = map.project(latlng, zoom).subtract(tilePoint.multiplyBy(256));
+                        const pixelData = ctx.getImageData(tilePixel.x, tilePixel.y, 1, 1).data;
+
+                        const r = pixelData[0];
+                        const g = pixelData[1];
+                        const b = pixelData[2];
+                        const a = pixelData[3];
+
+                        // Only process if not transparent
+                        if (a > 0) {
+                            const storageType = getCCSStorageType(r, g, b);
+
+                            if (storageType) {
+                                ccsTooltip.setLatLng(latlng)
+                                    .setContent(`<strong>CO2 Storage:</strong><br>${storageType}`)
+                                    .addTo(map);
+                            } else {
+                                if (map.hasLayer(ccsTooltip)) {
+                                    map.closeTooltip(ccsTooltip);
+                                }
+                            }
+                        } else {
+                            if (map.hasLayer(ccsTooltip)) {
+                                map.closeTooltip(ccsTooltip);
+                            }
+                        }
+                    } catch (error) {
+                        // Handle CORS or other errors silently
+                        if (map.hasLayer(ccsTooltip)) {
+                            map.closeTooltip(ccsTooltip);
+                        }
+                    }
+                };
+                img.onerror = function() {
+                    // Tile doesn't exist or failed to load
+                    if (map.hasLayer(ccsTooltip)) {
+                        map.closeTooltip(ccsTooltip);
+                    }
+                };
+                img.src = tileUrl;
+            }, 150);
+
+            // Listen to mouse movement
+            map.on('mousemove', function(e) {
+                queryCCS(e.latlng);
             });
         }
 
