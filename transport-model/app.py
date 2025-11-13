@@ -772,7 +772,7 @@ def run_lca_model(inputs):
     
     if commodity_type == 'fuel':
         fuel_type = inputs['fuel_type']
-        fuel_names = ['Liquid Hydrogen', 'Ammonia', 'Methanol']
+        fuel_names = ['Liquid Hydrogen', 'Ammonia', 'Methanol', 'SAF']
         selected_fuel_name = fuel_names[fuel_type] 
         recirculation_BOG = inputs['recirculation_BOG']
         BOG_recirculation_truck = inputs['BOG_recirculation_truck']
