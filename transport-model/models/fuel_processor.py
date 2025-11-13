@@ -88,12 +88,12 @@ class FuelProcessor:
         # Thermodynamic properties by fuel type [H2, NH3, MeOH, SAF]
         self.HHV_chem = [142, 22.5, 22.7, 43.5]  # MJ/kg - SAF: typical jet fuel HHV
         self.LHV_chem = [120, 18.6, 19.9, 43.0]  # MJ/kg - SAF: close to HHV for hydrocarbons
-        self.boiling_point_chem = [20, 239.66, 337.7, 450]  # K - SAF: ~177°C (jet fuel distillation midpoint)
-        self.latent_H_chem = [449.6/1000, 1.37, 1.1, 0.25]  # MJ/kg - SAF: typical for aviation kerosene
+        self.boiling_point_chem = [20, 239.66, 337.7, 478]  # K - SAF: ~205°C (average distillation midpoint 150-300°C)
+        self.latent_H_chem = [449.6/1000, 1.37, 1.1, 0.27]  # MJ/kg - SAF: 0.27 MJ/kg for kerosene blends
         self.specific_heat_chem = [14.3/1000, 4.7/1000, 2.5/1000, 2.1/1000]  # MJ/kg·K - SAF: ~2.1 kJ/kg·K
         self.liquid_chem_density = [71, 682, 805, 800]  # kg/m³ - SAF: typical jet fuel density
         self.gas_chem_density = [0.08, 0.73, 1.42, 4.5]  # kg/m³ (at STP) - SAF: kerosene vapor
-        self.GWP_chem = [33, 0, 0, 0]  # Global warming potential - SAF: 0 (lifecycle 50-80% lower than fossil jet fuel)
+        self.GWP_chem = [33, 0, 0, 20]  # gCO2e/MJ - SAF: 20 gCO2e/MJ lifecycle (50-95% reduction vs. 89 gCO2e/MJ fossil baseline)
 
         # Boil-off rates (fraction per hour) - SAF has minimal BOR (ambient temperature storage)
         self.BOR_land_storage = [0.0032, 0.0001, 0.0000032, 0.000001]  # SAF: very low
@@ -195,7 +195,7 @@ class FuelProcessor:
     def _initialize_transport_params(self):
         """Initialize transport-specific parameters"""
         # Road delivery energy
-        self.road_delivery_ener = [0.0455/500, 0.022/500, 0.022/500, 0.020/500]  # MJ/kg·km - SAF: slightly lower than methanol
+        self.road_delivery_ener = [0.0455/500, 0.022/500, 0.022/500, 0.001]  # MJ/kg·km - SAF: 0.001 MJ/kg·km (diesel freight standard)
 
         # Distances and durations from route_data
         self.distance_A_to_port = self.route['distance_A_to_port']  # km
