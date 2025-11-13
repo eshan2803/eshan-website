@@ -251,6 +251,18 @@ REFERENCE_ANNUAL_THROUGHPUT_TONS = {
 }
 
 # =================================================================
+# FUEL PRODUCTION COSTS (DEFAULT VALUES)
+# =================================================================
+# Default production costs in USD/kg for different fuel types
+# These are used for cargo valuation in insurance, tariff, and financing calculations
+DEFAULT_FUEL_PRODUCTION_COSTS = {
+    0: 6.5,   # Liquid Hydrogen - Green H2 via electrolysis
+    1: 0.5,   # Ammonia - Established commodity, Haber-Bosch process
+    2: 0.4,   # Methanol - Established commodity, catalytic conversion
+    3: 1.5    # SAF - Sustainable Aviation Fuel, 2025 production cost estimate
+}
+
+# =================================================================
 # CACHE CONFIGURATION
 # =================================================================
 MAX_CACHE_SIZE = 500  # Limit cache to 500 entries to prevent memory issues
