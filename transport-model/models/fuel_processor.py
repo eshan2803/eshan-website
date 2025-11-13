@@ -80,33 +80,33 @@ class FuelProcessor:
         self._initialize_transport_params()
 
         # Fuel type names
-        self.fuel_names = ['Liquid Hydrogen', 'Ammonia', 'Methanol']
+        self.fuel_names = ['Liquid Hydrogen', 'Ammonia', 'Methanol', 'SAF']
         self.selected_fuel_name = self.fuel_names[self.fuel_type]
 
     def _initialize_fuel_properties(self):
         """Initialize fuel-specific properties"""
-        # Thermodynamic properties by fuel type [H2, NH3, MeOH]
-        self.HHV_chem = [142, 22.5, 22.7]  # MJ/kg
-        self.LHV_chem = [120, 18.6, 19.9]  # MJ/kg
-        self.boiling_point_chem = [20, 239.66, 337.7]  # K
-        self.latent_H_chem = [449.6/1000, 1.37, 1.1]  # MJ/kg
-        self.specific_heat_chem = [14.3/1000, 4.7/1000, 2.5/1000]  # MJ/kg·K
-        self.liquid_chem_density = [71, 682, 805]  # kg/m³
-        self.gas_chem_density = [0.08, 0.73, 1.42]  # kg/m³ (at STP)
-        self.GWP_chem = [33, 0, 0]  # Global warming potential
+        # Thermodynamic properties by fuel type [H2, NH3, MeOH, SAF]
+        self.HHV_chem = [142, 22.5, 22.7, 43.5]  # MJ/kg - SAF: typical jet fuel HHV
+        self.LHV_chem = [120, 18.6, 19.9, 43.0]  # MJ/kg - SAF: close to HHV for hydrocarbons
+        self.boiling_point_chem = [20, 239.66, 337.7, 450]  # K - SAF: ~177°C (jet fuel distillation midpoint)
+        self.latent_H_chem = [449.6/1000, 1.37, 1.1, 0.25]  # MJ/kg - SAF: typical for aviation kerosene
+        self.specific_heat_chem = [14.3/1000, 4.7/1000, 2.5/1000, 2.1/1000]  # MJ/kg·K - SAF: ~2.1 kJ/kg·K
+        self.liquid_chem_density = [71, 682, 805, 800]  # kg/m³ - SAF: typical jet fuel density
+        self.gas_chem_density = [0.08, 0.73, 1.42, 4.5]  # kg/m³ (at STP) - SAF: kerosene vapor
+        self.GWP_chem = [33, 0, 0, 0]  # Global warming potential - SAF: 0 (lifecycle 50-80% lower than fossil jet fuel)
 
-        # Boil-off rates (fraction per hour)
-        self.BOR_land_storage = [0.0032, 0.0001, 0.0000032]
-        self.BOR_loading = [0.0086, 0.00022, 0.0001667]
-        self.BOR_truck_trans = [0.005, 0.00024, 0.000005]
-        self.BOR_ship_trans = [0.00326, 0.00024, 0.000005]
-        self.BOR_unloading = [0.0086, 0.00022, 0.0001667]
-        self.dBOR_dT = [(0.02538-0.02283)/(45-15)/4, (0.000406-0.0006122)/(45-15)/4, 0]
+        # Boil-off rates (fraction per hour) - SAF has minimal BOR (ambient temperature storage)
+        self.BOR_land_storage = [0.0032, 0.0001, 0.0000032, 0.000001]  # SAF: very low
+        self.BOR_loading = [0.0086, 0.00022, 0.0001667, 0.00003]  # SAF: minimal during operations
+        self.BOR_truck_trans = [0.005, 0.00024, 0.000005, 0.000001]  # SAF: negligible in transport
+        self.BOR_ship_trans = [0.00326, 0.00024, 0.000005, 0.000001]  # SAF: negligible at sea
+        self.BOR_unloading = [0.0086, 0.00022, 0.0001667, 0.00003]  # SAF: minimal unloading
+        self.dBOR_dT = [(0.02538-0.02283)/(45-15)/4, (0.000406-0.0006122)/(45-15)/4, 0, 0]  # SAF: no temp sensitivity
 
-        # Conversion properties
-        self.mass_conversion_to_H2 = [1, 0.176, 0.1875]
-        self.eff_energy_chem_to_H2 = [0, 0.7, 0.75]
-        self.energy_chem_to_H2 = [0, 9.3, 5.3]  # MJ/kg
+        # Conversion properties (if converting SAF to H2 via reforming)
+        self.mass_conversion_to_H2 = [1, 0.176, 0.1875, 0.125]  # SAF: ~12.5% H2 by mass
+        self.eff_energy_chem_to_H2 = [0, 0.7, 0.75, 0.70]  # SAF: steam reforming efficiency
+        self.energy_chem_to_H2 = [0, 9.3, 5.3, 12.0]  # MJ/kg - SAF: energy for steam reforming
 
         # Dynamic COP calculation
         start_temp_kelvin = self.start_temp + 273.15
@@ -114,14 +114,14 @@ class FuelProcessor:
         self.COP_cooldown_dyn = self.COP_liq_dyn
 
         # Default COP values (if dynamic fails)
-        self.COP_cooldown = [0.131, 1.714, 2]
-        self.COP_liq = [0.131, 1.714, 2]
-        self.COP_refrig = [0.036, 1.636, 2]
+        self.COP_cooldown = [0.131, 1.714, 2, 2.5]  # SAF: higher COP (warmer boiling point)
+        self.COP_liq = [0.131, 1.714, 2, 2.5]  # SAF: higher COP
+        self.COP_refrig = [0.036, 1.636, 2, 2.5]  # SAF: higher COP
 
     def _initialize_equipment_params(self):
         """Initialize equipment parameters"""
         # Pump parameters
-        self.V_flowrate = [72000, 72000, 72000]  # kg/hr
+        self.V_flowrate = [72000, 72000, 72000, 72000]  # kg/hr - SAF: same flowrate
         self.head_pump = 110  # meters
         self.pump_power_factor = 0.78
         self.number_of_cryo_pump_load_truck_site_A = 10
@@ -148,7 +148,7 @@ class FuelProcessor:
         self.insulator_thermal_conduct = 0.02  # W/m·K
 
         # Truck parameters
-        self.chem_in_truck_weight = [4200, 32000, 40000*0.001*self.liquid_chem_density[2]]  # kg
+        self.chem_in_truck_weight = [4200, 32000, 40000*0.001*self.liquid_chem_density[2], 35000]  # kg - SAF: 35,000 kg per truck
         self.truck_tank_volume = 50  # m³
         self.truck_tank_length = 12  # meters
         self.truck_tank_radius = np.sqrt(self.truck_tank_volume/(np.pi*self.truck_tank_length))
@@ -156,7 +156,7 @@ class FuelProcessor:
         self.truck_tank_insulator_thickness = 0.075  # meters
 
         # Ship parameters
-        self.OHTC_ship = [0.05, 0.22, 0.02]  # Overall heat transfer coefficient W/m²·K
+        self.OHTC_ship = [0.05, 0.22, 0.02, 0.15]  # Overall heat transfer coefficient W/m²·K - SAF: moderate OHTC
 
         # Calculate ship tank geometry from ship_params
         volume_per_tank = self.ship_params['volume_m3'] / self.ship_params['num_tanks']
@@ -195,7 +195,7 @@ class FuelProcessor:
     def _initialize_transport_params(self):
         """Initialize transport-specific parameters"""
         # Road delivery energy
-        self.road_delivery_ener = [0.0455/500, 0.022/500, 0.022/500]  # MJ/kg·km
+        self.road_delivery_ener = [0.0455/500, 0.022/500, 0.022/500, 0.020/500]  # MJ/kg·km - SAF: slightly lower than methanol
 
         # Distances and durations from route_data
         self.distance_A_to_port = self.route['distance_A_to_port']  # km
