@@ -3,10 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Cache busting meta tags -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
     <title>Commodity Transport Model | Dr. Eshan Singh</title>
     <link rel="icon" type="image/png" href="/assets/favicon.png">
     <!-- Tailwind CSS -->
@@ -227,11 +223,6 @@
                     </div>
 
                     <!-- Location Inputs -->
-                    <!-- VERSION INDICATOR - If you see "v2.0.SAF" you have the latest version -->
-                    <div style="background: #4ade80; color: white; padding: 8px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 16px;">
-                        ✓ Version 2.0.SAF - Updated with Product Tanker & SAF Fixes
-                    </div>
-
                     <div class="grid md:grid-cols-2 gap-6">
                         <div>
                             <label for="startLocation" class="form-label">Start Location</label>
@@ -336,7 +327,7 @@
 
                     <!-- Capacity Input (only for H2 and Ammonia liquefaction) -->
                     <div id="capacity-input-group">
-                        <label id="capacity-label" for="lh2PlantCapacity" class="form-label">🔥 Liquefaction Plant Capacity (TPD) [v2.0]:</label>
+                        <label id="capacity-label" for="lh2PlantCapacity" class="form-label">Liquefaction Plant Capacity (TPD):</label>
                         <input type="number" id="lh2PlantCapacity" value="24" class="form-input">
                     </div>
 
@@ -359,15 +350,15 @@
                     <!-- Ship Details -->
                     <div id="ship-details-wrapper">
                         <div>
-                            <label for="shipArchetypeSelect" class="form-label">Select Ship Archetype [HTML v2.0.SAF]</label>
+                            <label for="shipArchetypeSelect" class="form-label">Select Ship Archetype</label>
                             <select id="shipArchetypeSelect" class="form-select">
                                 <option value="custom">Build my own ship...</option>
                                 <option value="small">Small-Scale Carrier (20,000 m³)</option>
                                 <option value="midsized">Midsized Carrier (90,000 m³)</option>
-                                <option value="standard" selected>🚢 Standard Modern Carrier - LNG (174,000 m³)</option>
-                                <option value="product-tanker">✈️ Aframax Product Tanker - SAF/MeOH (80,000 m³)</option>
+                                <option value="standard" selected>Standard Modern Carrier - LNG (174,000 m³)</option>
+                                <option value="product-tanker">Aframax Product Tanker - SAF/MeOH (80,000 m³)</option>
                                 <option value="q-flex">Q-Flex Carrier (210,000 m³)</option>
-                                <option value="q-max">Q-Max Only One Entry (266,000 m³)</option>
+                                <option value="q-max">Q-Max Carrier (266,000 m³)</option>
                             </select>
                         </div>
 
