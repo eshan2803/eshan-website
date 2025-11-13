@@ -791,15 +791,15 @@ def run_lca_model(inputs):
         else:
             ship_tank_radius = np.cbrt(volume_per_tank/(4/3*np.pi))
             storage_area = 4*np.pi*ship_tank_radius**2
-        boiling_point_chem = [20, 239.66, 337.7, 450]; start_temp_kelvin = start_local_temperature + 273.15
+        boiling_point_chem = [20, 239.66, 337.7, 478]; start_temp_kelvin = start_local_temperature + 273.15
         COP_liq_dyn = calculate_dynamic_cop(start_temp_kelvin, boiling_point_chem[fuel_type])
         COP_cooldown_dyn = COP_liq_dyn
 
-        HHV_chem = [142, 22.5, 22.7, 43.5]; LHV_chem = [120, 18.6, 19.9, 43.0]; boiling_point_chem = [20, 239.66, 337.7, 450];
-        latent_H_chem = [449.6/1000, 1.37, 1.1, 0.25]; specific_heat_chem = [14.3/1000, 4.7/1000, 2.5/1000, 2.1/1000];
+        HHV_chem = [142, 22.5, 22.7, 43.5]; LHV_chem = [120, 18.6, 19.9, 43.0]; boiling_point_chem = [20, 239.66, 337.7, 478];
+        latent_H_chem = [449.6/1000, 1.37, 1.1, 0.27]; specific_heat_chem = [14.3/1000, 4.7/1000, 2.5/1000, 2.1/1000];
         liquid_chem_density = [71, 682, 805, 800];
-        GWP_chem = [33, 0, 0, 0]; GWP_N2O = 273;
-        fuel_cell_eff = 0.65; road_delivery_ener = [0.0455/500, 0.022/500, 0.022/500, 0.020/500];
+        GWP_chem = [33, 0, 0, 20]; GWP_N2O = 273;
+        fuel_cell_eff = 0.65; road_delivery_ener = [0.0455/500, 0.022/500, 0.022/500, 0.001];
         BOR_land_storage = [0.0032, 0.0001, 0.0000032, 0.000001]; BOR_loading = [0.0086, 0.00022, 0.0001667, 0.00003];
         BOR_truck_trans = [0.005, 0.00024, 0.000005, 0.000001]; BOR_ship_trans = [0.00326, 0.00024, 0.000005, 0.000001];
         BOR_unloading = [0.0086, 0.00022, 0.0001667, 0.00003];
@@ -859,7 +859,7 @@ def run_lca_model(inputs):
             0: 1000000,
             1: 5000000,
             2: 10000000,
-            3: 8000000
+            3: 2000000
         }
 
         target_weight = total_ship_volume * liquid_chem_density[fuel_type] * 0.98
