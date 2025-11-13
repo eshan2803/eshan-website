@@ -93,7 +93,7 @@ class FuelProcessor:
         self.specific_heat_chem = [14.3/1000, 4.7/1000, 2.5/1000, 2.1/1000]  # MJ/kg·K - SAF: ~2.1 kJ/kg·K
         self.liquid_chem_density = [71, 682, 805, 800]  # kg/m³ - SAF: typical jet fuel density
         self.gas_chem_density = [0.08, 0.73, 1.42, 4.5]  # kg/m³ (at STP) - SAF: kerosene vapor
-        self.GWP_chem = [33, 0, 0, 20]  # gCO2e/MJ - SAF: 20 gCO2e/MJ lifecycle (50-95% reduction vs. 89 gCO2e/MJ fossil baseline)
+        self.GWP_chem = [33, 0, 0, 0]  # 100-yr GWP of vented BOG - SAF vapor: 0 (not a GHG, unlike H2)
 
         # Boil-off rates (fraction per hour) - SAF has minimal BOR (ambient temperature storage)
         self.BOR_land_storage = [0.0032, 0.0001, 0.0000032, 0.000001]  # SAF: very low
