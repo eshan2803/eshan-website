@@ -325,9 +325,9 @@
                         </select>
                     </div>
 
-                    <!-- Capacity Input -->
+                    <!-- Capacity Input (only for H2 and Ammonia liquefaction) -->
                     <div id="capacity-input-group">
-                        <label id="capacity-label" for="lh2PlantCapacity" class="form-label">LH2 Plant Capacity (TPD):</label>
+                        <label id="capacity-label" for="lh2PlantCapacity" class="form-label">Liquefaction Plant Capacity (TPD):</label>
                         <input type="number" id="lh2PlantCapacity" value="24" class="form-input">
                     </div>
 
@@ -355,7 +355,8 @@
                                 <option value="custom">Build my own ship...</option>
                                 <option value="small">Small-Scale Carrier (20,000 m³)</option>
                                 <option value="midsized">Midsized Carrier (90,000 m³)</option>
-                                <option value="standard" selected>Standard Modern Carrier (174,000 m³)</option>
+                                <option value="standard" selected>Standard Modern Carrier - LNG (174,000 m³)</option>
+                                <option value="product-tanker">Aframax Product Tanker - SAF/MeOH (80,000 m³)</option>
                                 <option value="q-flex">Q-Flex Carrier (210,000 m³)</option>
                                 <option value="q-max">Q-Max Carrier (266,000 m³)</option>
                             </select>
@@ -496,6 +497,28 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // --- FUEL TYPE DEPENDENT UI ---
+            const fuelTypeSelect = document.getElementById('fuel_type');
+            const capacityInputGroup = document.getElementById('capacity-input-group');
+
+            function updateUIForFuelType() {
+                const fuelType = parseInt(fuelTypeSelect.value);
+                // Show liquefaction capacity only for H2 (0) and Ammonia (1)
+                // Hide for Methanol (2) and SAF (3) - ambient temperature storage
+                if (fuelType === 2 || fuelType === 3) {
+                    capacityInputGroup.style.display = 'none';
+                } else {
+                    capacityInputGroup.style.display = 'block';
+                }
+            }
+
+            // Update UI on fuel type change
+            if (fuelTypeSelect && capacityInputGroup) {
+                fuelTypeSelect.addEventListener('change', updateUIForFuelType);
+                // Initialize on page load
+                updateUIForFuelType();
+            }
+
             // --- MAGNETIC CURSOR ---
             const cursor = document.querySelector('.cursor');
             if (window.matchMedia("(pointer: fine)").matches) {
