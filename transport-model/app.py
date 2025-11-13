@@ -616,7 +616,8 @@ def run_lca_model(inputs):
     ship_archetypes = {
         'small':    {'name': 'Small-Scale Carrier', 'volume_m3': 20000,  'num_tanks': 2, 'shape': 2, 'reefer_slots': 400,  'gross_tonnage': 25000},
         'midsized': {'name': 'Midsized Carrier', 'volume_m3': 90000,  'num_tanks': 4, 'shape': 2, 'reefer_slots': 800,  'gross_tonnage': 95000},
-        'standard': {'name': 'Standard Modern Carrier', 'volume_m3': 174000, 'num_tanks': 4, 'shape': 1, 'reefer_slots': 1500, 'gross_tonnage': 165000},
+        'standard': {'name': 'Standard Modern Carrier (LNG)', 'volume_m3': 174000, 'num_tanks': 4, 'shape': 1, 'reefer_slots': 1500, 'gross_tonnage': 165000},
+        'product-tanker': {'name': 'Aframax Product Tanker (SAF/MeOH)', 'volume_m3': 80000, 'num_tanks': 12, 'shape': 1, 'reefer_slots': 0, 'gross_tonnage': 75000},
         'q-flex':   {'name': 'Q-Flex Carrier', 'volume_m3': 210000, 'num_tanks': 5, 'shape': 1, 'reefer_slots': 1800, 'gross_tonnage': 190000},
         'q-max':    {'name': 'Q-Max Carrier', 'volume_m3': 266000, 'num_tanks': 5, 'shape': 1, 'reefer_slots': 2000, 'gross_tonnage': 215000}
     }
