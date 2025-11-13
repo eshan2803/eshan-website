@@ -791,52 +791,52 @@ def run_lca_model(inputs):
         else:
             ship_tank_radius = np.cbrt(volume_per_tank/(4/3*np.pi))
             storage_area = 4*np.pi*ship_tank_radius**2
-        boiling_point_chem = [20, 239.66, 337.7]; start_temp_kelvin = start_local_temperature + 273.15
+        boiling_point_chem = [20, 239.66, 337.7, 450]; start_temp_kelvin = start_local_temperature + 273.15
         COP_liq_dyn = calculate_dynamic_cop(start_temp_kelvin, boiling_point_chem[fuel_type])
-        COP_cooldown_dyn = COP_liq_dyn 
-        
-        HHV_chem = [142, 22.5, 22.7]; LHV_chem = [120, 18.6, 19.9]; boiling_point_chem = [20, 239.66, 337.7];
-        latent_H_chem = [449.6/1000, 1.37, 1.1]; specific_heat_chem = [14.3/1000, 4.7/1000, 2.5/1000];
-        liquid_chem_density = [71, 682, 805];
-        GWP_chem = [33, 0, 0]; GWP_N2O = 273;
-        fuel_cell_eff = 0.65; road_delivery_ener = [0.0455/500, 0.022/500, 0.022/500];
-        BOR_land_storage = [0.0032, 0.0001, 0.0000032]; BOR_loading = [0.0086, 0.00022, 0.0001667];
-        BOR_truck_trans = [0.005, 0.00024, 0.000005]; BOR_ship_trans = [0.00326, 0.00024, 0.000005];
-        BOR_unloading = [0.0086, 0.00022, 0.0001667];
+        COP_cooldown_dyn = COP_liq_dyn
+
+        HHV_chem = [142, 22.5, 22.7, 43.5]; LHV_chem = [120, 18.6, 19.9, 43.0]; boiling_point_chem = [20, 239.66, 337.7, 450];
+        latent_H_chem = [449.6/1000, 1.37, 1.1, 0.25]; specific_heat_chem = [14.3/1000, 4.7/1000, 2.5/1000, 2.1/1000];
+        liquid_chem_density = [71, 682, 805, 800];
+        GWP_chem = [33, 0, 0, 0]; GWP_N2O = 273;
+        fuel_cell_eff = 0.65; road_delivery_ener = [0.0455/500, 0.022/500, 0.022/500, 0.020/500];
+        BOR_land_storage = [0.0032, 0.0001, 0.0000032, 0.000001]; BOR_loading = [0.0086, 0.00022, 0.0001667, 0.00003];
+        BOR_truck_trans = [0.005, 0.00024, 0.000005, 0.000001]; BOR_ship_trans = [0.00326, 0.00024, 0.000005, 0.000001];
+        BOR_unloading = [0.0086, 0.00022, 0.0001667, 0.00003];
         ss_therm_cond = 0.03; pipe_inner_D = 0.508; pipe_thick = 0.13; pipe_length = 1000;
-        V_flowrate = [72000, 72000, 72000]; head_pump = 110; pump_power_factor = 0.78;
+        V_flowrate = [72000, 72000, 72000, 72000]; head_pump = 110; pump_power_factor = 0.78;
         tank_metal_thickness = 0.01; tank_insulator_thickness = 0.4; metal_thermal_conduct = 13.8;
-        insulator_thermal_conduct = 0.02; chem_in_truck_weight = [4200, 32000, 40000*0.001*liquid_chem_density[2]];
+        insulator_thermal_conduct = 0.02; chem_in_truck_weight = [4200, 32000, 40000*0.001*liquid_chem_density[2], 35000];
         truck_tank_volume = 50; truck_tank_length = 12; truck_tank_radius = np.sqrt(truck_tank_volume/(np.pi*truck_tank_length));
         truck_tank_metal_thickness = 0.005; truck_tank_insulator_thickness = 0.075;
         number_of_cryo_pump_load_truck_site_A = 10; number_of_cryo_pump_load_ship_port_A = 10;
         number_of_cryo_pump_load_storage_port_A = 10; number_of_cryo_pump_load_storage_port_B = 10;
         number_of_cryo_pump_load_truck_port_B = 10; number_of_cryo_pump_load_storage_site_B = 10;
-        storage_volume = [5683, 50000000/liquid_chem_density[1], 50000000/liquid_chem_density[2]];
+        storage_volume = [5683, 50000000/liquid_chem_density[1], 50000000/liquid_chem_density[2], 50000000/liquid_chem_density[3]];
         storage_radius = [np.cbrt(3 * volume / (4 * np.pi)) for volume in storage_volume];
-        OHTC_ship = [0.05, 0.22, 0.02];
-        COP_cooldown = [0.131, 1.714, 2]; COP_liq = [0.131, 1.714, 2]; COP_refrig = [0.036, 1.636, 2];
-        dBOR_dT = [(0.02538-0.02283)/(45-15)/4, (0.000406-0.0006122)/(45-15)/4, 0];
+        OHTC_ship = [0.05, 0.22, 0.02, 0.15];
+        COP_cooldown = [0.131, 1.714, 2, 2.5]; COP_liq = [0.131, 1.714, 2, 2.5]; COP_refrig = [0.036, 1.636, 2, 2.5];
+        dBOR_dT = [(0.02538-0.02283)/(45-15)/4, (0.000406-0.0006122)/(45-15)/4, 0, 0];
         EIM_liquefication=100; EIM_cryo_pump=100; EIM_truck_eff=100; EIM_ship_eff=100; EIM_refrig_eff=100; EIM_fuel_cell=100;
         diesel_engine_eff = 0.4; heavy_fuel_density = 3.6; propul_eff = 0.55;
         NH3_ship_cosumption = (18.8*682*4170)/20000
-        mass_conversion_to_H2 = [1, 0.176, 0.1875]
-        eff_energy_chem_to_H2 = [0, 0.7, 0.75]
-        energy_chem_to_H2 = [0, 9.3, 5.3]
+        mass_conversion_to_H2 = [1, 0.176, 0.1875, 0.125]
+        eff_energy_chem_to_H2 = [0, 0.7, 0.75, 0.70]
+        energy_chem_to_H2 = [0, 9.3, 5.3, 12.0]
         PH2_storage_V = 150.0
         numbers_of_PH2_storage_at_start = 50.0
         multistage_eff = 0.85
         pipeline_diameter = 0.5
         epsilon = 0.000045
         compressor_velocity = 20.0
-        gas_chem_density = [0.08, 0.73, 1.42]
+        gas_chem_density = [0.08, 0.73, 1.42, 4.5]
         target_pressure_site_B = 300
         latent_H_H2 = 0.4496
         specific_heat_H2 = 14.3
         numbers_of_PH2_storage = 50.0
         ship_engine_eff = 0.6
         PH2_pressure = 800
-        truck_economy = [13.84, 10.14, 9.66]
+        truck_economy = [13.84, 10.14, 9.66, 9.5]
 
         ship_tank_metal_specific_heat = 0.47 / 1000
         ship_tank_insulation_specific_heat = 1.5 / 1000
@@ -844,20 +844,22 @@ def run_lca_model(inputs):
         ship_tank_insulation_density = 100
         pipe_metal_specific_heat = 0.5 / 1000
         ship_tank_metal_thickness = 0.05
-        ship_tank_insulation_thickness = [0.66, 0.09, 0]
+        ship_tank_insulation_thickness = [0.66, 0.09, 0, 0]
 
-        COP_cooldown = [0.131, 1.714, 0]
+        COP_cooldown = [0.131, 1.714, 0, 2.5]
         SMR_EMISSIONS_KG_PER_KG_H2 = 9.3
 
         loading_unloading_capex_params = {
             0: {'total_capex_M_usd': 500, 'annualization_factor': 0.08},
             1: {'total_capex_M_usd': 200, 'annualization_factor': 0.08},
-            2: {'total_capex_M_usd': 80,  'annualization_factor': 0.08}
+            2: {'total_capex_M_usd': 80,  'annualization_factor': 0.08},
+            3: {'total_capex_M_usd': 90,  'annualization_factor': 0.08}
         }
         reference_annual_throughput_tons = {
             0: 1000000,
             1: 5000000,
-            2: 10000000
+            2: 10000000,
+            3: 8000000
         }
 
         target_weight = total_ship_volume * liquid_chem_density[fuel_type] * 0.98
