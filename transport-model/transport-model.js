@@ -29,9 +29,9 @@ function updateFormVisibility() {
 
         capacityLabel.textContent = 'Liquefaction Plant Capacity (TPD):';
         shipOptions[1].textContent = 'Small-Scale Carrier (20,000 m³)';
-        shipOptions[2].textContent = 'Midsized Carrier (90,000 m³)';
-        shipOptions[3].textContent = 'Standard Modern Carrier - LNG (174,000 m³)';
-        shipOptions[4].textContent = 'Aframax Product Tanker - SAF/MeOH (80,000 m³)';
+        shipOptions[2].textContent = 'Aframax Product Tanker - SAF/MeOH (80,000 m³)';
+        shipOptions[3].textContent = 'Midsized Carrier (90,000 m³)';
+        shipOptions[4].textContent = 'Standard Modern Carrier - LNG (174,000 m³)';
         shipOptions[5].textContent = 'Q-Flex Carrier (210,000 m³)';
         shipOptions[6].textContent = 'Q-Max Carrier (266,000 m³)';
         
