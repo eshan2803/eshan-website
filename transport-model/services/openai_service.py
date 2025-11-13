@@ -6,7 +6,7 @@ Extracted from app.py for better organization.
 
 import json
 from openai import OpenAI
-from constants import API_KEY_OPENAI
+from constants import API_KEY_OPENAI, DEFAULT_FUEL_PRODUCTION_COSTS
 
 
 def openai_get_nearest_port(coordinates_str):
@@ -23,7 +23,7 @@ def openai_get_nearest_port(coordinates_str):
         client = OpenAI(api_key=API_KEY_OPENAI)
 
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5.1",
             response_format={"type": "json_object"},
             messages=[
                 {
@@ -73,7 +73,7 @@ def openai_get_hydrogen_production_cost(location):
         client = OpenAI(api_key=API_KEY_OPENAI)
 
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5.1",
             response_format={"type": "json_object"},
             messages=[
                 {
@@ -125,7 +125,7 @@ def openai_get_electricity_price(coords_str, api_cache=None):
         default_price_mj = 0.03
 
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5.1",
             response_format={"type": "json_object"},
             temperature=0,
             messages=[
@@ -183,7 +183,7 @@ def openai_get_hydrogen_cost(coords_str, api_cache=None):
         """
 
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5.1",
             messages=[
                 {"role": "system", "content": "You are a precise data retrieval assistant for hydrogen market prices. Return only a float or 'N/A'."},
                 {"role": "user", "content": prompt}
@@ -210,6 +210,30 @@ def openai_get_hydrogen_cost(coords_str, api_cache=None):
         cached_value = (coords_str, 6.5)
         api_cache[cache_key] = cached_value
         return cached_value
+
+
+def get_fuel_production_cost(fuel_type, coords_str, api_cache=None):
+    """
+    Get production cost for a specific fuel type.
+
+    For hydrogen (fuel_type=0), uses OpenAI to get region-specific green H2 costs.
+    For other fuels, returns default commodity prices from constants.
+
+    Args:
+        fuel_type (int): Fuel type (0=LH2, 1=Ammonia, 2=Methanol, 3=SAF)
+        coords_str (str): Coordinates as "lat,lng" string
+        api_cache (dict): Optional cache dictionary
+
+    Returns:
+        tuple: (coords_str, price_usd_per_kg)
+    """
+    if fuel_type == 0:
+        # For hydrogen, use OpenAI to get region-specific production cost
+        return openai_get_hydrogen_cost(coords_str, api_cache)
+    else:
+        # For other fuels, return default production costs
+        default_cost = DEFAULT_FUEL_PRODUCTION_COSTS.get(fuel_type, 1.0)
+        return (coords_str, default_cost)
 
 
 def openai_get_marine_fuel_price(fuel_name, port_coords_tuple, port_name_str, api_cache=None):
@@ -241,7 +265,7 @@ def openai_get_marine_fuel_price(fuel_name, port_coords_tuple, port_name_str, ap
         You are an expert in marine fuel markets. Provide the latest bunker fuel price in USD per metric ton (USD/mt) for {fuel_name} at the port of {port_name_str} (coordinates: {port_coords_tuple[0]}, {port_coords_tuple[1]}). Return only the price in USD/mt as a float, without additional text or explanation. If you cannot provide a specific numerical price, return the string "N/A".
         """
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5.1",
             messages=[
                 {"role": "system", "content": "You are a precise data retrieval assistant for marine fuel prices. Return only a float or 'N/A'."},
                 {"role": "user", "content": prompt}
@@ -292,7 +316,7 @@ def openai_get_food_price(food_name, location_name, api_cache=None):
         client = OpenAI(api_key=API_KEY_OPENAI)
 
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5.1",
             response_format={"type": "json_object"},
             messages=[
                 {
@@ -347,7 +371,7 @@ def openai_get_nearest_farm_region(food_name, location_name, api_cache=None):
         client = OpenAI(api_key=API_KEY_OPENAI)
 
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5.1",
             response_format={"type": "json_object"},
             messages=[
                 {
