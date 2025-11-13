@@ -27,12 +27,13 @@ function updateFormVisibility() {
         shipDetailsWrapper.classList.remove('hidden');
         capacityInputGroup.classList.remove('hidden');
 
-        capacityLabel.textContent = 'LH2 Plant Capacity (TPD):';
+        capacityLabel.textContent = 'Liquefaction Plant Capacity (TPD):';
         shipOptions[1].textContent = 'Small-Scale Carrier (20,000 m³)';
         shipOptions[2].textContent = 'Midsized Carrier (90,000 m³)';
-        shipOptions[3].textContent = 'Standard Modern Carrier (174,000 m³)';
-        shipOptions[4].textContent = 'Q-Flex Carrier (210,000 m³)';
-        shipOptions[5].textContent = 'Q-Max Carrier (266,000 m³)';
+        shipOptions[3].textContent = 'Standard Modern Carrier - LNG (174,000 m³)';
+        shipOptions[4].textContent = 'Aframax Product Tanker - SAF/MeOH (80,000 m³)';
+        shipOptions[5].textContent = 'Q-Flex Carrier (210,000 m³)';
+        shipOptions[6].textContent = 'Q-Max Carrier (266,000 m³)';
         
         // Handle BOG panel visibility
         if (bogRecirculationRadio.checked) {
@@ -53,6 +54,7 @@ function updateFormVisibility() {
         shipOptions[3].textContent = 'Post-Panamax Vessel (~10,000 Containers)';
         shipOptions[4].textContent = 'New-Panamax Vessel (~14,000 Containers)';
         shipOptions[5].textContent = 'Ultra-Large Vessel (20,000+ Containers)';
+        shipOptions[6].textContent = 'Ultra-Large Vessel (20,000+ Containers)'; // Duplicate to maintain array length
     }
 
     // Handle custom ship panel visibility (this works for both fuel and food)
