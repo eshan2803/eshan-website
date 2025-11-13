@@ -68,6 +68,7 @@ from services.openai_service import (
     openai_get_hydrogen_production_cost,
     openai_get_electricity_price as openai_get_electricity_price_helper_module,  # NEW
     openai_get_hydrogen_cost as openai_get_hydrogen_cost_helper_module,  # NEW
+    get_fuel_production_cost as get_fuel_production_cost_helper_module,  # NEW - fuel-specific costs
     openai_get_marine_fuel_price as openai_get_marine_fuel_price_helper_module,  # NEW
     openai_get_food_price as openai_get_food_price_helper_module,  # NEW
     openai_get_nearest_farm_region as openai_get_nearest_farm_region_helper_module  # NEW
@@ -259,7 +260,7 @@ def run_lca_model(inputs):
         from openai import OpenAI
         client = OpenAI(api_key=API_KEY_OPENAI)
         response = client.chat.completions.create(
-            model="gpt-4o", response_format={"type": "json_object"},
+            model="gpt-5.1", response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": "Return the nearest deep-water port for the given coordinates as JSON."},
                 {"role": "user", "content": f'Given coordinates {port_coor_str}, return the nearest deep-water or deep-draft port in JSON format: {{"nearest_port": "PORT_NAME", "latitude": "LATITUDE", "longitude": "LONGITUDE"}}'}
@@ -344,6 +345,7 @@ def run_lca_model(inputs):
     get_diesel_price = get_diesel_price_module
     openai_get_electricity_price = openai_get_electricity_price_helper_module
     openai_get_hydrogen_cost = openai_get_hydrogen_cost_helper_module
+    get_fuel_production_cost = get_fuel_production_cost_helper_module  # NEW - fuel-specific production costs
     openai_get_marine_fuel_price = openai_get_marine_fuel_price_helper_module
     openai_get_food_price = openai_get_food_price_helper_module
     openai_get_nearest_farm_region = openai_get_nearest_farm_region_helper_module
@@ -521,6 +523,7 @@ def run_lca_model(inputs):
     start = inputs['start']
     end = inputs['end']
     commodity_type = inputs.get('commodity_type', 'fuel')
+    fuel_type_for_cost = inputs.get('fuel_type', 0) if commodity_type == 'fuel' else 0  # Extract early for production cost lookup
     marine_fuel_choice = inputs.get('marine_fuel_choice', 'VLSFO')
     storage_time_A = inputs['storage_time_A']
     storage_time_B = inputs['storage_time_B']
@@ -553,8 +556,8 @@ def run_lca_model(inputs):
     if not port_to_end_dist_str:
         port_to_end_dist_str, port_to_end_dur_str = inland_routes_cal((end_port_lat, end_port_lng), (coor_end_lat, coor_end_lng))
 
-    # Continue with sea route calculation (not parallelized as it depends on ports)
-    _, hydrogen_production_cost = openai_get_hydrogen_cost(f"{coor_start_lat},{coor_start_lng}")
+    # Get fuel-specific production cost (uses OpenAI for H2, defaults for other fuels)
+    _, hydrogen_production_cost = get_fuel_production_cost(fuel_type_for_cost, f"{coor_start_lat},{coor_start_lng}")
 
     # Cache searoute calculation (expensive operation: 1-3 seconds)
     route_cache_key = f"searoute_{start_port_lat:.4f},{start_port_lng:.4f}_{end_port_lat:.4f},{end_port_lng:.4f}"
