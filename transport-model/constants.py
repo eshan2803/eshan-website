@@ -29,7 +29,8 @@ CO2E_DIESEL = 10.21  # kg CO2e per kg diesel
 SAFETY_CERTIFICATION_COST_PER_KG = {
     0: {'base_cost_usd': 15000, 'per_kg_rate': 0.01, 'threshold_kg': 10000},  # Liquid Hydrogen
     1: {'base_cost_usd': 10000, 'per_kg_rate': 0.005, 'threshold_kg': 10000}, # Ammonia
-    2: {'base_cost_usd': 5000, 'per_kg_rate': 0.002, 'threshold_kg': 10000}   # Methanol
+    2: {'base_cost_usd': 5000, 'per_kg_rate': 0.002, 'threshold_kg': 10000},  # Methanol
+    3: {'base_cost_usd': 6000, 'per_kg_rate': 0.003, 'threshold_kg': 10000}   # SAF (similar to conventional jet fuel)
 }
 
 FOOD_INSPECTION_COST_PER_SHIPMENT = {
@@ -92,7 +93,8 @@ ANNUAL_WORKING_DAYS = 330
 TRUCK_CAPEX_PARAMS = {
     0: {'cost_usd_per_truck': 1500000, 'useful_life_years': 10, 'annualization_factor': 0.15},  # Hydrogen
     1: {'cost_usd_per_truck': 800000, 'useful_life_years': 10, 'annualization_factor': 0.15},   # Ammonia
-    2: {'cost_usd_per_truck': 200000, 'useful_life_years': 10, 'annualization_factor': 0.15}    # Methanol
+    2: {'cost_usd_per_truck': 200000, 'useful_life_years': 10, 'annualization_factor': 0.15},   # Methanol
+    3: {'cost_usd_per_truck': 220000, 'useful_life_years': 10, 'annualization_factor': 0.15}    # SAF (standard fuel tanker)
 }
 
 MAINTENANCE_COST_PER_KM_TRUCK = 0.10  # $/km
@@ -115,6 +117,7 @@ COMMODITY_RISK_FACTORS = {
     "Liquid Hydrogen": 1.5,
     "Ammonia": 1.2,
     "Methanol": 0.8,
+    "SAF": 0.75,  # Similar to conventional jet fuel, lower than cryogenic fuels
     "Strawberry": 0.6,
     "Hass Avocado": 0.7,
     "Banana": 0.75,
@@ -236,13 +239,15 @@ for country in EU_MEMBER_COUNTRIES:
 LOADING_UNLOADING_CAPEX_PARAMS = {
     0: {'total_capex_M_usd': 500, 'annualization_factor': 0.08},  # Hydrogen
     1: {'total_capex_M_usd': 200, 'annualization_factor': 0.08},  # Ammonia
-    2: {'total_capex_M_usd': 80, 'annualization_factor': 0.08}   # Methanol
+    2: {'total_capex_M_usd': 80, 'annualization_factor': 0.08},   # Methanol
+    3: {'total_capex_M_usd': 90, 'annualization_factor': 0.08}    # SAF (similar to methanol infrastructure)
 }
 
 REFERENCE_ANNUAL_THROUGHPUT_TONS = {
     0: 1000000,   # Hydrogen - 1M tons/year
     1: 5000000,   # Ammonia - 5M tons/year
-    2: 10000000   # Methanol - 10M tons/year
+    2: 10000000,  # Methanol - 10M tons/year
+    3: 8000000    # SAF - 8M tons/year (intermediate between ammonia and methanol)
 }
 
 # =================================================================
