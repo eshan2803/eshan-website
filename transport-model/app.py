@@ -798,7 +798,7 @@ def run_lca_model(inputs):
         HHV_chem = [142, 22.5, 22.7, 43.5]; LHV_chem = [120, 18.6, 19.9, 43.0]; boiling_point_chem = [20, 239.66, 337.7, 478];
         latent_H_chem = [449.6/1000, 1.37, 1.1, 0.27]; specific_heat_chem = [14.3/1000, 4.7/1000, 2.5/1000, 2.1/1000];
         liquid_chem_density = [71, 682, 805, 800];
-        GWP_chem = [33, 0, 0, 20]; GWP_N2O = 273;
+        GWP_chem = [33, 0, 0, 0]; GWP_N2O = 273;
         fuel_cell_eff = 0.65; road_delivery_ener = [0.0455/500, 0.022/500, 0.022/500, 0.001];
         BOR_land_storage = [0.0032, 0.0001, 0.0000032, 0.000001]; BOR_loading = [0.0086, 0.00022, 0.0001667, 0.00003];
         BOR_truck_trans = [0.005, 0.00024, 0.000005, 0.000001]; BOR_ship_trans = [0.00326, 0.00024, 0.000005, 0.000001];
@@ -932,14 +932,17 @@ def run_lca_model(inputs):
         # - LH2 (fuel_type=0): ~15-18% losses due to high BOG rate (0.5%/day)
         # - NH3 (fuel_type=1): ~8-12% losses due to moderate BOG (0.024%/day)
         # - MeOH (fuel_type=2): ~5-8% losses due to very low BOG (0.0005%/day)
+        # - SAF (fuel_type=3): ~0.5% losses due to negligible BOG (ambient storage)
 
         if fuel_type == 0:  # Liquid Hydrogen
             # Higher losses due to cryogenic nature and high BOG rate
             typical_loss_factor = 1.17  # Expect ~17% loss
         elif fuel_type == 1:  # Ammonia
             typical_loss_factor = 1.10  # Expect ~10% loss
-        else:  # Methanol (fuel_type == 2)
+        elif fuel_type == 2:  # Methanol
             typical_loss_factor = 1.07  # Expect ~7% loss
+        else:  # SAF (fuel_type == 3)
+            typical_loss_factor = 1.005  # Expect ~0.5% loss (ambient temperature storage, negligible BOG)
 
         initial_guess = [target_weight * typical_loss_factor]
 
