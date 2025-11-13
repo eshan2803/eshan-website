@@ -244,10 +244,10 @@ LOADING_UNLOADING_CAPEX_PARAMS = {
 }
 
 REFERENCE_ANNUAL_THROUGHPUT_TONS = {
-    0: 1000000,   # Hydrogen - 1M tons/year
+    0: 1000000,   # Hydrogen - 1M tons/year (dedicated infrastructure)
     1: 5000000,   # Ammonia - 5M tons/year
     2: 10000000,  # Methanol - 10M tons/year
-    3: 2000000    # SAF - 2M tons/year (matches 2025 global production forecasts)
+    3: 8000000    # SAF - 8M tons/year (shared petroleum product infrastructure)
 }
 
 # =================================================================
