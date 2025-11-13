@@ -499,7 +499,7 @@ def run_lca_model(inputs):
         "fuel_pump_transfer_truck_to_siteB": "Unloading at Site B (to Storage)",
         "fuel_storage_site_B": "Storage at Site B",
         "fuel_pump_transfer_siteB_to_use": "Unloading for Final Use (Site B)",
-        "chem_convert_to_H2": "Cracking/Reforming to H2",
+        "chem_convert_to_H2": "Conversion to H2",
         "PH2_pressurization_at_site_A": "Pressurization at Site A",
         "PH2_site_A_to_port_A": "Pipeline Transport: Site A to Port A",
         "port_A_liquification": "Liquefaction at Port A",
@@ -1011,8 +1011,8 @@ def run_lca_model(inputs):
 
         final_chem_kg_denominator = final_results_raw[3] # This is the final quantity of chemical
 
-        # Handle conversion step if fuel type is not LH2
-        if user_define[1] != 0: 
+        # Handle conversion step if fuel type is not LH2 and not SAF
+        if user_define[1] != 0 and user_define[1] != 3: 
             amount_before_conversion = final_results_raw[3] 
             args_for_conversion = (mass_conversion_to_H2, eff_energy_chem_to_H2, energy_chem_to_H2, CO2e_end, end_electricity_price, end_country_name, CARBON_TAX_PER_TON_CO2_DICT)
             
