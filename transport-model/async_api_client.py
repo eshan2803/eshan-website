@@ -111,7 +111,7 @@ async def fetch_nearest_port(session, lat, lng, port_type="start"):
         port_coor_str = f"{lat}, {lng}"
 
         response = await client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5.1",
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": "Return the nearest deep-water port for the given coordinates as JSON."},
