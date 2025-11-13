@@ -505,18 +505,33 @@ def total_chem_base(A_optimized_chem_weight, B_fuel_type_tc, C_recirculation_BOG
         total_G_emission_tc += Z_emission
         total_S_bog_loss_tc += S_bog_loss
 
+    # ========================================================================
+    # TRANSPORT SERVICE COSTS END HERE
+    # Everything above represents actual transport/logistics service costs
+    # ========================================================================
+
+    # Calculate transport-only subtotal (for benchmarking against pure freight rates)
+    transport_service_total = total_opex_money_tc + total_capex_money_tc + total_carbon_tax_money_tc + total_insurance_money_tc
+
+    # ========================================================================
+    # IMPORT/COMMERCIAL COSTS (NOT TRANSPORT SERVICE COSTS)
+    # The following costs are commercial/regulatory, not freight service costs
+    # Exclude these when comparing to transport-only benchmarks
+    # ========================================================================
+
     # 1. Calculate the CIF Value (Cost of Goods + Insurance + Freight)
     initial_cargo_value = A_optimized_chem_weight * hydrogen_production_cost
     # The freight cost is the sum of all transport-related costs
     freight_and_insurance_cost = total_opex_money_tc + total_capex_money_tc + total_carbon_tax_money_tc + total_insurance_money_tc
     cif_value = initial_cargo_value + freight_and_insurance_cost
 
-    # 2. Calculate Tariff Cost and add it to the results list
+    # 2. Calculate Tariff Cost (IMPORT DUTY - NOT A TRANSPORT COST)
     tariff_rate = IMPORT_TARIFF_RATES_DICT.get(end_country_name, 0.05)
     tariff_cost = cif_value * tariff_rate
     data_results_list.append(["Import Tariffs & Duties", tariff_cost, 0.0, 0.0, 0.0, 0.0, R_current_chem, 0.0])
 
-    # 3. Calculate Financing Cost
+    # 3. Calculate Financing Cost (COMMERCIAL COST - NOT A TRANSPORT COST)
+    # This is working capital cost on cargo value, not freight service cost
     total_duration_days = (duration_A_to_port / 1440) + (port_to_port_duration / 24) + (duration_port_to_B / 1440) + storage_time_A + storage_time_B + storage_time_C
     financing_cost = initial_cargo_value * (ANNUAL_FINANCING_RATE / 365) * total_duration_days
     data_results_list.append(["Financing Costs", financing_cost, 0.0, 0.0, 0.0, 0.0, R_current_chem, 0.0])
