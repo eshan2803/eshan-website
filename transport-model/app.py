@@ -30,8 +30,7 @@ from utils.helpers import (
     get_diesel_price as get_diesel_price_module,
     calculate_dynamic_cop as calculate_dynamic_cop_module,
     straight_dis as straight_dis_module,
-    get_country_from_coords as get_country_from_coords_helper_module,  # NEW
-    is_location_near_port  # NEW - Port detection
+    get_country_from_coords as get_country_from_coords_helper_module
 )
 
 from utils.api_helpers import (  # NEW MODULE
@@ -581,6 +580,20 @@ def run_lca_model(inputs):
         api_cache[route_cache_key] = route
 
     searoute_coor = [[lat, lon] for lon, lat in route.geometry['coordinates']]
+
+    # Ensure sea route connects directly to port pins by prepending/appending exact port coordinates
+    # This fixes visualization issue where green line doesn't touch the port markers
+    if searoute_coor:
+        # Check if first point is not already the start port (within 1km tolerance)
+        first_point_dist = straight_dis(searoute_coor[0][1], searoute_coor[0][0], start_port_lng, start_port_lat)
+        if first_point_dist > 1:  # More than 1km away
+            searoute_coor.insert(0, [start_port_lat, start_port_lng])
+
+        # Check if last point is not already the end port (within 1km tolerance)
+        last_point_dist = straight_dis(searoute_coor[-1][1], searoute_coor[-1][0], end_port_lng, end_port_lat)
+        if last_point_dist > 1:  # More than 1km away
+            searoute_coor.append([end_port_lat, end_port_lng])
+
     port_to_port_dis = route.properties['length'] * 1.852
     canal_transits = detect_canal_transit(route)
 
