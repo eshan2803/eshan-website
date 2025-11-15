@@ -983,7 +983,7 @@ def run_lca_model(inputs):
                         method='SLSQP',
                         bounds=[(0, None)],
                         constraints=[con],
-                        options={'ftol': 1e-6, 'maxiter': 30})  # Tighter tolerance, reasonable max iterations
+                        options={'ftol': 1e-6, 'maxiter': 100})  # Increased iteration limit for complex routes
 
         print(f"[OPTIMIZATION] Completed in {result.nit} iterations, success={result.success}")
 
