@@ -254,6 +254,7 @@ def constraint(A, target_weight):
 def total_chem_base(A_optimized_chem_weight, B_fuel_type_tc, C_recirculation_BOG_tc,
                     D_truck_apply_tc, E_storage_apply_tc, F_maritime_apply_tc, carbon_tax_per_ton_co2_dict_tc,
                     selected_fuel_name_tc, searoute_coor_tc, port_to_port_duration_tc,
+                    start_is_port, end_is_port,  # NEW: Port detection flags
                     # All parameters needed from parent scope
                     GWP_chem, hydrogen_production_cost, start_country_name,
                     LH2_plant_capacity, EIM_liquefication, specific_heat_chem, start_local_temperature,
@@ -310,6 +311,8 @@ def total_chem_base(A_optimized_chem_weight, B_fuel_type_tc, C_recirculation_BOG
         selected_fuel_name_tc (str): Name of selected fuel
         searoute_coor_tc (list): Sea route coordinates for insurance calculation
         port_to_port_duration_tc (float): Port-to-port duration in hours
+        start_is_port (bool): True if start location is a port city (skips inland transport)
+        end_is_port (bool): True if end location is a port city (skips inland transport)
         ... (many more parameters from parent scope - see function signature)
 
     Returns:
@@ -323,23 +326,42 @@ def total_chem_base(A_optimized_chem_weight, B_fuel_type_tc, C_recirculation_BOG
         - Accumulates costs, energy, emissions, and tracks weight changes
         - Adds overhead costs (tariffs, financing, certification, contingency)
         - Separates insurance costs into dedicated rows for transparency
+        - Conditionally skips truck transport steps if start/end locations are ports
     """
+    # Build process sequence conditionally based on port detection
     funcs_sequence = [
-        site_A_chem_production, site_A_chem_liquification,
-        (fuel_pump_transfer, 'siteA_to_truck'),
-        (fuel_road_transport, 'start_leg'),
-        (fuel_pump_transfer, 'portA_to_storage'),
+        site_A_chem_production,
+        site_A_chem_liquification,
+    ]
+
+    # Start location transport to port (skip if start is already a port)
+    if not start_is_port:
+        funcs_sequence.extend([
+            (fuel_pump_transfer, 'siteA_to_truck'),
+            (fuel_road_transport, 'start_leg'),
+            (fuel_pump_transfer, 'portA_to_storage'),
+        ])
+
+    # Storage at starting port and loading to ship
+    funcs_sequence.extend([
         (fuel_storage, 'port_A'),
         chem_loading_to_ship,
         port_to_port,
         (fuel_pump_transfer, 'ship_to_portB'),
         (fuel_storage, 'port_B'),
-        (fuel_pump_transfer, 'portB_to_truck'),
-        (fuel_road_transport, 'end_leg'),
-        (fuel_pump_transfer, 'truck_to_siteB'),
-        (fuel_storage, 'site_B'),
-        (fuel_pump_transfer, 'siteB_to_use')
-    ]
+    ])
+
+    # End location transport from port (skip if end is already a port)
+    if not end_is_port:
+        funcs_sequence.extend([
+            (fuel_pump_transfer, 'portB_to_truck'),
+            (fuel_road_transport, 'end_leg'),
+            (fuel_pump_transfer, 'truck_to_siteB'),
+            (fuel_storage, 'site_B'),
+        ])
+
+    # Final use
+    funcs_sequence.append((fuel_pump_transfer, 'siteB_to_use'))
 
     R_current_chem = A_optimized_chem_weight
     data_results_list = []
@@ -570,6 +592,7 @@ def total_chem_base(A_optimized_chem_weight, B_fuel_type_tc, C_recirculation_BOG
 
 def total_food_lca(initial_weight, food_params, carbon_tax_per_ton_co2_dict_tl, HHV_diesel_tl, diesel_density_tl, CO2e_diesel_tl,
                    food_name_tl, searoute_coor_tl, port_to_port_duration_tl, shipment_size_containers,
+                   start_is_port, end_is_port,  # NEW: Port detection flags
                    # All parameters needed from parent scope
                    start, start_port_name, end_port_name, end,
                    price_start, start_country_name, facility_capacity,
@@ -606,6 +629,8 @@ def total_food_lca(initial_weight, food_params, carbon_tax_per_ton_co2_dict_tl, 
         searoute_coor_tl (list): Sea route coordinates for insurance calculation
         port_to_port_duration_tl (float): Port-to-port duration in hours
         shipment_size_containers (int): Number of containers in shipment
+        start_is_port (bool): True if start location is a port city (skips inland transport)
+        end_is_port (bool): True if end location is a port city (skips inland transport)
         ... (many more parameters from parent scope - see function signature)
 
     Returns:
@@ -620,11 +645,14 @@ def total_food_lca(initial_weight, food_params, carbon_tax_per_ton_co2_dict_tl, 
         - Accumulates costs, energy, emissions, and tracks weight/spoilage
         - Adds overhead costs (tariffs, financing, inspections, contingency)
         - Separates insurance costs into dedicated rows for transparency
+        - Conditionally skips road transport steps if start/end locations are ports
     """
+    # Build process sequence conditionally based on port detection
     food_funcs_sequence = [
         (food_harvest_and_prep, "Harvesting & Preparation"),
     ]
 
+    # Add precooling/freezing if needed
     flags = food_params['process_flags']
     if flags.get('needs_precooling', False):
         food_funcs_sequence.append((food_precooling_process, f"Pre-cooling in {start}"))
@@ -632,17 +660,23 @@ def total_food_lca(initial_weight, food_params, carbon_tax_per_ton_co2_dict_tl, 
     if flags.get('needs_freezing', False):
         food_funcs_sequence.append((food_freezing_process, f"Freezing in {start}"))
 
+    # Road transport to port (skip if start is already a port)
+    if not start_is_port:
+        food_funcs_sequence.append((food_road_transport, f"Road Transport: {start} to {start_port_name}"))
+
+    # Storage at start port and marine transport
     food_funcs_sequence.extend([
-        (food_road_transport, f"Road Transport: {start} to {start_port_name}"),
         (food_cold_storage, f"Cold Storage at {start_port_name}"),
-        (food_sea_transport, f"Marine Transport: {start_port_name} to {end_port_name}")
+        (food_sea_transport, f"Marine Transport: {start_port_name} to {end_port_name}"),
+        (food_cold_storage, f"Cold Storage at {end_port_name}"),
     ])
 
-    food_funcs_sequence.extend([
-        (food_cold_storage, f"Cold Storage at {end_port_name}"),
-        (food_road_transport, f"Road Transport: {end_port_name} to {end}"),
-        (food_cold_storage, f"Cold Storage at {end} (Destination)"),
-    ])
+    # Road transport from port (skip if end is already a port)
+    if not end_is_port:
+        food_funcs_sequence.extend([
+            (food_road_transport, f"Road Transport: {end_port_name} to {end}"),
+            (food_cold_storage, f"Cold Storage at {end} (Destination)"),
+        ])
 
     current_weight = initial_weight
     total_opex_money_tl = 0.0
