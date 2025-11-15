@@ -539,12 +539,6 @@ def run_lca_model(inputs):
     coor_start_lat, coor_start_lng, _ = api_data["start_geocode"]
     coor_end_lat, coor_end_lng, _ = api_data["end_geocode"]
 
-    # Detect if locations are major ports (within 50km)
-    start_port_detection = is_location_near_port(coor_start_lat, coor_start_lng, max_distance_km=50)
-    end_port_detection = is_location_near_port(coor_end_lat, coor_end_lng, max_distance_km=50)
-    start_is_port = start_port_detection['is_port']
-    end_is_port = end_port_detection['is_port']
-
     # Extract port data
     start_port_lat, start_port_lng, start_port_name = api_data.get("start_port", (None, None, None))
     end_port_lat, end_port_lng, end_port_name = api_data.get("end_port", (None, None, None))
@@ -562,6 +556,16 @@ def run_lca_model(inputs):
         start_to_port_dist_str, start_to_port_dur_str = inland_routes_cal((coor_start_lat, coor_start_lng), (start_port_lat, start_port_lng))
     if not port_to_end_dist_str:
         port_to_end_dist_str, port_to_end_dur_str = inland_routes_cal((end_port_lat, end_port_lng), (coor_end_lat, coor_end_lng))
+
+    # Dynamic port detection: Check if user's location is very close to detected nearest port
+    # If distance < 20km, assume the location IS the port (not an inland location)
+    PORT_THRESHOLD_KM = 20  # If closer than 20km to nearest port, consider it a port city
+
+    start_to_port_distance_km = straight_dis(coor_start_lng, coor_start_lat, start_port_lng, start_port_lat)
+    end_to_port_distance_km = straight_dis(coor_end_lng, coor_end_lat, end_port_lng, end_port_lat)
+
+    start_is_port = start_to_port_distance_km < PORT_THRESHOLD_KM
+    end_is_port = end_to_port_distance_km < PORT_THRESHOLD_KM
 
     # Get fuel-specific production cost (uses OpenAI for H2, defaults for other fuels)
     _, hydrogen_production_cost = get_fuel_production_cost(fuel_type_for_cost, f"{coor_start_lat},{coor_start_lng}")
