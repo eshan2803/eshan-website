@@ -30,7 +30,8 @@ from utils.helpers import (
     get_diesel_price as get_diesel_price_module,
     calculate_dynamic_cop as calculate_dynamic_cop_module,
     straight_dis as straight_dis_module,
-    get_country_from_coords as get_country_from_coords_helper_module  # NEW
+    get_country_from_coords as get_country_from_coords_helper_module,  # NEW
+    is_location_near_port  # NEW - Port detection
 )
 
 from utils.api_helpers import (  # NEW MODULE
@@ -538,6 +539,12 @@ def run_lca_model(inputs):
     coor_start_lat, coor_start_lng, _ = api_data["start_geocode"]
     coor_end_lat, coor_end_lng, _ = api_data["end_geocode"]
 
+    # Detect if locations are major ports (within 50km)
+    start_port_detection = is_location_near_port(coor_start_lat, coor_start_lng, max_distance_km=50)
+    end_port_detection = is_location_near_port(coor_end_lat, coor_end_lng, max_distance_km=50)
+    start_is_port = start_port_detection['is_port']
+    end_is_port = end_port_detection['is_port']
+
     # Extract port data
     start_port_lat, start_port_lng, start_port_name = api_data.get("start_port", (None, None, None))
     end_port_lat, end_port_lng, end_port_name = api_data.get("end_port", (None, None, None))
@@ -973,6 +980,7 @@ def run_lca_model(inputs):
             chem_weight, user_define[1], user_define[2],
             user_define[3], user_define[4], user_define[5],
             CARBON_TAX_PER_TON_CO2_DICT, selected_fuel_name, searoute_coor, port_to_port_duration,
+            start_is_port, end_is_port,  # Port detection flags
             # All parameters from parent scope
             GWP_chem, hydrogen_production_cost, start_country_name,
             LH2_plant_capacity, EIM_liquefication, specific_heat_chem, start_local_temperature,
@@ -1264,6 +1272,7 @@ def run_lca_model(inputs):
             initial_weight, current_food_params, CARBON_TAX_PER_TON_CO2_DICT,
             HHV_diesel, diesel_density, CO2e_diesel,
             food_name_for_lookup, searoute_coor, port_to_port_duration, shipment_size_containers,
+            start_is_port, end_is_port,  # Port detection flags
             # All parameters from parent scope
             start, start_port_name, end_port_name, end,
             price_start, start_country_name, facility_capacity,
