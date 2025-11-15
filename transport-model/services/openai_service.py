@@ -188,7 +188,7 @@ def openai_get_hydrogen_cost(coords_str, api_cache=None):
                 {"role": "system", "content": "You are a precise data retrieval assistant for hydrogen market prices. Return only a float or 'N/A'."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=50,
+            max_completion_tokens=50,
             temperature=0.3,
             timeout=15.0
         )
@@ -270,7 +270,7 @@ def openai_get_marine_fuel_price(fuel_name, port_coords_tuple, port_name_str, ap
                 {"role": "system", "content": "You are a precise data retrieval assistant for marine fuel prices. Return only a float or 'N/A'."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=50,
+            max_completion_tokens=50,
             temperature=0.3,
             timeout=15.0
         )
