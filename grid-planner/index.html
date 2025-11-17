@@ -1845,11 +1845,12 @@
             }
             
             function createGridMixSliders() {
-                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass'];
+                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass', 'rng'];
                 techOrder.forEach(tech => {
                     let name = tech.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
                     if (tech === 'wind') name = 'Onshore Wind';
                     if (tech === 'offshoreWind') name = 'Offshore Wind';
+                    if (tech === 'rng') name = 'RNG (Biogas)';
 
                     const color = COLORS[tech] || '#ccc';
 
@@ -1953,7 +1954,7 @@
                 dailyGenerationTotalsGWh = {}; // Clear previous totals
                 let totalGeneration = 0;
 
-                const gridTechs = ['coal', 'naturalGas', 'hydro', 'geothermal', 'biomass', 'nuclear', 'solar', 'wind', 'offshoreWind', 'storage'];
+                const gridTechs = ['coal', 'naturalGas', 'hydro', 'geothermal', 'biomass', 'rng', 'nuclear', 'solar', 'wind', 'offshoreWind', 'storage'];
                 gridTechs.forEach(tech => {
                     const techTotal = (generation[tech] || []).reduce((a, b) => a + b, 0);
                     dailyGenerationTotalsGWh[tech] = techTotal;
@@ -2029,11 +2030,12 @@
             }
 
             function createGenerationMixSliders() {
-                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass', 'storage'];
+                const techOrder = ['coal', 'naturalGas', 'solar', 'hydro', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass', 'rng', 'storage'];
                 techOrder.forEach(tech => {
                     let name = tech.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
                     if (tech === 'wind') name = 'Onshore Wind';
                     if (tech === 'offshoreWind') name = 'Offshore Wind';
+                    if (tech === 'rng') name = 'RNG (Biogas)';
                     const color = COLORS[tech] || '#ccc';
 
                     const wrapper = document.createElement('div');
