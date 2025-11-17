@@ -1355,12 +1355,12 @@
             // --- REWRITTEN DISPATCH LOGIC ---
             function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProfile, potentialGen, baselineStorageGWh = {}, hydroCF, countryName, storageOverrideDisabled = false) {
                 const VRE_SOURCES = ['solar', 'wind', 'offshoreWind'];
-                const INFLEXIBLE_SOURCES = ['nuclear', 'geothermal', 'biomass', 'rng'];
-                
+                const INFLEXIBLE_SOURCES = ['nuclear', 'geothermal', 'biomass', 'rng', 'hydrogen'];
+
                 let finalGeneration = {
                     coal: Array(24).fill(0), naturalGas: Array(24).fill(0),
                     hydro: Array(24).fill(0), nuclear: Array(24).fill(0),
-                    geothermal: Array(24).fill(0), biomass: Array(24).fill(0), rng: Array(24).fill(0),
+                    geothermal: Array(24).fill(0), biomass: Array(24).fill(0), rng: Array(24).fill(0), hydrogen: Array(24).fill(0),
                     solar: Array(24).fill(0), wind: Array(24).fill(0), offshoreWind: Array(24).fill(0),
                     storage: Array(24).fill(0), curtailment: Array(24).fill(0),
                     solarToStorage: Array(24).fill(0), windToStorage: Array(24).fill(0), offshoreWindToStorage: Array(24).fill(0)
@@ -1388,6 +1388,10 @@
                 }
 
                 let currentPotential = JSON.parse(JSON.stringify(potentialGen));
+                // Initialize hydrogen if not in baseline (no country has hydrogen yet)
+                if (!currentPotential.hydrogen) {
+                    currentPotential.hydrogen = Array(24).fill(0);
+                }
                 for (let i = 0; i < 24; i++) {
                     currentPotential.solar[i] += inputs.capacity.solar * solarProfile[i];
                     currentPotential.wind[i] += inputs.capacity.wind * windProfile[i];
@@ -1396,6 +1400,7 @@
                     currentPotential.geothermal[i] += inputs.capacity.geothermal * COST_DATA.capacity_factor.geothermal;
                     currentPotential.biomass[i] += inputs.capacity.biomass * COST_DATA.capacity_factor.biomass;
                     currentPotential.rng[i] += inputs.capacity.rng * COST_DATA.capacity_factor.rng;
+                    currentPotential.hydrogen[i] += inputs.capacity.hydrogen * COST_DATA.capacity_factor.hydrogen;
                 }
                 const hydroCapacity = (currentCountryInstalledCapacity.hydro || 0) + (inputs.capacity.hydro || 0);
                 const maxHourlyHydroOutput = countryName === 'California' ? hydroCapacity * 0.32 : hydroCapacity;
