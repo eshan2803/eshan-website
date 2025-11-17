@@ -863,7 +863,7 @@
         
         const COST_DATA = {
             capex: {
-                solar: 1200, wind: 1500, offshoreWind: 5000, nuclear: 7242, geothermal: 3329, biomass: 3500, rng: 3000, hydrogen: 2500,
+                solar: 1200, wind: 1500, offshoreWind: 5000, nuclear: 7242, geothermal: 3329, biomass: 3500, rng: 3000, hydrogen: 3500,
                 naturalGas: 1300, hydro: 3336, coal: 4407,
                 battery4hr: 350, battery8hr: 300, longduration: 300, // $/kWh
                 dac: 1000 // $/ton/year
@@ -2656,9 +2656,9 @@
                 });
 
                 const baselineResult = getSimulationResult(
-                    { 
-                        capacity: { solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, nuclear: 0, biomass: 0, rng: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
-                        incentives: { solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, nuclear: 0, biomass: 0, rng: 0, storage: 0, dac: 0, carbonTax: newCarbonTax, exportPrice: newExportPrice }
+                    {
+                        capacity: { solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, nuclear: 0, biomass: 0, rng: 0, hydrogen: 0, battery4hr: 0, battery8hr: 0, longduration: 0, dac: 0, demandflex: 0 },
+                        incentives: { solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, nuclear: 0, biomass: 0, rng: 0, hydrogen: 0, storage: 0, dac: 0, carbonTax: newCarbonTax, exportPrice: newExportPrice }
                     },
                     currentSolarCFProfile,
                     currentWindCFProfile,
