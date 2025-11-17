@@ -1243,8 +1243,8 @@ def run_lca_model(inputs):
             "table_data": {
                 "detailed_headers": new_detailed_headers,
                 "detailed_data": detailed_data_formatted,
-                "summary1_data": summary1_data,
-                "summary2_data": summary2_data,
+                "summary1_headers": ["Per kg chemical Output", "Value"], "summary1_data": summary1_data,
+                "summary2_headers": ["Per Energy Output", "Value"], "summary2_data": summary2_data,
                 "assumed_prices_headers": ["Assumed Price", "Value"], "assumed_prices_data": assumed_prices_data
             },
             "csv_data": csv_data, # Now csv_data is defined
@@ -1643,4 +1643,5 @@ print("=" * 60)
 print("[STARTUP] Flask app initialized successfully")
 print(f"[STARTUP] API Keys status: Google={bool(API_KEY_GOOGLE != 'ESHAN_API_KEY_GOOGLE')}, OpenAI={bool(API_KEY_OPENAI != 'ESHAN_API_KEY_OPENAI')}")
 print("=" * 60)
+
 
