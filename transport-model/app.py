@@ -1211,12 +1211,12 @@ def run_lca_model(inputs):
         summary1_data = [
             ["Cost ($/kg chemical)", f"{chem_cost:.2f}"],
             ["Consumed Energy (MJ/kg chemical)", f"{chem_energy:.2f}"],
-            ["Emission (kg CO2eq/kg chemical)", f"{chem_CO2e:.2f}"]
+            ["Emission (kg CO<sub>2eq</sub>/kg chemical)", f"{chem_CO2e:.2f}"]
         ]
 
         summary2_data = [
             ["Cost ($/GJ)", f"{total_money / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
-            ["Energy consumed (MJ_in/GJ_out)", f"{total_energy / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
+            ["Energy consumed (MJ<sub>in</sub>/GJ<sub>out</sub>)", f"{total_energy / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
             ["Emission (kg CO2eq/GJ)", f"{total_emissions / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"]
         ]
 
@@ -1243,8 +1243,8 @@ def run_lca_model(inputs):
             "table_data": {
                 "detailed_headers": new_detailed_headers,
                 "detailed_data": detailed_data_formatted,
-                "summary1_headers": ["Metric", "Value"], "summary1_data": summary1_data,
-                "summary2_headers": ["Per Energy Output", "Value"], "summary2_data": summary2_data,
+                "summary1_data": summary1_data,
+                "summary2_data": summary2_data,
                 "assumed_prices_headers": ["Assumed Price", "Value"], "assumed_prices_data": assumed_prices_data
             },
             "csv_data": csv_data, # Now csv_data is defined
@@ -1643,3 +1643,4 @@ print("=" * 60)
 print("[STARTUP] Flask app initialized successfully")
 print(f"[STARTUP] API Keys status: Google={bool(API_KEY_GOOGLE != 'ESHAN_API_KEY_GOOGLE')}, OpenAI={bool(API_KEY_OPENAI != 'ESHAN_API_KEY_OPENAI')}")
 print("=" * 60)
+
