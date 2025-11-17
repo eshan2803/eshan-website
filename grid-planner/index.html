@@ -863,7 +863,7 @@
         
         const COST_DATA = {
             capex: {
-                solar: 1200, wind: 1500, offshoreWind: 5000, nuclear: 7242, geothermal: 3329, biomass: 3500, rng: 3000, hydrogen: 2500,
+                solar: 1200, wind: 1500, offshoreWind: 5000, nuclear: 7242, geothermal: 3329, biomass: 3500, rng: 3000, hydrogen: 3500,
                 naturalGas: 1300, hydro: 3336, coal: 4407,
                 battery4hr: 350, battery8hr: 300, longduration: 300, // $/kWh
                 dac: 1000 // $/ton/year
@@ -1685,7 +1685,7 @@
                     capacity: {
                         solar: currentValues.solar, wind: currentValues.wind, offshoreWind: currentValues.offshoreWind,
                         geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
-                        biomass: currentValues.biomass, rng: currentValues.rng,
+                        biomass: currentValues.biomass, rng: currentValues.rng, hydrogen: currentValues.hydrogen,
                         battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
                         longduration: currentValues.longduration, dac: currentValues.dac,
                         demandflex: currentValues.demandflex,
@@ -1693,7 +1693,7 @@
                     incentives: {
                         solar: currentValues.solarIncentive, wind: currentValues.windIncentive, offshoreWind: currentValues.offshoreWindIncentive,
                         geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
-                        biomass: currentValues.biomassIncentive, rng: currentValues.rngIncentive,
+                        biomass: currentValues.biomassIncentive, rng: currentValues.rngIncentive, hydrogen: currentValues.hydrogenIncentive,
                         storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
                         carbonTax: currentValues.carbonTax,
                         exportPrice: currentValues.exportPrice,
@@ -1787,12 +1787,12 @@
 
             function updateCharts(generation, emissions, demand, totalCO2, solarProfile, windProfile, offshoreWindProfile, hourlyMarginalPrice, priceWithoutStorage) {
                 const chartData = generationChart.data.datasets;
-                
+
                 const techMap = {
-                    nuclear: 0, geothermal: 1, biomass: 2, rng: 3, hydro: 4, 
-                    wind: 5, offshoreWind: 6, solar: 7, 
-                    naturalGas: 8, coal: 9, storage: 10, curtailment: 11,
-                    solarToStorage: 12, windToStorage: 13, offshoreWindToStorage: 14
+                    nuclear: 0, geothermal: 1, biomass: 2, rng: 3, hydrogen: 4, hydro: 5,
+                    wind: 6, offshoreWind: 7, solar: 8,
+                    naturalGas: 9, coal: 10, storage: 11, curtailment: 12,
+                    solarToStorage: 13, windToStorage: 14, offshoreWindToStorage: 15
                 };
 
                 for (const tech in techMap) {
@@ -1800,7 +1800,7 @@
                         chartData[techMap[tech]].data = generation[tech];
                     }
                 }
-                chartData[15].data = demand;
+                chartData[16].data = demand;
 
                 generationChart.update('none');
                 
