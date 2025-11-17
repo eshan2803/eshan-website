@@ -1179,8 +1179,8 @@ def run_lca_model(inputs):
             ratio_emission = chem_CO2e / SMR_EMISSIONS_KG_PER_KG_H2
             emission_overlay_text = (
                 f"Context:\n"
-                f"• Gray Hydrogen (SMR) Emission: {SMR_EMISSIONS_KG_PER_KG_H2:.2f} kg CO2eq/kg\n"
-                f"• Total Transport Emission: {chem_CO2e:.2f} kg CO2eq/kg\n"
+                f"• Gray Hydrogen (SMR) Emission: {SMR_EMISSIONS_KG_PER_KG_H2:.2f} kg CO<sub>2eq</sub>/kg\n"
+                f"• Total Transport Emission: {chem_CO2e:.2f} kg CO<sub>2eq</sub>/kg\n"
                 f"• Transport emission is {ratio_emission:.1f} times the SMR emission."
             )
 
@@ -1217,7 +1217,7 @@ def run_lca_model(inputs):
         summary2_data = [
             ["Cost ($/GJ)", f"{total_money / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
             ["Energy consumed (MJ<sub>in</sub>/GJ<sub>out</sub>)", f"{total_energy / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
-            ["Emission (kg CO2eq/GJ)", f"{total_emissions / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"]
+            ["Emission (kg CO<sub>2eq</sub>/GJ)", f"{total_emissions / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"]
         ]
 
         assumed_prices_data = [
@@ -1501,13 +1501,13 @@ def run_lca_model(inputs):
         summary1_data = [
             ["Cost ($/kg food)", f"{cost_per_kg:.2f}"],
             ["Consumed Energy (MJ/kg food)", f"{energy_per_kg:.2f}"],
-            ["Emission (kg CO2eq/kg food)", f"{emissions_per_kg:.2f}"]
+            ["Emission (kg CO<sub>2eq</sub>/kg food)", f"{emissions_per_kg:.2f}"]
         ]
 
         summary2_data = [
             ["Cost ($/GJ)", f"{total_money / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
-            ["Energy consumed (MJ_in/GJ_out)", f"{total_energy / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
-            ["Emission (kg CO2eq/GJ)", f"{total_emissions / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"]
+            ["Energy consumed (MJ<sub>in</sub>/GJ<sub>out</sub>)", f"{total_energy / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"],
+            ["Emission (kg CO<sub>2eq</sub>/GJ)", f"{total_emissions / final_energy_output_gj:.2f}" if final_energy_output_gj > 0 else "N/A"]
         ]
 
         assumed_prices_data = [
@@ -1533,8 +1533,8 @@ def run_lca_model(inputs):
             ratio_emission = emissions_per_kg / production_co2e
             emission_overlay_text = (
                 f"Context:\n"
-                f"• Logistics Emissions: {emissions_per_kg:.2f} kg CO2eq/kg\n"
-                f"• Farming Emissions alone for {current_food_params['name']}: {production_co2e:.2f} kg CO2eq/kg\n"
+                f"• Logistics Emissions: {emissions_per_kg:.2f} kg CO<sub>2eq</sub>/kg\n"
+                f"• Farming Emissions alone for {current_food_params['name']}: {production_co2e:.2f} kg CO<sub>2eq</sub>/kg\n"
                 f"• Logistics add {ratio_emission:.1f}X the farming emissions."
             )
 
@@ -1643,5 +1643,6 @@ print("=" * 60)
 print("[STARTUP] Flask app initialized successfully")
 print(f"[STARTUP] API Keys status: Google={bool(API_KEY_GOOGLE != 'ESHAN_API_KEY_GOOGLE')}, OpenAI={bool(API_KEY_OPENAI != 'ESHAN_API_KEY_OPENAI')}")
 print("=" * 60)
+
 
 
