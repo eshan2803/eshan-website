@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,20 +8,26 @@
     <link rel="icon" type="image/png" href="/assets/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata@2.2.1/dist/chartjs-plugin-dragdata.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata@2.2.1/dist/chartjs-plugin-dragdata.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;700&display=swap"
+        rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
             background-color: #fcfcfc;
             color: #1f2937;
         }
-        .font-lora { 
-            font-family: 'Lora', serif; 
+
+        .font-lora {
+            font-family: 'Lora', serif;
         }
+
         .glass-card {
             background-color: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(12px);
@@ -29,28 +36,35 @@
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
             padding: 1.5rem;
         }
+
         .mesh-gradient-container {
             position: relative;
             z-index: 1;
         }
+
         .mesh-gradient-1 {
-            background-image: radial-gradient(at 40% 20%, hsla(28,100%,74%,1) 0px, transparent 50%),
-                              radial-gradient(at 80% 20%, hsla(189,100%,56%,1) 0px, transparent 50%),
-                              radial-gradient(at 0% 50%, hsla(355,100%,93%,1) 0px, transparent 50%),
-                              radial-gradient(at 80% 50%, hsla(340,100%,76%,1) 0px, transparent 50%),
-                              radial-gradient(at 0% 100%, hsla(22,100%,77%,1) 0px, transparent 50%),
-                              radial-gradient(at 80% 100%, hsla(242,100%,70%,1) 0px, transparent 50%);
-            background-size: 100% 100%; 
-            filter: blur(25px) saturate(1.2); 
+            background-image: radial-gradient(at 40% 20%, hsla(28, 100%, 74%, 1) 0px, transparent 50%),
+                radial-gradient(at 80% 20%, hsla(189, 100%, 56%, 1) 0px, transparent 50%),
+                radial-gradient(at 0% 50%, hsla(355, 100%, 93%, 1) 0px, transparent 50%),
+                radial-gradient(at 80% 50%, hsla(340, 100%, 76%, 1) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, hsla(22, 100%, 77%, 1) 0px, transparent 50%),
+                radial-gradient(at 80% 100%, hsla(242, 100%, 70%, 1) 0px, transparent 50%);
+            background-size: 100% 100%;
+            filter: blur(25px) saturate(1.2);
             opacity: 0.15;
-            position: absolute; 
-            top: 0; left: 0; right: 0; bottom: 0; 
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             z-index: -1;
             animation: pulse-bg 15s infinite alternate;
         }
-         .tutorial-active .mesh-gradient-1 {
+
+        .tutorial-active .mesh-gradient-1 {
             animation: none !important;
         }
+
         .form-input {
             width: 100%;
             -webkit-appearance: none;
@@ -62,6 +76,7 @@
             border: 1px solid #e5e7eb;
             transition: background .2s;
         }
+
         .form-input::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
@@ -71,8 +86,9 @@
             cursor: pointer;
             border-radius: 50%;
             border: 2px solid white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
+
         .form-input::-moz-range-thumb {
             width: 1.25rem;
             height: 1.25rem;
@@ -80,8 +96,9 @@
             cursor: pointer;
             border-radius: 50%;
             border: 2px solid white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
+
         .mix-slider-track {
             background-color: #e5e7eb;
             border-radius: 9999px;
@@ -90,11 +107,13 @@
             overflow: hidden;
             position: relative;
         }
+
         .mix-slider-fill {
             height: 100%;
             border-radius: 9999px;
             transition: width 0.2s ease-in-out;
         }
+
         .mix-slider-default-outline {
             position: absolute;
             top: 0;
@@ -105,41 +124,114 @@
             box-sizing: border-box;
             background: transparent;
         }
+
         .value-input {
-            width: 6rem; /* Adjust width as needed */
+            width: 6rem;
+            /* Adjust width as needed */
             padding: 0.25rem 0.5rem;
             border-radius: 0.375rem;
             border: 1px solid #d1d5db;
             text-align: right;
             background-color: rgba(255, 255, 255, 0.8);
         }
+
         /* Color-coded slider thumbs */
-        .thumb-solar::-webkit-slider-thumb { background-color: rgba(251, 191, 36, 1); }
-        .thumb-solar::-moz-range-thumb { background-color: rgba(251, 191, 36, 1); }
-        .thumb-wind::-webkit-slider-thumb { background-color: rgba(52, 211, 153, 1); } /* Lighter green */
-        .thumb-wind::-moz-range-thumb { background-color: rgba(52, 211, 153, 1); } /* Lighter green */
-        .thumb-offshoreWind::-webkit-slider-thumb { background-color: rgba(12, 148, 103, 1); }
-        .thumb-offshoreWind::-moz-range-thumb { background-color: rgba(12, 148, 103, 1); }
-        .thumb-geothermal::-webkit-slider-thumb { background-color: rgba(120, 40, 40, 1); }
-        .thumb-geothermal::-moz-range-thumb { background-color: rgba(120, 40, 40, 1); }
-        .thumb-nuclear::-webkit-slider-thumb { background-color: rgba(239, 68, 68, 1); }
-        .thumb-nuclear::-moz-range-thumb { background-color: rgba(239, 68, 68, 1); }
-        .thumb-storage::-webkit-slider-thumb { background-color: rgba(168, 85, 247, 1); }
-        .thumb-storage::-moz-range-thumb { background-color: rgba(168, 85, 247, 1); }
-        .thumb-neutral::-webkit-slider-thumb { background-color: rgba(107, 114, 128, 1); }
-        .thumb-neutral::-moz-range-thumb { background-color: rgba(107, 114, 128, 1); }
-        .thumb-biomass::-webkit-slider-thumb { background-color: rgba(101, 67, 33, 1); } /* Brown color for biomass */
-        .thumb-biomass::-moz-range-thumb { background-color: rgba(101, 67, 33, 1); }
-        .thumb-rng::-webkit-slider-thumb { background-color: rgba(132, 204, 22, 1); } /* Lime green for RNG */
-        .thumb-rng::-moz-range-thumb { background-color: rgba(132, 204, 22, 1); }
-        .thumb-hydrogen::-webkit-slider-thumb { background-color: rgba(219, 39, 119, 1); } /* Pink/magenta for hydrogen */
-        .thumb-hydrogen::-moz-range-thumb { background-color: rgba(219, 39, 119, 1); }
+        .thumb-solar::-webkit-slider-thumb {
+            background-color: rgba(251, 191, 36, 1);
+        }
+
+        .thumb-solar::-moz-range-thumb {
+            background-color: rgba(251, 191, 36, 1);
+        }
+
+        .thumb-wind::-webkit-slider-thumb {
+            background-color: rgba(52, 211, 153, 1);
+        }
+
+        /* Lighter green */
+        .thumb-wind::-moz-range-thumb {
+            background-color: rgba(52, 211, 153, 1);
+        }
+
+        /* Lighter green */
+        .thumb-offshoreWind::-webkit-slider-thumb {
+            background-color: rgba(12, 148, 103, 1);
+        }
+
+        .thumb-offshoreWind::-moz-range-thumb {
+            background-color: rgba(12, 148, 103, 1);
+        }
+
+        .thumb-geothermal::-webkit-slider-thumb {
+            background-color: rgba(120, 40, 40, 1);
+        }
+
+        .thumb-geothermal::-moz-range-thumb {
+            background-color: rgba(120, 40, 40, 1);
+        }
+
+        .thumb-nuclear::-webkit-slider-thumb {
+            background-color: rgba(239, 68, 68, 1);
+        }
+
+        .thumb-nuclear::-moz-range-thumb {
+            background-color: rgba(239, 68, 68, 1);
+        }
+
+        .thumb-storage::-webkit-slider-thumb {
+            background-color: rgba(168, 85, 247, 1);
+        }
+
+        .thumb-storage::-moz-range-thumb {
+            background-color: rgba(168, 85, 247, 1);
+        }
+
+        .thumb-neutral::-webkit-slider-thumb {
+            background-color: rgba(107, 114, 128, 1);
+        }
+
+        .thumb-neutral::-moz-range-thumb {
+            background-color: rgba(107, 114, 128, 1);
+        }
+
+        .thumb-biomass::-webkit-slider-thumb {
+            background-color: rgba(101, 67, 33, 1);
+        }
+
+        /* Brown color for biomass */
+        .thumb-biomass::-moz-range-thumb {
+            background-color: rgba(101, 67, 33, 1);
+        }
+
+        .thumb-rng::-webkit-slider-thumb {
+            background-color: rgba(132, 204, 22, 1);
+        }
+
+        /* Lime green for RNG */
+        .thumb-rng::-moz-range-thumb {
+            background-color: rgba(132, 204, 22, 1);
+        }
+
+        .thumb-hydrogen::-webkit-slider-thumb {
+            background-color: rgba(219, 39, 119, 1);
+        }
+
+        /* Pink/magenta for hydrogen */
+        .thumb-hydrogen::-moz-range-thumb {
+            background-color: rgba(219, 39, 119, 1);
+        }
 
         /* Rainbow Border Animation */
         @keyframes rainbow-border {
-            0% { background-position: 0% 50%; }
-            100% { background-position: 200% 50%; }
+            0% {
+                background-position: 0% 50%;
+            }
+
+            100% {
+                background-position: 200% 50%;
+            }
         }
+
         .rainbow-glow {
             position: relative;
             background: linear-gradient(90deg, #ff0080, #ff8000, #ffff00, #80ff00, #00ff80, #0080ff, #8000ff, #ff0080);
@@ -148,6 +240,7 @@
             padding: 2px;
             border-radius: 9999px;
         }
+
         .rainbow-glow .button-content {
             background: #f3f4f6;
             border-radius: 9999px;
@@ -158,12 +251,15 @@
             font-weight: 500;
             transition: background-color 0.3s;
         }
+
         .rainbow-glow:hover .button-content {
             background: #e5e7eb;
         }
+
         /* Style for active season preset button */
         .preset-active {
-            background-color: #4b5563 !important; /* A darker gray */
+            background-color: #4b5563 !important;
+            /* A darker gray */
             color: #ffffff !important;
         }
 
@@ -176,8 +272,10 @@
             height: 100vh;
             background-color: rgba(0, 0, 0, 0.6);
             z-index: 9998;
-            display: none; /* Controlled by JS */
+            display: none;
+            /* Controlled by JS */
         }
+
         #tutorial-popover {
             position: fixed;
             background-color: white;
@@ -190,26 +288,31 @@
             display: none;
             transition: top 0.3s ease-in-out, left 0.3s ease-in-out, transform 0.3s ease-in-out;
         }
+
         .tutorial-highlight-active {
             position: relative;
             z-index: 9999;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.7), 
-                        0 0 20px 10px rgba(59, 130, 246, 0.4),
-                        0 0 0 9999px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.7),
+                0 0 20px 10px rgba(59, 130, 246, 0.4),
+                0 0 0 9999px rgba(0, 0, 0, 0.6);
             transition: box-shadow 0.3s ease-in-out;
         }
+
         .tutorial-highlight-active.rounded-full {
-             border-radius: 9999px;
-        }
-        .tutorial-highlight-active.rounded-lg {
-             border-radius: 1rem;
+            border-radius: 9999px;
         }
 
+        .tutorial-highlight-active.rounded-lg {
+            border-radius: 1rem;
+        }
     </style>
 </head>
+
 <body class="antialiased">
     <!-- Tooltip element -->
-    <div id="hover-tooltip" class="absolute hidden bg-gray-800 text-white text-sm rounded-md px-2 py-1 z-50 pointer-events-none shadow-lg"></div>
+    <div id="hover-tooltip"
+        class="absolute hidden bg-gray-800 text-white text-sm rounded-md px-2 py-1 z-50 pointer-events-none shadow-lg">
+    </div>
 
     <!-- TUTORIAL HTML -->
     <div id="tutorial-overlay"></div>
@@ -219,8 +322,10 @@
         <div class="flex justify-between items-center">
             <button id="tutorial-skip" class="text-sm text-gray-500 hover:text-gray-800">Skip Tour</button>
             <div>
-                <button id="tutorial-prev" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 mr-2">Prev</button>
-                <button id="tutorial-next" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">Next</button>
+                <button id="tutorial-prev"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 mr-2">Prev</button>
+                <button id="tutorial-next"
+                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">Next</button>
             </div>
         </div>
     </div>
@@ -237,20 +342,22 @@
                     </div>
                 </div>
                 <nav class="flex items-center space-x-2">
-                    <a href="/energy.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
+                    <a href="/energy.html"
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
                     <a href="/transport-model/index.html" class="rainbow-glow">
                         <span class="button-content">Transport Model</span>
                     </a>
                     <a href="/grid-planner/index.html" class="rainbow-glow">
-                         <span class="button-content">Grid Planner</span>
+                        <span class="button-content">Grid Planner</span>
                     </a>
                     <a href="/grid-operator/index.html" class="rainbow-glow">
-                         <span class="button-content">Grid Operator</span>
+                        <span class="button-content">Grid Operator</span>
                     </a>
                     <a href="https://www.eshansingh.xyz/transmission/index.html" class="rainbow-glow">
                         <span class="button-content">CA Grid Map</span>
                     </a>
-                    <a href="/musings.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Musings</a>
+                    <a href="/musings.html"
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Musings</a>
                 </nav>
             </div>
         </header>
@@ -258,20 +365,25 @@
         <div class="container mx-auto p-4 md:p-8 pt-0">
 
             <section id="tutorial-step-1" class="text-center mb-12">
-                <h1 class="font-lora text-5xl md:text-6xl font-medium leading-tight text-gray-900">Grid Planning Simulator</h1>
+                <h1 class="font-lora text-5xl md:text-6xl font-medium leading-tight text-gray-900">Grid Planning
+                    Simulator</h1>
                 <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
-                    Your challenge: Use policy levers for clean energy and direct air capture to eliminate CO2 emissions from the electricity grid, while minimizing the impact on customer bill.
+                    Your challenge: Use policy levers for clean energy and direct air capture to eliminate CO2 emissions
+                    from the electricity grid, while minimizing the impact on customer bill.
                 </p>
                 <div class="flex justify-center items-center space-x-4 mt-4">
-                    <a href="grid-model-documentation.html" class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors text-sm font-medium">
+                    <a href="grid-model-documentation.html"
+                        class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors text-sm font-medium">
                         📖 View Documentation
                     </a>
-                    <button id="start-tutorial-btn" class="inline-flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors text-sm font-medium">
+                    <button id="start-tutorial-btn"
+                        class="inline-flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors text-sm font-medium">
                         🚀 Show Tutorial
                     </button>
                 </div>
                 <p class="mt-4 text-sm text-gray-600">
-                    Send your queries at <a href="mailto:hello@eshansingh.xyz" class="text-blue-600 hover:underline">hello@eshansingh.xyz</a>
+                    Send your queries at <a href="mailto:hello@eshansingh.xyz"
+                        class="text-blue-600 hover:underline">hello@eshansingh.xyz</a>
                 </p>
             </section>
 
@@ -280,35 +392,67 @@
                 <div id="tutorial-step-2" class="lg:col-span-2 glass-card rounded-lg">
                     <div class="mb-8 relative">
                         <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-2xl font-lora font-semibold text-gray-800">Hourly Electricity Generation (GWh)</h2>
+                            <h2 class="text-2xl font-lora font-semibold text-gray-800">Hourly Electricity Generation
+                                (GWh)</h2>
                             <div class="flex items-center space-x-2">
-                                <div id="current-demand-profile-text" class="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded-full mr-1"></div>
+                                <div id="current-demand-profile-text"
+                                    class="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded-full mr-1">
+                                </div>
                                 <div id="demand-edit-controls" class="flex items-center space-x-1">
-                                    <button id="edit-demand-btn" class="p-2 rounded-full hover:bg-gray-200" title="Edit demand profile or select a seasonal preset">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                            <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
-                                            <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
+                                    <button id="edit-demand-btn" class="p-2 rounded-full hover:bg-gray-200"
+                                        title="Edit demand profile or select a seasonal preset">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
+                                            fill="currentColor">
+                                            <path
+                                                d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                                            <path fill-rule="evenodd"
+                                                d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"
+                                                clip-rule="evenodd" />
                                         </svg>
                                     </button>
                                     <!-- Seasonal Demand Preset Buttons -->
                                     <div id="demand-presets" class="hidden flex flex-wrap gap-2">
-                                        <button id="preset-demand-spring-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Spring Typical</button>
-                                        <button id="preset-demand-spring-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Spring High</button>
-                                        <button id="preset-demand-summer-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Summer Typical</button>
-                                        <button id="preset-demand-summer-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Summer High</button>
-                                        <button id="preset-demand-fall-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Fall Typical</button>
-                                        <button id="preset-demand-fall-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Fall High</button>
-                                        <button id="preset-demand-winter-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Winter Typical</button>
-                                        <button id="preset-demand-winter-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Winter High</button>
+                                        <button id="preset-demand-spring-typical"
+                                            class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Spring
+                                            Typical</button>
+                                        <button id="preset-demand-spring-high"
+                                            class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Spring
+                                            High</button>
+                                        <button id="preset-demand-summer-typical"
+                                            class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Summer
+                                            Typical</button>
+                                        <button id="preset-demand-summer-high"
+                                            class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Summer
+                                            High</button>
+                                        <button id="preset-demand-fall-typical"
+                                            class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Fall
+                                            Typical</button>
+                                        <button id="preset-demand-fall-high"
+                                            class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Fall
+                                            High</button>
+                                        <button id="preset-demand-winter-typical"
+                                            class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Winter
+                                            Typical</button>
+                                        <button id="preset-demand-winter-high"
+                                            class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Winter
+                                            High</button>
                                     </div>
-                                    <button id="revert-demand-btn" class="p-2 rounded-full hover:bg-gray-200 hidden" title="Revert to original demand profile">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
-                                          <path fill-rule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                    <button id="revert-demand-btn" class="p-2 rounded-full hover:bg-gray-200 hidden"
+                                        title="Revert to original demand profile">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700"
+                                            viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd"
+                                                d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                                                clip-rule="evenodd" />
                                         </svg>
                                     </button>
-                                    <button id="confirm-demand-btn" class="p-2 rounded-full hover:bg-gray-200 hidden" title="Confirm changes to demand">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                    <button id="confirm-demand-btn" class="p-2 rounded-full hover:bg-gray-200 hidden"
+                                        title="Confirm changes to demand">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500"
+                                            viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd"
+                                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                clip-rule="evenodd" />
                                         </svg>
                                     </button>
                                 </div>
@@ -318,14 +462,16 @@
                     </div>
                     <!-- NEW: Marginal Price Chart -->
                     <div class="mb-8">
-                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly Marginal Price ($/MWh)</h2>
+                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly Marginal Price ($/MWh)
+                        </h2>
                         <canvas id="marginalPriceChart"></canvas>
                     </div>
                     <div class="mb-8">
-                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly CO2 Emissions (Metric Tons)</h2>
+                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly CO2 Emissions (Metric
+                            Tons)</h2>
                         <canvas id="co2EmissionsChart"></canvas>
                     </div>
-                     <div id="tutorial-step-4" class="mt-8">
+                    <div id="tutorial-step-4" class="mt-8">
                         <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Installed Capacity Mix (%)</h2>
                         <div id="grid-mix-sliders" class="space-y-3">
                             <!-- Sliders will be dynamically inserted here -->
@@ -342,29 +488,48 @@
                     <div class="mt-8">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-2xl font-lora font-semibold text-gray-800">Hourly Capacity Factors</h2>
-                             <div class="flex items-center space-x-2">
-                                <div id="current-cf-profile-text" class="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded-full mr-1"></div>
+                            <div class="flex items-center space-x-2">
+                                <div id="current-cf-profile-text"
+                                    class="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded-full mr-1">
+                                </div>
                                 <div id="cf-edit-controls" class="flex items-center space-x-1">
-                                    <button id="edit-cf-btn" class="p-2 rounded-full hover:bg-gray-200" title="Edit capacity factor profiles or select a seasonal preset">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                            <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
-                                            <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
+                                    <button id="edit-cf-btn" class="p-2 rounded-full hover:bg-gray-200"
+                                        title="Edit capacity factor profiles or select a seasonal preset">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
+                                            fill="currentColor">
+                                            <path
+                                                d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                                            <path fill-rule="evenodd"
+                                                d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"
+                                                clip-rule="evenodd" />
                                         </svg>
                                     </button>
                                     <div id="cf-presets" class="hidden">
-                                        <button id="preset-cf-spring" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Spring</button>
-                                        <button id="preset-cf-summer" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Summer</button>
-                                        <button id="preset-cf-fall" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Fall</button>
-                                        <button id="preset-cf-winter" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Winter</button>
+                                        <button id="preset-cf-spring"
+                                            class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Spring</button>
+                                        <button id="preset-cf-summer"
+                                            class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Summer</button>
+                                        <button id="preset-cf-fall"
+                                            class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Fall</button>
+                                        <button id="preset-cf-winter"
+                                            class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Winter</button>
                                     </div>
-                                    <button id="revert-cf-btn" class="p-2 rounded-full hover:bg-gray-200 hidden" title="Revert to original capacity factor profiles">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
-                                          <path fill-rule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                    <button id="revert-cf-btn" class="p-2 rounded-full hover:bg-gray-200 hidden"
+                                        title="Revert to original capacity factor profiles">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700"
+                                            viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd"
+                                                d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                                                clip-rule="evenodd" />
                                         </svg>
                                     </button>
-                                    <button id="confirm-cf-btn" class="p-2 rounded-full hover:bg-gray-200 hidden" title="Confirm changes to capacity factors">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                    <button id="confirm-cf-btn" class="p-2 rounded-full hover:bg-gray-200 hidden"
+                                        title="Confirm changes to capacity factors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500"
+                                            viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd"
+                                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                clip-rule="evenodd" />
                                         </svg>
                                     </button>
                                 </div>
@@ -377,7 +542,8 @@
                 <div class="lg:col-span-1 space-y-8">
                     <div id="tutorial-step-5" class="glass-card rounded-lg sticky top-6 z-10">
                         <div class="grid grid-cols-2 gap-4 text-center">
-                            <div title="Based on the average wholesale price of electricity&#10;Assuming natural gas plant on the margin drives the price">
+                            <div
+                                title="Based on the average wholesale price of electricity&#10;Assuming natural gas plant on the margin drives the price">
                                 <h3 class="text-xl font-lora font-semibold text-gray-800">Marginal Price</h3>
                                 <p id="bill-impact" class="text-5xl font-bold text-blue-600 mt-2">0%</p>
                             </div>
@@ -386,264 +552,404 @@
                                 <p id="system-cost-impact" class="text-5xl font-bold text-blue-600 mt-2">0%</p>
                             </div>
                         </div>
-                         <div class="text-center mt-2">
+                        <div class="text-center mt-2">
                             <p id="co2-avoided-text" class="text-md font-medium text-gray-700"></p>
                         </div>
                     </div>
 
+                    <!-- Test Out Button -->
+                    <div class="glass-card rounded-lg">
+                        <div class="text-center">
+                            <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Ready to Test Your Grid?
+                            </h2>
+                            <p class="text-sm text-gray-600 mb-4">Take your renewable energy plan to the next level!
+                                Dispatch your resources in real-time to match demand and avoid blackouts.</p>
+                            <button id="test-renewable-future-btn"
+                                class="w-full px-6 py-4 text-lg font-semibold text-white bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 rounded-full transition-all shadow-lg hover:shadow-xl transform hover:scale-105">
+                                ⚡ Test Out Your Renewable Future
+                            </button>
+                        </div>
+                    </div>
+
                     <div id="tutorial-step-3" class="glass-card space-y-6 rounded-lg">
-                         <div class="mb-6">
-                            <label for="country-select" class="block text-md font-medium text-gray-700 mb-2">Select Default Grid Mix</label>
-                            <select id="country-select" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
+                        <div class="mb-6">
+                            <label for="country-select" class="block text-md font-medium text-gray-700 mb-2">Select
+                                Default Grid Mix</label>
+                            <select id="country-select"
+                                class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white">
                                 <!-- Options will be populated by JS -->
                             </select>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
-                             <div class="flex items-center justify-around">
-                                <button id="undo-button" class="p-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Undo" disabled>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                            <div class="flex items-center justify-around">
+                                <button id="undo-button"
+                                    class="p-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Undo" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
+                                        fill="currentColor">
+                                        <path fill-rule="evenodd"
+                                            d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                                            clip-rule="evenodd" />
+                                    </svg>
                                 </button>
-                                <button id="redo-button" class="p-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Redo" disabled>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                                <button id="redo-button"
+                                    class="p-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Redo" disabled>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
+                                        fill="currentColor">
+                                        <path fill-rule="evenodd"
+                                            d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                                            clip-rule="evenodd" />
+                                    </svg>
                                 </button>
-                             </div>
-                             <button id="make-default-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors" title="Set the current lever positions as your new default">Make Default</button>
-                             <button id="reset-to-default-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors" title="Reset levers to the default for this grid mix">Reset to Default</button>
-                             <button id="reset-to-zero-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors" title="Reset all policy and new capacity levers to zero">Reset to Zero</button>
+                            </div>
+                            <button id="make-default-button"
+                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors"
+                                title="Set the current lever positions as your new default">Make Default</button>
+                            <button id="reset-to-default-button"
+                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors"
+                                title="Reset levers to the default for this grid mix">Reset to Default</button>
+                            <button id="reset-to-zero-button"
+                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors"
+                                title="Reset all policy and new capacity levers to zero">Reset to Zero</button>
                         </div>
                         <div>
-                            <h2 class="text-2xl font-lora font-semibold mb-4 border-b border-t pt-4 border-gray-300 pb-4 text-gray-800">Policy Levers</h2>
+                            <h2
+                                class="text-2xl font-lora font-semibold mb-4 border-b border-t pt-4 border-gray-300 pb-4 text-gray-800">
+                                Policy Levers</h2>
                             <div class="space-y-6 pt-4">
                                 <!-- Levers -->
                                 <div>
-                                    <label for="solar-slider" class="block text-md font-medium text-gray-700">New Solar Capacity</label>
+                                    <label for="solar-slider" class="block text-md font-medium text-gray-700">New Solar
+                                        Capacity</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="solar-slider" min="0" max="200" value="0" class="w-full form-input thumb-solar">
-                                        <input type="number" id="solar-input" min="0" max="200" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="solar-unit">GW</span>
+                                        <input type="range" id="solar-slider" min="0" max="200" value="0"
+                                            class="w-full form-input thumb-solar">
+                                        <input type="number" id="solar-input" min="0" max="200" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="solar-unit">GW</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="wind-slider" class="block text-md font-medium text-gray-700">New Onshore Wind Capacity</label>
+                                    <label for="wind-slider" class="block text-md font-medium text-gray-700">New Onshore
+                                        Wind Capacity</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="wind-slider" min="0" max="200" value="0" class="w-full form-input thumb-wind">
-                                        <input type="number" id="wind-input" min="0" max="200" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="wind-unit">GW</span>
+                                        <input type="range" id="wind-slider" min="0" max="200" value="0"
+                                            class="w-full form-input thumb-wind">
+                                        <input type="number" id="wind-input" min="0" max="200" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="wind-unit">GW</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="offshoreWind-slider" class="block text-md font-medium text-gray-700">New Offshore Wind Capacity</label>
+                                    <label for="offshoreWind-slider" class="block text-md font-medium text-gray-700">New
+                                        Offshore Wind Capacity</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="offshoreWind-slider" min="0" max="200" value="0" class="w-full form-input thumb-offshoreWind">
-                                        <input type="number" id="offshoreWind-input" min="0" max="200" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="offshoreWind-unit">GW</span>
+                                        <input type="range" id="offshoreWind-slider" min="0" max="200" value="0"
+                                            class="w-full form-input thumb-offshoreWind">
+                                        <input type="number" id="offshoreWind-input" min="0" max="200" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="offshoreWind-unit">GW</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="geothermal-slider" class="block text-md font-medium text-gray-700">New Geothermal Capacity</label>
+                                    <label for="geothermal-slider" class="block text-md font-medium text-gray-700">New
+                                        Geothermal Capacity</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="geothermal-slider" min="0" max="50" value="0" class="w-full form-input thumb-geothermal">
-                                        <input type="number" id="geothermal-input" min="0" max="50" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="geothermal-unit">GW</span>
+                                        <input type="range" id="geothermal-slider" min="0" max="50" value="0"
+                                            class="w-full form-input thumb-geothermal">
+                                        <input type="number" id="geothermal-input" min="0" max="50" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="geothermal-unit">GW</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="nuclear-slider" class="block text-md font-medium text-gray-700">New Nuclear Capacity</label>
+                                    <label for="nuclear-slider" class="block text-md font-medium text-gray-700">New
+                                        Nuclear Capacity</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="nuclear-slider" min="0" max="50" value="0" class="w-full form-input thumb-nuclear">
-                                        <input type="number" id="nuclear-input" min="0" max="50" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="nuclear-unit">GW</span>
+                                        <input type="range" id="nuclear-slider" min="0" max="50" value="0"
+                                            class="w-full form-input thumb-nuclear">
+                                        <input type="number" id="nuclear-input" min="0" max="50" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="nuclear-unit">GW</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="biomass-slider" class="block text-md font-medium text-gray-700">New Biomass Capacity</label>
+                                    <label for="biomass-slider" class="block text-md font-medium text-gray-700">New
+                                        Biomass Capacity</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="biomass-slider" min="0" max="50" value="0" class="w-full form-input thumb-biomass">
-                                        <input type="number" id="biomass-input" min="0" max="50" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="biomass-unit">GW</span>
+                                        <input type="range" id="biomass-slider" min="0" max="50" value="0"
+                                            class="w-full form-input thumb-biomass">
+                                        <input type="number" id="biomass-input" min="0" max="50" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="biomass-unit">GW</span>
                                     </div>
                                 </div>
                                 <!-- NEW: RNG (Biogas) Slider -->
                                 <div>
-                                    <label for="rng-slider" class="block text-md font-medium text-gray-700">New RNG (Biogas) Capacity</label>
+                                    <label for="rng-slider" class="block text-md font-medium text-gray-700">New RNG
+                                        (Biogas) Capacity</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="rng-slider" min="0" max="50" value="0" class="w-full form-input thumb-rng">
-                                        <input type="number" id="rng-input" min="0" max="50" value="0" class="value-input">
+                                        <input type="range" id="rng-slider" min="0" max="50" value="0"
+                                            class="w-full form-input thumb-rng">
+                                        <input type="number" id="rng-input" min="0" max="50" value="0"
+                                            class="value-input">
                                         <span class="font-semibold text-gray-900 w-12 text-left" id="rng-unit">GW</span>
                                     </div>
                                 </div>
                                 <!-- NEW: Hydrogen Slider -->
                                 <div>
-                                    <label for="hydrogen-slider" class="block text-md font-medium text-gray-700">New Hydrogen Capacity</label>
+                                    <label for="hydrogen-slider" class="block text-md font-medium text-gray-700">New
+                                        Hydrogen Capacity</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="hydrogen-slider" min="0" max="50" value="0" class="w-full form-input thumb-hydrogen">
-                                        <input type="number" id="hydrogen-input" min="0" max="50" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="hydrogen-unit">GW</span>
+                                        <input type="range" id="hydrogen-slider" min="0" max="50" value="0"
+                                            class="w-full form-input thumb-hydrogen">
+                                        <input type="number" id="hydrogen-input" min="0" max="50" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="hydrogen-unit">GW</span>
                                     </div>
                                 </div>
                                 <div class="border-t border-gray-300 pt-6">
-                                    <label for="battery4hr-slider" class="block text-md font-medium text-gray-700">4-hr Battery Storage</label>
+                                    <label for="battery4hr-slider" class="block text-md font-medium text-gray-700">4-hr
+                                        Battery Storage</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="battery4hr-slider" min="0" max="200" value="0" class="w-full form-input thumb-storage">
-                                        <input type="number" id="battery4hr-input" min="0" max="200" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="battery4hr-unit">GWh</span>
+                                        <input type="range" id="battery4hr-slider" min="0" max="200" value="0"
+                                            class="w-full form-input thumb-storage">
+                                        <input type="number" id="battery4hr-input" min="0" max="200" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="battery4hr-unit">GWh</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="battery8hr-slider" class="block text-md font-medium text-gray-700">8-hr Battery Storage</label>
+                                    <label for="battery8hr-slider" class="block text-md font-medium text-gray-700">8-hr
+                                        Battery Storage</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="battery8hr-slider" min="0" max="200" value="0" class="w-full form-input thumb-storage">
-                                        <input type="number" id="battery8hr-input" min="0" max="200" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="battery8hr-unit">GWh</span>
+                                        <input type="range" id="battery8hr-slider" min="0" max="200" value="0"
+                                            class="w-full form-input thumb-storage">
+                                        <input type="number" id="battery8hr-input" min="0" max="200" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="battery8hr-unit">GWh</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="longduration-slider" class="block text-md font-medium text-gray-700">24-hr Long Duration Storage</label>
+                                    <label for="longduration-slider"
+                                        class="block text-md font-medium text-gray-700">24-hr Long Duration
+                                        Storage</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="longduration-slider" min="0" max="500" value="0" class="w-full form-input thumb-storage">
-                                        <input type="number" id="longduration-input" min="0" max="500" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="longduration-unit">GWh</span>
+                                        <input type="range" id="longduration-slider" min="0" max="500" value="0"
+                                            class="w-full form-input thumb-storage">
+                                        <input type="number" id="longduration-input" min="0" max="500" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="longduration-unit">GWh</span>
                                     </div>
                                 </div>
-                                 <div class="border-t border-gray-300 pt-6">
-                                    <label for="demandflex-slider" class="block text-md font-medium text-gray-700">Demand Flexibility</label>
+                                <div class="border-t border-gray-300 pt-6">
+                                    <label for="demandflex-slider"
+                                        class="block text-md font-medium text-gray-700">Demand Flexibility</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="demandflex-slider" min="0" max="25" value="0" class="w-full form-input thumb-neutral">
-                                        <input type="number" id="demandflex-input" min="0" max="25" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="demandflex-unit">%</span>
+                                        <input type="range" id="demandflex-slider" min="0" max="25" value="0"
+                                            class="w-full form-input thumb-neutral">
+                                        <input type="number" id="demandflex-input" min="0" max="25" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="demandflex-unit">%</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <div>
-                            <h2 class="text-2xl font-lora font-semibold mb-4 border-b border-t border-gray-300 pt-6 pb-4 text-gray-800">Government Incentives</h2>
+                            <h2
+                                class="text-2xl font-lora font-semibold mb-4 border-b border-t border-gray-300 pt-6 pb-4 text-gray-800">
+                                Government Incentives</h2>
                             <div class="space-y-6 pt-4">
                                 <!-- Incentive levers -->
                                 <div>
-                                    <label for="carbon-tax-slider" class="block text-sm font-medium text-gray-700">Carbon Tax</label>
+                                    <label for="carbon-tax-slider"
+                                        class="block text-sm font-medium text-gray-700">Carbon Tax</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="carbon-tax-slider" min="0" max="200" value="0" class="w-full form-input thumb-neutral">
-                                        <input type="number" id="carbon-tax-input" min="0" max="200" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="carbon-tax-unit">$/ton</span>
+                                        <input type="range" id="carbon-tax-slider" min="0" max="200" value="0"
+                                            class="w-full form-input thumb-neutral">
+                                        <input type="number" id="carbon-tax-input" min="0" max="200" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="carbon-tax-unit">$/ton</span>
                                     </div>
                                 </div>
-                                 <div>
-                                    <label for="export-price-slider" class="block text-sm font-medium text-gray-700">Export Price</label>
+                                <div>
+                                    <label for="export-price-slider"
+                                        class="block text-sm font-medium text-gray-700">Export Price</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="export-price-slider" min="-100" max="100" value="20" class="w-full form-input thumb-neutral">
-                                        <input type="number" id="export-price-input" min="-100" max="100" value="20" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="export-price-unit">$/MWh</span>
+                                        <input type="range" id="export-price-slider" min="-100" max="100" value="20"
+                                            class="w-full form-input thumb-neutral">
+                                        <input type="number" id="export-price-input" min="-100" max="100" value="20"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="export-price-unit">$/MWh</span>
                                     </div>
                                 </div>
                                 <div class="border-t border-gray-300 pt-6">
-                                    <label for="solar-incentive-slider" class="block text-sm font-medium text-gray-700">Solar (PTC)</label>
+                                    <label for="solar-incentive-slider"
+                                        class="block text-sm font-medium text-gray-700">Solar (PTC)</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="solar-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-solar">
-                                        <input type="number" id="solar-incentive-input" min="0" max="50" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="solar-incentive-unit">$/MWh</span>
+                                        <input type="range" id="solar-incentive-slider" min="0" max="50" value="0"
+                                            class="w-full form-input thumb-solar">
+                                        <input type="number" id="solar-incentive-input" min="0" max="50" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="solar-incentive-unit">$/MWh</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="wind-incentive-slider" class="block text-sm font-medium text-gray-700">Onshore Wind (PTC)</label>
+                                    <label for="wind-incentive-slider"
+                                        class="block text-sm font-medium text-gray-700">Onshore Wind (PTC)</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="wind-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-wind">
-                                        <input type="number" id="wind-incentive-input" min="0" max="50" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="wind-incentive-unit">$/MWh</span>
+                                        <input type="range" id="wind-incentive-slider" min="0" max="50" value="0"
+                                            class="w-full form-input thumb-wind">
+                                        <input type="number" id="wind-incentive-input" min="0" max="50" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="wind-incentive-unit">$/MWh</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="offshoreWind-incentive-slider" class="block text-sm font-medium text-gray-700">Offshore Wind (PTC)</label>
+                                    <label for="offshoreWind-incentive-slider"
+                                        class="block text-sm font-medium text-gray-700">Offshore Wind (PTC)</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="offshoreWind-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-offshoreWind">
-                                        <input type="number" id="offshoreWind-incentive-input" min="0" max="50" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="offshoreWind-incentive-unit">$/MWh</span>
-                                    </div>
-                                </div>
-                                 <div>
-                                    <label for="geothermal-incentive-slider" class="block text-sm font-medium text-gray-700">Geothermal (PTC)</label>
-                                    <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="geothermal-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-geothermal">
-                                        <input type="number" id="geothermal-incentive-input" min="0" max="50" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="geothermal-incentive-unit">$/MWh</span>
+                                        <input type="range" id="offshoreWind-incentive-slider" min="0" max="50"
+                                            value="0" class="w-full form-input thumb-offshoreWind">
+                                        <input type="number" id="offshoreWind-incentive-input" min="0" max="50"
+                                            value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="offshoreWind-incentive-unit">$/MWh</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="nuclear-incentive-slider" class="block text-sm font-medium text-gray-700">Nuclear (PTC)</label>
+                                    <label for="geothermal-incentive-slider"
+                                        class="block text-sm font-medium text-gray-700">Geothermal (PTC)</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="nuclear-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-nuclear">
-                                        <input type="number" id="nuclear-incentive-input" min="0" max="50" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="nuclear-incentive-unit">$/MWh</span>
+                                        <input type="range" id="geothermal-incentive-slider" min="0" max="50" value="0"
+                                            class="w-full form-input thumb-geothermal">
+                                        <input type="number" id="geothermal-incentive-input" min="0" max="50" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="geothermal-incentive-unit">$/MWh</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="biomass-incentive-slider" class="block text-sm font-medium text-gray-700">Biomass (PTC)</label>
+                                    <label for="nuclear-incentive-slider"
+                                        class="block text-sm font-medium text-gray-700">Nuclear (PTC)</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="biomass-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-biomass">
-                                        <input type="number" id="biomass-incentive-input" min="0" max="50" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="biomass-incentive-unit">$/MWh</span>
+                                        <input type="range" id="nuclear-incentive-slider" min="0" max="50" value="0"
+                                            class="w-full form-input thumb-nuclear">
+                                        <input type="number" id="nuclear-incentive-input" min="0" max="50" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="nuclear-incentive-unit">$/MWh</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="biomass-incentive-slider"
+                                        class="block text-sm font-medium text-gray-700">Biomass (PTC)</label>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="biomass-incentive-slider" min="0" max="50" value="0"
+                                            class="w-full form-input thumb-biomass">
+                                        <input type="number" id="biomass-incentive-input" min="0" max="50" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="biomass-incentive-unit">$/MWh</span>
                                     </div>
                                 </div>
                                 <!-- NEW: RNG (Biogas) Incentive Slider -->
                                 <div>
-                                    <label for="rng-incentive-slider" class="block text-sm font-medium text-gray-700">RNG (Biogas) (PTC)</label>
+                                    <label for="rng-incentive-slider"
+                                        class="block text-sm font-medium text-gray-700">RNG (Biogas) (PTC)</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="rng-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-rng">
-                                        <input type="number" id="rng-incentive-input" min="0" max="50" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="rng-incentive-unit">$/MWh</span>
+                                        <input type="range" id="rng-incentive-slider" min="0" max="50" value="0"
+                                            class="w-full form-input thumb-rng">
+                                        <input type="number" id="rng-incentive-input" min="0" max="50" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="rng-incentive-unit">$/MWh</span>
                                     </div>
                                 </div>
                                 <!-- NEW: Hydrogen Incentive Slider -->
                                 <div>
-                                    <label for="hydrogen-incentive-slider" class="block text-sm font-medium text-gray-700">Hydrogen (PTC)</label>
+                                    <label for="hydrogen-incentive-slider"
+                                        class="block text-sm font-medium text-gray-700">Hydrogen (PTC)</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="hydrogen-incentive-slider" min="0" max="50" value="0" class="w-full form-input thumb-hydrogen">
-                                        <input type="number" id="hydrogen-incentive-input" min="0" max="50" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="hydrogen-incentive-unit">$/MWh</span>
+                                        <input type="range" id="hydrogen-incentive-slider" min="0" max="50" value="0"
+                                            class="w-full form-input thumb-hydrogen">
+                                        <input type="number" id="hydrogen-incentive-input" min="0" max="50" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="hydrogen-incentive-unit">$/MWh</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="storage-incentive-slider" class="block text-sm font-medium text-gray-700">Storage (ITC)</label>
+                                    <label for="storage-incentive-slider"
+                                        class="block text-sm font-medium text-gray-700">Storage (ITC)</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="storage-incentive-slider" min="0" max="100" value="0" class="w-full form-input thumb-storage">
-                                        <input type="number" id="storage-incentive-input" min="0" max="100" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="storage-incentive-unit">$/kWh</span>
+                                        <input type="range" id="storage-incentive-slider" min="0" max="100" value="0"
+                                            class="w-full form-input thumb-storage">
+                                        <input type="number" id="storage-incentive-input" min="0" max="100" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="storage-incentive-unit">$/kWh</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="dac-incentive-slider" class="block text-sm font-medium text-gray-700">Direct Air Capture (45Q)</label>
+                                    <label for="dac-incentive-slider"
+                                        class="block text-sm font-medium text-gray-700">Direct Air Capture (45Q)</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="dac-incentive-slider" min="0" max="200" value="0" class="w-full form-input thumb-neutral">
-                                        <input type="number" id="dac-incentive-input" min="0" max="200" value="0" class="value-input">
-                                        <span class="font-semibold text-gray-900 w-12 text-left" id="dac-incentive-unit">$/ton</span>
+                                        <input type="range" id="dac-incentive-slider" min="0" max="200" value="0"
+                                            class="w-full form-input thumb-neutral">
+                                        <input type="number" id="dac-incentive-input" min="0" max="200" value="0"
+                                            class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left"
+                                            id="dac-incentive-unit">$/ton</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div class="border-t border-gray-300 pt-6">
-                            <label for="dac-slider" class="block text-md font-medium text-gray-700">Direct Air Capture Deployment</label>
+                            <label for="dac-slider" class="block text-md font-medium text-gray-700">Direct Air Capture
+                                Deployment</label>
                             <div class="flex items-center space-x-2 mt-2">
-                                <input type="range" id="dac-slider" min="0" max="10000" value="0" class="w-full form-input thumb-neutral">
+                                <input type="range" id="dac-slider" min="0" max="10000" value="0"
+                                    class="w-full form-input thumb-neutral">
                                 <input type="number" id="dac-input" min="0" max="10000" value="0" class="value-input">
                                 <span class="font-semibold text-gray-900 w-12 text-left" id="dac-unit">t/hr</span>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </main>
         </div>
+    </div>
+    </main>
+    </div>
     </div>
     <!-- Copyright Footer -->
     <footer class="container mx-auto p-4 mt-12 text-center border-t border-gray-200">
         <p class="text-sm text-gray-600">
-            © 2025 <a href="https://eshansingh.xyz" class="font-medium text-gray-800 hover:text-blue-600">Dr. Eshan Singh</a>. All rights reserved.
+            © 2025 <a href="https://eshansingh.xyz" class="font-medium text-gray-800 hover:text-blue-600">Dr. Eshan
+                Singh</a>. All rights reserved.
         </p>
         <p class="text-xs text-gray-500 mt-1">
-            For licensing inquiries: <a href="mailto:hello@eshansingh.xyz" class="text-blue-600 hover:text-blue-700 underline">hello@eshansingh.xyz</a>
+            For licensing inquiries: <a href="mailto:hello@eshansingh.xyz"
+                class="text-blue-600 hover:text-blue-700 underline">hello@eshansingh.xyz</a>
         </p>
-    </footer>    
+    </footer>
     <script type="module">
         // --- FIREBASE IMPORTS ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -652,15 +958,15 @@
 
         // --- HARDCODED FIREBASE CONFIGURATION ---
         const firebaseConfig = {
-          apiKey: "AIzaSyCdEeu0VugTfZD-R-62pFvBdb313TeM4xs",
-          authDomain: "grid-decarbonization.firebaseapp.com",
-          projectId: "grid-decarbonization",
-          storageBucket: "grid-decarbonization.appspot.com",
-          messagingSenderId: "902419724670",
-          appId: "1:902419724670:web:b636a75ea44325946a9b2f",
-          measurementId: "G-3Q9HE19CGN"
+            apiKey: "AIzaSyCdEeu0VugTfZD-R-62pFvBdb313TeM4xs",
+            authDomain: "grid-decarbonization.firebaseapp.com",
+            projectId: "grid-decarbonization",
+            storageBucket: "grid-decarbonization.appspot.com",
+            messagingSenderId: "902419724670",
+            appId: "1:902419724670:web:b636a75ea44325946a9b2f",
+            measurementId: "G-3Q9HE19CGN"
         };
-        
+
         // --- INITIALIZE FIREBASE & DEFINE KEY VARIABLES ---
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -669,155 +975,160 @@
 
         // --- MODEL PARAMETERS & DATA (GLOBAL SCOPE) ---
         const HOURS = Array.from({ length: 24 }, (_, i) => `${i}:00`);
-        
+
         const countryGridMixData = {
-            "California": { 
-                totalCapacityMW: 89223, 
+            "California": {
+                totalCapacityMW: 89223,
                 peakLoadsMW: { summer: 52061, winter: 47500, fall: 46000, spring: 41000 },
-                mix: { coal: 0.1, naturalGas: 43.4, hydro: 15.7, wind: 7.1, offshoreWind: 0, solar: 26.1, nuclear: 2.7, geothermal: 3.0, biomass: 1.0 , rng: 0.4},
+                mix: { coal: 0.1, naturalGas: 43.4, hydro: 15.7, wind: 7.1, offshoreWind: 0, solar: 26.1, nuclear: 2.7, geothermal: 3.0, biomass: 1.0, rng: 0.4 },
                 storageGWh: { battery4hr: 53.0 },
                 defaultExportPrice: -20
             },
-            "China": { 
-                totalCapacityMW: 3400000, 
+            "China": {
+                totalCapacityMW: 3400000,
                 peakLoadsMW: { summer: 1340000, winter: 1206000, fall: 1179200, spring: 1072000 },
-                mix: { coal: 40.0, naturalGas: 8.0, hydro: 12.5, wind: 14.0, offshoreWind: 1.6, solar: 20.0, nuclear: 2.5, geothermal: 0.1, biomass: 0.9 , rng: 0.4},
+                mix: { coal: 40.0, naturalGas: 8.0, hydro: 12.5, wind: 14.0, offshoreWind: 1.6, solar: 20.0, nuclear: 2.5, geothermal: 0.1, biomass: 0.9, rng: 0.4 },
                 storageGWh: { battery4hr: 222 }
             },
-            "United States": { 
-                totalCapacityMW: 1275000, 
+            "United States": {
+                totalCapacityMW: 1275000,
                 peakLoadsMW: { summer: 800000, winter: 720000, fall: 704000, spring: 640000 },
-                mix: { coal: 15.0, naturalGas: 48.0, hydro: 7.8, wind: 11.5, offshoreWind: 0.2, solar: 9.0, nuclear: 8.0, geothermal: 0.3, biomass: 0.8 , rng: 0.4},
+                mix: { coal: 15.0, naturalGas: 48.0, hydro: 7.8, wind: 11.5, offshoreWind: 0.2, solar: 9.0, nuclear: 8.0, geothermal: 0.3, biomass: 0.8, rng: 0.4 },
                 storageGWh: { battery4hr: 95 }
             },
-            "India": { 
-                totalCapacityMW: 476000, 
+            "India": {
+                totalCapacityMW: 476000,
                 peakLoadsMW: { summer: 243000, winter: 206550, fall: 213840, spring: 194400 },
-                mix: { coal: 50.0, naturalGas: 6.0, hydro: 10.0, wind: 9.5, offshoreWind: 0, solar: 18.0, nuclear: 1.8, geothermal: 0.0, biomass: 1.9 , rng: 0.8},
+                mix: { coal: 50.0, naturalGas: 6.0, hydro: 10.0, wind: 9.5, offshoreWind: 0, solar: 18.0, nuclear: 1.8, geothermal: 0.0, biomass: 1.9, rng: 0.8 },
                 storageGWh: { battery4hr: 1 }
             },
-            "Japan": { 
-                totalCapacityMW: 295000, 
+            "Japan": {
+                totalCapacityMW: 295000,
                 peakLoadsMW: { summer: 181000, winter: 162900, fall: 159280, spring: 144800 },
-                mix: { coal: 20.0, naturalGas: 35.0, hydro: 17.0, wind: 1.6, offshoreWind: 0.1, solar: 15.5, nuclear: 10.5, geothermal: 0.2, biomass: 1.1 , rng: 0.5},
+                mix: { coal: 20.0, naturalGas: 35.0, hydro: 17.0, wind: 1.6, offshoreWind: 0.1, solar: 15.5, nuclear: 10.5, geothermal: 0.2, biomass: 1.1, rng: 0.5 },
                 storageGWh: { battery4hr: 1.2 }
             },
-            "Russia": { 
-                totalCapacityMW: 248000, 
+            "Russia": {
+                totalCapacityMW: 248000,
                 peakLoadsMW: { winter: 160000, summer: 144000, fall: 140800, spring: 128000 },
-                mix: { coal: 15.0, naturalGas: 52.0, hydro: 20.0, wind: 0.9, offshoreWind: 0, solar: 0.8, nuclear: 11.3, geothermal: 0.0, biomass: 0.1 , rng: 0.1} 
+                mix: { coal: 15.0, naturalGas: 52.0, hydro: 20.0, wind: 0.9, offshoreWind: 0, solar: 0.8, nuclear: 11.3, geothermal: 0.0, biomass: 0.1, rng: 0.1 }
             },
-            "Brazil": { 
-                totalCapacityMW: 180000, 
+            "Brazil": {
+                totalCapacityMW: 180000,
                 peakLoadsMW: { summer: 101860, winter: 91674, fall: 89637, spring: 81488 },
-                mix: { coal: 2.0, naturalGas: 18.0, hydro: 59.0, wind: 10.5, offshoreWind: 0, solar: 9.5, nuclear: 1.0, geothermal: 0.0, biomass: 5.6 , rng: 2.4} 
+                mix: { coal: 2.0, naturalGas: 18.0, hydro: 59.0, wind: 10.5, offshoreWind: 0, solar: 9.5, nuclear: 1.0, geothermal: 0.0, biomass: 5.6, rng: 2.4 }
             },
-            "Germany": { 
-                totalCapacityMW: 210000, 
+            "Germany": {
+                totalCapacityMW: 210000,
                 peakLoadsMW: { winter: 84000, summer: 75600, fall: 73920, spring: 67200 },
-                mix: { coal: 14.0, naturalGas: 38.0, hydro: 4.0, wind: 22.0, offshoreWind: 4.0, solar: 12.0, nuclear: 5.0, geothermal: 0.0, biomass: 4.2 , rng: 1.8},
+                mix: { coal: 14.0, naturalGas: 38.0, hydro: 4.0, wind: 22.0, offshoreWind: 4.0, solar: 12.0, nuclear: 5.0, geothermal: 0.0, biomass: 4.2, rng: 1.8 },
                 storageGWh: { battery4hr: 22.1 }
             },
-            "Canada": { 
-                totalCapacityMW: 165000, 
+            "Canada": {
+                totalCapacityMW: 165000,
                 peakLoadsMW: { winter: 140000, summer: 126000, fall: 123200, spring: 112000 },
-                mix: { coal: 4.5, naturalGas: 13.5, hydro: 57.0, wind: 8.5, offshoreWind: 0, solar: 2.5, nuclear: 14.0, geothermal: 0.0, biomass: 1.4 , rng: 0.6},
+                mix: { coal: 4.5, naturalGas: 13.5, hydro: 57.0, wind: 8.5, offshoreWind: 0, solar: 2.5, nuclear: 14.0, geothermal: 0.0, biomass: 1.4, rng: 0.6 },
                 storageGWh: { battery4hr: 1 }
             },
-            "South Korea": { 
-                totalCapacityMW: 125000, 
+            "South Korea": {
+                totalCapacityMW: 125000,
                 peakLoadsMW: { summer: 93000, winter: 83700, fall: 81840, spring: 74400 },
-                mix: { coal: 34.0, naturalGas: 20.0, hydro: 5.0, wind: 1.4, offshoreWind: 0.1, solar: 12.5, nuclear: 27.0, geothermal: 0.0, biomass: 0.7 , rng: 0.3},
+                mix: { coal: 34.0, naturalGas: 20.0, hydro: 5.0, wind: 1.4, offshoreWind: 0.1, solar: 12.5, nuclear: 27.0, geothermal: 0.0, biomass: 0.7, rng: 0.3 },
                 storageGWh: { battery4hr: 9 }
             },
-            "France": { 
-                totalCapacityMW: 115000, 
+            "France": {
+                totalCapacityMW: 115000,
                 peakLoadsMW: { winter: 102000, summer: 91800, fall: 89760, spring: 81600 },
-                mix: { coal: 1.0, naturalGas: 10.0, hydro: 10.0, wind: 8.0, offshoreWind: 0.5, solar: 6.0, nuclear: 64.0, geothermal: 0.0, biomass: 0.3 , rng: 0.1},
+                mix: { coal: 1.0, naturalGas: 10.0, hydro: 10.0, wind: 8.0, offshoreWind: 0.5, solar: 6.0, nuclear: 64.0, geothermal: 0.0, biomass: 0.3, rng: 0.1 },
                 storageGWh: { battery4hr: 1.0 }
             },
-            "United Kingdom": { 
-                totalCapacityMW: 78000, 
+            "United Kingdom": {
+                totalCapacityMW: 78000,
                 peakLoadsMW: { winter: 60000, summer: 54000, fall: 52800, spring: 48000 },
-                mix: { coal: 1.0, naturalGas: 38.0, hydro: 2.0, wind: 15.0, offshoreWind: 14.0, solar: 19.0, nuclear: 9.0, geothermal: 0.0, biomass: 4.2 , rng: 1.8},
-                 storageGWh: { battery4hr: 16.0 }
+                mix: { coal: 1.0, naturalGas: 38.0, hydro: 2.0, wind: 15.0, offshoreWind: 14.0, solar: 19.0, nuclear: 9.0, geothermal: 0.0, biomass: 4.2, rng: 1.8 },
+                storageGWh: { battery4hr: 16.0 }
             },
-            "Australia": { 
-                totalCapacityMW: 65000, 
+            "Australia": {
+                totalCapacityMW: 65000,
                 peakLoadsMW: { summer: 47000, winter: 42300, fall: 41360, spring: 37600 },
-                mix: { coal: 45.0, naturalGas: 18.0, hydro: 13.0, wind: 10.0, offshoreWind: 0, solar: 13.0, nuclear: 0.0, geothermal: 0.0, biomass: 0.7 , rng: 0.3},
+                mix: { coal: 45.0, naturalGas: 18.0, hydro: 13.0, wind: 10.0, offshoreWind: 0, solar: 13.0, nuclear: 0.0, geothermal: 0.0, biomass: 0.7, rng: 0.3 },
                 storageGWh: { battery4hr: 5.6 }
             },
-            "Spain": { 
-                totalCapacityMW: 120000, 
+            "Spain": {
+                totalCapacityMW: 120000,
                 peakLoadsMW: { summer: 45000, winter: 40500, fall: 39600, spring: 36000 },
-                mix: { coal: 2.0, naturalGas: 22.0, hydro: 17.0, wind: 27.5, offshoreWind: 0, solar: 21.5, nuclear: 7.0, geothermal: 0.0, biomass: 1.0 , rng: 0.4},
+                mix: { coal: 2.0, naturalGas: 22.0, hydro: 17.0, wind: 27.5, offshoreWind: 0, solar: 21.5, nuclear: 7.0, geothermal: 0.0, biomass: 1.0, rng: 0.4 },
                 storageGWh: { battery4hr: 1.7 }
             },
-            "Italy": { 
-                totalCapacityMW: 122000, 
+            "Italy": {
+                totalCapacityMW: 122000,
                 peakLoadsMW: { summer: 60000, winter: 54000, fall: 52800, spring: 48000 },
-                mix: { coal: 4.0, naturalGas: 47.0, hydro: 18.0, wind: 10.0, offshoreWind: 0, solar: 19.0, nuclear: 0.0, geothermal: 1.0, biomass: 1.4 , rng: 0.6},
+                mix: { coal: 4.0, naturalGas: 47.0, hydro: 18.0, wind: 10.0, offshoreWind: 0, solar: 19.0, nuclear: 0.0, geothermal: 1.0, biomass: 1.4, rng: 0.6 },
                 storageGWh: { battery4hr: 6 }
             },
-            "Indonesia": { 
-                totalCapacityMW: 75000, 
+            "Indonesia": {
+                totalCapacityMW: 75000,
                 peakLoadsMW: { summer: 50000, winter: 45000, fall: 44000, spring: 40000 },
-                mix: { coal: 48.0, naturalGas: 28.0, hydro: 9.0, wind: 0.2, offshoreWind: 0, solar: 2.8, nuclear: 0.0, geothermal: 3.0, biomass: 0.7 , rng: 0.3} 
+                mix: { coal: 48.0, naturalGas: 28.0, hydro: 9.0, wind: 0.2, offshoreWind: 0, solar: 2.8, nuclear: 0.0, geothermal: 3.0, biomass: 0.7, rng: 0.3 }
             },
-            "South Africa": { 
-                totalCapacityMW: 60000, 
+            "South Africa": {
+                totalCapacityMW: 60000,
                 peakLoadsMW: { winter: 34000, summer: 30600, fall: 29920, spring: 27200 },
-                mix: { coal: 78.0, naturalGas: 6.0, hydro: 6.0, wind: 5.5, offshoreWind: 0, solar: 3.5, nuclear: 0.0, geothermal: 0.0, biomass: 0.3 , rng: 0.1},
+                mix: { coal: 78.0, naturalGas: 6.0, hydro: 6.0, wind: 5.5, offshoreWind: 0, solar: 3.5, nuclear: 0.0, geothermal: 0.0, biomass: 0.3, rng: 0.1 },
                 storageGWh: { battery4hr: 2 }
             },
-            "Mexico": { 
-                totalCapacityMW: 88000, 
+            "Mexico": {
+                totalCapacityMW: 88000,
                 peakLoadsMW: { summer: 50000, winter: 45000, fall: 44000, spring: 40000 },
-                mix: { coal: 5.0, naturalGas: 58.0, hydro: 15.0, wind: 9.0, offshoreWind: 0, solar: 11.0, nuclear: 1.0, geothermal: 1.0, biomass: 0.3 , rng: 0.1} ,
+                mix: { coal: 5.0, naturalGas: 58.0, hydro: 15.0, wind: 9.0, offshoreWind: 0, solar: 11.0, nuclear: 1.0, geothermal: 1.0, biomass: 0.3, rng: 0.1 },
                 storageGWh: { battery4hr: 0.6 }
             },
-            "Norway": { 
-                totalCapacityMW: 39000, 
+            "Norway": {
+                totalCapacityMW: 39000,
                 peakLoadsMW: { winter: 25000, summer: 22500, fall: 22000, spring: 20000 },
-                mix: { coal: 0.0, naturalGas: 0.0, hydro: 91.0, wind: 8.5, offshoreWind: 0, solar: 0.5, nuclear: 0.0, geothermal: 0.0, biomass: 0.0 , rng: 0.0} ,
+                mix: { coal: 0.0, naturalGas: 0.0, hydro: 91.0, wind: 8.5, offshoreWind: 0, solar: 0.5, nuclear: 0.0, geothermal: 0.0, biomass: 0.0, rng: 0.0 },
                 storageGWh: { battery4hr: 0.2 }
             },
-            "New Zealand": { 
-                totalCapacityMW: 9800, 
+            "New Zealand": {
+                totalCapacityMW: 9800,
                 peakLoadsMW: { winter: 7000, summer: 6300, fall: 6160, spring: 5600 },
-                mix: { coal: 0.0, naturalGas: 14.0, hydro: 56.0, wind: 7.5, offshoreWind: 0, solar: 1.5, nuclear: 0.0, geothermal: 20.0, biomass: 0.7 , rng: 0.3},
-                storageGWh: { battery4hr: 0.4 } 
+                mix: { coal: 0.0, naturalGas: 14.0, hydro: 56.0, wind: 7.5, offshoreWind: 0, solar: 1.5, nuclear: 0.0, geothermal: 20.0, biomass: 0.7, rng: 0.3 },
+                storageGWh: { battery4hr: 0.4 }
             },
-            "Vietnam": { 
-                totalCapacityMW: 80000, 
+            "Vietnam": {
+                totalCapacityMW: 80000,
                 peakLoadsMW: { summer: 45000, winter: 40500, fall: 39600, spring: 36000 },
-                mix: { coal: 32.0, naturalGas: 9.0, hydro: 28.0, wind: 6.0, offshoreWind: 0, solar: 24.0, nuclear: 0.0, geothermal: 0.0, biomass: 0.7 , rng: 0.3},
-                storageGWh: { battery4hr: 0.1 } 
+                mix: { coal: 32.0, naturalGas: 9.0, hydro: 28.0, wind: 6.0, offshoreWind: 0, solar: 24.0, nuclear: 0.0, geothermal: 0.0, biomass: 0.7, rng: 0.3 },
+                storageGWh: { battery4hr: 0.1 }
             }
         };
 
         const carbonTaxes = {
-            "California": 26, "Canada": 61, "China": 8, "France": 48, "Germany": 43, "Japan": 2, 
+            "California": 26, "Canada": 61, "China": 8, "France": 48, "Germany": 43, "Japan": 2,
             "South Korea": 22, "Spain": 16, "United Kingdom": 22, "South Africa": 9,
             "Mexico": 3, "Norway": 85, "New Zealand": 50
         };
+
+        // High-demand seasonal profiles (used for non-California countries)
         const SEASONAL_DEMAND_PROFILES = {
-            'spring-high':    [28, 26, 25, 24, 24, 25, 28, 32, 33, 32, 30, 28, 27, 28, 30, 34, 39, 45, 48, 46, 42, 38, 34, 30],
-            'summer-high':    [30, 28, 27, 26, 26, 27, 29, 33, 37, 40, 42, 44, 46, 48, 50, 52, 55, 56, 55, 52, 48, 43, 38, 33],
-            'fall-high':      [27, 25, 24, 23, 23, 24, 27, 31, 34, 36, 37, 38, 39, 40, 41, 43, 46, 50, 49, 46, 42, 37, 32, 29],
-            'winter-high':    [32, 30, 29, 29, 30, 34, 40, 45, 44, 42, 40, 39, 39, 40, 41, 43, 45, 46, 45, 42, 39, 36, 34, 32]
+            'spring-high': [28, 26, 25, 24, 24, 25, 28, 32, 33, 32, 30, 28, 27, 28, 30, 34, 39, 45, 48, 46, 42, 38, 34, 30],
+            'summer-high': [30, 28, 27, 26, 26, 27, 29, 33, 37, 40, 42, 44, 46, 48, 50, 52, 55, 56, 55, 52, 48, 43, 38, 33],
+            'fall-high': [27, 25, 24, 23, 23, 24, 27, 31, 34, 36, 37, 38, 39, 40, 41, 43, 46, 50, 49, 46, 42, 37, 32, 29],
+            'winter-high': [32, 30, 29, 29, 30, 34, 40, 45, 44, 42, 40, 39, 39, 40, 41, 43, 45, 46, 45, 42, 39, 36, 34, 32]
         };
-        
+
+        // California profiles loaded from JSON (populated during initialization)
+        let CALIFORNIA_PROFILES = {};
+
         // This object will hold the calculated POTENTIAL generation, not a pre-dispatched baseline.
-        let BASELINE_POTENTIAL_GENERATION = {}; 
+        let BASELINE_POTENTIAL_GENERATION = {};
         let currentCountryInstalledCapacity = {};
         let currentBaselineStorage = {};
         let dailyGenerationTotalsGWh = {}; // For tooltips
 
-        const SOLAR_CF_PROFILE = [0,0,0,0,0,0.05,0.15,0.3,0.5,0.7,0.8,0.85,0.9,0.85,0.8,0.7,0.3,0.05,0,0,0,0,0,0];
-        const WIND_CF_PROFILE = [0.4,0.42,0.45,0.46,0.45,0.4,0.35,0.3,0.25,0.2,0.2,0.2,0.25,0.3,0.35,0.4,0.5,0.6,0.65,0.6,0.55,0.5,0.45,0.4];
-        const OFFSHORE_WIND_CF_PROFILE = [0.55,0.56,0.57,0.58,0.58,0.57,0.55,0.52,0.5,0.48,0.47,0.46,0.47,0.48,0.5,0.52,0.55,0.6,0.62,0.61,0.6,0.58,0.57,0.56];
+        const SOLAR_CF_PROFILE = [0, 0, 0, 0, 0, 0.05, 0.15, 0.3, 0.5, 0.7, 0.8, 0.85, 0.9, 0.85, 0.8, 0.7, 0.3, 0.05, 0, 0, 0, 0, 0, 0];
+        const WIND_CF_PROFILE = [0.4, 0.42, 0.45, 0.46, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.2, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5, 0.6, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4];
+        const OFFSHORE_WIND_CF_PROFILE = [0.55, 0.56, 0.57, 0.58, 0.58, 0.57, 0.55, 0.52, 0.5, 0.48, 0.47, 0.46, 0.47, 0.48, 0.5, 0.52, 0.55, 0.6, 0.62, 0.61, 0.6, 0.58, 0.57, 0.56];
 
         const SEASONAL_HYDRO_CF = {
             spring: 0.50,
@@ -839,19 +1150,19 @@
                 offshoreWind: OFFSHORE_WIND_CF_PROFILE
             },
             "Germany": {
-                solar: [0,0,0,0,0,0.02,0.1,0.25,0.45,0.6,0.7,0.75,0.7,0.6,0.4,0.15,0.05,0,0,0,0,0,0,0],
-                wind: [0.5,0.52,0.55,0.56,0.55,0.5,0.45,0.4,0.35,0.3,0.3,0.3,0.35,0.4,0.45,0.5,0.6,0.7,0.75,0.7,0.65,0.6,0.55,0.5],
-                offshoreWind: [0.6,0.62,0.65,0.66,0.65,0.6,0.55,0.5,0.45,0.4,0.4,0.4,0.45,0.5,0.55,0.6,0.7,0.8,0.85,0.8,0.75,0.7,0.65,0.6]
+                solar: [0, 0, 0, 0, 0, 0.02, 0.1, 0.25, 0.45, 0.6, 0.7, 0.75, 0.7, 0.6, 0.4, 0.15, 0.05, 0, 0, 0, 0, 0, 0, 0],
+                wind: [0.5, 0.52, 0.55, 0.56, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.3, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.7, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5],
+                offshoreWind: [0.6, 0.62, 0.65, 0.66, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.4, 0.4, 0.45, 0.5, 0.55, 0.6, 0.7, 0.8, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6]
             },
             "United Kingdom": {
-                solar: [0,0,0,0,0,0.01,0.08,0.2,0.4,0.55,0.65,0.7,0.65,0.55,0.35,0.1,0.02,0,0,0,0,0,0,0],
-                wind: [0.6,0.62,0.65,0.68,0.66,0.6,0.55,0.5,0.45,0.4,0.4,0.4,0.45,0.5,0.55,0.6,0.7,0.8,0.85,0.8,0.75,0.7,0.65,0.6],
-                offshoreWind: [0.7,0.72,0.75,0.78,0.76,0.7,0.65,0.6,0.55,0.5,0.5,0.5,0.55,0.6,0.65,0.7,0.8,0.9,0.95,0.9,0.85,0.8,0.75,0.7]
+                solar: [0, 0, 0, 0, 0, 0.01, 0.08, 0.2, 0.4, 0.55, 0.65, 0.7, 0.65, 0.55, 0.35, 0.1, 0.02, 0, 0, 0, 0, 0, 0, 0],
+                wind: [0.6, 0.62, 0.65, 0.68, 0.66, 0.6, 0.55, 0.5, 0.45, 0.4, 0.4, 0.4, 0.45, 0.5, 0.55, 0.6, 0.7, 0.8, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6],
+                offshoreWind: [0.7, 0.72, 0.75, 0.78, 0.76, 0.7, 0.65, 0.6, 0.55, 0.5, 0.5, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.9, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7]
             },
             "Australia": {
-                solar: [0,0,0,0,0,0.08,0.2,0.4,0.6,0.8,0.9,0.95,0.9,0.8,0.6,0.3,0.1,0,0,0,0,0,0,0],
-                wind: [0.3,0.3,0.3,0.25,0.2,0.2,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.45,0.4,0.35,0.3,0.3,0.3,0.35,0.4,0.4,0.35,0.3],
-                offshoreWind: [0.4,0.4,0.4,0.35,0.3,0.3,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.55,0.5,0.45,0.4,0.4,0.4,0.45,0.5,0.5,0.45,0.4]
+                solar: [0, 0, 0, 0, 0, 0.08, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 0.9, 0.8, 0.6, 0.3, 0.1, 0, 0, 0, 0, 0, 0, 0],
+                wind: [0.3, 0.3, 0.3, 0.25, 0.2, 0.2, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.45, 0.4, 0.35, 0.3, 0.3, 0.3, 0.35, 0.4, 0.4, 0.35, 0.3],
+                offshoreWind: [0.4, 0.4, 0.4, 0.35, 0.3, 0.3, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.55, 0.5, 0.45, 0.4, 0.4, 0.4, 0.45, 0.5, 0.5, 0.45, 0.4]
             },
             "default": {
                 solar: SOLAR_CF_PROFILE,
@@ -860,7 +1171,7 @@
             }
         };
         const EMISSION_FACTORS = { naturalGas: 395, hydro: 0, nuclear: 0, solar: 0, wind: 0, offshoreWind: 0, geothermal: 0, coal: 850, biomass: 0, rng: 0, hydrogen: 0 };
-        
+
         const COST_DATA = {
             capex: {
                 solar: 1200, wind: 1500, offshoreWind: 5000, nuclear: 7242, geothermal: 3329, biomass: 3500, rng: 3000, hydrogen: 3500,
@@ -895,7 +1206,7 @@
             discount_rate: 0.07
         };
 
-        document.addEventListener('DOMContentLoaded', async function() {
+        document.addEventListener('DOMContentLoaded', async function () {
             setLogLevel('debug');
 
             // --- DOM ELEMENTS ---
@@ -944,7 +1255,7 @@
             const countrySelect = document.getElementById('country-select');
             const hoverTooltip = document.getElementById('hover-tooltip');
             const startTutorialBtn = document.getElementById('start-tutorial-btn');
-            
+
             const currentDemandProfileText = document.getElementById('current-demand-profile-text');
             const editDemandBtn = document.getElementById('edit-demand-btn');
             const confirmDemandBtn = document.getElementById('confirm-demand-btn');
@@ -971,7 +1282,7 @@
             let defaultCapacityMix = {};
             let defaultGenerationMix = {};
             let currentSystemDefaultProfileName = 'spring-typical';
-            
+
             let isDemandEditMode = false;
             let currentDemand = [...SEASONAL_DEMAND_PROFILES['spring-high']];
             let originalDemandBeforeEdit = [];
@@ -993,7 +1304,7 @@
             const marginalPriceCtx = document.getElementById('marginalPriceChart').getContext('2d'); // NEW
             const co2Ctx = document.getElementById('co2EmissionsChart').getContext('2d');
             const capacityFactorCtx = document.getElementById('capacityFactorChart').getContext('2d');
-            
+
             const COLORS = {
                 naturalGas: 'rgba(107, 114, 128, 0.8)', hydro: 'rgba(59, 130, 246, 0.8)',
                 nuclear: 'rgba(239, 68, 68, 0.8)', solar: 'rgba(251, 191, 36, 1)',
@@ -1040,7 +1351,7 @@
                 naturalGasToStorage: createPattern(COLORS.naturalGas, COLORS.storage),
                 biomassToStorage: createPattern(COLORS.biomass, COLORS.storage),
             };
-            
+
             const generationChartConfig = {
                 type: 'bar',
                 data: {
@@ -1067,21 +1378,21 @@
                 },
                 options: {
                     responsive: true, animation: { duration: 0 },
-                    plugins: { 
+                    plugins: {
                         tooltip: {
                             mode: 'index',
                             callbacks: {
-                                title: function(context) {
+                                title: function (context) {
                                     return context[0].label;
                                 },
-                                label: function(context) {
+                                label: function (context) {
                                     return ''; // We build the full tooltip in the footer
                                 },
-                                footer: function(tooltipItems) {
+                                footer: function (tooltipItems) {
                                     const totals = {};
                                     let stackTotal = 0;
 
-                                    tooltipItems.forEach(function(tooltipItem) {
+                                    tooltipItems.forEach(function (tooltipItem) {
                                         let label = tooltipItem.dataset.label;
                                         const value = tooltipItem.raw;
                                         if (value === 0) return;
@@ -1093,9 +1404,9 @@
                                         }
 
                                         totals[label] = (totals[label] || 0) + value;
-                                        
-                                        if(tooltipItem.dataset.type !== 'line') {
-                                           if (!label.includes('to Storage') && label !== 'Curtailment') {
+
+                                        if (tooltipItem.dataset.type !== 'line') {
+                                            if (!label.includes('to Storage') && label !== 'Curtailment') {
                                                 stackTotal += value;
                                             }
                                         }
@@ -1104,23 +1415,23 @@
                                     const lines = [];
                                     const tooltipOrder = ['Coal', 'Natural Gas', 'Hydro', 'Geothermal', 'Biomass', 'RNG (Biogas)', 'Hydrogen', 'Nuclear', 'Solar', 'Onshore Wind', 'Offshore Wind', 'Storage', 'Curtailment', 'Solar (to Storage)', 'Onshore Wind (to Storage)', 'Offshore Wind (to Storage)', 'Demand'];
                                     tooltipOrder.forEach(label => {
-                                        if (totals[label] > 0.01) { 
+                                        if (totals[label] > 0.01) {
                                             lines.push(`${label}: ${totals[label].toFixed(2)}`);
                                         }
                                     });
-                                    
-                                    if(stackTotal > 0) {
+
+                                    if (stackTotal > 0) {
                                         lines.push('------------------');
                                         lines.push(`Total Gen to Grid: ${stackTotal.toFixed(2)}`);
                                     }
                                     return lines;
                                 }
                             }
-                        }, 
-                        legend: { 
+                        },
+                        legend: {
                             position: 'bottom',
                             labels: {
-                                filter: function(legendItem) {
+                                filter: function (legendItem) {
                                     return !legendItem.text.includes('to Storage') && legendItem.text !== 'Demand';
                                 }
                             }
@@ -1151,10 +1462,10 @@
                 options: {
                     responsive: true, animation: { duration: 0 },
                     scales: {
-                         x: { title: { display: true, text: 'Hour of Day' } },
+                        x: { title: { display: true, text: 'Hour of Day' } },
                         y: { title: { display: true, text: 'Price ($/MWh)' } }
                     },
-                    plugins: { 
+                    plugins: {
                         legend: { display: true }
                     }
                 }
@@ -1172,10 +1483,10 @@
                 options: {
                     responsive: true, animation: { duration: 0 },
                     scales: {
-                         x: { title: { display: true, text: 'Hour of Day' } },
+                        x: { title: { display: true, text: 'Hour of Day' } },
                         y: { beginAtZero: true, title: { display: true, text: 'CO2 (Metric Tons)' } }
                     },
-                    plugins: { 
+                    plugins: {
                         legend: { display: false },
                         annotation: {
                             annotations: {
@@ -1183,8 +1494,8 @@
                                     type: 'label',
                                     content: 'Total Daily CO2: 0 tons',
                                     position: {
-                                      x: 'center',
-                                      y: 'top'
+                                        x: 'center',
+                                        y: 'top'
                                     },
                                     yAdjust: 10,
                                     backgroundColor: 'rgba(249, 250, 251, 0.85)',
@@ -1215,11 +1526,17 @@
                 },
                 options: {
                     responsive: true, animation: { duration: 0 },
-                    plugins: { 
+                    plugins: {
                         legend: { position: 'bottom' },
                         dragData: {
                             round: 2,
                             showTooltip: true,
+                            onDrag: (e, datasetIndex, index, value) => {
+                                // Enforce constraints DURING dragging for real-time feedback
+                                if (value < 0) return 0;
+                                if (value > 1) return 1;
+                                return value;
+                            },
                             onDragEnd: (e, datasetIndex, index, value) => {
                                 const chart = e.chart;
                                 let updatedValue = value;
@@ -1255,7 +1572,7 @@
                     if (!techData.lifetime[tech]) continue;
                     const n = techData.lifetime[tech];
                     const crf = (d * Math.pow(1 + d, n)) / (Math.pow(1 + d, n) - 1);
-                    
+
                     const baselineCapacityGW = baselineCapacity[tech] || 0;
                     const newCapacityGW = capacity[tech] || 0;
                     const totalCapacityKW = (baselineCapacityGW + newCapacityGW) * 1000000;
@@ -1263,7 +1580,7 @@
                     if (totalCapacityKW > 0) {
                         const annualized_capex = techData.capex[tech] * totalCapacityKW * crf;
                         const annual_fom = techData.fixed_om[tech] * totalCapacityKW;
-                        
+
                         const annual_generation_mwh = (generation[tech] || []).reduce((a, b) => a + b, 0) * 1000 * 365;
                         const annual_vom = techData.variable_om[tech] * annual_generation_mwh;
 
@@ -1275,7 +1592,7 @@
                         totalAnnualCost += annualized_capex + annual_fom + annual_vom - annual_ptc;
                     }
                 }
-                
+
                 // --- NEW: Natural Gas Cost Calculation ---
                 const baselineNGCapacityGW = baselineCapacity.naturalGas || 0;
                 const newNGCapacityGW = capacity.naturalGas || 0;
@@ -1286,7 +1603,7 @@
                     const crf = (d * Math.pow(1 + d, n)) / (Math.pow(1 + d, n) - 1);
                     const annualized_capex = COST_DATA.capex.naturalGas * totalNGCapacityKW * crf;
                     const annual_fom = COST_DATA.fixed_om.naturalGas * totalNGCapacityKW;
-                    
+
                     // The VOM for gas is now calculated based on the hourly dispatch cost
                     const annual_vom_ng = (gasGenDetails.ccgt.cost + gasGenDetails.ct.cost) * 365;
 
@@ -1304,7 +1621,7 @@
                         if (!COST_DATA.lifetime[type]) continue;
                         const n = COST_DATA.lifetime[type];
                         const crf = (d * Math.pow(1 + d, n)) / (Math.pow(1 + d, n) - 1);
-                        
+
                         let capex_per_kwh = COST_DATA.capex[type] - currentIncentives.storage;
                         const total_kwh = total_gwh * 1000000;
                         const duration = type === 'longduration' ? 24 : parseInt(type.match(/\d+/)[0]);
@@ -1312,14 +1629,14 @@
 
                         const annualized_capex = capex_per_kwh * total_kwh * crf;
                         const annual_fom = COST_DATA.fixed_om[type] * total_kw;
-                        
+
                         const annual_discharge_mwh = generation.storage.reduce((a, b) => a + b, 0) * 1000 * 365;
                         const annual_vom = COST_DATA.variable_om[type] * annual_discharge_mwh;
-                        
+
                         totalAnnualCost += annualized_capex + annual_fom + annual_vom;
                     }
                 }
-                
+
                 if (capacity.dac > 0) {
                     const annualDacCapacityTons = capacity.dac * 24 * 365;
                     const n = COST_DATA.lifetime.dac;
@@ -1332,7 +1649,7 @@
 
                     totalAnnualCost += (annualizedDacCapex + annualDacFom + dacVariableCost - dacIncentiveValue);
                 }
-                
+
                 const totalAnnualCO2 = calculateEmissions(generation, 0).reduce((a, b) => a + b, 0) * 365;
                 totalAnnualCost += totalAnnualCO2 * currentIncentives.carbonTax;
 
@@ -1341,7 +1658,7 @@
 
                 return totalAnnualCost;
             }
-            
+
             // NEW: Function to calculate consumer cost based on marginal price
             function calculateAnnualConsumerCost(hourlyMarginalPrice, demand) {
                 let totalCost = 0;
@@ -1365,7 +1682,7 @@
                     storage: Array(24).fill(0), curtailment: Array(24).fill(0),
                     solarToStorage: Array(24).fill(0), windToStorage: Array(24).fill(0), offshoreWindToStorage: Array(24).fill(0)
                 };
-                
+
                 let curtailmentBySource = { solar: Array(24).fill(0), wind: Array(24).fill(0), offshoreWind: Array(24).fill(0) };
 
                 let modifiedDemand = [...currentDemand];
@@ -1410,28 +1727,36 @@
                     let vreAndInflexibleGen = 0;
                     [...INFLEXIBLE_SOURCES, ...VRE_SOURCES].forEach(tech => {
                         const potential = currentPotential[tech][i];
-                        finalGeneration[tech][i] = potential; 
+                        finalGeneration[tech][i] = potential;
                         vreAndInflexibleGen += potential;
                     });
                     netLoad[i] = modifiedDemand[i] - vreAndInflexibleGen;
                 }
-                
+
                 if (!storageOverrideDisabled) {
                     const storageDispatch = dispatchStorageEconomically(netLoad, inputs, baselineStorageGWh, currentPotential);
                     finalGeneration.storage = storageDispatch.discharge;
-                    
+
                     for (let i = 0; i < 24; i++) {
                         netLoad[i] += storageDispatch.charge[i];
                         netLoad[i] -= storageDispatch.discharge[i];
-                        
+
                         // FIX 1: Subtract charged amount from VRE sources for correct visual accounting
                         if (storageDispatch.charge[i] > 0) {
                             let totalVrePotential = finalGeneration.solar[i] + finalGeneration.wind[i] + finalGeneration.offshoreWind[i];
                             if (totalVrePotential > 0) {
-                                let solarCharge = (finalGeneration.solar[i] / totalVrePotential) * storageDispatch.charge[i];
-                                let windCharge = (finalGeneration.wind[i] / totalVrePotential) * storageDispatch.charge[i];
-                                let offshoreCharge = (finalGeneration.offshoreWind[i] / totalVrePotential) * storageDispatch.charge[i];
-                                
+                                // Cap the VRE charge to what's actually available from VRE sources
+                                const vreChargeAmount = Math.min(storageDispatch.charge[i], totalVrePotential);
+
+                                let solarCharge = (finalGeneration.solar[i] / totalVrePotential) * vreChargeAmount;
+                                let windCharge = (finalGeneration.wind[i] / totalVrePotential) * vreChargeAmount;
+                                let offshoreCharge = (finalGeneration.offshoreWind[i] / totalVrePotential) * vreChargeAmount;
+
+                                // Ensure we don't subtract more than available from each source
+                                solarCharge = Math.min(solarCharge, finalGeneration.solar[i]);
+                                windCharge = Math.min(windCharge, finalGeneration.wind[i]);
+                                offshoreCharge = Math.min(offshoreCharge, finalGeneration.offshoreWind[i]);
+
                                 finalGeneration.solarToStorage[i] = solarCharge;
                                 finalGeneration.windToStorage[i] = windCharge;
                                 finalGeneration.offshoreWindToStorage[i] = offshoreCharge;
@@ -1443,29 +1768,30 @@
                         }
                     }
                 }
-                
+
                 for (let i = 0; i < 24; i++) {
                     if (netLoad[i] < 0) {
                         finalGeneration.curtailment[i] = -netLoad[i];
+
+                        // Only curtail VRE sources (NOT inflexible baseload)
                         let availableForCurtailment = 0;
-                        [...INFLEXIBLE_SOURCES, ...VRE_SOURCES].forEach(tech => {
+                        VRE_SOURCES.forEach(tech => {
                             availableForCurtailment += finalGeneration[tech][i];
                         });
-                         if (availableForCurtailment > 0) {
-                            [...INFLEXIBLE_SOURCES, ...VRE_SOURCES].forEach(tech => {
+
+                        if (availableForCurtailment > 0) {
+                            VRE_SOURCES.forEach(tech => {
                                 const proportion = finalGeneration[tech][i] / availableForCurtailment;
-                                const reduction = finalGeneration.curtailment[i] * proportion;
-                                if (curtailmentBySource.hasOwnProperty(tech)) {
-                                    curtailmentBySource[tech][i] += reduction;
-                                }                                
+                                const reduction = Math.min(finalGeneration.curtailment[i] * proportion, finalGeneration[tech][i]);
+                                curtailmentBySource[tech][i] += reduction;
                                 finalGeneration[tech][i] -= reduction;
                             });
                         }
                         netLoad[i] = 0;
                     }
                 }
-                
-                
+
+
                 const totalDailyHydroEnergy = hydroCapacity * hydroCF * 24;
                 const baseloadHydroEnergy = totalDailyHydroEnergy * 0.40;
                 let flexibleHydroEnergy = totalDailyHydroEnergy * 0.60;
@@ -1497,11 +1823,11 @@
                     netLoad[maxPriorityHour] -= hydroToDispatch;
                     flexibleHydroEnergy -= hydroToDispatch;
                 }
-                
+
                 const { gasGenDetails, hourlyMarginalPrice, thermalGeneration } = calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential);
                 finalGeneration.naturalGas = thermalGeneration.naturalGas;
                 finalGeneration.coal = thermalGeneration.coal;
-                
+
                 // FIX 2: Override price with export price during curtailment hours
                 for (let i = 0; i < 24; i++) {
                     if (finalGeneration.curtailment[i] > 0.01) {
@@ -1511,22 +1837,22 @@
 
                 const newEmissions = calculateEmissions(finalGeneration, inputs.capacity.dac);
                 const newSystemCost = calculateTotalAnnualSystemCost(finalGeneration, inputs.capacity, inputs.incentives, finalGeneration.curtailment, currentCountryInstalledCapacity, baselineStorageGWh, gasGenDetails);
-                
+
                 return {
                     generation: finalGeneration,
                     emissions: newEmissions,
                     systemCost: newSystemCost,
                     demand: modifiedDemand,
                     curtailmentBySource: curtailmentBySource,
-                    hourlyMarginalPrice: hourlyMarginalPrice 
+                    hourlyMarginalPrice: hourlyMarginalPrice
                 };
             }
-            
+
             function calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential) {
                 const gasGenDetails = { ccgt: { generation: 0, cost: 0 }, ct: { generation: 0, cost: 0 } };
                 const hourlyMarginalPrice = Array(24).fill(0);
                 const thermalGeneration = { naturalGas: Array(24).fill(0), coal: Array(24).fill(0) };
-                
+
                 const totalNGCapacity = (currentCountryInstalledCapacity.naturalGas || 0) + (inputs.capacity.naturalGas || 0);
                 const ccgtCapacity = totalNGCapacity * 0.7;
                 const ctCapacity = totalNGCapacity * 0.3;
@@ -1567,7 +1893,7 @@
                             gasGenDetails.ct.cost += ctToDispatch * 1000 * avgCost;
                         }
                     }
-                    
+
                     if (remainingLoad > 0.01 && currentPotential.coal[i] > 0) {
                         const coalToDispatch = Math.min(remainingLoad, currentPotential.coal[i]);
                         thermalGeneration.coal[i] += coalToDispatch;
@@ -1612,7 +1938,7 @@
 
                 while (true) {
                     const { hourlyMarginalPrice } = calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential);
-                    
+
                     let maxPrice = -Infinity, minPrice = Infinity;
                     let maxPriceHour = -1, minPriceHour = -1;
 
@@ -1645,14 +1971,14 @@
                     const dispatchAmount = Math.min(DISPATCH_INCREMENT, chargeHeadroom, dischargeHeadroom, energyHeadroom);
 
                     if (dispatchAmount < 0.01) {
-                        break; 
+                        break;
                     }
 
                     const chargeAmount = dispatchAmount / storageEfficiency;
                     hourlyCharge[minPriceHour] += chargeAmount;
                     hourlyDischarge[maxPriceHour] += dispatchAmount;
                     totalChargedGWh += chargeAmount;
-                    
+
                     netLoad[minPriceHour] += chargeAmount;
                     netLoad[maxPriceHour] -= dispatchAmount;
                 }
@@ -1666,12 +1992,12 @@
                 for (const key in sliders) {
                     currentValues[key] = parseFloat(sliders[key].value);
                 }
-                
+
                 const selectedCountry = countrySelect.value;
                 const baseSolarProfile = (countryProfiles[selectedCountry] || countryProfiles.default).solar;
                 const baseWindProfile = (countryProfiles[selectedCountry] || countryProfiles.default).wind;
                 const baseOffshoreWindProfile = (countryProfiles[selectedCountry] || countryProfiles.default).offshoreWind;
-                
+
                 const baseSeason = currentDemandProfileName.split(' ')[0].toLowerCase();
                 const seasonalMultipliers = SEASONAL_MULTIPLIERS[baseSeason] || { solar: 1.0, wind: 1.0, offshoreWind: 1.0 };
                 const seasonalSolarProfile = currentSolarCFProfile.length > 0 ? currentSolarCFProfile : baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
@@ -1685,7 +2011,7 @@
                         activePotentialGeneration[tech] = Array(24).fill(0);
                     }
                 }
-                
+
                 const inputsForSim = {
                     capacity: {
                         solar: currentValues.solar, wind: currentValues.wind, offshoreWind: currentValues.offshoreWind,
@@ -1719,14 +2045,14 @@
                 );
 
                 const totalDailyCO2 = result.emissions.reduce((a, b) => a + b, 0);
-                
+
                 const newConsumerCost = calculateAnnualConsumerCost(result.hourlyMarginalPrice, result.demand);
-                const totalAnnualDemandMWh = result.demand.reduce((a,b) => a+b, 0) * 1000 * 365;
+                const totalAnnualDemandMWh = result.demand.reduce((a, b) => a + b, 0) * 1000 * 365;
                 const newAvgMarginalPrice = totalAnnualDemandMWh > 0 ? newConsumerCost / totalAnnualDemandMWh : 0;
 
-                const baselineTotalAnnualDemandMWh = currentDemand.reduce((a,b) => a+b, 0) * 1000 * 365;
+                const baselineTotalAnnualDemandMWh = currentDemand.reduce((a, b) => a + b, 0) * 1000 * 365;
                 const baselineAvgMarginalPrice = baselineTotalAnnualDemandMWh > 0 ? customBaselineConsumerCost / baselineTotalAnnualDemandMWh : 0;
-                
+
                 const billPercentageChange = baselineAvgMarginalPrice > 0 ? ((newAvgMarginalPrice - baselineAvgMarginalPrice) / baselineAvgMarginalPrice) * 100 : 0;
 
                 const newTotalAnnualCO2 = result.emissions.reduce((a, b) => a + b, 0) * 365;
@@ -1743,14 +2069,14 @@
                 updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile, result.hourlyMarginalPrice, resultWithoutStorage.hourlyMarginalPrice);
                 updateGridMixSlider(currentCountryInstalledCapacity, defaultCapacityMix);
                 updateGenerationMixSlider(result.generation, defaultGenerationMix, result.curtailmentBySource);
-                
+
                 billImpactEl.textContent = `${billPercentageChange > 0 ? '+' : ''}${billPercentageChange.toFixed(0)}%`;
                 systemCostImpactEl.textContent = `${systemCostPercentageChange > 0 ? '+' : ''}${systemCostPercentageChange.toFixed(0)}%`;
 
                 // Update colors based on positive/negative change
                 [billImpactEl, systemCostImpactEl].forEach((el, index) => {
                     const change = index === 0 ? billPercentageChange : systemCostPercentageChange;
-                    if(change > 0) {
+                    if (change > 0) {
                         el.className = 'text-5xl font-bold text-red-600 mt-2';
                     } else if (change < 0) {
                         el.className = 'text-5xl font-bold text-green-600 mt-2';
@@ -1768,7 +2094,7 @@
                     co2AvoidedEl.className = 'text-md font-medium text-gray-700';
                 } else {
                     const co2AvoidedPercent = baselineDailyCO2 > 0 ? (dailyCO2Avoided / baselineDailyCO2) * 100 : 0;
-                    let text = `CO2 avoided: ${dailyCO2Avoided.toLocaleString('en-US', {maximumFractionDigits: 0})} tons (${co2AvoidedPercent.toFixed(0)}%)`;
+                    let text = `CO2 avoided: ${dailyCO2Avoided.toLocaleString('en-US', { maximumFractionDigits: 0 })} tons (${co2AvoidedPercent.toFixed(0)}%)`;
                     if (co2Avoided > 0) {
                         text += ` at $${abatementCost.toFixed(0)}/ton`;
                     }
@@ -1776,7 +2102,7 @@
                     co2AvoidedEl.className = dailyCO2Avoided > 0 ? 'text-md font-medium text-green-600' : 'text-md font-medium text-red-600';
                 }
             }
-            
+
             function calculateEmissions(generation, dacRate) {
                 const co2 = [];
                 for (let i = 0; i < 24; i++) {
@@ -1808,14 +2134,14 @@
                 chartData[16].data = demand;
 
                 generationChart.update('none');
-                
+
                 // NEW: Update marginal price chart
                 marginalPriceChart.data.datasets[0].data = hourlyMarginalPrice;
                 marginalPriceChart.data.datasets[1].data = priceWithoutStorage;
                 marginalPriceChart.update('none');
 
                 co2Chart.data.datasets[0].data = emissions;
-                co2Chart.options.plugins.annotation.annotations.totalCO2.content = `Total Daily CO2: ${totalCO2.toLocaleString(undefined, {maximumFractionDigits: 0})} tons`;
+                co2Chart.options.plugins.annotation.annotations.totalCO2.content = `Total Daily CO2: ${totalCO2.toLocaleString(undefined, { maximumFractionDigits: 0 })} tons`;
                 co2Chart.update('none');
 
                 capacityFactorChart.data.datasets[0].data = solarProfile;
@@ -1946,7 +2272,7 @@
                 storageTypes.forEach(type => {
                     const wrapper = document.createElement('div');
                     wrapper.className = 'grid grid-cols-6 gap-2 items-center';
-                    
+
                     const checkboxContainer = document.createElement('div');
                     checkboxContainer.className = "flex items-center justify-center";
                     const checkbox = document.createElement('input');
@@ -2004,11 +2330,11 @@
                             outlineEl.style.width = `${defaultMix[tech]}%`;
                         }
                     });
-                } else { 
-                     gridTechs.forEach(tech => {
+                } else {
+                    gridTechs.forEach(tech => {
                         const fillEl = document.getElementById(`gen-mix-fill-${tech}`);
                         const valueEl = document.getElementById(`gen-mix-value-${tech}`);
-                        if(fillEl && valueEl) {
+                        if (fillEl && valueEl) {
                             fillEl.style.width = '0%';
                             valueEl.textContent = '0.0%';
                         }
@@ -2017,27 +2343,27 @@
 
                 const curtailmentTrack = document.getElementById('gen-mix-track-curtailment');
                 const curtailmentValue = document.getElementById('gen-mix-value-curtailment');
-                curtailmentTrack.innerHTML = ''; 
+                curtailmentTrack.innerHTML = '';
 
                 let totalCurtailed = (generation.curtailment || []).reduce((a, b) => a + b, 0);
                 dailyGenerationTotalsGWh['curtailment'] = totalCurtailed;
-                let totalPotentialGeneration = totalGeneration + totalCurtailed + (generation.solarToStorage || []).reduce((a,b)=>a+b,0) + (generation.windToStorage || []).reduce((a,b)=>a+b,0) + (generation.offshoreWindToStorage || []).reduce((a,b)=>a+b,0);
-                
+                let totalPotentialGeneration = totalGeneration + totalCurtailed + (generation.solarToStorage || []).reduce((a, b) => a + b, 0) + (generation.windToStorage || []).reduce((a, b) => a + b, 0) + (generation.offshoreWindToStorage || []).reduce((a, b) => a + b, 0);
+
                 if (totalPotentialGeneration > 0) {
                     const overallCurtailmentPercent = (totalCurtailed / totalPotentialGeneration) * 100;
                     curtailmentValue.textContent = `${overallCurtailmentPercent.toFixed(1)}%`;
 
                     if (totalCurtailed > 0) {
-                        const solarCurtail = (curtailmentBySource.solar || []).reduce((a,b)=>a+b,0) || 0;
-                        const windCurtail = (curtailmentBySource.wind || []).reduce((a,b)=>a+b,0) || 0;
-                        const offshoreWindCurtail = (curtailmentBySource.offshoreWind || []).reduce((a,b)=>a+b,0) || 0;
+                        const solarCurtail = (curtailmentBySource.solar || []).reduce((a, b) => a + b, 0) || 0;
+                        const windCurtail = (curtailmentBySource.wind || []).reduce((a, b) => a + b, 0) || 0;
+                        const offshoreWindCurtail = (curtailmentBySource.offshoreWind || []).reduce((a, b) => a + b, 0) || 0;
 
-                        const techWithCurtailment = [{tech: 'solar', val: solarCurtail}, {tech: 'wind', val: windCurtail}, {tech: 'offshoreWind', val: offshoreWindCurtail}];
+                        const techWithCurtailment = [{ tech: 'solar', val: solarCurtail }, { tech: 'wind', val: windCurtail }, { tech: 'offshoreWind', val: offshoreWindCurtail }];
 
                         techWithCurtailment.forEach(item => {
-                             if (item.val > 0) {
+                            if (item.val > 0) {
                                 const contributionPercent = (item.val / totalCurtailed);
-                                const segmentWidth = 100 * contributionPercent; 
+                                const segmentWidth = 100 * contributionPercent;
 
                                 const segment = document.createElement('div');
                                 segment.className = 'h-full';
@@ -2126,6 +2452,25 @@
                 generationMixSlidersContainer.appendChild(wrapper);
             }
 
+            // --- HELPER: Calculate minimum demand based on inflexible baseload ---
+            function calculateMinimumDemand() {
+                const INFLEXIBLE_SOURCES = ['nuclear', 'geothermal', 'biomass', 'rng', 'hydrogen'];
+                const currentValues = {};
+                for (const key in sliders) {
+                    currentValues[key] = parseFloat(sliders[key].value);
+                }
+
+                let minDemand = 0;
+                INFLEXIBLE_SOURCES.forEach(tech => {
+                    const baselineCapacity = currentCountryInstalledCapacity[tech] || 0;
+                    const newCapacity = currentValues[tech] || 0;
+                    const totalCapacity = baselineCapacity + newCapacity;
+                    const cf = COST_DATA.capacity_factor[tech] || 0;
+                    minDemand += totalCapacity * cf;
+                });
+                return minDemand;
+            }
+
             // --- DEMAND EDIT MODE ---
             function setDemandEditMode(enabled) {
                 isDemandEditMode = enabled;
@@ -2160,7 +2505,36 @@
                     generationChart.options.plugins.dragData = {
                         round: 1,
                         showTooltip: true,
-                        onDragEnd: function(e, datasetIndex, index, value) {
+                        onDrag: function (e, datasetIndex, index, value) {
+                            // Enforce constraints DURING dragging for real-time feedback
+                            const minDemand = calculateMinimumDemand();
+
+                            if (value < minDemand) {
+                                return minDemand;
+                            }
+                            if (value < 0) {
+                                return 0;
+                            }
+                            return value;
+                        },
+                        onDragEnd: function (e, datasetIndex, index, value) {
+                            const chart = e.chart;
+                            let updatedValue = value;
+
+                            // Calculate minimum demand based on inflexible baseload
+                            const minDemand = calculateMinimumDemand();
+
+                            // Enforce minimum demand constraint
+                            if (updatedValue < minDemand) {
+                                updatedValue = minDemand;
+                            }
+
+                            // Enforce non-negative constraint
+                            if (updatedValue < 0) {
+                                updatedValue = 0;
+                            }
+
+                            chart.data.datasets[datasetIndex].data[index] = updatedValue;
                             generationChart.update('none');
                         }
                     };
@@ -2195,7 +2569,7 @@
             // --- CF EDIT MODE ---
             function setCFEditMode(enabled) {
                 isCFEditMode = enabled;
-                
+
                 if (enabled) {
                     editCFBtn.classList.add('hidden');
                     confirmCFBtn.classList.remove('hidden');
@@ -2222,7 +2596,7 @@
                     confirmCFBtn.classList.add('hidden');
                     revertCFBtn.classList.add('hidden');
                     cfPresetsDiv.classList.add('hidden');
-                    
+
                     capacityFactorChart.data.datasets.forEach(dataset => {
                         dataset.pointRadius = 0;
                         dataset.dragData = false;
@@ -2230,14 +2604,14 @@
                 }
                 capacityFactorChart.update();
             }
-            
+
             // --- NEW: Function to set the baseline from the current state ---
             function setNewBaselineFromCurrentState() {
                 const currentValues = {};
                 for (const key in sliders) {
                     currentValues[key] = parseFloat(sliders[key].value);
                 }
-                
+
                 let activePotentialGeneration = JSON.parse(JSON.stringify(BASELINE_POTENTIAL_GENERATION));
                 for (const tech in enabledTechnologies) {
                     if (!enabledTechnologies[tech]) {
@@ -2272,7 +2646,7 @@
                     currentHydroCF,
                     countrySelect.value
                 );
-                
+
                 customBaselineSystemCost = newBaselineResult.systemCost;
                 customBaselineConsumerCost = calculateAnnualConsumerCost(newBaselineResult.hourlyMarginalPrice, newBaselineResult.demand);
                 customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
@@ -2303,7 +2677,7 @@
                 historyIndex++;
                 updateUndoRedoButtons();
             }
-            
+
             function syncInputs(sourceElement, targetElement) {
                 targetElement.value = sourceElement.value;
             }
@@ -2315,12 +2689,12 @@
 
                     // --- MODIFICATION: Special handling for carbon tax ---
                     if (key === 'carbonTax') {
-                         slider.addEventListener('input', () => {
+                        slider.addEventListener('input', () => {
                             syncInputs(slider, input);
                             setNewBaselineFromCurrentState(); // Recalculate baseline on change
                             runSimulation();
                         });
-                        
+
                         input.addEventListener('input', () => {
                             let value = parseFloat(input.value);
                             const min = parseFloat(slider.min);
@@ -2339,7 +2713,7 @@
                             syncInputs(slider, input);
                             runSimulation();
                         });
-                        
+
                         input.addEventListener('input', () => {
                             let value = parseFloat(input.value);
                             const min = parseFloat(slider.min);
@@ -2379,8 +2753,8 @@
                 currentCFProfileName = cfProfileDisplayName;
                 currentCFProfileText.textContent = currentCFProfileName;
 
-                updateBaselineForCountry(countrySelect.value, profileName); 
-                
+                updateBaselineForCountry(countrySelect.value, profileName);
+
                 setDemandEditMode(false);
                 setCFEditMode(false);
                 saveState();
@@ -2404,9 +2778,9 @@
                 runSimulation();
                 saveState();
             });
-            
+
             const demandProfiles = [
-                'spring-typical', 'spring-high', 'summer-typical', 'summer-high', 
+                'spring-typical', 'spring-high', 'summer-typical', 'summer-high',
                 'fall-typical', 'fall-high', 'winter-typical', 'winter-high'
             ];
             demandProfiles.forEach(profile => {
@@ -2439,7 +2813,7 @@
                 currentOffshoreWindCFProfile = [...capacityFactorChart.data.datasets[2].data];
                 currentCFProfileName = "User Defined";
                 currentCFProfileText.textContent = currentCFProfileName;
-                
+
                 const lastDemandProfile = currentDemandProfileName.toLowerCase().replace(' ', '-');
                 updateBaselineForCountry(countrySelect.value, lastDemandProfile);
 
@@ -2452,8 +2826,8 @@
             resetToZeroButton.addEventListener('click', () => {
                 Object.keys(sliders).forEach(key => {
                     if (key === 'exportPrice') {
-                         sliders[key].value = 20;
-                         inputs[key].value = 20;
+                        sliders[key].value = 20;
+                        inputs[key].value = 20;
                     } else {
                         sliders[key].value = 0;
                         inputs[key].value = 0;
@@ -2462,7 +2836,7 @@
                 runSimulation();
                 saveState();
             });
-            
+
             makeDefaultButton.addEventListener('click', () => {
                 userDefaultState = {};
                 for (const key in sliders) {
@@ -2478,12 +2852,12 @@
                 userDefaultState.hydroCF = currentHydroCF;
 
                 setNewBaselineFromCurrentState(); // Use the new function
-                
+
                 userDefaultState.baselineCost = customBaselineSystemCost;
                 userDefaultState.baselineCO2 = customBaselineTotalAnnualCO2;
 
                 runSimulation();
-                
+
                 const modal = document.createElement('div');
                 modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50';
                 modal.innerHTML = `
@@ -2549,7 +2923,7 @@
                     restoreState(stateHistory[historyIndex]);
                 }
             });
-            
+
             // --- INITIALIZATION & DYNAMIC CONTENT ---
 
             function populateCountryDropdown() {
@@ -2559,7 +2933,7 @@
                 caOption.textContent = "California";
                 countrySelect.appendChild(caOption);
 
-                for(const country in countryGridMixData) {
+                for (const country in countryGridMixData) {
                     if (country !== "California") {
                         const option = document.createElement('option');
                         option.value = country;
@@ -2570,19 +2944,15 @@
                 countrySelect.value = "California";
             }
 
-            function updateBaselineForCountry(countryName, profileName) { 
-                const TYPICAL_DAY_SCALING_FACTORS = {
-                    summer: 0.82, fall: 0.77, winter: 0.73, spring: 0.79
-                };
-
+            function updateBaselineForCountry(countryName, profileName) {
                 let newCarbonTax = 0;
                 let countryData = countryGridMixData[countryName];
-                
+
                 if (!countryData) {
                     console.error(`No data for country: ${countryName}`);
                     return;
                 }
-                
+
                 newCarbonTax = carbonTaxes[countryName] || 0;
 
                 const nameParts = profileName.split('-');
@@ -2590,30 +2960,38 @@
                 const profileType = nameParts[1];
 
                 if (currentDemandProfileName !== 'User Defined') {
-                    const baseProfile = SEASONAL_DEMAND_PROFILES[`${baseSeason}-high`];
-                    const basePeak = Math.max(...baseProfile);
-                    
-                    const countryHighPeakMW = countryData.peakLoadsMW[baseSeason];
-                    let targetPeakGW = countryHighPeakMW / 1000;
+                    // For California, use JSON profiles directly (same calculation as Grid Dispatch Test)
+                    if (countryName === 'California' && CALIFORNIA_PROFILES[profileName]) {
+                        const profile = CALIFORNIA_PROFILES[profileName];
+                        const peakMW = profile.peakMW;
+                        const hourlyPercentages = profile.hourlyPercentages;
 
-                    if (profileType === 'typical') {
-                        targetPeakGW *= TYPICAL_DAY_SCALING_FACTORS[baseSeason];
+                        // Match tester's calculation: (pct / 100) * peakMW, then convert to GW
+                        currentDemand = hourlyPercentages.map(pct => (pct / 100) * (peakMW / 1000));
+                    } else {
+                        // For other countries, use scaling approach
+                        const TYPICAL_DAY_SCALING_FACTORS = {
+                            spring: 0.79, summer: 0.82, fall: 0.77, winter: 0.73
+                        };
+
+                        const hourlyPercentages = SEASONAL_DEMAND_PROFILES[profileName] || SEASONAL_DEMAND_PROFILES[`${baseSeason}-high`];
+                        const scalingFactor = profileType === 'typical' ? TYPICAL_DAY_SCALING_FACTORS[baseSeason] || 1.0 : 1.0;
+                        const peakLoadMW = countryData.peakLoadsMW[baseSeason] || countryData.peakLoadsMW.summer;
+                        const peakPercentage = Math.max(...hourlyPercentages);
+                        currentDemand = hourlyPercentages.map(pct => (pct / peakPercentage) * (peakLoadMW / 1000) * scalingFactor);
                     }
-
-                    const finalScalingFactor = targetPeakGW / basePeak;
-                    currentDemand = baseProfile.map(val => val * finalScalingFactor);
                 }
-                
+
                 currentCountryInstalledCapacity = {};
-                for(const tech in COST_DATA.capacity_factor) {
+                for (const tech in COST_DATA.capacity_factor) {
                     const techCapacityGW = (countryData.totalCapacityMW / 1000) * ((countryData.mix[tech] || 0) / 100);
                     currentCountryInstalledCapacity[tech] = techCapacityGW;
                 }
-                
+
                 currentBaselineStorage = countryData.storageGWh || {};
 
                 const potentialGeneration = {};
-                for(const tech in currentCountryInstalledCapacity) {
+                for (const tech in currentCountryInstalledCapacity) {
                     potentialGeneration[tech] = Array(24).fill(0);
                     const cf = COST_DATA.capacity_factor[tech];
                     let capacity = currentCountryInstalledCapacity[tech];
@@ -2638,20 +3016,20 @@
                     sliders[key].value = 0;
                     inputs[key].value = 0;
                 });
-                
+
                 sliders.carbonTax.value = newCarbonTax;
                 inputs.carbonTax.value = newCarbonTax;
 
                 const newExportPrice = countryData.defaultExportPrice ?? 20;
                 sliders.exportPrice.value = newExportPrice;
                 inputs.exportPrice.value = newExportPrice;
-                
+
                 const allTechs = [...Object.keys(COST_DATA.capacity_factor), 'battery4hr', 'battery8hr', 'longduration'];
                 allTechs.forEach(tech => {
                     const checkbox = document.getElementById(`toggle-${tech}`);
-                    if(checkbox) {
-                       checkbox.checked = true;
-                       enabledTechnologies[tech] = true;
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        enabledTechnologies[tech] = true;
                     }
                 });
 
@@ -2671,14 +3049,14 @@
                 customBaselineSystemCost = baselineResult.systemCost;
                 customBaselineConsumerCost = calculateAnnualConsumerCost(baselineResult.hourlyMarginalPrice, baselineResult.demand); // NEW
                 customBaselineTotalAnnualCO2 = baselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
-                
+
                 systemDefaultState = {};
                 for (const key in sliders) {
                     systemDefaultState[key] = sliders[key].value;
                 }
                 systemDefaultState.enabledTech = { ...enabledTechnologies };
                 userDefaultState = {};
-                
+
                 let totalDefaultCapacity = 0;
                 for (const tech in currentCountryInstalledCapacity) {
                     defaultCapacityMix[tech] = currentCountryInstalledCapacity[tech];
@@ -2699,7 +3077,7 @@
                         totalDefaultGeneration += gen;
                     }
                 }
-                 if (totalDefaultGeneration > 0) {
+                if (totalDefaultGeneration > 0) {
                     for (const tech in defaultGenerationMix) {
                         defaultGenerationMix[tech] = (defaultGenerationMix[tech] / totalDefaultGeneration) * 100;
                     }
@@ -2710,7 +3088,7 @@
             countrySelect.addEventListener('change', (e) => {
                 applySeason(currentSystemDefaultProfileName);
             });
-            
+
             document.addEventListener('mousemove', (e) => {
                 hoverTooltip.style.left = e.pageX + 15 + 'px';
                 hoverTooltip.style.top = e.pageY + 15 + 'px';
@@ -2732,7 +3110,7 @@
             gridMixSlidersContainer.addEventListener('mouseout', () => {
                 hoverTooltip.classList.add('hidden');
             });
-            
+
             generationMixSlidersContainer.addEventListener('mouseover', (e) => {
                 const row = e.target.closest('.mix-slider-row');
                 if (!row) return;
@@ -2744,7 +3122,7 @@
                 hoverTooltip.innerHTML = `${label}: ${totalGWh.toFixed(2)} GWh`;
                 hoverTooltip.classList.remove('hidden');
             });
-             generationMixSlidersContainer.addEventListener('mouseout', () => {
+            generationMixSlidersContainer.addEventListener('mouseout', () => {
                 hoverTooltip.classList.add('hidden');
             });
 
@@ -2835,7 +3213,7 @@
                 }
                 localStorage.setItem('gridSimulatorTutorialSeen', 'true');
             }
-            
+
             function positionPopover(targetElement, popoverEl, position) {
                 popoverEl.style.visibility = 'hidden';
                 popoverEl.style.display = 'block';
@@ -2917,12 +3295,12 @@
                     if (step.highlightClass) {
                         highlightedElement.classList.add(step.highlightClass);
                     }
-                    
+
                     highlightedElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
 
                     setTimeout(() => {
                         positionPopover(highlightedElement, popover, step.position);
-                    }, 400); 
+                    }, 400);
                 } else {
                     overlay.style.display = 'block';
                     positionPopover(null, popover, 'center');
@@ -2943,15 +3321,154 @@
             });
 
             skipBtn.addEventListener('click', endTutorial);
-            
+
             startTutorialBtn.addEventListener('click', () => {
                 localStorage.removeItem('gridSimulatorTutorialSeen');
                 startTutorial();
             });
 
+            // --- TEST RENEWABLE FUTURE BUTTON ---
+            const testRenewableFutureBtn = document.getElementById('test-renewable-future-btn');
+            testRenewableFutureBtn.addEventListener('click', () => {
+                // Show confirmation dialog
+                const confirmModal = document.createElement('div');
+                confirmModal.className = 'fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50';
+                confirmModal.innerHTML = `
+                    <div class="bg-white p-8 rounded-lg shadow-2xl max-w-lg mx-4">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Ready to Test Your Renewable Future?</h3>
+                        <p class="text-gray-600 mb-6">Have you added renewable capacity by moving the Policy levers?</p>
+                        <div class="flex flex-col sm:flex-row gap-3 justify-end">
+                            <button id="stay-planner-btn" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors">
+                                No, Let me modify my Installed Capacity
+                            </button>
+                            <button id="proceed-tester-btn" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors">
+                                Yes, Let me Test it Out
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(confirmModal);
+
+                // Handle "Stay on planner" button
+                document.getElementById('stay-planner-btn').addEventListener('click', () => {
+                    confirmModal.remove();
+                });
+
+                // Handle "Proceed to tester" button
+                document.getElementById('proceed-tester-btn').addEventListener('click', () => {
+                    confirmModal.remove();
+                    proceedToTester();
+                });
+            });
+
+            // Function to handle the actual navigation to tester
+            function proceedToTester() {
+                // Generate demand curves for all seasons for the selected country
+                const allSeasonalDemands = {};
+                const selectedCountryName = countrySelect.value;
+                const countryData = countryGridMixData[selectedCountryName];
+
+                if (selectedCountryName === 'California' && CALIFORNIA_PROFILES) {
+                    // For California, use the JSON profiles
+                    for (const [profileKey, profile] of Object.entries(CALIFORNIA_PROFILES)) {
+                        const peakMW = profile.peakMW;
+                        const hourlyPercentages = profile.hourlyPercentages;
+                        allSeasonalDemands[profileKey] = hourlyPercentages.map(pct => (pct / 100) * peakMW);
+                    }
+                } else if (countryData) {
+                    // For other countries, generate all seasonal profiles
+                    const TYPICAL_DAY_SCALING_FACTORS = {
+                        spring: 0.79, summer: 0.82, fall: 0.77, winter: 0.73
+                    };
+
+                    const seasons = ['spring', 'summer', 'fall', 'winter'];
+                    const profileTypes = ['typical', 'high'];
+
+                    for (const season of seasons) {
+                        for (const profileType of profileTypes) {
+                            const profileKey = `${season}-${profileType}`;
+                            const hourlyPercentages = SEASONAL_DEMAND_PROFILES[profileKey] || SEASONAL_DEMAND_PROFILES[`${season}-high`];
+                            const scalingFactor = profileType === 'typical' ? (TYPICAL_DAY_SCALING_FACTORS[season] || 1.0) : 1.0;
+                            const peakLoadMW = countryData.peakLoadsMW[season] || countryData.peakLoadsMW.summer;
+                            const peakPercentage = Math.max(...hourlyPercentages);
+                            allSeasonalDemands[profileKey] = hourlyPercentages.map(pct =>
+                                (pct / peakPercentage) * peakLoadMW * scalingFactor
+                            );
+                        }
+                    }
+                }
+
+                // Capture all installed capacities (baseline + new)
+                const capacityData = {
+                    // Get country name and baseline capacity
+                    country: selectedCountryName,
+                    // Baseline capacities from selected country
+                    baseline: currentCountryInstalledCapacity,
+                    // New capacities from sliders (in GW)
+                    newCapacity: {
+                        solar: parseFloat(sliders.solar.value),
+                        wind: parseFloat(sliders.wind.value),
+                        offshoreWind: parseFloat(sliders.offshoreWind.value),
+                        geothermal: parseFloat(sliders.geothermal.value),
+                        nuclear: parseFloat(sliders.nuclear.value),
+                        biomass: parseFloat(sliders.biomass.value),
+                        rng: parseFloat(sliders.rng.value),
+                        hydrogen: parseFloat(sliders.hydrogen.value)
+                    },
+                    // Total capacities (baseline + new) in MW
+                    totalCapacityMW: {},
+                    // Storage capacities (baseline + new) in GWh
+                    storage: {
+                        battery4hr: (currentBaselineStorage.battery4hr || 0) + parseFloat(sliders.battery4hr.value),
+                        battery8hr: (currentBaselineStorage.battery8hr || 0) + parseFloat(sliders.battery8hr.value),
+                        longduration: (currentBaselineStorage.longduration || 0) + parseFloat(sliders.longduration.value)
+                    },
+                    // Seasonal profile information
+                    season: currentCFProfileName.toLowerCase(),
+                    demandProfile: currentDemandProfileName.toLowerCase().replace(' ', '-'),
+                    // Custom demand profile data (hourly MW values, used if profile doesn't exist in presets)
+                    // Convert from GW to MW and ensure we have valid data
+                    customDemandData: currentDemand.map(d => d * 1000), // Convert GW to MW
+                    // All seasonal demand curves for this country (in MW)
+                    allSeasonalDemands: allSeasonalDemands,
+                    // Capacity factors
+                    solarCF: currentSolarCFProfile.length > 0 ? currentSolarCFProfile : null,
+                    windCF: currentWindCFProfile.length > 0 ? currentWindCFProfile : null,
+                    offshoreWindCF: currentOffshoreWindCFProfile.length > 0 ? currentOffshoreWindCFProfile : null,
+                    // Daily generation percentages (to determine if gas generators should be shown)
+                    dailyGenerationPercent: {
+                        naturalGas: dailyGenerationTotalsGWh.naturalGas || 0
+                    }
+                };
+
+                // Calculate total capacities in MW
+                for (const tech in currentCountryInstalledCapacity) {
+                    const baseline = currentCountryInstalledCapacity[tech] || 0;
+                    const newCap = capacityData.newCapacity[tech] || 0;
+                    capacityData.totalCapacityMW[tech] = (baseline + newCap) * 1000; // Convert GW to MW
+                }
+
+                // Store in localStorage
+                localStorage.setItem('gridDispatchCapacities', JSON.stringify(capacityData));
+
+                // Navigate to the dispatch test page
+                window.location.href = '../grid-dispatch-test/index.html';
+            }
+
 
             // --- MAIN INITIALIZATION FUNCTION ---
             async function initialize() {
+                // Load California seasonal profiles from JSON
+                try {
+                    const response = await fetch('../grid-operator/seasonal_profiles.json');
+                    const profilesData = await response.json();
+                    CALIFORNIA_PROFILES = profilesData.california.profiles;
+                    console.log('Loaded California profiles from JSON:', Object.keys(CALIFORNIA_PROFILES));
+                } catch (error) {
+                    console.error('Error loading California profiles from JSON:', error);
+                    console.log('Falling back to scaling method for California');
+                }
+
                 try {
                     await signInAnonymously(auth);
                     console.log("Firebase authentication successful.");
@@ -2984,7 +3501,7 @@
                 populateCountryDropdown();
                 applySeason('spring-typical');
                 setupInputSyncing();
-                
+
                 setTimeout(startTutorial, 500);
             }
 
@@ -2992,16 +3509,5 @@
         });
     </script>
 </body>
+
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
