@@ -746,7 +746,15 @@
                                     <div>150 MW/unit • <span id="hydrogenMaxUnits">15</span> units max</div>
                                     <div class="text-indigo-600 font-medium">Startup: 45 min</div>
                                     <div class="text-indigo-600 font-medium">Min Load: 20%</div>
-                                    <div class="text-gray-600 font-medium">Cost: $540+$5/150MW</div>
+                                    <div class="text-gray-600 font-medium">Cost: $<span id="hydrogenCostDisplay">540</span>+$5/150MW</div>
+                                </div>
+                                <div class="mt-2">
+                                    <select id="hydrogenFuelCost" class="px-2 py-1 text-xs font-medium text-indigo-700 bg-white border border-indigo-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                        <option value="3">3 $/kg H₂</option>
+                                        <option value="4">4 $/kg H₂</option>
+                                        <option value="5">5 $/kg H₂</option>
+                                        <option value="6" selected>6 $/kg H₂</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
