@@ -2057,7 +2057,7 @@ function createChart() {
                                     return null;
                                 }
 
-                                return `${dataset.label}: ${value.toFixed(2)} MW`;
+                                return `${dataset.label}: ${Math.round(value)} MW`;
                             }
 
                             // Default behavior for edit mode and past/current game time
@@ -2066,7 +2066,7 @@ function createChart() {
                                 label += ': ';
                             }
                             if (context.parsed.y !== null) {
-                                label += context.parsed.y.toFixed(2) + ' MW';
+                                label += Math.round(context.parsed.y) + ' MW';
                             }
                             return label;
                         }
@@ -3597,7 +3597,19 @@ function createDeltaHistoryChart() {
                 },
                 tooltip: {
                     mode: 'index',
-                    intersect: false
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += Math.round(context.parsed.y) + ' MW';
+                            }
+                            return label;
+                        }
+                    }
                 }
             }
         }
@@ -4488,7 +4500,19 @@ function createSchedulerChart() {
                 },
                 tooltip: {
                     mode: 'index',
-                    intersect: false
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += Math.round(context.parsed.y) + ' MW';
+                            }
+                            return label;
+                        }
+                    }
                 }
             },
             scales: {
@@ -4880,7 +4904,7 @@ function updateResourcePanelValues() {
 
     // Calculate total scheduled generation MW at this tick
     const totalMW = (ccgtOnline * CCGT_UNIT_SIZE_MW) + (ctOnline * CT_UNIT_SIZE_MW) + batteryMW + hydroMW + calculateRNGMW(rngOnline) + calculateHydrogenMW(hydrogenOnline);
-    totalScheduledMWSpan.textContent = totalMW.toLocaleString();
+    totalScheduledMWSpan.textContent = Math.round(totalMW).toLocaleString();
 
     // Add visual indicators showing current scheduled values
     const ccgtLabel = document.querySelector('[data-action="commit_ccgt"]').closest('.p-3').querySelector('label');
@@ -4903,13 +4927,13 @@ function updateResourcePanelValues() {
     }
 
     if (batteryMW !== 0) {
-        batteryLabel.innerHTML = `🔋 Battery <span class="text-xs text-green-600 font-semibold">(${batteryMW} MW scheduled)</span>`;
+        batteryLabel.innerHTML = `🔋 Battery <span class="text-xs text-green-600 font-semibold">(${Math.round(batteryMW)} MW scheduled)</span>`;
     } else {
         batteryLabel.innerHTML = '🔋 Battery';
     }
 
     if (hydroMW !== 0) {
-        hydroLabel.innerHTML = `💧 Hydro <span class="text-xs text-cyan-600 font-semibold">(${hydroMW} MW scheduled)</span>`;
+        hydroLabel.innerHTML = `💧 Hydro <span class="text-xs text-cyan-600 font-semibold">(${Math.round(hydroMW)} MW scheduled)</span>`;
     } else {
         hydroLabel.innerHTML = '💧 Hydro';
     }
@@ -5267,7 +5291,7 @@ function updateUpcomingEventsList(currentTick) {
             if (data.count > 0) {
                 return `${eventIcons[action]} ${eventNames[action]} ${data.count}x`;
             } else if (data.value !== 0) {
-                return `${eventIcons[action]} ${eventNames[action]} ${data.value}MW`;
+                return `${eventIcons[action]} ${eventNames[action]} ${Math.round(data.value)}MW`;
             }
             return '';
         }).filter(s => s).join(', ');
@@ -5275,7 +5299,7 @@ function updateUpcomingEventsList(currentTick) {
         // Format MW impact
         const impactColor = totalMWImpact >= 0 ? 'text-green-600' : 'text-red-600';
         const impactSign = totalMWImpact >= 0 ? '+' : '';
-        const impactText = `${impactSign}${totalMWImpact.toLocaleString()} MW`;
+        const impactText = `${impactSign}${Math.round(totalMWImpact).toLocaleString()} MW`;
 
         return `
             <div class="px-2 py-2 bg-gray-50 rounded border-l-4 border-purple-400">
@@ -5351,11 +5375,11 @@ function updateNextEventTicker(currentTick) {
         else if (nextEvent.action === 'commit_hydrogen') mwImpact = nextEvent.count * HYDROGEN_UNIT_SIZE_MW;
         else if (nextEvent.action === 'shutdown_hydrogen') mwImpact = -nextEvent.count * HYDROGEN_UNIT_SIZE_MW;
     } else if (nextEvent.value !== undefined) {
-        details = `${nextEvent.value}MW`;
+        details = `${Math.round(nextEvent.value)}MW`;
         mwImpact = nextEvent.value;
     }
 
-    const mwText = mwImpact !== 0 ? ` (${mwImpact >= 0 ? '+' : ''}${mwImpact.toLocaleString()} MW)` : '';
+    const mwText = mwImpact !== 0 ? ` (${mwImpact >= 0 ? '+' : ''}${Math.round(mwImpact).toLocaleString()} MW)` : '';
 
     nextEventText.innerHTML = `${eventIcons[nextEvent.action]} ${eventNames[nextEvent.action]} ${details} @ ${nextEvent.time}${mwText}`;
     nextEventTicker.classList.remove('hidden');
