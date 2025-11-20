@@ -323,7 +323,7 @@ const CT_MIN_LOAD_PERCENT = 0; // 0% minimum - can run at any level
 const CT_STARTUP_TIME_MIN = 15; // 10-20 min, using midpoint
 const CT_RAMP_RATE_MW_PER_MIN = 25; // 20-30 MW/min per unit
 
-// RNG (Biogas) Unit Constants
+// RNG Unit Constants
 const RNG_UNIT_SIZE_MW = 100;
 let RNG_MAX_UNITS = 20; // Will be dynamically calculated based on planner capacity
 const RNG_MIN_LOAD_PERCENT = 0.3; // 30% minimum stable load
@@ -377,6 +377,32 @@ function initializeUnitArrays() {
     for (let i = 0; i < HYDROGEN_MAX_UNITS; i++) {
         hydrogenUnits.push({ state: 'offline', startupTicksRemaining: 0, outputMW: 0 });
     }
+}
+
+// Helper function to calculate actual MW for a given number of RNG units (accounts for fractional last unit)
+function calculateRNGMW(unitCount) {
+    if (unitCount === 0) return 0;
+    const totalInstalledCapacityMW = capacities.rng || 0;
+    const fractionalAmount = totalInstalledCapacityMW % RNG_UNIT_SIZE_MW;
+
+    if (fractionalAmount > 0 && unitCount === RNG_MAX_UNITS) {
+        // Last unit is fractional
+        return (unitCount - 1) * RNG_UNIT_SIZE_MW + fractionalAmount;
+    }
+    return unitCount * RNG_UNIT_SIZE_MW;
+}
+
+// Helper function to calculate actual MW for a given number of Hydrogen units (accounts for fractional last unit)
+function calculateHydrogenMW(unitCount) {
+    if (unitCount === 0) return 0;
+    const totalInstalledCapacityMW = capacities.hydrogen || 0;
+    const fractionalAmount = totalInstalledCapacityMW % HYDROGEN_UNIT_SIZE_MW;
+
+    if (fractionalAmount > 0 && unitCount === HYDROGEN_MAX_UNITS) {
+        // Last unit is fractional
+        return (unitCount - 1) * HYDROGEN_UNIT_SIZE_MW + fractionalAmount;
+    }
+    return unitCount * HYDROGEN_UNIT_SIZE_MW;
 }
 
 // --- UNIT DISPATCH FUNCTIONS ---
@@ -1790,7 +1816,7 @@ function createChart() {
                     order: 4
                 },
                 {
-                    label: 'RNG (Biogas)',
+                    label: 'RNG',
                     type: 'line',
                     data: [],
                     borderColor: 'rgba(132, 204, 22, 1)',
@@ -2125,7 +2151,7 @@ function updateChartData() {
     myChart.data.datasets[7].data = []; // Battery
     myChart.data.datasets[8].data = []; // CCGT
     myChart.data.datasets[9].data = []; // CT
-    myChart.data.datasets[10].data = []; // RNG (Biogas)
+    myChart.data.datasets[10].data = []; // RNG
     myChart.data.datasets[11].data = []; // Hydrogen
     myChart.data.datasets[12].data = []; // Hydro
     myChart.data.datasets[13].data = []; // Solar Curtailment
@@ -2482,7 +2508,7 @@ function updateSupplyValues() {
             myChart.data.datasets[7].data[0] = battery;  // Battery
             myChart.data.datasets[8].data[0] = ccgt;     // CCGT
             myChart.data.datasets[9].data[0] = ct;       // CT
-            myChart.data.datasets[10].data[0] = rngMW;  // RNG (Biogas)
+            myChart.data.datasets[10].data[0] = rngMW;  // RNG
             myChart.data.datasets[11].data[0] = hydrogenMW;  // Hydrogen
             myChart.data.datasets[12].data[0] = hydro;   // Hydro
             myChart.data.datasets[13].data[0] = -solarCurtailment;   // Solar Curtailment (negative)
@@ -3105,7 +3131,7 @@ function gameLoop() {
     myChart.data.datasets[9].data.push(batteryMW);  // Battery
     myChart.data.datasets[10].data.push(ccgtMW);     // CCGT
     myChart.data.datasets[11].data.push(ctMW);       // CT
-    myChart.data.datasets[12].data.push(rngMW);     // RNG (Biogas)
+    myChart.data.datasets[12].data.push(rngMW);     // RNG
     myChart.data.datasets[13].data.push(hydrogenMW); // Hydrogen
     myChart.data.datasets[14].data.push(hydroMW);   // Hydro
     myChart.data.datasets[15].data.push(-solarCurtailmentMW);   // Solar Curtailment (negative)
@@ -3485,7 +3511,7 @@ function resetGame() {
         myChart.data.datasets[9].data = []; // Battery
         myChart.data.datasets[10].data = []; // CCGT
         myChart.data.datasets[11].data = []; // CT
-        myChart.data.datasets[12].data = []; // RNG (Biogas)
+        myChart.data.datasets[12].data = []; // RNG
         myChart.data.datasets[13].data = []; // Hydrogen
         myChart.data.datasets[14].data = []; // Hydro
         myChart.data.datasets[15].data = []; // Solar Curtailment
@@ -3495,7 +3521,7 @@ function resetGame() {
         myChart.data.datasets[7].data = []; // Battery
         myChart.data.datasets[8].data = []; // CCGT
         myChart.data.datasets[9].data = []; // CT
-        myChart.data.datasets[10].data = []; // RNG (Biogas)
+        myChart.data.datasets[10].data = []; // RNG
         myChart.data.datasets[11].data = []; // Hydrogen
         myChart.data.datasets[12].data = []; // Hydro
         myChart.data.datasets[13].data = []; // Solar Curtailment
@@ -3509,7 +3535,7 @@ function resetGame() {
     myChart.data.datasets[7].data = []; // Battery
     myChart.data.datasets[8].data = []; // CCGT
     myChart.data.datasets[9].data = []; // CT
-    myChart.data.datasets[10].data = []; // RNG (Biogas)
+    myChart.data.datasets[10].data = []; // RNG
     myChart.data.datasets[11].data = []; // Hydrogen
     myChart.data.datasets[12].data = []; // Hydro
     myChart.data.datasets[13].data = []; // Solar Curtailment
@@ -4425,9 +4451,9 @@ function createSchedulerChart() {
                     stepped: true,
                     stack: 'generation'
                 },
-                // RNG (Biogas) scheduled generation dataset
+                // RNG scheduled generation dataset
                 {
-                    label: 'RNG (Biogas)',
+                    label: 'RNG',
                     data: Array(289).fill(0),
                     borderColor: 'rgba(132, 204, 22, 1)',
                     backgroundColor: 'rgba(132, 204, 22, 0.3)',
@@ -4599,6 +4625,22 @@ function addScheduledEvent(action) {
             eventData.count = 1; // Always shutdown 1 unit per click
             break;
         case 'commit_rng':
+            // Check if we can commit another RNG unit
+            {
+                let currentRNGOnline = 0;
+                scheduledEvents.forEach(event => {
+                    if (event.action === 'commit_rng' && event.effectiveTick !== undefined && event.effectiveTick <= selectedScheduleTick) {
+                        currentRNGOnline += event.count;
+                    } else if (event.action === 'shutdown_rng' && event.tick <= selectedScheduleTick) {
+                        currentRNGOnline = Math.max(0, currentRNGOnline - event.count);
+                    }
+                });
+
+                if (currentRNGOnline >= RNG_MAX_UNITS) {
+                    alert(`Cannot commit more RNG units. Maximum capacity is ${RNG_MAX_UNITS} units (${Math.round(plannerCapacityData.totalCapacityMW.rng)} MW).`);
+                    return;
+                }
+            }
             eventData.count = 1; // Always commit 1 unit per click
             // Hour 0 (tick 0) has instant startup, otherwise 30 min delay
             eventData.effectiveTick = selectedScheduleTick === 0 ? 0 : selectedScheduleTick + 6;
@@ -4607,6 +4649,22 @@ function addScheduledEvent(action) {
             eventData.count = 1; // Always shutdown 1 unit per click
             break;
         case 'commit_hydrogen':
+            // Check if we can commit another Hydrogen unit
+            {
+                let currentHydrogenOnline = 0;
+                scheduledEvents.forEach(event => {
+                    if (event.action === 'commit_hydrogen' && event.effectiveTick !== undefined && event.effectiveTick <= selectedScheduleTick) {
+                        currentHydrogenOnline += event.count;
+                    } else if (event.action === 'shutdown_hydrogen' && event.tick <= selectedScheduleTick) {
+                        currentHydrogenOnline = Math.max(0, currentHydrogenOnline - event.count);
+                    }
+                });
+
+                if (currentHydrogenOnline >= HYDROGEN_MAX_UNITS) {
+                    alert(`Cannot commit more Hydrogen units. Maximum capacity is ${HYDROGEN_MAX_UNITS} units (${Math.round(plannerCapacityData.totalCapacityMW.hydrogen)} MW).`);
+                    return;
+                }
+            }
             eventData.count = 1; // Always commit 1 unit per click
             // Hour 0 (tick 0) has instant startup, otherwise 45 min delay
             eventData.effectiveTick = selectedScheduleTick === 0 ? 0 : selectedScheduleTick + 9;
@@ -4765,8 +4823,8 @@ function updateSchedulerChartVisuals() {
         ctData[tick] = currentCT * CT_UNIT_SIZE_MW;
         batteryData[tick] = currentBattery;
         hydroData[tick] = currentHydro;
-        rngData[tick] = currentRNG * RNG_UNIT_SIZE_MW;
-        hydrogenData[tick] = currentHydrogen * HYDROGEN_UNIT_SIZE_MW;
+        rngData[tick] = calculateRNGMW(currentRNG);
+        hydrogenData[tick] = calculateHydrogenMW(currentHydrogen);
     }
 
     // Update chart datasets
@@ -4774,7 +4832,7 @@ function updateSchedulerChartVisuals() {
     schedulerChart.data.datasets[2].data = ctData;    // CT
     schedulerChart.data.datasets[3].data = batteryData; // Battery
     schedulerChart.data.datasets[4].data = hydroData;  // Hydro
-    schedulerChart.data.datasets[5].data = rngData;    // RNG (Biogas)
+    schedulerChart.data.datasets[5].data = rngData;    // RNG
     schedulerChart.data.datasets[6].data = hydrogenData; // Hydrogen
     schedulerChart.update('none');
 }
@@ -4821,7 +4879,7 @@ function updateResourcePanelValues() {
     document.getElementById('hydroMW').value = hydroMW;
 
     // Calculate total scheduled generation MW at this tick
-    const totalMW = (ccgtOnline * CCGT_UNIT_SIZE_MW) + (ctOnline * CT_UNIT_SIZE_MW) + batteryMW + hydroMW + (rngOnline * RNG_UNIT_SIZE_MW) + (hydrogenOnline * HYDROGEN_UNIT_SIZE_MW);
+    const totalMW = (ccgtOnline * CCGT_UNIT_SIZE_MW) + (ctOnline * CT_UNIT_SIZE_MW) + batteryMW + hydroMW + calculateRNGMW(rngOnline) + calculateHydrogenMW(hydrogenOnline);
     totalScheduledMWSpan.textContent = totalMW.toLocaleString();
 
     // Add visual indicators showing current scheduled values
@@ -4857,13 +4915,13 @@ function updateResourcePanelValues() {
     }
 
     if (rngOnline > 0) {
-        rngLabel.innerHTML = `🌱 RNG (Biogas) <span class="text-xs text-lime-600 font-semibold">(${rngOnline} online @ ${rngOnline * RNG_UNIT_SIZE_MW} MW)</span>`;
+        rngLabel.innerHTML = `🌱 RNG <span class="text-xs text-lime-600 font-semibold">(${rngOnline} online @ ${Math.round(calculateRNGMW(rngOnline))} MW)</span>`;
     } else {
-        rngLabel.innerHTML = '🌱 RNG (Biogas)';
+        rngLabel.innerHTML = '🌱 RNG';
     }
 
     if (hydrogenOnline > 0) {
-        hydrogenLabel.innerHTML = `⚗️ Hydrogen <span class="text-xs text-indigo-600 font-semibold">(${hydrogenOnline} online @ ${hydrogenOnline * HYDROGEN_UNIT_SIZE_MW} MW)</span>`;
+        hydrogenLabel.innerHTML = `⚗️ Hydrogen <span class="text-xs text-indigo-600 font-semibold">(${hydrogenOnline} online @ ${Math.round(calculateHydrogenMW(hydrogenOnline))} MW)</span>`;
     } else {
         hydrogenLabel.innerHTML = '⚗️ Hydrogen';
     }
@@ -5073,6 +5131,11 @@ function applyHour0State(state) {
     updateCTDisplay();
     updateRNGDisplay();
     updateHydrogenDisplay();
+
+    // Update power sliders for RNG and Hydrogen to reflect committed units
+    updateRNGPowerSlider();
+    updateHydrogenPowerSlider();
+
     updateSupplyValues();
 }
 
