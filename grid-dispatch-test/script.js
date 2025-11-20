@@ -81,6 +81,8 @@ const hydrogenOnlineCount = document.getElementById('hydrogenOnlineCount');
 const hydrogenOnlineMW = document.getElementById('hydrogenOnlineMW');
 const hydrogenStartingCount = document.getElementById('hydrogenStartingCount');
 const hydrogenNextOnline = document.getElementById('hydrogenNextOnline');
+const hydrogenFuelCost = document.getElementById('hydrogenFuelCost');
+const hydrogenCostDisplay = document.getElementById('hydrogenCostDisplay');
 
 const totalSupplyValueSpan = document.getElementById('totalSupplyValue');
 
@@ -258,7 +260,7 @@ function calculateHydrogenCost(mw) {
 
     while (remainingMW > 0) {
         const stepMW = Math.min(remainingMW, HYDROGEN_STEP_MW);
-        const costPerMWh = HYDROGEN_BASE_COST + (stepIndex * HYDROGEN_COST_INCREMENT);
+        const costPerMWh = currentHydrogenBaseCost + (stepIndex * HYDROGEN_COST_INCREMENT);
         totalCost += stepMW * costPerMWh;
         remainingMW -= stepMW;
         stepIndex++;
@@ -339,7 +341,15 @@ let HYDROGEN_MAX_UNITS = 15; // Will be dynamically calculated based on planner 
 const HYDROGEN_MIN_LOAD_PERCENT = 0.2; // 20% minimum stable load
 const HYDROGEN_STARTUP_TIME_MIN = 45; // 45 min startup time
 const HYDROGEN_RAMP_RATE_MW_PER_MIN = 8; // 8 MW/min per unit
-const HYDROGEN_BASE_COST = 540; // $/MWh base cost
+
+// Hydrogen fuel cost options ($/MWh base cost for different H2 prices)
+const HYDROGEN_FUEL_COST = {
+    '3': 278,  // 3 $/kg H2
+    '4': 362,  // 4 $/kg H2
+    '5': 455,  // 5 $/kg H2
+    '6': 540   // 6 $/kg H2 (default)
+};
+let currentHydrogenBaseCost = HYDROGEN_FUEL_COST['6']; // Default to 6 $/kg
 const HYDROGEN_COST_INCREMENT = 5; // $/MWh per 150MW step
 const HYDROGEN_STEP_MW = 150;
 
@@ -1511,6 +1521,9 @@ async function initialize() {
         // Hydro condition dropdown listener
         hydroCondition.addEventListener('change', updateHydroCapacity);
 
+        // Hydrogen fuel cost dropdown listener
+        hydrogenFuelCost.addEventListener('change', updateHydrogenCost);
+
         const speedSteps = [0.1, 1, 5, 10, 20, 30];
         const gameSpeedSlider = document.getElementById("gameSpeedSlider");
         const gameSpeedTime = document.getElementById("gameSpeedTime");
@@ -2676,6 +2689,14 @@ function updateHydroCapacity() {
 
     // Update display text
     hydroMaxDisplay.textContent = `Max: ${currentHydroMaxMW.toLocaleString()} MW`;
+}
+
+function updateHydrogenCost() {
+    const fuelCostKey = hydrogenFuelCost.value;
+    currentHydrogenBaseCost = HYDROGEN_FUEL_COST[fuelCostKey];
+
+    // Update cost display text
+    hydrogenCostDisplay.textContent = currentHydrogenBaseCost;
 }
 
 // --- 10. STATUS BANNER UPDATE FUNCTION ---
