@@ -175,21 +175,21 @@ let prevCT = 0;
 let prevHydro = 0;
 
 // Operating costs in $/MWh (mainly fuel costs for thermal plants)
-const BATTERY_OPCOST = 5;   // Battery storage (minimal O&M, efficiency losses)
+const BATTERY_OPCOST = 6;   // Battery storage (minimal O&M, efficiency losses)
 const HYDRO_OPCOST = 2;     // Hydro (minimal O&M, no fuel cost)
 const SOLAR_CURTAILMENT_OPCOST = 20;   // Solar curtailment (opportunity cost of wasted energy)
 const WIND_CURTAILMENT_OPCOST = 20;  // Wind curtailment (opportunity cost of wasted energy)
 
 // Linear cost function parameters for CCGT and CT (simulating heat rate degradation)
-// CCGT: starts at $35/MWh for first 500MW, then increases by $5/MWh for each additional 500MW
-const CCGT_BASE_COST = 35;
+// CCGT: starts at $32/MWh for first 500MW, then increases by $1/MWh for each additional 500MW
+const CCGT_BASE_COST = 32;
 const CCGT_STEP_MW = 500;
-const CCGT_COST_INCREMENT = 5;
+const CCGT_COST_INCREMENT = 1;
 
-// CT: starts at $65/MWh for first 200MW, then increases by $5/MWh for each additional 200MW
-const CT_BASE_COST = 65;
+// CT: starts at $50/MWh for first 200MW, then increases by $2/MWh for each additional 200MW
+const CT_BASE_COST = 50;
 const CT_STEP_MW = 200;
-const CT_COST_INCREMENT = 5;
+const CT_COST_INCREMENT = 2;
 
 // Helper function to calculate linear cost for CCGT
 function calculateCCGTCost(mw) {
@@ -329,8 +329,8 @@ let RNG_MAX_UNITS = 20; // Will be dynamically calculated based on planner capac
 const RNG_MIN_LOAD_PERCENT = 0.3; // 30% minimum stable load
 const RNG_STARTUP_TIME_MIN = 30; // 30 min startup time
 const RNG_RAMP_RATE_MW_PER_MIN = 10; // 10 MW/min per unit
-const RNG_BASE_COST = 40; // $/MWh base cost
-const RNG_COST_INCREMENT = 5; // $/MWh per 100MW step
+const RNG_BASE_COST = 255; // $/MWh base cost
+const RNG_COST_INCREMENT = 3; // $/MWh per 100MW step
 const RNG_STEP_MW = 100;
 
 // Hydrogen Unit Constants
@@ -339,7 +339,7 @@ let HYDROGEN_MAX_UNITS = 15; // Will be dynamically calculated based on planner 
 const HYDROGEN_MIN_LOAD_PERCENT = 0.2; // 20% minimum stable load
 const HYDROGEN_STARTUP_TIME_MIN = 45; // 45 min startup time
 const HYDROGEN_RAMP_RATE_MW_PER_MIN = 8; // 8 MW/min per unit
-const HYDROGEN_BASE_COST = 55; // $/MWh base cost
+const HYDROGEN_BASE_COST = 540; // $/MWh base cost
 const HYDROGEN_COST_INCREMENT = 5; // $/MWh per 150MW step
 const HYDROGEN_STEP_MW = 150;
 
@@ -4367,6 +4367,9 @@ closeSchedulerBtn.addEventListener('click', () => {
 clearScheduleBtn.addEventListener('click', () => {
     if (confirm('Are you sure you want to clear all scheduled events?')) {
         scheduledEvents = [];
+        // Reset selected time to 12:00 AM (tick 0)
+        selectedScheduleTick = 0;
+        selectedTimeSpan.textContent = '12:00 AM';
         updateScheduledEventsList();
         updateSchedulerChartVisuals();
         updateResourcePanelValues();
@@ -4594,6 +4597,51 @@ document.querySelectorAll('.resource-action-btn').forEach(btn => {
     });
 });
 
+// Add click-and-hold feature for commit buttons (rapid unit addition)
+let holdInterval = null;
+let holdTimeout = null;
+
+document.querySelectorAll('.resource-action-btn').forEach(btn => {
+    const action = btn.getAttribute('data-action');
+
+    // Only add hold feature to commit buttons
+    if (action && (action === 'commit_ccgt' || action === 'commit_ct' || action === 'commit_rng' || action === 'commit_hydrogen')) {
+        btn.addEventListener('mousedown', function() {
+            // Clear any existing intervals
+            if (holdInterval) clearInterval(holdInterval);
+            if (holdTimeout) clearTimeout(holdTimeout);
+
+            // Start adding units after a short delay (500ms)
+            holdTimeout = setTimeout(() => {
+                holdInterval = setInterval(() => {
+                    const success = addScheduledEvent(action);
+                    // Stop interval if validation fails (reached capacity limit)
+                    if (!success) {
+                        if (holdInterval) clearInterval(holdInterval);
+                        if (holdTimeout) clearTimeout(holdTimeout);
+                        holdInterval = null;
+                        holdTimeout = null;
+                    }
+                }, 150); // Add a unit every 150ms while holding
+            }, 500);
+        });
+
+        btn.addEventListener('mouseup', function() {
+            if (holdInterval) clearInterval(holdInterval);
+            if (holdTimeout) clearTimeout(holdTimeout);
+            holdInterval = null;
+            holdTimeout = null;
+        });
+
+        btn.addEventListener('mouseleave', function() {
+            if (holdInterval) clearInterval(holdInterval);
+            if (holdTimeout) clearTimeout(holdTimeout);
+            holdInterval = null;
+            holdTimeout = null;
+        });
+    }
+});
+
 // Add Enter key listeners for Battery and Hydro inputs
 document.getElementById('batteryMW').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
@@ -4617,11 +4665,116 @@ document.getElementById('hydroMW').addEventListener('keypress', function(e) {
     }
 });
 
-// Add scheduled event
+// Validate battery State of Charge (SOC) with new scheduled value
+function validateBatterySOC(newBatteryMW, atTick) {
+    const INITIAL_SOC_PERCENT = 0.2; // Start with 20% charge
+    const TICK_DURATION_HOURS = 5 / 60; // 5 minutes = 1/12 hour
+
+    let currentSOC = BATTERY_CAPACITY_MWH * INITIAL_SOC_PERCENT; // Starting energy in MWh
+
+    // Create a temporary schedule including the new value
+    const tempSchedule = [...scheduledEvents];
+
+    // Add the new battery event to temp schedule
+    tempSchedule.push({
+        tick: atTick,
+        action: 'set_battery',
+        value: newBatteryMW
+    });
+
+    // Sort by tick
+    tempSchedule.sort((a, b) => a.tick - b.tick);
+
+    // Simulate battery SOC from tick 0 to tick 287 (24 hours)
+    let currentBatteryMW = 0; // Battery starts at 0 MW
+    let lastEventTick = 0;
+
+    for (const event of tempSchedule) {
+        if (event.action === 'set_battery') {
+            // Process the time period from last event to this event with current battery MW
+            const ticksElapsed = event.tick - lastEventTick;
+            // Note: Positive MW = discharging (decreases SOC), Negative MW = charging (increases SOC)
+            const energyChange = -currentBatteryMW * TICK_DURATION_HOURS * ticksElapsed;
+            const previousSOC = currentSOC;
+            currentSOC += energyChange;
+
+            // Check if SOC went out of bounds during this period
+            if (currentSOC < 0) {
+                // Calculate exact tick where battery would reach 0%
+                // Energy removed per tick = currentBatteryMW × TICK_DURATION_HOURS (when discharging, currentBatteryMW > 0)
+                const ticksToEmpty = Math.floor(previousSOC / (currentBatteryMW * TICK_DURATION_HOURS));
+                const stopTick = Math.min(287, Math.max(lastEventTick + ticksToEmpty, lastEventTick + 1));
+                const timeStr = formatGameTime(stopTick);
+
+                return {
+                    valid: false,
+                    stopTick: stopTick,
+                    message: `Battery would fully discharge at ${timeStr}.\n\nAutomatically adding stop event to set battery to 0 MW at ${timeStr}.`
+                };
+            }
+            if (currentSOC > BATTERY_CAPACITY_MWH) {
+                // Calculate exact tick where battery would reach 100%
+                // Energy added per tick = -currentBatteryMW × TICK_DURATION_HOURS (when charging, currentBatteryMW < 0)
+                const remainingCapacity = BATTERY_CAPACITY_MWH - previousSOC;
+                const ticksToFull = Math.floor(remainingCapacity / (-currentBatteryMW * TICK_DURATION_HOURS));
+                const stopTick = Math.min(287, Math.max(lastEventTick + ticksToFull, lastEventTick + 1));
+                const timeStr = formatGameTime(stopTick);
+
+                return {
+                    valid: false,
+                    stopTick: stopTick,
+                    message: `Battery would reach full capacity at ${timeStr}.\n\nAutomatically adding stop event to set battery to 0 MW at ${timeStr}.`
+                };
+            }
+
+            // Update current battery MW for next period
+            currentBatteryMW = event.value;
+            lastEventTick = event.tick;
+        }
+    }
+
+    // Check from last event to end of day (tick 287)
+    if (lastEventTick < 287) {
+        const ticksElapsed = 287 - lastEventTick;
+        const energyChange = -currentBatteryMW * TICK_DURATION_HOURS * ticksElapsed;
+        const previousSOC = currentSOC;
+        currentSOC += energyChange;
+
+        if (currentSOC < 0) {
+            // Calculate exact tick where battery would reach 0%
+            const ticksToEmpty = Math.floor(previousSOC / (currentBatteryMW * TICK_DURATION_HOURS));
+            const stopTick = Math.min(287, Math.max(lastEventTick + ticksToEmpty, lastEventTick + 1));
+            const timeStr = formatGameTime(stopTick);
+
+            return {
+                valid: false,
+                stopTick: stopTick,
+                message: `Battery would fully discharge at ${timeStr}.\n\nAutomatically adding stop event to set battery to 0 MW at ${timeStr}.`
+            };
+        }
+        if (currentSOC > BATTERY_CAPACITY_MWH) {
+            // Calculate exact tick where battery would reach 100%
+            const remainingCapacity = BATTERY_CAPACITY_MWH - previousSOC;
+            const ticksToFull = Math.floor(remainingCapacity / (-currentBatteryMW * TICK_DURATION_HOURS));
+            const stopTick = Math.min(287, Math.max(lastEventTick + ticksToFull, lastEventTick + 1));
+            const timeStr = formatGameTime(stopTick);
+
+            return {
+                valid: false,
+                stopTick: stopTick,
+                message: `Battery would reach full capacity at ${timeStr}.\n\nAutomatically adding stop event to set battery to 0 MW at ${timeStr}.`
+            };
+        }
+    }
+
+    return { valid: true };
+}
+
+// Add scheduled event (returns true if successful, false if validation failed)
 function addScheduledEvent(action) {
     if (selectedScheduleTick === null) {
         alert('Please select a time on the timeline first');
-        return;
+        return false;
     }
 
     let eventData = {
@@ -4638,6 +4791,22 @@ function addScheduledEvent(action) {
             eventData.effectiveTick = selectedScheduleTick === 0 ? 0 : selectedScheduleTick + 15;
             break;
         case 'shutdown_ccgt':
+            // Check if there are CCGT units online to shut down
+            {
+                let currentCCGTOnline = 0;
+                scheduledEvents.forEach(event => {
+                    if (event.action === 'commit_ccgt' && event.effectiveTick !== undefined && event.effectiveTick <= selectedScheduleTick) {
+                        currentCCGTOnline += event.count;
+                    } else if (event.action === 'shutdown_ccgt' && event.tick <= selectedScheduleTick) {
+                        currentCCGTOnline = Math.max(0, currentCCGTOnline - event.count);
+                    }
+                });
+
+                if (currentCCGTOnline === 0) {
+                    alert('No CCGT units are currently online to shut down at this time.');
+                    return false;
+                }
+            }
             eventData.count = 1; // Always shutdown 1 unit per click
             break;
         case 'commit_ct':
@@ -4646,10 +4815,67 @@ function addScheduledEvent(action) {
             eventData.effectiveTick = selectedScheduleTick === 0 ? 0 : selectedScheduleTick + 3;
             break;
         case 'shutdown_ct':
+            // Check if there are CT units online to shut down
+            {
+                let currentCTOnline = 0;
+                scheduledEvents.forEach(event => {
+                    if (event.action === 'commit_ct' && event.effectiveTick !== undefined && event.effectiveTick <= selectedScheduleTick) {
+                        currentCTOnline += event.count;
+                    } else if (event.action === 'shutdown_ct' && event.tick <= selectedScheduleTick) {
+                        currentCTOnline = Math.max(0, currentCTOnline - event.count);
+                    }
+                });
+
+                if (currentCTOnline === 0) {
+                    alert('No CT units are currently online to shut down at this time.');
+                    return false;
+                }
+            }
             eventData.count = 1; // Always shutdown 1 unit per click
             break;
         case 'commit_rng':
             // Check if we can commit another RNG unit
+            {
+                if (RNG_MAX_UNITS === 0) {
+                    alert('No RNG capacity available. Please configure RNG capacity in the Grid Planner.');
+                    return false;
+                }
+
+                // Calculate the effective tick for this new commit
+                const newEffectiveTick = selectedScheduleTick === 0 ? 0 : selectedScheduleTick + 6;
+
+                // Count units online at the effective tick (when this new unit would come online)
+                let currentRNGOnline = 0;
+                scheduledEvents.forEach(event => {
+                    if (event.action === 'commit_rng' && event.effectiveTick !== undefined && event.effectiveTick <= newEffectiveTick) {
+                        currentRNGOnline += event.count;
+                    } else if (event.action === 'shutdown_rng' && event.tick <= newEffectiveTick) {
+                        currentRNGOnline = Math.max(0, currentRNGOnline - event.count);
+                    }
+                });
+
+                // Check unit count limit
+                if (currentRNGOnline >= RNG_MAX_UNITS) {
+                    const totalCapacityMW = plannerCapacityData?.totalCapacityMW?.rng || (RNG_MAX_UNITS * RNG_UNIT_SIZE_MW);
+                    alert(`Cannot commit more RNG units. Maximum capacity is ${RNG_MAX_UNITS} units (${Math.round(totalCapacityMW)} MW).`);
+                    return false;
+                }
+
+                // Additional safety check: validate total MW doesn't exceed planner capacity
+                const currentRNGMW = calculateRNGMW(currentRNGOnline);
+                const newRNGMW = calculateRNGMW(currentRNGOnline + 1);
+                const totalCapacityMW = plannerCapacityData?.totalCapacityMW?.rng || (RNG_MAX_UNITS * RNG_UNIT_SIZE_MW);
+                if (newRNGMW > totalCapacityMW) {
+                    alert(`Cannot commit more RNG units. This would exceed maximum capacity.\n\nCurrent: ${Math.round(currentRNGMW)} MW\nRequested: ${Math.round(newRNGMW)} MW\nMaximum: ${Math.round(totalCapacityMW)} MW`);
+                    return false;
+                }
+
+                eventData.effectiveTick = newEffectiveTick;
+            }
+            eventData.count = 1; // Always commit 1 unit per click
+            break;
+        case 'shutdown_rng':
+            // Check if there are RNG units online to shut down
             {
                 let currentRNGOnline = 0;
                 scheduledEvents.forEach(event => {
@@ -4660,20 +4886,56 @@ function addScheduledEvent(action) {
                     }
                 });
 
-                if (currentRNGOnline >= RNG_MAX_UNITS) {
-                    alert(`Cannot commit more RNG units. Maximum capacity is ${RNG_MAX_UNITS} units (${Math.round(plannerCapacityData.totalCapacityMW.rng)} MW).`);
-                    return;
+                if (currentRNGOnline === 0) {
+                    alert('No RNG units are currently online to shut down at this time.');
+                    return false;
                 }
             }
-            eventData.count = 1; // Always commit 1 unit per click
-            // Hour 0 (tick 0) has instant startup, otherwise 30 min delay
-            eventData.effectiveTick = selectedScheduleTick === 0 ? 0 : selectedScheduleTick + 6;
-            break;
-        case 'shutdown_rng':
             eventData.count = 1; // Always shutdown 1 unit per click
             break;
         case 'commit_hydrogen':
             // Check if we can commit another Hydrogen unit
+            {
+                if (HYDROGEN_MAX_UNITS === 0) {
+                    alert('No Hydrogen capacity available. Please configure Hydrogen capacity in the Grid Planner.');
+                    return false;
+                }
+
+                // Calculate the effective tick for this new commit
+                const newEffectiveTick = selectedScheduleTick === 0 ? 0 : selectedScheduleTick + 9;
+
+                // Count units online at the effective tick (when this new unit would come online)
+                let currentHydrogenOnline = 0;
+                scheduledEvents.forEach(event => {
+                    if (event.action === 'commit_hydrogen' && event.effectiveTick !== undefined && event.effectiveTick <= newEffectiveTick) {
+                        currentHydrogenOnline += event.count;
+                    } else if (event.action === 'shutdown_hydrogen' && event.tick <= newEffectiveTick) {
+                        currentHydrogenOnline = Math.max(0, currentHydrogenOnline - event.count);
+                    }
+                });
+
+                // Check unit count limit
+                if (currentHydrogenOnline >= HYDROGEN_MAX_UNITS) {
+                    const totalCapacityMW = plannerCapacityData?.totalCapacityMW?.hydrogen || (HYDROGEN_MAX_UNITS * HYDROGEN_UNIT_SIZE_MW);
+                    alert(`Cannot commit more Hydrogen units. Maximum capacity is ${HYDROGEN_MAX_UNITS} units (${Math.round(totalCapacityMW)} MW).`);
+                    return false;
+                }
+
+                // Additional safety check: validate total MW doesn't exceed planner capacity
+                const currentHydrogenMW = calculateHydrogenMW(currentHydrogenOnline);
+                const newHydrogenMW = calculateHydrogenMW(currentHydrogenOnline + 1);
+                const totalCapacityMW = plannerCapacityData?.totalCapacityMW?.hydrogen || (HYDROGEN_MAX_UNITS * HYDROGEN_UNIT_SIZE_MW);
+                if (newHydrogenMW > totalCapacityMW) {
+                    alert(`Cannot commit more Hydrogen units. This would exceed maximum capacity.\n\nCurrent: ${Math.round(currentHydrogenMW)} MW\nRequested: ${Math.round(newHydrogenMW)} MW\nMaximum: ${Math.round(totalCapacityMW)} MW`);
+                    return false;
+                }
+
+                eventData.effectiveTick = newEffectiveTick;
+            }
+            eventData.count = 1; // Always commit 1 unit per click
+            break;
+        case 'shutdown_hydrogen':
+            // Check if there are Hydrogen units online to shut down
             {
                 let currentHydrogenOnline = 0;
                 scheduledEvents.forEach(event => {
@@ -4684,23 +4946,78 @@ function addScheduledEvent(action) {
                     }
                 });
 
-                if (currentHydrogenOnline >= HYDROGEN_MAX_UNITS) {
-                    alert(`Cannot commit more Hydrogen units. Maximum capacity is ${HYDROGEN_MAX_UNITS} units (${Math.round(plannerCapacityData.totalCapacityMW.hydrogen)} MW).`);
-                    return;
+                if (currentHydrogenOnline === 0) {
+                    alert('No Hydrogen units are currently online to shut down at this time.');
+                    return false;
                 }
             }
-            eventData.count = 1; // Always commit 1 unit per click
-            // Hour 0 (tick 0) has instant startup, otherwise 45 min delay
-            eventData.effectiveTick = selectedScheduleTick === 0 ? 0 : selectedScheduleTick + 9;
-            break;
-        case 'shutdown_hydrogen':
             eventData.count = 1; // Always shutdown 1 unit per click
             break;
         case 'set_battery':
-            eventData.value = parseInt(document.getElementById('batteryMW').value);
+            {
+                let batteryMW = parseInt(document.getElementById('batteryMW').value);
+
+                // Validation 1: Auto-cap battery power to maximum capacity
+                if (Math.abs(batteryMW) > BATTERY_POWER_MW) {
+                    const cappedValue = batteryMW > 0 ? BATTERY_POWER_MW : -BATTERY_POWER_MW;
+                    alert(`Battery power cannot exceed ${BATTERY_POWER_MW} MW.\n\nRequested: ${batteryMW} MW\nScheduling at maximum: ${cappedValue} MW`);
+                    batteryMW = cappedValue;
+                }
+
+                // Remove ALL existing auto-generated battery stop events before recalculating
+                scheduledEvents = scheduledEvents.filter(e => !(e.action === 'set_battery' && e.autoGenerated === true));
+
+                // Validation 2: Check battery energy capacity (SOC tracking) and auto-add stop events
+                const socValidation = validateBatterySOC(batteryMW, selectedScheduleTick);
+                if (!socValidation.valid) {
+                    // Auto-add stop event at the time battery would reach limit
+                    if (socValidation.stopTick !== undefined) {
+                        alert(socValidation.message);
+                        eventData.value = batteryMW;
+
+                        // Add the initial event
+                        scheduledEvents.push(eventData);
+
+                        // Add automatic stop event
+                        const stopEventData = {
+                            tick: socValidation.stopTick,
+                            action: 'set_battery',
+                            time: formatGameTime(socValidation.stopTick),
+                            value: 0,
+                            autoGenerated: true
+                        };
+                        scheduledEvents.push(stopEventData);
+                        scheduledEvents.sort((a, b) => a.tick - b.tick);
+
+                        updateScheduledEventsList();
+                        updateSchedulerChartVisuals();
+                        updateResourcePanelValues();
+                        updateShutdownButtonStates();
+                        return true; // Successfully added battery schedule with auto-stop
+                    }
+                }
+
+                eventData.value = batteryMW;
+            }
             break;
         case 'set_hydro':
-            eventData.value = parseInt(document.getElementById('hydroMW').value);
+            {
+                let hydroMW = parseInt(document.getElementById('hydroMW').value);
+
+                // Validation 1: Auto-cap hydro to 0 if negative
+                if (hydroMW < 0) {
+                    alert(`Hydro power cannot be negative.\n\nRequested: ${hydroMW} MW\nScheduling at minimum: 0 MW`);
+                    hydroMW = 0;
+                }
+
+                // Validation 2: Auto-cap hydro to maximum capacity
+                if (hydroMW > currentHydroMaxMW) {
+                    alert(`Hydro power cannot exceed maximum capacity.\n\nRequested: ${hydroMW} MW\nScheduling at maximum: ${currentHydroMaxMW} MW (${Object.keys(HYDRO_CAPACITY).find(key => HYDRO_CAPACITY[key] === currentHydroMaxMW)} year)`);
+                    hydroMW = currentHydroMaxMW;
+                }
+
+                eventData.value = hydroMW;
+            }
             break;
     }
 
@@ -4711,6 +5028,7 @@ function addScheduledEvent(action) {
     updateSchedulerChartVisuals();
     updateResourcePanelValues();
     updateShutdownButtonStates();
+    return true; // Success
 }
 
 // Update scheduled events list display
