@@ -4328,6 +4328,9 @@ openSchedulerBtn.addEventListener('click', () => {
     updateResourcePanelValues();
     updateShutdownButtonStates();
 
+    // Initialize battery icon overlay
+    updateBatteryIconOverlay();
+
     // Show scheduler tutorial on first visit
     const schedulerTutorialSeen = localStorage.getItem('gridOperatorSchedulerTutorialSeen');
     if (!schedulerTutorialSeen) {
@@ -4392,7 +4395,7 @@ clearScheduleBtn.addEventListener('click', () => {
         selectedScheduleTick = 0;
         selectedTimeSpan.textContent = '12:00 AM';
         updateScheduledEventsList();
-        updateSchedulerChartVisuals();
+        updateSchedulerChartVisuals(); // This also updates battery overlay
         updateResourcePanelValues();
         updateShutdownButtonStates();
     }
@@ -4400,6 +4403,76 @@ clearScheduleBtn.addEventListener('click', () => {
 
 // Apply schedule
 applyScheduleBtn.addEventListener('click', applySchedule);
+
+// Calculate end-of-day battery SOC based on schedule
+function calculateEndOfDayBatterySOC() {
+    const INITIAL_SOC_PERCENT = 0.2; // Start with 20% charge
+    const TICK_DURATION_HOURS = 5 / 60; // 5 minutes = 1/12 hour
+
+    let currentSOC = BATTERY_CAPACITY_MWH * INITIAL_SOC_PERCENT; // Starting energy in MWh
+    let currentBatteryMW = 0; // Battery starts at 0 MW
+    let lastEventTick = 0;
+
+    // Sort events by tick
+    const sortedEvents = [...scheduledEvents].sort((a, b) => a.tick - b.tick);
+
+    for (const event of sortedEvents) {
+        if (event.action === 'set_battery') {
+            // Process the time period from last event to this event with current battery MW
+            const ticksElapsed = event.tick - lastEventTick;
+            // Note: Positive MW = discharging (decreases SOC), Negative MW = charging (increases SOC)
+            const energyChange = -currentBatteryMW * TICK_DURATION_HOURS * ticksElapsed;
+            currentSOC += energyChange;
+
+            // Clamp SOC to valid range [0, BATTERY_CAPACITY_MWH]
+            currentSOC = Math.max(0, Math.min(BATTERY_CAPACITY_MWH, currentSOC));
+
+            // Update current battery MW for next period
+            currentBatteryMW = event.value;
+            lastEventTick = event.tick;
+        }
+    }
+
+    // Process from last event to end of day (tick 287)
+    if (lastEventTick < 287) {
+        const ticksElapsed = 287 - lastEventTick;
+        const energyChange = -currentBatteryMW * TICK_DURATION_HOURS * ticksElapsed;
+        currentSOC += energyChange;
+
+        // Clamp SOC to valid range [0, BATTERY_CAPACITY_MWH]
+        currentSOC = Math.max(0, Math.min(BATTERY_CAPACITY_MWH, currentSOC));
+    }
+
+    // Return SOC as percentage (0-100)
+    return (currentSOC / BATTERY_CAPACITY_MWH) * 100;
+}
+
+// Update battery icon overlay
+function updateBatteryIconOverlay() {
+    const overlay = document.getElementById('batteryIconOverlay');
+    if (!overlay) return;
+
+    const socPercent = calculateEndOfDayBatterySOC();
+    const socText = overlay.querySelector('.battery-soc-text');
+    const batteryFill = overlay.querySelector('.battery-fill');
+
+    if (socText) {
+        socText.textContent = `${Math.round(socPercent)}%`;
+    }
+
+    if (batteryFill) {
+        batteryFill.style.height = `${socPercent}%`;
+
+        // Change color based on SOC level
+        if (socPercent < 20) {
+            batteryFill.style.background = 'linear-gradient(to top, #ef4444, #f87171)'; // Red
+        } else if (socPercent < 50) {
+            batteryFill.style.background = 'linear-gradient(to top, #eab308, #fbbf24)'; // Yellow
+        } else {
+            batteryFill.style.background = 'linear-gradient(to top, #22c55e, #4ade80)'; // Green
+        }
+    }
+}
 
 // Create scheduler chart
 function createSchedulerChart() {
@@ -5198,6 +5271,9 @@ function updateSchedulerChartVisuals() {
     schedulerChart.data.datasets[5].data = rngData;    // RNG
     schedulerChart.data.datasets[6].data = hydrogenData; // Hydrogen
     schedulerChart.update('none');
+
+    // Update battery icon overlay
+    updateBatteryIconOverlay();
 }
 
 // Update resource panel to show currently scheduled values at selected time
