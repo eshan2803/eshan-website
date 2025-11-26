@@ -513,7 +513,7 @@
                             <!-- CCGT Unit Dispatch (First row, left) -->
                             <div class="p-4 bg-blue-50 rounded-lg">
                                 <div class="flex justify-between items-center mb-2">
-                                    <label class="text-sm font-medium text-blue-700">⚡ CCGT Units</label>
+                                    <label class="text-sm font-medium text-blue-700">⚡ CCGT Units (500 MW each)</label>
                                     <div class="flex items-center gap-1">
                                         <span id="ccgtOutputDisplay" class="text-sm font-semibold text-blue-600">0 MW</span>
                                     </div>
@@ -554,7 +554,7 @@
                             <!-- CT Unit Dispatch (First row, right) -->
                             <div class="p-4 bg-orange-50 rounded-lg">
                                 <div class="flex justify-between items-center mb-2">
-                                    <label class="text-sm font-medium text-orange-700">🔥 CT Peakers</label>
+                                    <label class="text-sm font-medium text-orange-700">🔥 CT Peakers (200 MW each)</label>
                                     <div class="flex items-center gap-1">
                                         <span id="ctOutputDisplay" class="text-sm font-semibold text-orange-600">0 MW</span>
                                     </div>
@@ -671,7 +671,7 @@
                             <!-- RNG Unit Dispatch (Fourth row, left) -->
                             <div class="p-4 bg-lime-50 rounded-lg">
                                 <div class="flex justify-between items-center mb-2">
-                                    <label class="text-sm font-medium text-lime-700">🌱 RNG</label>
+                                    <label class="text-sm font-medium text-lime-700">🌱 RNG (100 MW each)</label>
                                     <div class="flex items-center gap-1">
                                         <span id="rngOutputDisplay" class="text-sm font-semibold text-lime-600">0 MW</span>
                                     </div>
@@ -712,7 +712,7 @@
                             <!-- Hydrogen Unit Dispatch (Fourth row, right) -->
                             <div class="p-4 bg-indigo-50 rounded-lg">
                                 <div class="flex justify-between items-center mb-2">
-                                    <label class="text-sm font-medium text-indigo-700">⚗️ Hydrogen</label>
+                                    <label class="text-sm font-medium text-indigo-700">⚗️ Hydrogen (150 MW each)</label>
                                     <div class="flex items-center gap-1">
                                         <span id="hydrogenOutputDisplay" class="text-sm font-semibold text-indigo-600">0 MW</span>
                                     </div>
@@ -1018,29 +1018,31 @@
             <div class="flex-1 overflow-hidden flex">
                 <!-- Left: Chart Area -->
                 <div class="flex-1 p-6 overflow-y-auto">
-                    <div class="mb-4">
-                        <h3 class="text-lg font-semibold text-gray-700 mb-2">Timeline - Click to Schedule Events</h3>
-                        <p class="text-sm text-gray-500">Click on any time point to add a scheduled resource change</p>
-                    </div>
-                    <div class="bg-gray-50 rounded-lg p-4 relative" style="height: 500px;">
-                        <canvas id="schedulerChart"></canvas>
+                    <div class="mb-4 flex items-start justify-between">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-2">Timeline - Click to Schedule Events</h3>
+                            <p class="text-sm text-gray-500">Click on any time point to add a scheduled resource change</p>
+                        </div>
                         <!-- Battery Icon Overlay -->
-                        <div id="batteryIconOverlay" style="position: absolute; top: 20px; right: 20px; z-index: 10;">
-                            <div style="background: rgba(255, 255, 255, 0.95); border: 2px solid #10b981; border-radius: 8px; padding: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 80px;">
-                                <div style="text-align: center; font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 4px;">End of Day</div>
+                        <div id="batteryIconOverlay" class="ml-4">
+                            <div style="min-width: 60px;">
+                                <div style="text-align: center; font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 3px;">End of Day</div>
                                 <!-- Battery Icon -->
-                                <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 4px;">
-                                    <div style="width: 30px; height: 45px; border: 2px solid #374151; border-radius: 3px; position: relative; background: #f3f4f6;">
+                                <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 3px;">
+                                    <div style="width: 22px; height: 32px; border: 2px solid #374151; border-radius: 2px; position: relative; background: #f3f4f6;">
                                         <!-- Battery Terminal -->
-                                        <div style="position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 12px; height: 4px; background: #374151; border-radius: 2px 2px 0 0;"></div>
+                                        <div style="position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 9px; height: 3px; background: #374151; border-radius: 2px 2px 0 0;"></div>
                                         <!-- Battery Fill -->
                                         <div class="battery-fill" style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, #22c55e, #4ade80); border-radius: 1px; transition: height 0.3s ease, background 0.3s ease; height: 20%;"></div>
                                     </div>
                                 </div>
                                 <!-- SOC Text -->
-                                <div class="battery-soc-text" style="text-align: center; font-size: 16px; font-weight: bold; color: #1f2937;">20%</div>
+                                <div class="battery-soc-text" style="text-align: center; font-size: 13px; font-weight: bold; color: #1f2937;">20%</div>
                             </div>
                         </div>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4" style="height: 500px;">
+                        <canvas id="schedulerChart"></canvas>
                     </div>
 
                     <!-- Scheduled Events List -->
@@ -1070,7 +1072,7 @@
                     <div class="space-y-4">
                         <!-- CCGT -->
                         <div class="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                            <label class="block text-sm font-medium text-blue-700 mb-2">⚡ CCGT Units</label>
+                            <label class="block text-sm font-medium text-blue-700 mb-2">⚡ CCGT Units (500 MW each)</label>
                             <div class="flex gap-2">
                                 <button class="resource-action-btn flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700" data-action="commit_ccgt">
                                     + Commit 1 Unit
@@ -1084,7 +1086,7 @@
 
                         <!-- CT -->
                         <div class="p-3 bg-orange-50 rounded-lg border border-orange-200">
-                            <label class="block text-sm font-medium text-orange-700 mb-2">🔥 CT Peakers</label>
+                            <label class="block text-sm font-medium text-orange-700 mb-2">🔥 CT Peakers (200 MW each)</label>
                             <div class="flex gap-2">
                                 <button class="resource-action-btn flex-1 px-3 py-2 text-sm bg-orange-600 text-white rounded hover:bg-orange-700" data-action="commit_ct">
                                     + Commit 1 Unit
@@ -1118,7 +1120,7 @@
 
                         <!-- RNG -->
                         <div class="p-3 bg-lime-50 rounded-lg border border-lime-200">
-                            <label class="block text-sm font-medium text-lime-700 mb-2">🌱 RNG</label>
+                            <label class="block text-sm font-medium text-lime-700 mb-2">🌱 RNG (100 MW each)</label>
                             <div class="flex gap-2">
                                 <button class="resource-action-btn flex-1 px-3 py-2 text-sm bg-lime-600 text-white rounded hover:bg-lime-700" data-action="commit_rng">
                                     + Commit 1 Unit
@@ -1132,7 +1134,7 @@
 
                         <!-- Hydrogen -->
                         <div class="p-3 bg-indigo-50 rounded-lg border border-indigo-200">
-                            <label class="block text-sm font-medium text-indigo-700 mb-2">⚗️ Hydrogen</label>
+                            <label class="block text-sm font-medium text-indigo-700 mb-2">⚗️ Hydrogen (150 MW each)</label>
                             <div class="flex gap-2">
                                 <button class="resource-action-btn flex-1 px-3 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700" data-action="commit_hydrogen">
                                     + Commit 1 Unit
