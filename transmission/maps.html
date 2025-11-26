@@ -179,6 +179,15 @@
         #basemap-wind {
             background-image: url('https://eshan2803.github.io/basemaps/wind_tiles/6/10/24.png');
         }
+        #basemap-population-density {
+            background-image: url('https://eshan2803.github.io/basemaps/population_tiles/6/10/24.png');
+        }
+        #basemap-ccus {
+            background-image: url('https://eshan2803.github.io/basemaps/ccus_west_tiles/6/10/24.png');
+        }
+        #basemap-burn-probability {
+            background: linear-gradient(135deg, #ff4500 0%, #ffa500 50%, #ffff00 100%);
+        }
 
         /* Land cover hover tooltip styling */
         .land-cover-tooltip {
@@ -201,20 +210,33 @@
 </head>
 <body>
     <div id="controls">
-        <p><strong>California Power Grid Simulator</strong></p>
+        <p><strong>California Power Grid Map</strong></p>
         <p style="margin: 5px 0; font-size: 13px;">Hover over plants to see details.</p>
         <p style="margin: 5px 0; font-size: 13px;">Click on plants to turn them ON/OFF.</p>
         <p style="margin: 5px 0; font-size: 13px;">Select Generator Type by clicking on the Legend Label.</p>
         <p style="margin: 5px 0; font-size: 13px;">Select multiple Generators by Ctrl/Cmd and clicking on Legend Labels.</p>
+        <p style="margin: 5px 0; font-size: 13px;">Select multiple Basemaps by Ctrl/Cmd and clicking on Basemap Toggles.</p>
         <p id="status" style="margin-top: 10px; padding: 5px; background-color: #f0f0f0; border-radius: 4px; text-align: center;">
             <strong>Active Plants: <span id="activeCount">0</span></strong>
         </p>
         <button id="toggleAllBtn" style="width: 100%; margin-top: 10px; padding: 8px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
             Turn All Plants ON
         </button>
+        
+        <!-- Time Simulation Control -->
+        <div style="margin-top: 15px; border-top: 1px solid #ccc; padding-top: 10px;">
+            <label for="timeSlider" style="font-weight: bold; display: block; margin-bottom: 5px;">Time of Day: <span id="timeDisplay">12:00 PM</span></label>
+            <input type="range" id="timeSlider" min="0" max="23" value="12" step="1" style="width: 100%;">
+            <div style="display: flex; justify-content: space-between; font-size: 10px; color: #666;">
+                <span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>11 PM</span>
+            </div>
+            <p id="simStatus" style="font-size: 11px; color: #555; margin-top: 5px; font-style: italic;">
+                Drag slider to simulate daily cycle
+            </p>
+        </div>
     </div>
     <div id="legend">
-        <strong>Power Plant Types:</strong>
+        <strong id="legend-plants-header" style="cursor: pointer; user-select: none;" title="Click to hide/show all plants">Power Plant:</strong>
         <div class="legend-item fuel-filter" data-fuel="SUN" style="cursor: pointer; padding: 2px; border-radius: 3px;">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
                 <svg width="20" height="20"><circle cx="10" cy="10" r="5" fill="#FFD700" stroke="#000" stroke-width="1"/></svg>
@@ -232,7 +254,7 @@
         </div>
         <div class="legend-item fuel-filter" data-fuel="WAT" style="cursor: pointer; padding: 2px; border-radius: 3px;">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
-                <svg width="20" height="20"><polygon points="5,2 15,2 18.5,10 15,18 5,18 1.5,10" fill="#00CED1" stroke="#000" stroke-width="1"/></svg>
+                <svg width="20" height="20"><polygon points="6.5,5 13.5,5 16,10 13.5,15 6.5,15 4,10" fill="#00CED1" stroke="#000" stroke-width="1"/></svg>
             </span>Hydro (298)
         </div>
         <div class="legend-item fuel-filter" data-fuel="GEO,WH" style="cursor: pointer; padding: 2px; border-radius: 3px;" title="Includes: Geothermal, Waste Heat">
@@ -242,7 +264,7 @@
         </div>
         <div class="legend-item fuel-filter" data-fuel="NUC" style="cursor: pointer; padding: 2px; border-radius: 3px;">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
-                <svg width="20" height="20"><polygon points="10,2 17,6 15,16 5,16 3,6" fill="#BA55D3" stroke="#000" stroke-width="1"/></svg>
+                <svg width="20" height="20"><polygon points="10,5 14,7.5 12.5,14 7.5,14 6,7.5" fill="#BA55D3" stroke="#000" stroke-width="1"/></svg>
             </span>Nuclear (2)
         </div>
         <div class="legend-item fuel-filter" data-fuel="LFG,WDS,OBG,MSW,AB,OBS" style="cursor: pointer; padding: 2px; border-radius: 3px;" title="Includes: Landfill Gas, Wood, Other Biogas, Municipal Solid Waste, Agricultural Byproduct, Other Biomass Solids">
@@ -267,8 +289,8 @@
         </div>
         <div class="legend-item" style="margin-top: 10px;"><span class="legend-color" style="background-color: #808080;"></span>OFF</div>
         <div class="legend-item"><span class="legend-color" style="background-color: #39FF14;"></span>Active Flow</div>
-        <div class="legend-item"><span class="legend-color" style="background-color: #4A90A4;"></span>Transmission Lines</div>
-        <div class="legend-item">
+        <div class="legend-item" id="legend-lines-toggle" style="cursor: pointer; user-select: none;" title="Click to hide/show transmission lines"><span class="legend-color" style="background-color: #4A90A4;"></span>Transmission Lines</div>
+        <div class="legend-item" id="legend-substations-toggle" style="cursor: pointer; user-select: none;" title="Click to hide/show substations">
             <span style="display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
                 <svg width="20" height="20"><circle cx="10" cy="10" r="2" fill="#39FF14" stroke="#000" stroke-width="0.5"/></svg>
             </span>Substations (4442)
@@ -295,6 +317,15 @@
         </div>
         <div class="basemap-option" id="basemap-wind" data-layer="windMap" title="Wind Speed Map">
             <span class="label">Wind</span>
+        </div>
+        <div class="basemap-option" id="basemap-population-density" data-layer="populationMap" title="Population Density Map">
+            <span class="label">Pop. Density</span>
+        </div>
+        <div class="basemap-option" id="basemap-ccus" data-layer="ccusWest" title="CO2 Storage Sites (West)">
+            <span class="label">CO<sub>2</sub> Storage</span>
+        </div>
+        <div class="basemap-option" id="basemap-burn-probability" data-layer="burnProbability" title="Wildfire Burn Probability">
+            <span class="label">Fire Risk</span>
         </div>
     </div>
     <div id="map"></div>
@@ -345,8 +376,8 @@
                 pane: 'wmsOverlayPane',
                 opacity: 0.7,
                 minZoom: 0,
-                maxZoom: 10,
-                maxNativeZoom: 10,  // Use zoom 10 tiles even when zoomed further
+                maxZoom: 12,
+                maxNativeZoom: 12,  // Use zoom 10 tiles even when zoomed further
                 errorTileUrl: '',  // Don't show broken tile images
                 bounds: [[-90, -180], [90, 180]]  // World bounds
             }),
@@ -359,6 +390,32 @@
                 maxNativeZoom: 10,  // Use zoom 10 tiles even when zoomed further
                 errorTileUrl: '',  // Don't show broken tile images
                 bounds: [[-90, -180], [90, 180]]  // World bounds
+            }),
+            populationMap: L.tileLayer('https://eshan2803.github.io/basemaps/population_tiles/{z}/{x}/{y}.png', {
+                attribution: 'Population Density Data',
+                pane: 'wmsOverlayPane',
+                opacity: 0.9,
+                minZoom: 0,
+                maxZoom: 12,
+                maxNativeZoom: 12,  // Use zoom 10 tiles even when zoomed further
+                errorTileUrl: '',  // Don't show broken tile images
+                bounds: [[-90, -180], [90, 180]]  // World bounds
+            }),
+            ccusWest: L.tileLayer('https://eshan2803.github.io/basemaps/ccus_west_tiles/{z}/{x}/{y}.png', {
+                attribution: 'NATCARB v1502 – DOE',
+                pane: 'wmsOverlayPane',
+                opacity: 0.7,
+                minZoom: 0,
+                maxZoom: 12,
+                maxNativeZoom: 12,
+                errorTileUrl: '',
+                bounds: [[-90, -180], [90, 180]]
+            }),
+            burnProbability: L.esri.imageMapLayer({
+                url: 'https://apps.fs.usda.gov/fsgisx01/rest/services/RDW_Wildfire/RMRS_WRC_BurnProbability/ImageServer',
+                attribution: 'USDA Forest Service',
+                pane: 'wmsOverlayPane',
+                opacity: 0.7
             })
         };
 
@@ -377,8 +434,9 @@
         var currentBaseLayer = baseLayers.grayscale.addTo(map);
         currentBaseLayer.getContainer().classList.add('grayscale');
 
-        // Track active overlays
-        var activeOverlay = null; // Can be: populationOverlay, solarOverlay, windOverlay, or null
+        // Track active overlays - now supports multiple overlays
+        var activeOverlays = []; // Array of active overlay layers
+        var activeBaseOptions = new Set(); // Track which basemap options are selected
 
         // URLs for local data
         const transmissionUrl = './transmission.geojson';
@@ -397,10 +455,11 @@
 
         // Network graph data structures
         let networkGraph = {
-            substations: [], // {id, latlng, name, voltage, connectedLines: [], marker}
-            plants: [],      // {id, latlng, name, fuel, capacity, nearestSubstationId, marker, isOn}
-            lines: [],       // {id, coords, startNodeId, endNodeId, feature, antPath}
-            linesBySubstation: {} // Map of substationId -> [lineIds]
+            substations: [], // {id, latlng, name, voltage, connectedLines: [], marker, islandId}
+            plants: [],      // {id, latlng, name, fuel, capacity, nearestSubstationId, marker, isOn, islandId}
+            lines: [],       // {id, coords, startNodeId, endNodeId, feature, antPath, islandId}
+            linesBySubstation: {}, // Map of substationId -> [lineIds]
+            islands: {}      // Map of islandId -> { lines: [lineIds], substations: [subIds] }
         };
 
         // Data loading promises
@@ -457,9 +516,12 @@
                     renderMap();
                     setupToggleAllButton();
                     setupLegendInteractivity();
+                    setupLayerToggles();
                     setupBasemapToggle();
                     setupHomeButton();
                     setupLandCoverHover();
+                    setupCCSHover();
+                    setupTimeSimulation();
                     console.log('Network graph built and map rendered.');
                 } catch (error) {
                     console.error('Error building network or rendering map:', error);
@@ -491,11 +553,15 @@
                             if (marker instanceof L.CircleMarker) {
                                 marker.setStyle({ fillColor: color });
                             } else {
+                                const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
+                                const isWind = ['WND', 'WIND'].includes(fuelType);
+                                const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
+                                const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
                                 marker.setIcon(L.divIcon({
                                     className: 'custom-div-icon',
-                                    html: getMarkerHTML(fuelType, color),
-                                    iconSize: [12, 12],
-                                    iconAnchor: [6, 6]
+                                    html: getMarkerHTML(fuelType, color, 'large'),
+                                    iconSize: [markerSize, markerSize],
+                                    iconAnchor: [markerAnchor, markerAnchor]
                                 }));
                             }
                         } else {
@@ -504,11 +570,15 @@
                             if (marker instanceof L.CircleMarker) {
                                 marker.setStyle({ fillColor: '#808080' });
                             } else {
+                                const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
+                                const isWind = ['WND', 'WIND'].includes(fuelType);
+                                const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
+                                const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
                                 marker.setIcon(L.divIcon({
                                     className: 'custom-div-icon',
-                                    html: getMarkerHTML(fuelType, '#808080'),
-                                    iconSize: [12, 12],
-                                    iconAnchor: [6, 6]
+                                    html: getMarkerHTML(fuelType, '#808080', 'large'),
+                                    iconSize: [markerSize, markerSize],
+                                    iconAnchor: [markerAnchor, markerAnchor]
                                 }));
                             }
                         }
@@ -687,11 +757,15 @@
                             if (plant.marker instanceof L.CircleMarker) {
                                 plant.marker.setStyle({ fillColor: color });
                             } else {
+                                const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
+                                const isWind = ['WND', 'WIND'].includes(fuelType);
+                                const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
+                                const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
                                 plant.marker.setIcon(L.divIcon({
                                     className: 'custom-div-icon',
-                                    html: getMarkerHTML(fuelType, color),
-                                    iconSize: [12, 12],
-                                    iconAnchor: [6, 6]
+                                    html: getMarkerHTML(fuelType, color, 'large'),
+                                    iconSize: [markerSize, markerSize],
+                                    iconAnchor: [markerAnchor, markerAnchor]
                                 }));
                             }
                         }
@@ -739,11 +813,15 @@
                             if (plant.marker instanceof L.CircleMarker) {
                                 plant.marker.setStyle({ fillColor: color });
                             } else {
+                                const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
+                                const isWind = ['WND', 'WIND'].includes(fuelType);
+                                const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
+                                const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
                                 plant.marker.setIcon(L.divIcon({
                                     className: 'custom-div-icon',
-                                    html: getMarkerHTML(fuelType, color),
-                                    iconSize: [12, 12],
-                                    iconAnchor: [6, 6]
+                                    html: getMarkerHTML(fuelType, color, 'large'),
+                                    iconSize: [markerSize, markerSize],
+                                    iconAnchor: [markerAnchor, markerAnchor]
                                 }));
                             }
                         } else {
@@ -753,11 +831,15 @@
                             if (plant.marker instanceof L.CircleMarker) {
                                 plant.marker.setStyle({ fillColor: '#808080' });
                             } else {
+                                const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
+                                const isWind = ['WND', 'WIND'].includes(fuelType);
+                                const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
+                                const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
                                 plant.marker.setIcon(L.divIcon({
                                     className: 'custom-div-icon',
-                                    html: getMarkerHTML(fuelType, '#808080'),
-                                    iconSize: [12, 12],
-                                    iconAnchor: [6, 6]
+                                    html: getMarkerHTML(fuelType, '#808080', 'large'),
+                                    iconSize: [markerSize, markerSize],
+                                    iconAnchor: [markerAnchor, markerAnchor]
                                 }));
                             }
                         }
@@ -770,123 +852,375 @@
                 // Clear saved state
                 stateBeforeFilter = {};
             }
+
+            // Setup click handler for Power Plant header to toggle all plants visibility
+            const plantsHeader = document.getElementById('legend-plants-header');
+            let plantsVisible = true;
+
+            plantsHeader.addEventListener('click', () => {
+                plantsVisible = !plantsVisible;
+
+                networkGraph.plants.forEach(plant => {
+                    if (plant.marker) {
+                        if (plantsVisible) {
+                            if (!map.hasLayer(plant.marker)) {
+                                plantsLayer.addLayer(plant.marker);
+                            }
+                        } else {
+                            if (map.hasLayer(plant.marker)) {
+                                plantsLayer.removeLayer(plant.marker);
+                            }
+                        }
+                    }
+                });
+
+                // Update header styling to indicate state
+                plantsHeader.style.opacity = plantsVisible ? '1' : '0.5';
+                plantsHeader.style.textDecoration = plantsVisible ? 'none' : 'line-through';
+
+                console.log(`Plants ${plantsVisible ? 'shown' : 'hidden'}`);
+            });
         }
 
-        // Setup basemap toggle functionality
+        // Setup click handlers for transmission lines and substations toggles
+        function setupLayerToggles() {
+            // Track visibility state
+            let linesVisible = true;
+            let substationsVisible = true;
+
+            // Transmission Lines toggle
+            const linesToggle = document.getElementById('legend-lines-toggle');
+            linesToggle.addEventListener('click', () => {
+                linesVisible = !linesVisible;
+
+                if (linesVisible) {
+                    if (!map.hasLayer(staticLinesLayer)) {
+                        map.addLayer(staticLinesLayer);
+                    }
+                    if (!map.hasLayer(animatedLinesLayer) && activeGenerators > 0) {
+                        map.addLayer(animatedLinesLayer);
+                    }
+                } else {
+                    if (map.hasLayer(staticLinesLayer)) {
+                        map.removeLayer(staticLinesLayer);
+                    }
+                    if (map.hasLayer(animatedLinesLayer)) {
+                        map.removeLayer(animatedLinesLayer);
+                    }
+                }
+
+                // Update styling to indicate state
+                linesToggle.style.opacity = linesVisible ? '1' : '0.5';
+                linesToggle.style.textDecoration = linesVisible ? 'none' : 'line-through';
+
+                console.log(`Transmission lines ${linesVisible ? 'shown' : 'hidden'}`);
+            });
+
+            // Substations toggle
+            const substationsToggle = document.getElementById('legend-substations-toggle');
+            substationsToggle.addEventListener('click', () => {
+                substationsVisible = !substationsVisible;
+
+                if (substationsVisible) {
+                    if (!map.hasLayer(substationsLayer)) {
+                        map.addLayer(substationsLayer);
+                    }
+                } else {
+                    if (map.hasLayer(substationsLayer)) {
+                        map.removeLayer(substationsLayer);
+                    }
+                }
+
+                // Update styling to indicate state
+                substationsToggle.style.opacity = substationsVisible ? '1' : '0.5';
+                substationsToggle.style.textDecoration = substationsVisible ? 'none' : 'line-through';
+
+                console.log(`Substations ${substationsVisible ? 'shown' : 'hidden'}`);
+            });
+        }
+
+        // Setup basemap toggle functionality with multi-select support
         function setupBasemapToggle() {
             const basemapOptions = document.querySelectorAll('.basemap-option');
 
             basemapOptions.forEach(option => {
-                option.addEventListener('click', () => {
+                option.addEventListener('click', (e) => {
                     const layerType = option.getAttribute('data-layer');
+                    const isMultiSelect = e.ctrlKey || e.metaKey; // Ctrl on Windows/Linux, Cmd on Mac
 
-                    // 1. First, clean up the map from previous selections
-                    basemapOptions.forEach(opt => opt.classList.remove('active'));
-                    if (currentBaseLayer && map.hasLayer(currentBaseLayer)) {
-                        map.removeLayer(currentBaseLayer);
-                        // Remove grayscale filter if present (only for tile layers that support it)
-                        if (currentBaseLayer.getContainer && typeof currentBaseLayer.getContainer === 'function') {
-                            const container = currentBaseLayer.getContainer();
-                            if (container) {
-                                container.classList.remove('grayscale');
-                            }
+                    // Determine if this is an overlay basemap (not a base layer)
+                    const overlayTypes = ['elevation', 'population', 'landcover', 'solarMap', 'windMap', 'populationMap', 'ccusWest', 'burnProbability'];
+                    const isOverlayType = overlayTypes.includes(layerType);
+
+                    if (isMultiSelect && isOverlayType) {
+                        // Multi-select mode for overlay basemaps
+                        if (activeBaseOptions.has(layerType)) {
+                            // Remove this overlay
+                            activeBaseOptions.delete(layerType);
+                            option.classList.remove('active');
+                            removeOverlayByType(layerType);
+                        } else {
+                            // Add this overlay
+                            activeBaseOptions.add(layerType);
+                            option.classList.add('active');
+                            addOverlayByType(layerType);
                         }
-                    }
-                    if (activeOverlay && map.hasLayer(activeOverlay)) {
-                        map.removeLayer(activeOverlay);
-                    }
-                    activeOverlay = null; // Reset the active overlay
-                    isLandCoverActive = false; // Reset land cover tracking
 
-                    // 2. Add the new layers based on the selection
-                    option.classList.add('active');
-
-                    switch (layerType) {
-                        case 'grayscale':
-                            currentBaseLayer = baseLayers.grayscale.addTo(map);
+                        console.log(`Multi-select: ${Array.from(activeBaseOptions).join(', ')}`);
+                    } else {
+                        // Single-select mode - clear everything and start fresh
+                        // 1. Clear all previous selections
+                        basemapOptions.forEach(opt => opt.classList.remove('active'));
+                        if (currentBaseLayer && map.hasLayer(currentBaseLayer)) {
+                            map.removeLayer(currentBaseLayer);
+                            // Remove grayscale filter if present
                             if (currentBaseLayer.getContainer && typeof currentBaseLayer.getContainer === 'function') {
                                 const container = currentBaseLayer.getContainer();
                                 if (container) {
-                                    container.classList.add('grayscale');
+                                    container.classList.remove('grayscale');
                                 }
                             }
-                            console.log('Switched to grayscale basemap');
-                            break;
-                        case 'satellite':
-                            currentBaseLayer = baseLayers.satellite.addTo(map);
-                            currentBaseLayer.on('load', () => console.log('Satellite basemap loaded'));
-                            currentBaseLayer.on('requesterror', (e) => console.error('Satellite error:', e));
-                            console.log('Switched to satellite basemap');
-                            break;
-                        case 'elevation':
-                            currentBaseLayer = baseLayers.elevation.addTo(map);
-                            console.log('Switched to elevation/topographic map (OpenTopoMap)');
-                            break;
-                        case 'population':
-                            currentBaseLayer = baseLayers.population.addTo(map);
-                            activeOverlay = populationOverlay.addTo(map);
-                            currentBaseLayer.on('load', () => console.log('Population basemap loaded'));
-                            currentBaseLayer.on('tileerror', (e) => console.error('Population WMS error:', e));
-                            console.log('Switched to population basemap');
-                            break;
-                        case 'landcover':
-                            // Add satellite basemap for context
-                            currentBaseLayer = baseLayers.satellite.addTo(map);
-                            // Add land cover overlay
-                            activeOverlay = baseLayers.landcover.addTo(map);
-                            isLandCoverActive = true;
-                            console.log('Switched to land cover (USGS NLCD)');
-                            break;
-                        case 'solarMap':
-                            // Add satellite basemap for context
-                            currentBaseLayer = baseLayers.satellite.addTo(map);
-                            // Add solar irradiance overlay
-                            activeOverlay = baseLayers.solarMap.addTo(map);
+                        }
 
-                            // Debug: log tile load events
-                            activeOverlay.on('tileload', function(e) {
-                                console.log('Tile loaded:', e.url);
-                            });
-                            activeOverlay.on('tileerror', function(e) {
-                                console.error('Tile error:', e.url, e.tile, e.error);
-                            });
-                            activeOverlay.on('load', function() {
-                                console.log('All tiles loaded for current view');
-                            });
+                        // Remove all active overlays
+                        activeOverlays.forEach(overlay => {
+                            if (map.hasLayer(overlay)) {
+                                map.removeLayer(overlay);
+                            }
+                        });
+                        activeOverlays = [];
+                        activeBaseOptions.clear();
+                        isLandCoverActive = false;
 
-                            console.log('Switched to solar irradiance map');
-                            console.log('Current zoom level:', map.getZoom());
-                            console.log('Current bounds:', map.getBounds());
-                            break;
-                        case 'windMap':
-                            // Add satellite basemap for context
-                            currentBaseLayer = baseLayers.satellite.addTo(map);
-                            // Add wind speed overlay
-                            activeOverlay = baseLayers.windMap.addTo(map);
+                        // 2. Add the new selection
+                        option.classList.add('active');
+                        activeBaseOptions.add(layerType);
 
-                            // Debug: log tile load events
-                            activeOverlay.on('tileload', function(e) {
-                                console.log('Tile loaded:', e.url);
-                            });
-                            activeOverlay.on('tileerror', function(e) {
-                                console.error('Tile error:', e.url, e.tile, e.error);
-                            });
-                            activeOverlay.on('load', function() {
-                                console.log('All tiles loaded for current view');
-                            });
+                        switch (layerType) {
+                            case 'grayscale':
+                                currentBaseLayer = baseLayers.grayscale.addTo(map);
+                                if (currentBaseLayer.getContainer && typeof currentBaseLayer.getContainer === 'function') {
+                                    const container = currentBaseLayer.getContainer();
+                                    if (container) {
+                                        container.classList.add('grayscale');
+                                    }
+                                }
+                                console.log('Switched to grayscale basemap');
+                                break;
+                            case 'satellite':
+                                currentBaseLayer = baseLayers.satellite.addTo(map);
+                                currentBaseLayer.on('load', () => console.log('Satellite basemap loaded'));
+                                currentBaseLayer.on('requesterror', (e) => console.error('Satellite error:', e));
+                                console.log('Switched to satellite basemap');
+                                break;
+                            default:
+                                // For overlay types, use appropriate base layer
+                                // Use street/grayscale for CCS Storage, satellite for others
+                                if (layerType === 'ccusWest') {
+                                    currentBaseLayer = baseLayers.grayscale.addTo(map);
+                                    if (currentBaseLayer.getContainer && typeof currentBaseLayer.getContainer === 'function') {
+                                        const container = currentBaseLayer.getContainer();
+                                        if (container) {
+                                            container.classList.add('grayscale');
+                                        }
+                                    }
+                                } else {
+                                    currentBaseLayer = baseLayers.satellite.addTo(map);
+                                }
+                                addOverlayByType(layerType);
+                                break;
+                        }
 
-                            console.log('Switched to wind speed map');
-                            console.log('Current zoom level:', map.getZoom());
-                            console.log('Current bounds:', map.getBounds());
-                            break;
+                        console.log(`Switched to ${layerType} basemap`);
                     }
 
-                    // 3. NO LONGER NEEDED - The 'pane' system handles z-ordering automatically.
-                    // Layer ordering is now controlled by the z-index values set in the pane definitions
-
-                    console.log(`Switched to ${layerType} basemap`);
                 });
             });
+        }
+
+        // Helper function to add an overlay by type
+        function addOverlayByType(layerType) {
+            let overlay = null;
+
+            switch (layerType) {
+                case 'elevation':
+                    overlay = baseLayers.elevation.addTo(map);
+                    console.log('Added elevation overlay');
+                    break;
+                case 'population':
+                    overlay = populationOverlay.addTo(map);
+                    console.log('Added population overlay');
+                    break;
+                case 'landcover':
+                    overlay = baseLayers.landcover.addTo(map);
+                    isLandCoverActive = true;
+                    console.log('Added land cover overlay');
+                    break;
+                case 'solarMap':
+                    overlay = baseLayers.solarMap.addTo(map);
+                    overlay.on('tileload', function(e) {
+                        console.log('Solar tile loaded:', e.url);
+                    });
+                    overlay.on('tileerror', function(e) {
+                        console.error('Solar tile error:', e.url);
+                    });
+                    console.log('Added solar overlay');
+                    break;
+                case 'windMap':
+                    overlay = baseLayers.windMap.addTo(map);
+                    overlay.on('tileload', function(e) {
+                        console.log('Wind tile loaded:', e.url);
+                    });
+                    overlay.on('tileerror', function(e) {
+                        console.error('Wind tile error:', e.url);
+                    });
+                    console.log('Added wind overlay');
+                    break;
+                case 'populationMap':
+                    overlay = baseLayers.populationMap.addTo(map);
+                    overlay.on('tileload', function(e) {
+                        console.log('Population tile loaded:', e.url);
+                    });
+                    overlay.on('tileerror', function(e) {
+                        console.error('Population tile error:', e.url);
+                    });
+                    console.log('Added population density overlay');
+                    break;
+                case 'ccusWest':
+                    overlay = baseLayers.ccusWest.addTo(map);
+                    isCCSActive = true;
+                    overlay.on('tileload', function(e) {
+                        console.log('CCS Storage tile loaded:', e.url);
+                    });
+                    overlay.on('tileerror', function(e) {
+                        console.error('CCS Storage tile error:', e.url);
+                    });
+                    console.log('Added CCS Storage overlay');
+                    break;
+                case 'burnProbability':
+                    overlay = baseLayers.burnProbability.addTo(map);
+                    console.log('Added Burn Probability overlay');
+                    break;
+            }
+
+            if (overlay) {
+                activeOverlays.push(overlay);
+                // Adjust opacity of all overlays based on count
+                updateOverlayOpacity();
+            }
+        }
+
+        // Helper function to update opacity of all active overlays based on count
+        function updateOverlayOpacity() {
+            const overlayCount = activeOverlays.length;
+
+            if (overlayCount === 0) {
+                return;
+            }
+
+            // Calculate opacity based on number of overlays
+            // With 1 overlay: keep original opacity (0.7-0.9)
+            // With 2 overlays: reduce to 0.5 each for better blending
+            // With 3+ overlays: reduce further to prevent complete occlusion
+            let targetOpacity;
+
+            if (overlayCount === 1) {
+                targetOpacity = 0.8; // Single layer - keep it visible
+            } else if (overlayCount === 2) {
+                targetOpacity = 0.5; // Two layers - 50% each for blending
+            } else if (overlayCount === 3) {
+                targetOpacity = 0.4; // Three layers - reduce more
+            } else {
+                targetOpacity = 0.35; // Four or more - even more transparent
+            }
+
+            // Apply the calculated opacity to all active overlays
+            activeOverlays.forEach(overlay => {
+                if (overlay && overlay.setOpacity) {
+                    overlay.setOpacity(targetOpacity);
+                }
+            });
+
+            console.log(`Updated ${overlayCount} overlay(s) to opacity: ${targetOpacity}`);
+        }
+
+        // Helper function to remove an overlay by type
+        function removeOverlayByType(layerType) {
+            // Find and remove the overlay from the map
+            activeOverlays = activeOverlays.filter(overlay => {
+                // Check if this overlay corresponds to the layer type we want to remove
+                let shouldRemove = false;
+
+                switch (layerType) {
+                    case 'elevation':
+                        shouldRemove = (overlay === baseLayers.elevation);
+                        break;
+                    case 'population':
+                        shouldRemove = (overlay === populationOverlay);
+                        break;
+                    case 'landcover':
+                        shouldRemove = (overlay === baseLayers.landcover);
+                        if (shouldRemove) isLandCoverActive = false;
+                        break;
+                    case 'solarMap':
+                        shouldRemove = (overlay === baseLayers.solarMap);
+                        break;
+                    case 'windMap':
+                        shouldRemove = (overlay === baseLayers.windMap);
+                        break;
+                    case 'populationMap':
+                        shouldRemove = (overlay === baseLayers.populationMap);
+                        break;
+                    case 'ccusWest':
+                        shouldRemove = (overlay === baseLayers.ccusWest);
+                        if (shouldRemove) isCCSActive = false;
+                        break;
+                    case 'burnProbability':
+                        shouldRemove = (overlay === baseLayers.burnProbability);
+                        break;
+                }
+
+                if (shouldRemove && map.hasLayer(overlay)) {
+                    map.removeLayer(overlay);
+                    console.log(`Removed ${layerType} overlay`);
+                }
+
+                return !shouldRemove; // Keep overlays that don't match
+            });
+
+            // Adjust opacity of remaining overlays
+            updateOverlayOpacity();
+        }
+
+        // CCS Storage color mapping (RGB values from tile colors)
+        const ccsColorMap = {
+            'coal': { color: [139, 69, 19], name: 'Coal Mine Storage' },
+            'oilgas': { color: [255, 140, 0], name: 'Oil-Gas Well Storage' },
+            'saline': { color: [30, 144, 255], name: 'Saline Storage' }
+        };
+
+        // Function to identify CCS storage type from RGB color
+        function getCCSStorageType(r, g, b) {
+            let minDistance = Infinity;
+            let closestType = null;
+
+            for (const [key, data] of Object.entries(ccsColorMap)) {
+                const [cr, cg, cb] = data.color;
+                // Calculate Euclidean distance in RGB space
+                const distance = Math.sqrt(
+                    Math.pow(r - cr, 2) +
+                    Math.pow(g - cg, 2) +
+                    Math.pow(b - cb, 2)
+                );
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestType = data.name;
+                }
+            }
+
+            // Only return if color is reasonably close (threshold to avoid noise)
+            return minDistance < 50 ? closestType : null;
         }
 
         // NLCD Land Cover color mapping from the legend
@@ -941,8 +1275,18 @@
             offset: [0, -10]
         });
 
+        // Create CCS storage hover tooltip
+        var ccsTooltip = L.tooltip({
+            permanent: false,
+            direction: 'top',
+            className: 'land-cover-tooltip',
+            offset: [0, -10]
+        });
+
         // Variable to track if land cover layer is active
         var isLandCoverActive = false;
+        // Variable to track if CCS storage layer is active
+        var isCCSActive = false;
 
         // Debounce function to limit GetFeatureInfo requests
         function debounce(func, wait) {
@@ -967,7 +1311,11 @@
                 // Don't show land cover tooltip if:
                 // 1. Land cover layer is not active
                 // 2. Mouse is over a power plant or other map feature
-                if (!isLandCoverActive || !activeOverlay || activeOverlay !== baseLayers.landcover || isOverMapFeature) {
+                // 3. Land cover overlay is not in the active overlays array
+                // 4. Multiple overlays are active (colors blend, making detection inaccurate)
+                const hasLandCoverActive = activeOverlays.includes(baseLayers.landcover);
+                const hasMultipleOverlays = activeOverlays.length > 1;
+                if (!isLandCoverActive || !hasLandCoverActive || isOverMapFeature || hasMultipleOverlays) {
                     if (map.hasLayer(landCoverTooltip)) {
                         map.closeTooltip(landCoverTooltip);
                     }
@@ -1074,6 +1422,94 @@
                 if (e.layer && (e.layer.feature || e.layer instanceof L.Marker || e.layer instanceof L.CircleMarker || e.layer instanceof L.Polyline)) {
                     isOverMapFeature = false;
                 }
+            });
+        }
+
+        // Setup CCS Storage hover functionality
+        function setupCCSHover() {
+            // Create a canvas to sample pixel colors
+            let canvas = document.createElement('canvas');
+            let ctx = canvas.getContext('2d');
+
+            // Debounced function to query CCS layer for storage type
+            const queryCCS = debounce(function(latlng) {
+                // Don't show CCS tooltip if:
+                // 1. CCS layer is not active
+                // 2. Mouse is over a power plant or other map feature
+                // 3. CCS overlay is not in the active overlays array
+                // 4. Multiple overlays are active (colors blend, making detection inaccurate)
+                const hasCCSActive = activeOverlays.includes(baseLayers.ccusWest);
+                const hasMultipleOverlays = activeOverlays.length > 1;
+                if (!isCCSActive || !hasCCSActive || isOverMapFeature || hasMultipleOverlays) {
+                    if (map.hasLayer(ccsTooltip)) {
+                        map.closeTooltip(ccsTooltip);
+                    }
+                    return;
+                }
+
+                // Get the pixel at the mouse position from the CCS tile layer
+                const point = map.latLngToContainerPoint(latlng);
+                const zoom = map.getZoom();
+                const tilePoint = map.project(latlng, zoom).divideBy(256).floor();
+
+                // Build URL for the CCS tile
+                const tileUrl = `https://eshan2803.github.io/basemaps/ccus_west_tiles/${zoom}/${tilePoint.x}/${tilePoint.y}.png`;
+
+                // Load the tile image and sample the color
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.onload = function() {
+                    try {
+                        canvas.width = 256;
+                        canvas.height = 256;
+                        ctx.drawImage(img, 0, 0);
+
+                        // Get pixel position within the tile
+                        const tilePixel = map.project(latlng, zoom).subtract(tilePoint.multiplyBy(256));
+                        const pixelData = ctx.getImageData(tilePixel.x, tilePixel.y, 1, 1).data;
+
+                        const r = pixelData[0];
+                        const g = pixelData[1];
+                        const b = pixelData[2];
+                        const a = pixelData[3];
+
+                        // Only process if not transparent
+                        if (a > 0) {
+                            const storageType = getCCSStorageType(r, g, b);
+
+                            if (storageType) {
+                                ccsTooltip.setLatLng(latlng)
+                                    .setContent(`<strong>CO2 Storage:</strong><br>${storageType}`)
+                                    .addTo(map);
+                            } else {
+                                if (map.hasLayer(ccsTooltip)) {
+                                    map.closeTooltip(ccsTooltip);
+                                }
+                            }
+                        } else {
+                            if (map.hasLayer(ccsTooltip)) {
+                                map.closeTooltip(ccsTooltip);
+                            }
+                        }
+                    } catch (error) {
+                        // Handle CORS or other errors silently
+                        if (map.hasLayer(ccsTooltip)) {
+                            map.closeTooltip(ccsTooltip);
+                        }
+                    }
+                };
+                img.onerror = function() {
+                    // Tile doesn't exist or failed to load
+                    if (map.hasLayer(ccsTooltip)) {
+                        map.closeTooltip(ccsTooltip);
+                    }
+                };
+                img.src = tileUrl;
+            }, 150);
+
+            // Listen to mouse movement
+            map.on('mousemove', function(e) {
+                queryCCS(e.latlng);
             });
         }
 
@@ -1235,6 +1671,67 @@
                 }
             });
 
+            // 4. Identify Electrical Islands (Connected Components)
+            console.log('Calculating electrical islands...');
+            let islandCounter = 0;
+            const visitedSubstations = new Set();
+
+            networkGraph.substations.forEach(substation => {
+                if (!visitedSubstations.has(substation.id)) {
+                    islandCounter++;
+                    const islandId = `island_${islandCounter}`;
+                    
+                    networkGraph.islands[islandId] = {
+                        lines: [],
+                        substations: []
+                    };
+
+                    // BFS to find all connected components
+                    const queue = [substation.id];
+                    visitedSubstations.add(substation.id);
+                    
+                    // Assign island to starting substation
+                    substation.islandId = islandId;
+                    networkGraph.islands[islandId].substations.push(substation.id);
+
+                    while (queue.length > 0) {
+                        const currentSubId = queue.shift();
+                        
+                        // Get connected lines
+                        const connectedLineIds = networkGraph.linesBySubstation[currentSubId] || [];
+                        
+                        connectedLineIds.forEach(lineId => {
+                            const line = networkGraph.lines.find(l => l.id === lineId);
+                            if (!line) return;
+
+                            // Assign island to line (if not already assigned)
+                            if (!line.islandId) {
+                                line.islandId = islandId;
+                                networkGraph.islands[islandId].lines.push(lineId);
+                            }
+
+                            // Check other end of the line
+                            let otherSubId = null;
+                            if (line.startNodeId === currentSubId) otherSubId = line.endNodeId;
+                            else if (line.endNodeId === currentSubId) otherSubId = line.startNodeId;
+
+                            if (otherSubId && !visitedSubstations.has(otherSubId)) {
+                                visitedSubstations.add(otherSubId);
+                                queue.push(otherSubId);
+                                
+                                // Assign island to other substation
+                                const otherSub = networkGraph.substations.find(s => s.id === otherSubId);
+                                if (otherSub) {
+                                    otherSub.islandId = islandId;
+                                    networkGraph.islands[islandId].substations.push(otherSubId);
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+            console.log(`Identified ${islandCounter} electrical islands.`);
+
             // 3. Connect plants to nearest substations
             plantsData.features.forEach((feature, idx) => {
                 const props = feature.properties;
@@ -1252,6 +1749,11 @@
 
                 // Reuse substationPoints already created above
                 const nearest = turf.nearestPoint(plantPoint, substationPoints);
+                const nearestSubId = nearest.properties.id;
+                
+                // Find the substation to get its island ID
+                const nearestSub = networkGraph.substations.find(s => s.id === nearestSubId);
+                const islandId = nearestSub ? nearestSub.islandId : null;
 
                 networkGraph.plants.push({
                     id: `plant_${idx}`,
@@ -1259,9 +1761,10 @@
                     name: props.PlantName || 'Unknown',
                     fuel: props.PriEnergySource || 'UNKNOWN',
                     capacity: props.Capacity_Latest || 0,
-                    nearestSubstationId: nearest.properties.id,
+                    nearestSubstationId: nearestSubId,
                     feature: feature,
-                    isOn: false
+                    isOn: false,
+                    islandId: islandId // Assign island ID
                 });
             });
 
@@ -1272,50 +1775,24 @@
             console.log(`${connectedLines} lines connected to substations (${(connectedLines/networkGraph.lines.length*100).toFixed(1)}%)`);
         }
 
-        // BFS to find all lines connected to a substation
-        function getConnectedLines(startSubstationId) {
-            const visited = new Set();
-            const connectedLineIds = new Set();
-            const queue = [startSubstationId];
-
-            while (queue.length > 0) {
-                const currentSubId = queue.shift();
-
-                if (visited.has(currentSubId)) continue;
-                visited.add(currentSubId);
-
-                // Get all lines connected to this substation
-                const lines = networkGraph.linesBySubstation[currentSubId] || [];
-
-                lines.forEach(lineId => {
-                    connectedLineIds.add(lineId);
-
-                    // Find the line and get the other end substation
-                    const line = networkGraph.lines.find(l => l.id === lineId);
-                    if (!line) return;
-
-                    // Add the other end to the queue
-                    if (line.startNodeId === currentSubId && line.endNodeId) {
-                        if (!visited.has(line.endNodeId)) {
-                            queue.push(line.endNodeId);
-                        }
-                    } else if (line.endNodeId === currentSubId && line.startNodeId) {
-                        if (!visited.has(line.startNodeId)) {
-                            queue.push(line.startNodeId);
-                        }
-                    }
-                });
-            }
-
-            return Array.from(connectedLineIds);
-        }
+        // BFS to find all lines connected to a substation - REMOVED (Optimized with Island pre-calculation)
+        // function getConnectedLines(startSubstationId) { ... }
 
         // Generate HTML for plant marker based on fuel type and color
-        function getMarkerHTML(fuelType, color) {
+        // Optional size parameter: 'normal' (12px default) or 'large' (18px for wind, 16px for battery/nuclear)
+        function getMarkerHTML(fuelType, color, size = 'normal') {
+            const isLarge = size === 'large';
+            const windSize = isLarge ? 18 : 12;
+            const windHalfSize = isLarge ? 9 : 6;
+            const batterySize = isLarge ? 16 : 12;
+            const batteryHalfSize = isLarge ? 8 : 6;
+            const nuclearSize = isLarge ? 16 : 12;
+            const nuclearHalfSize = isLarge ? 8 : 6;
+
             switch (fuelType.toUpperCase()) {
                 case 'WND':
                 case 'WIND':
-                    return `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><polygon points="6,2 11,10 1,10" fill="${color}" stroke="#000" stroke-width="1"/></svg>`;
+                    return `<svg width="${windSize}" height="${windSize}" style="margin-left: -${windHalfSize}px; margin-top: -${windHalfSize}px;"><polygon points="${windHalfSize},${isLarge ? 3 : 2} ${isLarge ? 16 : 11},${isLarge ? 15 : 10} ${isLarge ? 2 : 1},${isLarge ? 15 : 10}" fill="${color}" stroke="#000" stroke-width="1"/></svg>`;
 
                 case 'NG':
                 case 'GAS':
@@ -1331,7 +1808,7 @@
                     return `<div style="width: 8px; height: 8px; background-color: ${color}; border: 1px solid #000; transform: rotate(45deg); margin-left: -4px; margin-top: -4px;"></div>`;
 
                 case 'NUC':
-                    return `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><polygon points="6,1 11,4 9,10 3,10 1,4" fill="${color}" stroke="#000" stroke-width="1"/></svg>`;
+                    return `<svg width="${nuclearSize}" height="${nuclearSize}" style="margin-left: -${nuclearHalfSize}px; margin-top: -${nuclearHalfSize}px;"><polygon points="${nuclearHalfSize},${isLarge ? 1.5 : 1} ${isLarge ? 14 : 11},${isLarge ? 5 : 4} ${isLarge ? 12 : 9},${isLarge ? 13 : 10} ${isLarge ? 4 : 3},${isLarge ? 13 : 10} ${isLarge ? 2 : 1},${isLarge ? 5 : 4}" fill="${color}" stroke="#000" stroke-width="1"/></svg>`;
 
                 case 'LFG':
                 case 'WDS':
@@ -1352,7 +1829,7 @@
 
                 case 'BAT':
                 case 'OTH': // Vaca Dixon Battery Storage is marked as OTH
-                    return `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><rect x="2" y="4" width="8" height="5" fill="${color}" stroke="#000" stroke-width="1"/><rect x="4" y="3" width="4" height="1" fill="${color}" stroke="#000" stroke-width="0.5"/></svg>`;
+                    return `<svg width="${batterySize}" height="${batterySize}" style="margin-left: -${batteryHalfSize}px; margin-top: -${batteryHalfSize}px;"><rect x="${isLarge ? 3 : 2}" y="${isLarge ? 5 : 4}" width="${isLarge ? 10 : 8}" height="${isLarge ? 6 : 5}" fill="${color}" stroke="#000" stroke-width="1"/><rect x="${isLarge ? 5 : 4}" y="${isLarge ? 4 : 3}" width="${isLarge ? 6 : 4}" height="1" fill="${color}" stroke="#000" stroke-width="0.5"/></svg>`;
 
                 default:
                     return `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><polygon points="4,1 8,1 11,4 11,8 8,11 4,11 1,8 1,4" fill="${color}" stroke="#000" stroke-width="1"/></svg>`;
@@ -1472,14 +1949,14 @@
                         });
                         break;
 
-                    case 'WND': // Wind - Triangle pointing up (SVG for consistent border)
+                    case 'WND': // Wind - Triangle pointing up (SVG for consistent border) - LARGER SIZE (18px)
                     case 'WIND':
                         marker = L.marker(plantData.latlng, {
                             icon: L.divIcon({
                                 className: 'custom-div-icon',
-                                html: `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><polygon points="6,2 11,10 1,10" fill="#808080" stroke="#000" stroke-width="1"/></svg>`,
-                                iconSize: [12, 12],
-                                iconAnchor: [6, 6]
+                                html: getMarkerHTML(fuelType, '#808080', 'large'),
+                                iconSize: [18, 18],
+                                iconAnchor: [9, 9]
                             })
                         });
                         break;
@@ -1522,13 +1999,23 @@
                         break;
 
                     case 'PC': // Petroleum Coke - Pentagon with border
-                    case 'NUC':
                         marker = L.marker(plantData.latlng, {
                             icon: L.divIcon({
                                 className: 'custom-div-icon',
                                 html: `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><polygon points="6,1 11,4 9,10 3,10 1,4" fill="#808080" stroke="#000" stroke-width="1"/></svg>`,
                                 iconSize: [12, 12],
                                 iconAnchor: [6, 6]
+                            })
+                        });
+                        break;
+
+                    case 'NUC': // Nuclear - Pentagon with border - LARGER SIZE
+                        marker = L.marker(plantData.latlng, {
+                            icon: L.divIcon({
+                                className: 'custom-div-icon',
+                                html: getMarkerHTML(fuelType, '#808080', 'large'),
+                                iconSize: [16, 16],
+                                iconAnchor: [8, 8]
                             })
                         });
                         break;
@@ -1565,13 +2052,14 @@
                         });
                         break;
 
-                    case 'BAT': // Battery - Rectangle with border
+                    case 'BAT': // Battery - Rectangle with border - LARGER SIZE
+                    case 'OTH': // Other (often battery storage)
                         marker = L.marker(plantData.latlng, {
                             icon: L.divIcon({
                                 className: 'custom-div-icon',
-                                html: `<svg width="12" height="12" style="margin-left: -6px; margin-top: -6px;"><rect x="2" y="4" width="8" height="5" fill="#808080" stroke="#000" stroke-width="1"/><rect x="4" y="3" width="4" height="1" fill="#808080" stroke="#000" stroke-width="0.5"/></svg>`,
-                                iconSize: [12, 12],
-                                iconAnchor: [6, 6]
+                                html: getMarkerHTML(fuelType, '#808080', 'large'),
+                                iconSize: [16, 16],
+                                iconAnchor: [8, 8]
                             })
                         });
                         break;
@@ -1614,11 +2102,15 @@
                         if (marker instanceof L.CircleMarker) {
                             marker.setStyle({ fillColor: color });
                         } else {
+                            const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
+                            const isWind = ['WND', 'WIND'].includes(fuelType);
+                            const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
+                            const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
                             marker.setIcon(L.divIcon({
                                 className: 'custom-div-icon',
-                                html: getMarkerHTML(fuelType, color),
-                                iconSize: [12, 12],
-                                iconAnchor: [6, 6]
+                                html: getMarkerHTML(fuelType, color, 'large'),
+                                iconSize: [markerSize, markerSize],
+                                iconAnchor: [markerAnchor, markerAnchor]
                             }));
                         }
                     } else {
@@ -1628,11 +2120,15 @@
                         if (marker instanceof L.CircleMarker) {
                             marker.setStyle({ fillColor: '#808080' });
                         } else {
+                            const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
+                            const isWind = ['WND', 'WIND'].includes(fuelType);
+                            const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
+                            const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
                             marker.setIcon(L.divIcon({
                                 className: 'custom-div-icon',
-                                html: getMarkerHTML(fuelType, '#808080'),
-                                iconSize: [12, 12],
-                                iconAnchor: [6, 6]
+                                html: getMarkerHTML(fuelType, '#808080', 'large'),
+                                iconSize: [markerSize, markerSize],
+                                iconAnchor: [markerAnchor, markerAnchor]
                             }));
                         }
                     }
@@ -1694,7 +2190,7 @@
             }
         }
 
-        // Updated function to show flow only on connected lines
+        // Updated function to show flow only on connected lines using pre-calculated Islands
         function updateFlow() {
             // Update counter display
             document.getElementById('activeCount').textContent = activeGenerators;
@@ -1703,21 +2199,27 @@
             animatedLinesLayer.clearLayers();
 
             if (activeGenerators > 0) {
-                // Find all active plants
-                const activePlants = networkGraph.plants.filter(p => p.isOn);
+                // Set of active island IDs
+                const activeIslandIds = new Set();
 
-                // Collect all connected line IDs from all active plants
-                const allConnectedLineIds = new Set();
-
-                activePlants.forEach(plant => {
-                    const substationId = plant.nearestSubstationId;
-                    if (substationId) {
-                        const connectedLines = getConnectedLines(substationId);
-                        connectedLines.forEach(lineId => allConnectedLineIds.add(lineId));
+                // Find all active plants and collect their island IDs
+                networkGraph.plants.forEach(plant => {
+                    if (plant.isOn && plant.islandId) {
+                        activeIslandIds.add(plant.islandId);
                     }
                 });
 
-                console.log(`${activePlants.length} active plants, ${allConnectedLineIds.size} lines to animate`);
+                // Collect all line IDs from active islands
+                const allConnectedLineIds = new Set();
+                activeIslandIds.forEach(islandId => {
+                    if (networkGraph.islands[islandId]) {
+                        networkGraph.islands[islandId].lines.forEach(lineId => {
+                            allConnectedLineIds.add(lineId);
+                        });
+                    }
+                });
+
+                console.log(`${activeGenerators} active plants, ${activeIslandIds.size} active islands, ${allConnectedLineIds.size} lines to animate`);
 
                 // Update static lines: hide animated ones, show others in teal-blue
                 staticLinesLayer.eachLayer(function(layer) {
@@ -1760,7 +2262,210 @@
                 }
             }
         }
+
+        // --- Time Simulation Logic ---
+
+        function setupTimeSimulation() {
+            const timeSlider = document.getElementById('timeSlider');
+            const timeDisplay = document.getElementById('timeDisplay');
+            const simStatus = document.getElementById('simStatus');
+
+            // Initial update - small delay to ensure plants are loaded
+            setTimeout(() => {
+                updateSimulation(parseInt(timeSlider.value));
+            }, 1000);
+
+            timeSlider.addEventListener('input', function() {
+                const hour = parseInt(this.value);
+                
+                // Update Time Display
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                const displayHour = hour % 12 || 12;
+                timeDisplay.textContent = `${displayHour}:00 ${ampm}`;
+
+                // Update Simulation Status Text
+                if (hour >= 8 && hour <= 16) {
+                    simStatus.textContent = "Daytime: Solar peaks, gas ramps down.";
+                } else if (hour >= 17 && hour <= 21) {
+                    simStatus.textContent = "Evening Ramp: Solar fades, gas ramps UP!";
+                } else {
+                    simStatus.textContent = "Night: Wind & baseload active.";
+                }
+
+                updateSimulation(hour);
+            });
+        }
+
+        function updateSimulation(hour) {
+            if (!networkGraph.plants || networkGraph.plants.length === 0) return;
+
+            // 1. Calculate Factors
+            const solarFactor = getSolarFactor(hour);
+            const windFactor = getWindFactor(hour);
+            const loadFactor = getLoadFactor(hour);
+            
+            // Net Load roughly = Load - (Solar + Wind)
+            // We use this to determine how much dispatchable gas/hydro is needed
+            // Normalize factors roughly to 0-1 range for logic
+            // Solar reduces net load significantly
+            const netLoadProxy = Math.max(0.1, loadFactor - (solarFactor * 0.5) - (windFactor * 0.1)); 
+
+            activeGenerators = 0;
+
+            networkGraph.plants.forEach(plant => {
+                const fuelType = (plant.fuel || 'UNKNOWN').toUpperCase();
+                let shouldBeOn = false;
+                let customColor = null;
+
+                if (fuelType === 'SUN') {
+                    // Solar Logic
+                    // Visible if factor > 0. Continuous color transition.
+                    if (solarFactor > 0.05) {
+                        shouldBeOn = true;
+                        // Interpolate color: Grey (#808080) -> Gold (#FFD700)
+                        customColor = interpolateColor('#808080', '#FFD700', solarFactor);
+                    } else {
+                        shouldBeOn = false;
+                    }
+
+                } else if (fuelType === 'WND' || fuelType === 'WIND') {
+                    // Wind Logic
+                    // Probabilistic ON based on wind factor
+                    const plantHash = plant.id.split('').reduce((a,b)=>a+b.charCodeAt(0),0);
+                    if ((plantHash % 100) / 100 < windFactor) {
+                        shouldBeOn = true;
+                    }
+
+                } else if (['NG', 'GAS', 'OGW', 'OG', 'BIT', 'OIL', 'DFO'].includes(fuelType)) {
+                    // Gas/Fossil Logic (Peaker/Dispatchable)
+                    // Turn on based on Net Load
+                     const plantHash = plant.id.split('').reduce((a,b)=>a+b.charCodeAt(0),0);
+                     // Shift hash so different plants turn on than wind
+                     // More gas plants turn on as netLoadProxy increases
+                     if (((plantHash + 50) % 100) / 100 < netLoadProxy) {
+                         shouldBeOn = true;
+                     }
+
+                } else if (['WAT', 'NUC', 'GEO', 'WH', 'BIO'].includes(fuelType)) {
+                     // Baseload / Hydro
+                     if (fuelType === 'NUC' || fuelType === 'GEO') shouldBeOn = true; // Baseload always on
+                     else {
+                         // Hydro follows load somewhat
+                         const plantHash = plant.id.split('').reduce((a,b)=>a+b.charCodeAt(0),0);
+                         if ((plantHash % 100) / 100 < (loadFactor * 0.9)) {
+                             shouldBeOn = true;
+                         }
+                     }
+                } else {
+                    // Others
+                    shouldBeOn = false;
+                }
+
+                // Update State
+                plant.isOn = shouldBeOn;
+                
+                if (shouldBeOn) activeGenerators++;
+
+                // Update Visuals
+                const baseColor = getFuelColor(plant.fuel);
+                const displayColor = customColor || baseColor;
+
+                updatePlantMarker(plant, shouldBeOn, displayColor);
+            });
+
+            updateFlow();
+        }
+
+        function updatePlantMarker(plant, isOn, color) {
+            if (!plant.marker) return;
+            
+            const fuelType = (plant.fuel || 'UNKNOWN').toUpperCase();
+            const marker = plant.marker;
+
+            if (isOn) {
+                 if (marker instanceof L.CircleMarker) {
+                    marker.setStyle({ fillColor: color });
+                } else {
+                    const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
+                    const isWind = ['WND', 'WIND'].includes(fuelType);
+                    const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
+                    const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
+                    marker.setIcon(L.divIcon({
+                        className: 'custom-div-icon',
+                        html: getMarkerHTML(fuelType, color, 'large'),
+                        iconSize: [markerSize, markerSize],
+                        iconAnchor: [markerAnchor, markerAnchor]
+                    }));
+                }
+            } else {
+                // Turn OFF (Grey)
+                const grey = '#808080';
+                 if (marker instanceof L.CircleMarker) {
+                    marker.setStyle({ fillColor: grey });
+                } else {
+                    const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
+                    const isWind = ['WND', 'WIND'].includes(fuelType);
+                    const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
+                    const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
+                    marker.setIcon(L.divIcon({
+                        className: 'custom-div-icon',
+                        html: getMarkerHTML(fuelType, grey, 'large'),
+                        iconSize: [markerSize, markerSize],
+                        iconAnchor: [markerAnchor, markerAnchor]
+                    }));
+                }
+            }
+        }
+
+        // Gaussian-ish Solar Profile
+        function getSolarFactor(hour) {
+            if (hour < 6 || hour > 20) return 0;
+            // Peak at 13 (1 PM)
+            const peak = 13;
+            const sigma = 2.5; 
+            return Math.exp(-Math.pow(hour - peak, 2) / (2 * Math.pow(sigma, 2)));
+        }
+
+        // Wind Profile
+        function getWindFactor(hour) {
+            // Higher at night (0-6, 18-23), lower during day
+            // Cosine approximation
+            // Shifted to peak around midnight
+            return 0.5 + 0.3 * Math.cos((hour / 24) * 2 * Math.PI);
+        }
+
+        // Load Profile (Camel Hump)
+        function getLoadFactor(hour) {
+            // Normalized 0-1 roughly
+            const morning = 0.4 * Math.exp(-Math.pow(hour - 10, 2) / 10);
+            const evening = 0.6 * Math.exp(-Math.pow(hour - 19, 2) / 10);
+            const base = 0.3;
+            return Math.min(1.0, base + morning + evening);
+        }
+
+        // Color Interpolation (Hex to Hex)
+        function interpolateColor(color1, color2, factor) {
+            if (factor >= 1) return color2;
+            if (factor <= 0) return color1;
+
+            const r1 = parseInt(color1.substring(1, 3), 16);
+            const g1 = parseInt(color1.substring(3, 5), 16);
+            const b1 = parseInt(color1.substring(5, 7), 16);
+
+            const r2 = parseInt(color2.substring(1, 3), 16);
+            const g2 = parseInt(color2.substring(3, 5), 16);
+            const b2 = parseInt(color2.substring(5, 7), 16);
+
+            const r = Math.round(r1 + factor * (r2 - r1));
+            const g = Math.round(g1 + factor * (g2 - g1));
+            const b = Math.round(b1 + factor * (b2 - b1));
+
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
     </script>
 </body>
 </html>
+
+
+
 
