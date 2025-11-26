@@ -205,74 +205,178 @@
             font-size: 12px;
         }
 
-        /* Time Control Panel (Bottom Center) */
+        /* Minimalist Time Control (Bottom Center) */
         #time-control-panel {
             position: absolute;
-            bottom: 25px;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
-            width: 60%;
-            min-width: 450px;
-            max-width: 800px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px 25px;
-            border-radius: 50px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+            width: 400px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(4px);
+            padding: 10px 20px;
+            border-radius: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             z-index: 1000;
             display: flex;
             flex-direction: column;
             align-items: center;
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(0,0,0,0.1);
+            gap: 5px;
+            transition: all 0.3s ease;
         }
-        
-        #time-control-header {
+
+        #time-control-panel:hover {
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .slider-row {
             display: flex;
-            justify-content: space-between;
-            width: 100%;
             align-items: center;
-            margin-bottom: 8px;
+            width: 100%;
+            gap: 10px;
         }
 
         #timeSlider {
-            width: 100%;
-            height: 8px;
-            border-radius: 5px;
-            background: #d3d3d3;
+            flex-grow: 1;
+            height: 4px;
+            border-radius: 2px;
+            background: #ccc;
             outline: none;
-            opacity: 0.7;
-            transition: opacity .2s;
             cursor: pointer;
+            -webkit-appearance: none; /* Override default look */
         }
 
-        #timeSlider:hover {
-            opacity: 1;
+        /* Custom Slider Thumb */
+        #timeSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #4A90A4;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
         }
 
-        .edit-profile-btn {
-            background-color: #4A90A4;
-            color: white;
+        #timeSlider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        #timeDisplay {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            font-family: monospace; /* Consistent width */
+        }
+
+        .edit-icon-btn {
+            background: none;
             border: none;
-            border-radius: 15px;
-            padding: 4px 12px;
-            font-size: 11px;
             cursor: pointer;
-            transition: background-color 0.2s;
+            padding: 4px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            transition: all 0.2s;
         }
 
-        .edit-profile-btn:hover {
-            background-color: #357a8d;
+        .edit-icon-btn:hover {
+            background-color: rgba(0,0,0,0.05);
+            color: #4A90A4;
         }
 
-        /* Profile Editor Modal */
-        #profile-editor-modal {
+        .edit-icon-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        /* Collapsible Basemap Menu (Bottom Right) */
+        #basemap-container {
+            position: absolute;
+            bottom: 30px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+        }
+
+        #basemap-trigger {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid rgba(0,0,0,0.1);
+        }
+
+        #basemap-trigger:hover {
+            background: #f4f4f4;
+            transform: scale(1.05);
+        }
+
+        #basemap-trigger.active {
+            background: #4A90A4;
+            color: white;
+            border-color: #4A90A4;
+        }
+
+        #basemap-trigger svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+
+        /* The list of basemaps */
+        #basemap-list {
+            background: white;
+            padding: 5px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             display: none; /* Hidden by default */
+            flex-direction: column;
+            gap: 4px;
+            max-height: 400px;
+            overflow-y: auto; /* Scroll if too tall */
+        }
+
+        #basemap-list.show {
+            display: flex;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Reuse existing basemap-option styles but ensure they work in the list */
+        .basemap-option {
+            /* Existing styles should work, just ensuring flex containment */
+            flex-shrink: 0;
+        }
+
+        /* Profile Editor Modal - Keep existing styles */
+        #profile-editor-modal {
+            display: none; 
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
+            background-color: rgba(0,0,0,0.5);
             z-index: 2000;
             justify-content: center;
             align-items: center;
@@ -460,55 +564,54 @@
             </span>Substations (4442)
         </div>
     </div>
-    <div id="basemap-toggle">
-        <div class="basemap-option active" id="basemap-grayscale" data-layer="grayscale" title="Grayscale Map">
-            <span class="label">Street</span>
+    <div id="basemap-container">
+        <div id="basemap-list">
+            <div class="basemap-option active" id="basemap-grayscale" data-layer="grayscale" title="Grayscale Map">
+                <span class="label">Street</span>
+            </div>
+            <div class="basemap-option" id="basemap-satellite" data-layer="satellite" title="Satellite View">
+                <span class="label">Satellite</span>
+            </div>
+            <div class="basemap-option" id="basemap-elevation" data-layer="elevation" title="Topographic Elevation">
+                <span class="label">Elevation</span>
+            </div>
+            <div class="basemap-option" id="basemap-population" data-layer="population" title="Population Density">
+                <span class="label">Population</span>
+            </div>
+            <div class="basemap-option" id="basemap-landcover" data-layer="landcover" title="Land Cover (NLCD)">
+                <span class="label">Land Cover</span>
+            </div>
+            <div class="basemap-option" id="basemap-solar" data-layer="solarMap" title="Solar Irradiance Map">
+                <span class="label">Solar</span>
+            </div>
+            <div class="basemap-option" id="basemap-wind" data-layer="windMap" title="Wind Speed Map">
+                <span class="label">Wind</span>
+            </div>
+            <div class="basemap-option" id="basemap-population-density" data-layer="populationMap" title="Population Density Map">
+                <span class="label">Pop. Density</span>
+            </div>
+            <div class="basemap-option" id="basemap-ccus" data-layer="ccusWest" title="CO2 Storage Sites (West)">
+                <span class="label">CO<sub>2</sub> Storage</span>
+            </div>
+            <div class="basemap-option" id="basemap-burn-probability" data-layer="burnProbability" title="Wildfire Burn Probability">
+                <span class="label">Fire Risk</span>
+            </div>
         </div>
-        <div class="basemap-option" id="basemap-satellite" data-layer="satellite" title="Satellite View">
-            <span class="label">Satellite</span>
-        </div>
-        <div class="basemap-option" id="basemap-elevation" data-layer="elevation" title="Topographic Elevation">
-            <span class="label">Elevation</span>
-        </div>
-        <div class="basemap-option" id="basemap-population" data-layer="population" title="Population Density">
-            <span class="label">Population</span>
-        </div>
-        <div class="basemap-option" id="basemap-landcover" data-layer="landcover" title="Land Cover (NLCD)">
-            <span class="label">Land Cover</span>
-        </div>
-        <div class="basemap-option" id="basemap-solar" data-layer="solarMap" title="Solar Irradiance Map">
-            <span class="label">Solar</span>
-        </div>
-        <div class="basemap-option" id="basemap-wind" data-layer="windMap" title="Wind Speed Map">
-            <span class="label">Wind</span>
-        </div>
-        <div class="basemap-option" id="basemap-population-density" data-layer="populationMap" title="Population Density Map">
-            <span class="label">Pop. Density</span>
-        </div>
-        <div class="basemap-option" id="basemap-ccus" data-layer="ccusWest" title="CO2 Storage Sites (West)">
-            <span class="label">CO<sub>2</sub> Storage</span>
-        </div>
-        <div class="basemap-option" id="basemap-burn-probability" data-layer="burnProbability" title="Wildfire Burn Probability">
-            <span class="label">Fire Risk</span>
+        <div id="basemap-trigger" title="Toggle Layers">
+            <svg viewBox="0 0 24 24"><path d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z"/></svg>
         </div>
     </div>
     <div id="map"></div>
     <div id="time-control-panel">
-        <div id="time-control-header">
-            <div>
-                <span style="font-weight: bold; font-size: 16px;">Time: <span id="timeDisplay">12:00 PM</span></span>
-                <p id="simStatus" style="font-size: 12px; color: #555; margin: 2px 0 0 0; font-style: italic;">
-                    Drag slider to simulate daily cycle
-                </p>
-            </div>
-            <button id="openProfileEditorBtn" class="edit-profile-btn">Edit Profiles</button>
+        <div class="slider-row">
+            <input type="range" id="timeSlider" min="0" max="23" value="12" step="1">
+            <button id="openProfileEditorBtn" class="edit-icon-btn" title="Edit Profiles">
+                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            </button>
         </div>
-        
-        <input type="range" id="timeSlider" min="0" max="23" value="12" step="1" style="width: 100%; margin: 10px 0;">
-        
-        <div style="display: flex; justify-content: space-between; width: 100%; font-size: 10px; color: #666; padding: 0 5px;">
-            <span>12 AM</span><span>3 AM</span><span>6 AM</span><span>9 AM</span><span>12 PM</span><span>3 PM</span><span>6 PM</span><span>9 PM</span><span>11 PM</span>
-        </div>
+        <div id="timeDisplay">12:00 PM</div>
+        <!-- Hidden status text for logic access -->
+        <div id="simStatus" style="display: none;"></div>
     </div>
 
     <!-- Profile Editor Modal -->
@@ -1147,6 +1250,24 @@
 
         // Setup basemap toggle functionality with multi-select support
         function setupBasemapToggle() {
+            // Toggle Menu Logic
+            const trigger = document.getElementById('basemap-trigger');
+            const list = document.getElementById('basemap-list');
+            
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                list.classList.toggle('show');
+                trigger.classList.toggle('active');
+            });
+
+            // Close menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!document.getElementById('basemap-container').contains(e.target)) {
+                    list.classList.remove('show');
+                    trigger.classList.remove('active');
+                }
+            });
+
             const basemapOptions = document.querySelectorAll('.basemap-option');
 
             basemapOptions.forEach(option => {
