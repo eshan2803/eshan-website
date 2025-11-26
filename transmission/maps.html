@@ -204,6 +204,182 @@
             color: #2c5f2d;
             font-size: 12px;
         }
+
+        /* Time Control Panel (Bottom Center) */
+        #time-control-panel {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            min-width: 450px;
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 25px;
+            border-radius: 50px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        
+        #time-control-header {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        #timeSlider {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #d3d3d3;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+            cursor: pointer;
+        }
+
+        #timeSlider:hover {
+            opacity: 1;
+        }
+
+        .edit-profile-btn {
+            background-color: #4A90A4;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            padding: 4px 12px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .edit-profile-btn:hover {
+            background-color: #357a8d;
+        }
+
+        /* Profile Editor Modal */
+        #profile-editor-modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #profile-editor-content {
+            background-color: #fefefe;
+            padding: 25px;
+            border-radius: 12px;
+            width: 80%;
+            max-width: 900px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            position: relative;
+        }
+
+        .close-modal {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-modal:hover {
+            color: black;
+        }
+
+        .tab-container {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: #4A90A4;
+            border-bottom: 3px solid #4A90A4;
+        }
+        
+        .profile-sliders-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            height: 250px;
+            padding: 20px 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .hour-slider-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 3%;
+            height: 100%;
+        }
+
+        .vertical-slider {
+            writing-mode: bt-lr; /* IE */
+            -webkit-appearance: slider-vertical; /* WebKit */
+            width: 8px;
+            height: 85%; /* Leave space for label */
+            outline: none;
+        }
+        
+        .hour-label {
+            font-size: 9px;
+            color: #666;
+            margin-top: 5px;
+            transform: rotate(-45deg);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: none;
+            font-weight: 600;
+        }
+
+        .btn-secondary {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/leaflet-ant-path@1.3.0/dist/leaflet-ant-path.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
@@ -222,18 +398,6 @@
         <button id="toggleAllBtn" style="width: 100%; margin-top: 10px; padding: 8px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
             Turn All Plants ON
         </button>
-        
-        <!-- Time Simulation Control -->
-        <div style="margin-top: 15px; border-top: 1px solid #ccc; padding-top: 10px;">
-            <label for="timeSlider" style="font-weight: bold; display: block; margin-bottom: 5px;">Time of Day: <span id="timeDisplay">12:00 PM</span></label>
-            <input type="range" id="timeSlider" min="0" max="23" value="12" step="1" style="width: 100%;">
-            <div style="display: flex; justify-content: space-between; font-size: 10px; color: #666;">
-                <span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>11 PM</span>
-            </div>
-            <p id="simStatus" style="font-size: 11px; color: #555; margin-top: 5px; font-style: italic;">
-                Drag slider to simulate daily cycle
-            </p>
-        </div>
     </div>
     <div id="legend">
         <strong id="legend-plants-header" style="cursor: pointer; user-select: none;" title="Click to hide/show all plants">Power Plant:</strong>
@@ -329,6 +493,48 @@
         </div>
     </div>
     <div id="map"></div>
+    <div id="time-control-panel">
+        <div id="time-control-header">
+            <div>
+                <span style="font-weight: bold; font-size: 16px;">Time: <span id="timeDisplay">12:00 PM</span></span>
+                <p id="simStatus" style="font-size: 12px; color: #555; margin: 2px 0 0 0; font-style: italic;">
+                    Drag slider to simulate daily cycle
+                </p>
+            </div>
+            <button id="openProfileEditorBtn" class="edit-profile-btn">Edit Profiles</button>
+        </div>
+        
+        <input type="range" id="timeSlider" min="0" max="23" value="12" step="1" style="width: 100%; margin: 10px 0;">
+        
+        <div style="display: flex; justify-content: space-between; width: 100%; font-size: 10px; color: #666; padding: 0 5px;">
+            <span>12 AM</span><span>3 AM</span><span>6 AM</span><span>9 AM</span><span>12 PM</span><span>3 PM</span><span>6 PM</span><span>9 PM</span><span>11 PM</span>
+        </div>
+    </div>
+
+    <!-- Profile Editor Modal -->
+    <div id="profile-editor-modal">
+        <div id="profile-editor-content">
+            <span class="close-modal">&times;</span>
+            <h2>Edit Daily Profiles</h2>
+            <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Adjust the hourly capacity factors for each resource type.</p>
+            
+            <div class="tab-container">
+                <button class="tab-btn active" data-tab="solar">Solar</button>
+                <button class="tab-btn" data-tab="wind">Wind</button>
+                <button class="tab-btn" data-tab="load">Load Demand</button>
+            </div>
+
+            <div id="sliders-wrapper" class="profile-sliders-container">
+                <!-- Sliders will be generated by JS -->
+            </div>
+
+            <div class="modal-actions">
+                <button id="resetProfilesBtn" class="btn btn-secondary">Reset to Defaults</button>
+                <button id="saveProfilesBtn" class="btn btn-primary">Apply Changes</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Initialize the map centered on California with smooth zoom
         var map = L.map('map', {
@@ -2265,7 +2471,26 @@
 
         // --- Time Simulation Logic ---
 
+        // Default Profiles (Arrays of 24 values)
+        const profiles = {
+            solar: [],
+            wind: [],
+            load: []
+        };
+
+        // Temporary profile storage for editing
+        let tempProfiles = {
+            solar: [],
+            wind: [],
+            load: []
+        };
+        
+        let currentTab = 'solar';
+
         function setupTimeSimulation() {
+            // Initialize Profiles
+            initProfiles();
+
             const timeSlider = document.getElementById('timeSlider');
             const timeDisplay = document.getElementById('timeDisplay');
             const simStatus = document.getElementById('simStatus');
@@ -2284,30 +2509,160 @@
                 timeDisplay.textContent = `${displayHour}:00 ${ampm}`;
 
                 // Update Simulation Status Text
-                if (hour >= 8 && hour <= 16) {
-                    simStatus.textContent = "Daytime: Solar peaks, gas ramps down.";
-                } else if (hour >= 17 && hour <= 21) {
-                    simStatus.textContent = "Evening Ramp: Solar fades, gas ramps UP!";
-                } else {
-                    simStatus.textContent = "Night: Wind & baseload active.";
-                }
+                updateStatusText(hour);
 
                 updateSimulation(hour);
             });
+
+            setupProfileEditor();
+        }
+
+        function initProfiles() {
+            for (let i = 0; i < 24; i++) {
+                profiles.solar[i] = getInitialSolarFactor(i);
+                profiles.wind[i] = getInitialWindFactor(i);
+                profiles.load[i] = getInitialLoadFactor(i);
+            }
+            // Deep copy for temp storage
+            tempProfiles = JSON.parse(JSON.stringify(profiles));
+        }
+
+        function updateStatusText(hour) {
+            const simStatus = document.getElementById('simStatus');
+            
+            // Calculate Net Load for status context
+            const solar = profiles.solar[hour];
+            const wind = profiles.wind[hour];
+            const load = profiles.load[hour];
+            const netLoad = Math.max(0, load - (solar * 0.5) - (wind * 0.1)); // Proxy
+
+            if (solar > 0.6) {
+                 simStatus.textContent = "Mid-Day: High Solar output displacing fossil fuels.";
+            } else if (load > 0.7 && solar < 0.3) {
+                 simStatus.textContent = "Peak Demand: Solar fading, Peakers ramping up hard.";
+            } else if (load < 0.4) {
+                 simStatus.textContent = "Off-Peak: Low demand, wind & baseload serving grid.";
+            } else {
+                 simStatus.textContent = "Normal Operations.";
+            }
+        }
+
+        function setupProfileEditor() {
+            const modal = document.getElementById('profile-editor-modal');
+            const openBtn = document.getElementById('openProfileEditorBtn');
+            const closeBtn = document.querySelector('.close-modal');
+            const saveBtn = document.getElementById('saveProfilesBtn');
+            const resetBtn = document.getElementById('resetProfilesBtn');
+            const tabs = document.querySelectorAll('.tab-btn');
+
+            // Open Modal
+            openBtn.addEventListener('click', () => {
+                // Reset temp profiles to current active profiles
+                tempProfiles = JSON.parse(JSON.stringify(profiles));
+                renderSliders(currentTab);
+                modal.style.display = 'flex';
+            });
+
+            // Close Modal
+            closeBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+            
+            // Close on outside click
+            window.addEventListener('click', (e) => {
+                if (e.target == modal) {
+                    modal.style.display = 'none';
+                }
+            });
+
+            // Tab Switching
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all
+                    tabs.forEach(t => t.classList.remove('active'));
+                    // Add active to clicked
+                    tab.classList.add('active');
+                    // Update current tab
+                    currentTab = tab.getAttribute('data-tab');
+                    // Render sliders
+                    renderSliders(currentTab);
+                });
+            });
+
+            // Save Changes
+            saveBtn.addEventListener('click', () => {
+                // Commit temp profiles to main profiles
+                profiles = JSON.parse(JSON.stringify(tempProfiles));
+                modal.style.display = 'none';
+                // Update simulation immediately with new profile data
+                const hour = parseInt(document.getElementById('timeSlider').value);
+                updateStatusText(hour);
+                updateSimulation(hour);
+                console.log('Profiles updated');
+            });
+
+            // Reset Defaults
+            resetBtn.addEventListener('click', () => {
+                initProfiles(); // Re-run init math
+                tempProfiles = JSON.parse(JSON.stringify(profiles));
+                renderSliders(currentTab); // Re-render
+            });
+        }
+
+        function renderSliders(type) {
+            const container = document.getElementById('sliders-wrapper');
+            container.innerHTML = ''; // Clear existing
+
+            const data = tempProfiles[type];
+            
+            // Determine color for visual feedback
+            let barColor = '#888';
+            if (type === 'solar') barColor = '#FFD700';
+            if (type === 'wind') barColor = '#1E90FF';
+            if (type === 'load') barColor = '#FF4500';
+
+            for (let i = 0; i < 24; i++) {
+                const group = document.createElement('div');
+                group.className = 'hour-slider-group';
+
+                const slider = document.createElement('input');
+                slider.type = 'range';
+                slider.min = '0';
+                slider.max = '100'; // Percent
+                slider.value = Math.round(data[i] * 100);
+                slider.className = 'vertical-slider';
+                slider.dataset.hour = i;
+                
+                // Style accent color if supported (browser dependent)
+                slider.style.accentColor = barColor;
+
+                const label = document.createElement('div');
+                label.className = 'hour-label';
+                label.textContent = `${i}:00`;
+
+                // Event Listener to update temp data
+                slider.addEventListener('input', function() {
+                    tempProfiles[type][i] = parseInt(this.value) / 100;
+                });
+
+                group.appendChild(slider);
+                group.appendChild(label);
+                container.appendChild(group);
+            }
         }
 
         function updateSimulation(hour) {
             if (!networkGraph.plants || networkGraph.plants.length === 0) return;
 
-            // 1. Calculate Factors
-            const solarFactor = getSolarFactor(hour);
-            const windFactor = getWindFactor(hour);
-            const loadFactor = getLoadFactor(hour);
+            // 1. Retrieve Factors from Profiles
+            const solarFactor = profiles.solar[hour];
+            const windFactor = profiles.wind[hour];
+            const loadFactor = profiles.load[hour];
             
-            // Net Load roughly = Load - (Solar + Wind)
-            // We use this to determine how much dispatchable gas/hydro is needed
-            // Normalize factors roughly to 0-1 range for logic
-            // Solar reduces net load significantly
+            // Net Load Proxy = Load - Renewables
+            // This drives the dispatch of fossil fuels
+            // Solar reduces net load significantly (0.5 weight)
+            // Wind reduces net load somewhat (0.1 weight)
             const netLoadProxy = Math.max(0.1, loadFactor - (solarFactor * 0.5) - (windFactor * 0.1)); 
 
             activeGenerators = 0;
@@ -2318,8 +2673,7 @@
                 let customColor = null;
 
                 if (fuelType === 'SUN') {
-                    // Solar Logic
-                    // Visible if factor > 0. Continuous color transition.
+                    // Solar Logic: Simply follows the factor
                     if (solarFactor > 0.05) {
                         shouldBeOn = true;
                         // Interpolate color: Grey (#808080) -> Gold (#FFD700)
@@ -2329,36 +2683,49 @@
                     }
 
                 } else if (fuelType === 'WND' || fuelType === 'WIND') {
-                    // Wind Logic
-                    // Probabilistic ON based on wind factor
+                    // Wind Logic: Probabilistic
+                    // If factor is 0.5, 50% of wind farms are ON
                     const plantHash = plant.id.split('').reduce((a,b)=>a+b.charCodeAt(0),0);
                     if ((plantHash % 100) / 100 < windFactor) {
                         shouldBeOn = true;
                     }
 
                 } else if (['NG', 'GAS', 'OGW', 'OG', 'BIT', 'OIL', 'DFO'].includes(fuelType)) {
-                    // Gas/Fossil Logic (Peaker/Dispatchable)
-                    // Turn on based on Net Load
+                    // Dispatchable (Gas/Fossil) Logic
+                    // Driven by Net Load.
+                    // As Net Load increases, more plants turn on.
                      const plantHash = plant.id.split('').reduce((a,b)=>a+b.charCodeAt(0),0);
                      // Shift hash so different plants turn on than wind
-                     // More gas plants turn on as netLoadProxy increases
                      if (((plantHash + 50) % 100) / 100 < netLoadProxy) {
                          shouldBeOn = true;
                      }
 
-                } else if (['WAT', 'NUC', 'GEO', 'WH', 'BIO'].includes(fuelType)) {
-                     // Baseload / Hydro
-                     if (fuelType === 'NUC' || fuelType === 'GEO') shouldBeOn = true; // Baseload always on
-                     else {
-                         // Hydro follows load somewhat
-                         const plantHash = plant.id.split('').reduce((a,b)=>a+b.charCodeAt(0),0);
-                         if ((plantHash % 100) / 100 < (loadFactor * 0.9)) {
-                             shouldBeOn = true;
-                         }
+                } else if (['WAT', 'HYD'].includes(fuelType)) {
+                     // Hydro Logic: Dispatchable Peaker
+                     // Hydro often follows load peaks but is limited by water availability.
+                     // We simulate it serving the top 90% of load curve or so.
+                     const plantHash = plant.id.split('').reduce((a,b)=>a+b.charCodeAt(0),0);
+                     if ((plantHash % 100) / 100 < (loadFactor * 0.8)) {
+                         shouldBeOn = true;
+                     }
+
+                } else if (['NUC', 'GEO', 'BIO', 'WH'].includes(fuelType)) {
+                     // Baseload Logic
+                     // Nuclear and Geothermal run 24/7 typically.
+                     // We'll keep them ON mostly, maybe small maintenance outage simulation (1%)
+                     const plantHash = plant.id.split('').reduce((a,b)=>a+b.charCodeAt(0),0);
+                     if ((plantHash % 100) > 5) { // 95% availability
+                        shouldBeOn = true;
                      }
                 } else {
-                    // Others
-                    shouldBeOn = false;
+                    // Others (Battery, etc.)
+                    // Battery should act like a peaker (ON during peak net load)
+                    if (['BAT', 'OTH'].includes(fuelType)) {
+                        if (netLoadProxy > 0.7) shouldBeOn = true; // Discharge at peak
+                        else shouldBeOn = false; // Charge/Idle off-peak
+                    } else {
+                        shouldBeOn = false;
+                    }
                 }
 
                 // Update State
@@ -2417,26 +2784,19 @@
             }
         }
 
-        // Gaussian-ish Solar Profile
-        function getSolarFactor(hour) {
+        // Initial Math Functions (used to populate arrays)
+        function getInitialSolarFactor(hour) {
             if (hour < 6 || hour > 20) return 0;
-            // Peak at 13 (1 PM)
             const peak = 13;
             const sigma = 2.5; 
             return Math.exp(-Math.pow(hour - peak, 2) / (2 * Math.pow(sigma, 2)));
         }
 
-        // Wind Profile
-        function getWindFactor(hour) {
-            // Higher at night (0-6, 18-23), lower during day
-            // Cosine approximation
-            // Shifted to peak around midnight
+        function getInitialWindFactor(hour) {
             return 0.5 + 0.3 * Math.cos((hour / 24) * 2 * Math.PI);
         }
 
-        // Load Profile (Camel Hump)
-        function getLoadFactor(hour) {
-            // Normalized 0-1 roughly
+        function getInitialLoadFactor(hour) {
             const morning = 0.4 * Math.exp(-Math.pow(hour - 10, 2) / 10);
             const evening = 0.6 * Math.exp(-Math.pow(hour - 19, 2) / 10);
             const base = 0.3;
