@@ -212,8 +212,15 @@
                 <ul>
                     <li><strong>Solar (Gold):</strong> Follows a bell curve, peaking at 1 PM and dropping to zero at night. The color intensity changes with output.</li>
                     <li><strong>Wind (Blue):</strong> Follows a variable profile, typically stronger at night and evening in California.</li>
-                    <li><strong>Load (Demand):</strong> Follows a "Camel Hump" profile with peaks in the morning and evening.</li>
-                    <li><strong>Net Load & Peakers:</strong> The system calculates <code>Net Load = Total Demand - (Solar + Wind)</code>. When Net Load is high (e.g., 7 PM when solar is gone but demand is high), dispatchable <strong>Gas/Fossil (Red)</strong> and <strong>Hydro (Teal)</strong> plants turn ON to fill the gap.</li>
+                    <li><strong>Load (Demand):</strong> Represents the <strong>Gross System Demand</strong> (Total consumption by homes and businesses). It follows a "Camel Hump" profile with peaks in the morning and evening.</li>
+                    <li><strong>Net Load & Fossil Fuels:</strong> The system calculates <code>Net Load = Gross Demand - (Solar + Wind)</code>. When Net Load is high (e.g., 7 PM when solar is gone but demand is high), dispatchable <strong>Gas/Fossil (Red)</strong> and <strong>Hydro (Teal)</strong> plants turn ON to fill the gap. 
+                    <br><em>Note: The simulation groups all Natural Gas plants (Combined Cycle and Peakers) into a single dispatchable category for visualization purposes.</em></li>
+                    <li><strong>Batteries (Gold/Cyan):</strong> Batteries act as both load and generation:
+                        <ul>
+                            <li><strong>Charging (Cyan):</strong> During high solar output (typically 11 AM - 3 PM), batteries turn <strong>Cyan</strong> to indicate they are absorbing excess renewable energy from the grid.</li>
+                            <li><strong>Discharging (Gold):</strong> During peak demand (typically 6 PM - 9 PM), batteries turn <strong>Gold</strong> to indicate they are discharging stored energy back into the grid.</li>
+                        </ul>
+                    </li>
                 </ul>
 
                 <h4>4.2. Visualizing the Duck Curve</h4>
