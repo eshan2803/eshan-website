@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>California Grid Map Documentation | Dr. Eshan Singh</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+
+    <style>
+        html { scroll-behavior: smooth; }
+        body {
+            background-color: #fcfcfc;
+            font-family: 'Inter', sans-serif;
+        }
+        .font-lora { font-family: 'Lora', serif; }
+        
+        /* Rainbow Border Animation */
+        @keyframes rainbow-border {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+        
+        .rainbow-glow {
+            position: relative;
+            background: linear-gradient(90deg, #ff0080, #ff8000, #ffff00, #80ff00, #00ff80, #0080ff, #8000ff, #ff0080);
+            background-size: 200% 200%;
+            animation: rainbow-border 2s linear infinite;
+            padding: 2px;
+            border-radius: 9999px;
+        }
+        
+        .rainbow-glow .button-content {
+            background: #f3f4f6;
+            border-radius: 9999px;
+            padding: 0.5rem 1rem;
+            display: block;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        
+        .rainbow-glow:hover .button-content {
+            background: #e5e7eb;
+        }
+        
+        /* Glass Card Effect */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+      
+        /* Documentation specific styles */
+        .documentation-content h3 {
+            font-size: 1.5rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #4A90A4;
+            padding-bottom: 0.5rem;
+            color: #1f2937;
+        }
+        .documentation-content h4 {
+            font-size: 1.2rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: #4A90A4;
+            font-weight: 600;
+        }
+        .documentation-content h5 {
+            font-size: 1.1rem;
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+            color: #374151;
+            font-weight: 600;
+        }
+        .documentation-content p, .documentation-content li {
+            line-height: 1.7;
+            text-align: justify;
+            color: #4b5563;
+        }
+        .documentation-content ul, .documentation-content ol {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            list-style-type: disc;
+        }
+        .documentation-content ol {
+            list-style-type: decimal;
+        }
+        .documentation-content ol li {
+            margin-bottom: 0.75rem;
+        }
+        .documentation-content strong {
+            color: #1f2937;
+        }
+        .documentation-content a {
+            color: #4A90A4;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .documentation-content a:hover {
+            text-decoration: underline;
+        }
+        .documentation-content code {
+            background-color: rgba(74, 144, 164, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.875rem;
+            color: #4A90A4;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    
+    <header class="p-8">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="/index.html" class="font-lora text-2xl font-semibold">Dr. Eshan Singh</a>
+            <nav class="flex items-center space-x-2">
+                <a href="/energy.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
+                <a href="/transport-model/index.html" class="rainbow-glow">
+                    <span class="button-content">Transport Model</span>
+                </a>
+                <a href="/grid-planner/index.html" class="rainbow-glow">
+                     <span class="button-content">Grid Planner</span>
+                </a>
+                <a href="/grid-operator/index.html" class="rainbow-glow">
+                     <span class="button-content">Grid Operator</span>
+                </a>
+                <a href="./index.html" class="rainbow-glow">
+                    <span class="button-content">CA Grid Map</span>
+                </a>
+                <a href="/musings.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Musings</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-8 pb-16">
+        <div class="glass-card rounded-2xl p-8 shadow-xl">
+            <section class="documentation-content">
+                <h2 class="text-center text-4xl font-bold text-gray-800 mb-8 font-lora">California Power Grid Map: Documentation</h2>
+
+                <h3>1. Introduction</h3>
+                <p>
+                    The California Power Grid Map is an interactive visualization tool designed to explore the complex infrastructure of California's electricity system. It maps over 1,500 power plants, thousands of substations, and the intricate web of high-voltage transmission lines that power the state. Beyond a static map, this tool includes a time-based simulator to demonstrate grid dynamics, specifically the integration of renewable energy and the resulting "Duck Curve" phenomenon.
+                </p>
+
+                <h3>2. Data Sources</h3>
+                <p>
+                    The data visualized in this application is aggregated from several authoritative public sources:
+                </p>
+                <ul>
+                    <li><strong>Power Plants:</strong> California Energy Commission (CEC) and U.S. Energy Information Administration (EIA).</li>
+                    <li><strong>Transmission Lines & Substations:</strong> Homeland Infrastructure Foundation-Level Data (HIFLD) and California Open Data Portal.</li>
+                    <li><strong>Basemaps:</strong>
+                        <ul>
+                            <li><em>Solar Irradiance & Wind Speed:</em> Global Solar Atlas & Global Wind Atlas (World Bank Group).</li>
+                            <li><em>Land Cover:</em> National Land Cover Database (NLCD) 2021 (USGS).</li>
+                            <li><em>Population Density:</em> NASA SEDAC Gridded Population of the World (GPW v4).</li>
+                            <li><em>Wildfire Risk:</em> USDA Forest Service Wildfire Hazard Potential.</li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <h3>3. Interactive Features</h3>
+                
+                <h4>3.1. Map Navigation & Controls</h4>
+                <ul>
+                    <li><strong>Zoom/Pan:</strong> Standard map navigation. The map is centered on California by default.</li>
+                    <li><strong>Home Button:</strong> Located at the top-left, this button resets the view to the state level.</li>
+                    <li><strong>Plant Details:</strong> Hover over any power plant marker to see its Name, Fuel Type, and Capacity (MW).</li>
+                    <li><strong>Toggle Plants:</strong> Click on any plant to manually toggle it ON or OFF. This affects the "Active Plants" counter and visualization.</li>
+                </ul>
+
+                <h4>3.2. Legend & Filtering</h4>
+                <p>
+                    The legend on the bottom-left serves as a filter.
+                </p>
+                <ul>
+                    <li><strong>Click a Label:</strong> To show <em>only</em> that specific fuel type (e.g., click "Solar" to hide all other plants).</li>
+                    <li><strong>Ctrl/Cmd + Click:</strong> To select multiple fuel types simultaneously (e.g., "Solar" + "Wind").</li>
+                    <li><strong>Click Header:</strong> Click "Power Plant" to toggle the visibility of all plant markers.</li>
+                    <li><strong>Transmission Layers:</strong> Toggle "Transmission Lines" and "Substations" visibility directly from the legend.</li>
+                </ul>
+
+                <h4>3.3. Basemap Layers</h4>
+                <p>
+                    The "Layers" button (stack icon) on the bottom-right allows you to switch between different background maps. This is useful for analyzing siting constraints.
+                </p>
+                <ul>
+                    <li><strong>Satellite/Street:</strong> Standard views for context.</li>
+                    <li><strong>Resource Maps:</strong> "Solar" and "Wind" layers show the theoretical potential for renewable energy generation across the state.</li>
+                    <li><strong>Constraint Maps:</strong> "Land Cover," "Population," and "Fire Risk" layers help identify areas unsuitable for development. Hovering over the map while the "Land Cover" layer is active will show the specific land type (e.g., "Shrub/Scrub," "Cultivated Crops").</li>
+                </ul>
+
+                <h3>4. Time Simulation & The "Duck Curve"</h3>
+                <p>
+                    The slider at the bottom of the screen allows you to simulate a 24-hour day. This feature demonstrates the intermittency of renewables and the grid's response.
+                </p>
+
+                <h4>4.1. Dispatch Logic</h4>
+                <p>
+                    As you drag the slider, the simulator adjusts the status of power plants based on hourly profiles:
+                </p>
+                <ul>
+                    <li><strong>Solar (Gold):</strong> Follows a bell curve, peaking at 1 PM and dropping to zero at night. The color intensity changes with output.</li>
+                    <li><strong>Wind (Blue):</strong> Follows a variable profile, typically stronger at night and evening in California.</li>
+                    <li><strong>Load (Demand):</strong> Follows a "Camel Hump" profile with peaks in the morning and evening.</li>
+                    <li><strong>Net Load & Peakers:</strong> The system calculates <code>Net Load = Total Demand - (Solar + Wind)</code>. When Net Load is high (e.g., 7 PM when solar is gone but demand is high), dispatchable <strong>Gas/Fossil (Red)</strong> and <strong>Hydro (Teal)</strong> plants turn ON to fill the gap.</li>
+                </ul>
+
+                <h4>4.2. Visualizing the Duck Curve</h4>
+                <p>
+                    By sliding from <strong>12:00 PM</strong> to <strong>8:00 PM</strong>, you can observe the "Duck Curve" effect:
+                </p>
+                <ol>
+                    <li><strong>Mid-Day:</strong> Solar plants are bright Gold. Gas plants turn OFF because solar is covering the demand.</li>
+                    <li><strong>Late Afternoon:</strong> Solar fades to grey.</li>
+                    <li><strong>Evening Ramp:</strong> Suddenly, hundreds of Gas and Hydro plants light up (turn ON) to meet the evening lighting and appliance load. This rapid "ramp" is a major challenge for grid operators.</li>
+                </ol>
+
+                <h3>5. Profile Editor</h3>
+                <p>
+                    Users can customize the simulation by clicking the <strong>Edit Icon (Pencil)</strong> next to the time slider.
+                </p>
+                <ul>
+                    <li><strong>Edit Curves:</strong> Adjust the hourly <strong>Solar</strong>, <strong>Wind</strong>, and <strong>Load</strong> profiles using 24 vertical sliders.</li>
+                    <li><strong>Scenarios:</strong> Create "what-if" scenarios. For example, set solar output to zero during the day to simulate a heavy storm or eclipse, and observe how the gas plants respond.</li>
+                    <li><strong>Real-Time Update:</strong> Changes apply immediately upon clicking "Apply Changes."</li>
+                </ul>
+
+            </section>
+        </div>
+    </main>
+
+    <footer class="w-full text-center py-5 border-t border-gray-200/80">
+        <div class="flex items-center justify-center space-x-4">
+             <p class="text-sm text-gray-500">&copy; 2025 Eshan & Associates LLC. All rights reserved.</p>
+             <a href="https://www.linkedin.com/in/eshan-singh-188b1554/" target="_blank" rel="noopener noreferrer" class="cursor-pointer">
+                <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn" class="h-5 w-5 hover:opacity-75 transition-opacity">
+            </a>
+        </div>
+    </footer>
+
+</body>
+</html>
