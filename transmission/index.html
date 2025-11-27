@@ -105,6 +105,30 @@
             height: 18px;
             fill: #333;
         }
+        /* Documentation button */
+        .leaflet-control-doc {
+            background: white;
+            border: 2px solid rgba(0,0,0,0.2);
+            border-radius: 4px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-top: 5px; /* Spacing between buttons */
+            box-shadow: 0 1px 5px rgba(0,0,0,0.2);
+            transition: all 0.2s;
+        }
+        .leaflet-control-doc:hover {
+            background: #f4f4f4;
+            transform: scale(1.05);
+        }
+        .leaflet-control-doc svg {
+            width: 18px;
+            height: 18px;
+            fill: #333;
+        }
         /* Basemap toggle control in bottom-right */
         #basemap-toggle {
             position: absolute;
@@ -204,6 +228,286 @@
             color: #2c5f2d;
             font-size: 12px;
         }
+
+        /* Minimalist Time Control (Bottom Center) */
+        #time-control-panel {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(4px);
+            padding: 10px 20px;
+            border-radius: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+
+        #time-control-panel:hover {
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            gap: 10px;
+        }
+
+        #timeSlider {
+            flex-grow: 1;
+            height: 4px;
+            border-radius: 2px;
+            background: #ccc;
+            outline: none;
+            cursor: pointer;
+            -webkit-appearance: none; /* Override default look */
+        }
+
+        /* Custom Slider Thumb */
+        #timeSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #4A90A4;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
+        }
+
+        #timeSlider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        #timeDisplay {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            font-family: monospace; /* Consistent width */
+        }
+
+        .edit-icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            transition: all 0.2s;
+        }
+
+        .edit-icon-btn:hover {
+            background-color: rgba(0,0,0,0.05);
+            color: #4A90A4;
+        }
+
+        .edit-icon-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        /* Collapsible Basemap Menu (Bottom Right) */
+        #basemap-container {
+            position: absolute;
+            bottom: 30px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+        }
+
+        #basemap-trigger {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid rgba(0,0,0,0.1);
+        }
+
+        #basemap-trigger:hover {
+            background: #f4f4f4;
+            transform: scale(1.05);
+        }
+
+        #basemap-trigger.active {
+            background: #4A90A4;
+            color: white;
+            border-color: #4A90A4;
+        }
+
+        #basemap-trigger svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+
+        /* The list of basemaps */
+        #basemap-list {
+            background: white;
+            padding: 5px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            gap: 4px;
+            max-height: 400px;
+            overflow-y: auto; /* Scroll if too tall */
+        }
+
+        #basemap-list.show {
+            display: flex;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Reuse existing basemap-option styles but ensure they work in the list */
+        .basemap-option {
+            /* Existing styles should work, just ensuring flex containment */
+            flex-shrink: 0;
+        }
+
+        /* Profile Editor Modal - Keep existing styles */
+        #profile-editor-modal {
+            display: none; 
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #profile-editor-content {
+            background-color: #fefefe;
+            padding: 25px;
+            border-radius: 12px;
+            width: 80%;
+            max-width: 900px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            position: relative;
+        }
+
+        .close-modal {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-modal:hover {
+            color: black;
+        }
+
+        .tab-container {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: #4A90A4;
+            border-bottom: 3px solid #4A90A4;
+        }
+        
+        .profile-sliders-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            height: 250px;
+            padding: 20px 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .hour-slider-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 3%;
+            height: 100%;
+        }
+
+        .vertical-slider {
+            writing-mode: bt-lr; /* IE */
+            -webkit-appearance: slider-vertical; /* WebKit */
+            width: 8px;
+            height: 85%; /* Leave space for label */
+            outline: none;
+        }
+        
+        .hour-label {
+            font-size: 9px;
+            color: #666;
+            margin-top: 5px;
+            transform: rotate(-45deg);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: none;
+            font-weight: 600;
+        }
+
+        .btn-secondary {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/leaflet-ant-path@1.3.0/dist/leaflet-ant-path.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
@@ -284,39 +588,80 @@
             </span>Substations (4442)
         </div>
     </div>
-    <div id="basemap-toggle">
-        <div class="basemap-option active" id="basemap-grayscale" data-layer="grayscale" title="Grayscale Map">
-            <span class="label">Street</span>
+    <div id="basemap-container">
+        <div id="basemap-list">
+            <div class="basemap-option active" id="basemap-grayscale" data-layer="grayscale" title="Grayscale Map">
+                <span class="label">Street</span>
+            </div>
+            <div class="basemap-option" id="basemap-satellite" data-layer="satellite" title="Satellite View">
+                <span class="label">Satellite</span>
+            </div>
+            <div class="basemap-option" id="basemap-elevation" data-layer="elevation" title="Topographic Elevation">
+                <span class="label">Elevation</span>
+            </div>
+            <div class="basemap-option" id="basemap-population" data-layer="population" title="Population Density">
+                <span class="label">Population</span>
+            </div>
+            <div class="basemap-option" id="basemap-landcover" data-layer="landcover" title="Land Cover (NLCD)">
+                <span class="label">Land Cover</span>
+            </div>
+            <div class="basemap-option" id="basemap-solar" data-layer="solarMap" title="Solar Irradiance Map">
+                <span class="label">Solar</span>
+            </div>
+            <div class="basemap-option" id="basemap-wind" data-layer="windMap" title="Wind Speed Map">
+                <span class="label">Wind</span>
+            </div>
+            <div class="basemap-option" id="basemap-population-density" data-layer="populationMap" title="Population Density Map">
+                <span class="label">Pop. Density</span>
+            </div>
+            <div class="basemap-option" id="basemap-ccus" data-layer="ccusWest" title="CO2 Storage Sites (West)">
+                <span class="label">CO<sub>2</sub> Storage</span>
+            </div>
+            <div class="basemap-option" id="basemap-burn-probability" data-layer="burnProbability" title="Wildfire Burn Probability">
+                <span class="label">Fire Risk</span>
+            </div>
         </div>
-        <div class="basemap-option" id="basemap-satellite" data-layer="satellite" title="Satellite View">
-            <span class="label">Satellite</span>
-        </div>
-        <div class="basemap-option" id="basemap-elevation" data-layer="elevation" title="Topographic Elevation">
-            <span class="label">Elevation</span>
-        </div>
-        <div class="basemap-option" id="basemap-population" data-layer="population" title="Population Density">
-            <span class="label">Population</span>
-        </div>
-        <div class="basemap-option" id="basemap-landcover" data-layer="landcover" title="Land Cover (NLCD)">
-            <span class="label">Land Cover</span>
-        </div>
-        <div class="basemap-option" id="basemap-solar" data-layer="solarMap" title="Solar Irradiance Map">
-            <span class="label">Solar</span>
-        </div>
-        <div class="basemap-option" id="basemap-wind" data-layer="windMap" title="Wind Speed Map">
-            <span class="label">Wind</span>
-        </div>
-        <div class="basemap-option" id="basemap-population-density" data-layer="populationMap" title="Population Density Map">
-            <span class="label">Pop. Density</span>
-        </div>
-        <div class="basemap-option" id="basemap-ccus" data-layer="ccusWest" title="CO2 Storage Sites (West)">
-            <span class="label">CO<sub>2</sub> Storage</span>
-        </div>
-        <div class="basemap-option" id="basemap-burn-probability" data-layer="burnProbability" title="Wildfire Burn Probability">
-            <span class="label">Fire Risk</span>
+        <div id="basemap-trigger" title="Toggle Layers">
+            <svg viewBox="0 0 24 24"><path d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z"/></svg>
         </div>
     </div>
     <div id="map"></div>
+    <div id="time-control-panel">
+        <div class="slider-row">
+            <input type="range" id="timeSlider" min="0" max="23" value="12" step="1">
+            <button id="openProfileEditorBtn" class="edit-icon-btn" title="Edit Profiles">
+                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            </button>
+        </div>
+        <div id="timeDisplay">12:00 PM</div>
+        <!-- Hidden status text for logic access -->
+        <div id="simStatus" style="display: none;"></div>
+    </div>
+
+    <!-- Profile Editor Modal -->
+    <div id="profile-editor-modal">
+        <div id="profile-editor-content">
+            <span class="close-modal">&times;</span>
+            <h2>Edit Daily Profiles</h2>
+            <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Adjust the hourly capacity factors for each resource type.</p>
+            
+            <div class="tab-container">
+                <button class="tab-btn active" data-tab="solar">Solar</button>
+                <button class="tab-btn" data-tab="wind">Wind</button>
+                <button class="tab-btn" data-tab="load">Load Demand</button>
+            </div>
+
+            <div id="sliders-wrapper" class="profile-sliders-container">
+                <!-- Sliders will be generated by JS -->
+            </div>
+
+            <div class="modal-actions">
+                <button id="resetProfilesBtn" class="btn btn-secondary">Reset to Defaults</button>
+                <button id="saveProfilesBtn" class="btn btn-primary">Apply Changes</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Initialize the map centered on California with smooth zoom
         var map = L.map('map', {
@@ -507,8 +852,10 @@
                     setupLayerToggles();
                     setupBasemapToggle();
                     setupHomeButton();
+                    setupDocButton();
                     setupLandCoverHover();
                     setupCCSHover();
+                    setupTimeSimulation();
                     console.log('Network graph built and map rendered.');
                 } catch (error) {
                     console.error('Error building network or rendering map:', error);
@@ -928,6 +1275,24 @@
 
         // Setup basemap toggle functionality with multi-select support
         function setupBasemapToggle() {
+            // Toggle Menu Logic
+            const trigger = document.getElementById('basemap-trigger');
+            const list = document.getElementById('basemap-list');
+            
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                list.classList.toggle('show');
+                trigger.classList.toggle('active');
+            });
+
+            // Close menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!document.getElementById('basemap-container').contains(e.target)) {
+                    list.classList.remove('show');
+                    trigger.classList.remove('active');
+                }
+            });
+
             const basemapOptions = document.querySelectorAll('.basemap-option');
 
             basemapOptions.forEach(option => {
@@ -1527,6 +1892,32 @@
 
             // Add the home button to the map
             L.control.home({ position: 'topleft' }).addTo(map);
+        }
+
+        // Setup documentation button linking to documentation page
+        function setupDocButton() {
+            L.Control.Doc = L.Control.extend({
+                onAdd: function(map) {
+                    var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-doc');
+                    // Open book icon
+                    container.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>';
+                    container.title = 'View Documentation';
+
+                    L.DomEvent.disableClickPropagation(container);
+                    L.DomEvent.on(container, 'click', function() {
+                        window.open('./documentation.html', '_blank');
+                    });
+
+                    return container;
+                },
+                onRemove: function(map) {}
+            });
+
+            L.control.doc = function(opts) {
+                return new L.Control.Doc(opts);
+            }
+
+            L.control.doc({ position: 'topleft' }).addTo(map);
         }
 
         // Removed custom generator functionality - we're using real power plant data
@@ -2248,6 +2639,360 @@
                     map.removeLayer(animatedLinesLayer);
                 }
             }
+        }
+
+        // --- Time Simulation Logic ---
+
+        // Default Profiles (Arrays of 24 values)
+        const profiles = {
+            solar: [],
+            wind: [],
+            load: []
+        };
+
+        // Temporary profile storage for editing
+        let tempProfiles = {
+            solar: [],
+            wind: [],
+            load: []
+        };
+        
+        let currentTab = 'solar';
+
+        function setupTimeSimulation() {
+            // Initialize Profiles
+            initProfiles();
+
+            const timeSlider = document.getElementById('timeSlider');
+            const timeDisplay = document.getElementById('timeDisplay');
+            const simStatus = document.getElementById('simStatus');
+
+            // Initial update - small delay to ensure plants are loaded
+            setTimeout(() => {
+                updateSimulation(parseInt(timeSlider.value));
+            }, 1000);
+
+            timeSlider.addEventListener('input', function() {
+                const hour = parseInt(this.value);
+                
+                // Update Time Display
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                const displayHour = hour % 12 || 12;
+                timeDisplay.textContent = `${displayHour}:00 ${ampm}`;
+
+                // Update Simulation Status Text
+                updateStatusText(hour);
+
+                updateSimulation(hour);
+            });
+
+            setupProfileEditor();
+        }
+
+        function initProfiles() {
+            for (let i = 0; i < 24; i++) {
+                profiles.solar[i] = getInitialSolarFactor(i);
+                profiles.wind[i] = getInitialWindFactor(i);
+                profiles.load[i] = getInitialLoadFactor(i);
+            }
+            // Deep copy for temp storage
+            tempProfiles = JSON.parse(JSON.stringify(profiles));
+        }
+
+        function updateStatusText(hour) {
+            const simStatus = document.getElementById('simStatus');
+            
+            // Calculate Net Load for status context
+            const solar = profiles.solar[hour];
+            const wind = profiles.wind[hour];
+            const load = profiles.load[hour];
+            const netLoad = Math.max(0, load - (solar * 0.5) - (wind * 0.1)); // Proxy
+
+            if (solar > 0.6) {
+                 simStatus.textContent = "Mid-Day: High Solar output displacing fossil fuels.";
+            } else if (load > 0.7 && solar < 0.3) {
+                 simStatus.textContent = "Peak Demand: Solar fading, Peakers ramping up hard.";
+            } else if (load < 0.4) {
+                 simStatus.textContent = "Off-Peak: Low demand, wind & baseload serving grid.";
+            } else {
+                 simStatus.textContent = "Normal Operations.";
+            }
+        }
+
+        function setupProfileEditor() {
+            const modal = document.getElementById('profile-editor-modal');
+            const openBtn = document.getElementById('openProfileEditorBtn');
+            const closeBtn = document.querySelector('.close-modal');
+            const saveBtn = document.getElementById('saveProfilesBtn');
+            const resetBtn = document.getElementById('resetProfilesBtn');
+            const tabs = document.querySelectorAll('.tab-btn');
+
+            // Open Modal
+            openBtn.addEventListener('click', () => {
+                // Reset temp profiles to current active profiles
+                tempProfiles = JSON.parse(JSON.stringify(profiles));
+                renderSliders(currentTab);
+                modal.style.display = 'flex';
+            });
+
+            // Close Modal
+            closeBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+            
+            // Close on outside click
+            window.addEventListener('click', (e) => {
+                if (e.target == modal) {
+                    modal.style.display = 'none';
+                }
+            });
+
+            // Tab Switching
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all
+                    tabs.forEach(t => t.classList.remove('active'));
+                    // Add active to clicked
+                    tab.classList.add('active');
+                    // Update current tab
+                    currentTab = tab.getAttribute('data-tab');
+                    // Render sliders
+                    renderSliders(currentTab);
+                });
+            });
+
+            // Save Changes
+            saveBtn.addEventListener('click', () => {
+                // Commit temp profiles to main profiles
+                profiles = JSON.parse(JSON.stringify(tempProfiles));
+                modal.style.display = 'none';
+                // Update simulation immediately with new profile data
+                const hour = parseInt(document.getElementById('timeSlider').value);
+                updateStatusText(hour);
+                updateSimulation(hour);
+                console.log('Profiles updated');
+            });
+
+            // Reset Defaults
+            resetBtn.addEventListener('click', () => {
+                initProfiles(); // Re-run init math
+                tempProfiles = JSON.parse(JSON.stringify(profiles));
+                renderSliders(currentTab); // Re-render
+            });
+        }
+
+        function renderSliders(type) {
+            const container = document.getElementById('sliders-wrapper');
+            container.innerHTML = ''; // Clear existing
+
+            const data = tempProfiles[type];
+            
+            // Determine color for visual feedback
+            let barColor = '#888';
+            if (type === 'solar') barColor = '#FFD700';
+            if (type === 'wind') barColor = '#1E90FF';
+            if (type === 'load') barColor = '#FF4500';
+
+            for (let i = 0; i < 24; i++) {
+                const group = document.createElement('div');
+                group.className = 'hour-slider-group';
+
+                const slider = document.createElement('input');
+                slider.type = 'range';
+                slider.min = '0';
+                slider.max = '100'; // Percent
+                slider.value = Math.round(data[i] * 100);
+                slider.className = 'vertical-slider';
+                slider.dataset.hour = i;
+                
+                // Style accent color if supported (browser dependent)
+                slider.style.accentColor = barColor;
+
+                const label = document.createElement('div');
+                label.className = 'hour-label';
+                label.textContent = `${i}:00`;
+
+                // Event Listener to update temp data
+                slider.addEventListener('input', function() {
+                    tempProfiles[type][i] = parseInt(this.value) / 100;
+                });
+
+                group.appendChild(slider);
+                group.appendChild(label);
+                container.appendChild(group);
+            }
+        }
+
+        function updateSimulation(hour) {
+            if (!networkGraph.plants || networkGraph.plants.length === 0) return;
+
+            // 1. Retrieve Factors from Profiles
+            const solarFactor = profiles.solar[hour];
+            const windFactor = profiles.wind[hour];
+            const loadFactor = profiles.load[hour];
+            
+            // Net Load Proxy = Load - Renewables
+            // This drives the dispatch of fossil fuels
+            // Solar reduces net load significantly (0.5 weight)
+            // Wind reduces net load somewhat (0.1 weight)
+            const netLoadProxy = Math.max(0.1, loadFactor - (solarFactor * 0.5) - (windFactor * 0.1)); 
+
+            activeGenerators = 0;
+
+            networkGraph.plants.forEach(plant => {
+                const fuelType = (plant.fuel || 'UNKNOWN').toUpperCase();
+                let shouldBeOn = false;
+                let customColor = null;
+
+                if (fuelType === 'SUN') {
+                    // Solar Logic: Simply follows the factor
+                    if (solarFactor > 0.05) {
+                        shouldBeOn = true;
+                        // Interpolate color: Grey (#808080) -> Gold (#FFD700)
+                        customColor = interpolateColor('#808080', '#FFD700', solarFactor);
+                    } else {
+                        shouldBeOn = false;
+                    }
+
+                } else if (fuelType === 'WND' || fuelType === 'WIND') {
+                    // Wind Logic: Probabilistic
+                    // If factor is 0.5, 50% of wind farms are ON
+                    const plantHash = plant.id.split('').reduce((a,b)=>a+b.charCodeAt(0),0);
+                    if ((plantHash % 100) / 100 < windFactor) {
+                        shouldBeOn = true;
+                    }
+
+                } else if (['NG', 'GAS', 'OGW', 'OG', 'BIT', 'OIL', 'DFO'].includes(fuelType)) {
+                    // Dispatchable (Gas/Fossil) Logic
+                    // Driven by Net Load.
+                    // As Net Load increases, more plants turn on.
+                     const plantHash = plant.id.split('').reduce((a,b)=>a+b.charCodeAt(0),0);
+                     // Shift hash so different plants turn on than wind
+                     if (((plantHash + 50) % 100) / 100 < netLoadProxy) {
+                         shouldBeOn = true;
+                     }
+
+                } else if (['WAT', 'HYD'].includes(fuelType)) {
+                     // Hydro Logic: Dispatchable Peaker
+                     // Hydro often follows load peaks but is limited by water availability.
+                     // We simulate it serving the top 90% of load curve or so.
+                     const plantHash = plant.id.split('').reduce((a,b)=>a+b.charCodeAt(0),0);
+                     if ((plantHash % 100) / 100 < (loadFactor * 0.8)) {
+                         shouldBeOn = true;
+                     }
+
+                } else if (['NUC', 'GEO', 'BIO', 'WH'].includes(fuelType)) {
+                     // Baseload Logic
+                     // Nuclear and Geothermal run 24/7 typically.
+                     // We'll keep them ON mostly, maybe small maintenance outage simulation (1%)
+                     const plantHash = plant.id.split('').reduce((a,b)=>a+b.charCodeAt(0),0);
+                     if ((plantHash % 100) > 5) { // 95% availability
+                        shouldBeOn = true;
+                     }
+                } else {
+                    // Others (Battery, etc.)
+                    // Battery should act like a peaker (ON during peak net load)
+                    if (['BAT', 'OTH'].includes(fuelType)) {
+                        if (netLoadProxy > 0.7) shouldBeOn = true; // Discharge at peak
+                        else shouldBeOn = false; // Charge/Idle off-peak
+                    } else {
+                        shouldBeOn = false;
+                    }
+                }
+
+                // Update State
+                plant.isOn = shouldBeOn;
+                
+                if (shouldBeOn) activeGenerators++;
+
+                // Update Visuals
+                const baseColor = getFuelColor(plant.fuel);
+                const displayColor = customColor || baseColor;
+
+                updatePlantMarker(plant, shouldBeOn, displayColor);
+            });
+
+            updateFlow();
+        }
+
+        function updatePlantMarker(plant, isOn, color) {
+            if (!plant.marker) return;
+            
+            const fuelType = (plant.fuel || 'UNKNOWN').toUpperCase();
+            const marker = plant.marker;
+
+            if (isOn) {
+                 if (marker instanceof L.CircleMarker) {
+                    marker.setStyle({ fillColor: color });
+                } else {
+                    const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
+                    const isWind = ['WND', 'WIND'].includes(fuelType);
+                    const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
+                    const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
+                    marker.setIcon(L.divIcon({
+                        className: 'custom-div-icon',
+                        html: getMarkerHTML(fuelType, color, 'large'),
+                        iconSize: [markerSize, markerSize],
+                        iconAnchor: [markerAnchor, markerAnchor]
+                    }));
+                }
+            } else {
+                // Turn OFF (Grey)
+                const grey = '#808080';
+                 if (marker instanceof L.CircleMarker) {
+                    marker.setStyle({ fillColor: grey });
+                } else {
+                    const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
+                    const isWind = ['WND', 'WIND'].includes(fuelType);
+                    const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
+                    const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
+                    marker.setIcon(L.divIcon({
+                        className: 'custom-div-icon',
+                        html: getMarkerHTML(fuelType, grey, 'large'),
+                        iconSize: [markerSize, markerSize],
+                        iconAnchor: [markerAnchor, markerAnchor]
+                    }));
+                }
+            }
+        }
+
+        // Initial Math Functions (used to populate arrays)
+        function getInitialSolarFactor(hour) {
+            if (hour < 6 || hour > 20) return 0;
+            const peak = 13;
+            const sigma = 2.5; 
+            return Math.exp(-Math.pow(hour - peak, 2) / (2 * Math.pow(sigma, 2)));
+        }
+
+        function getInitialWindFactor(hour) {
+            return 0.5 + 0.3 * Math.cos((hour / 24) * 2 * Math.PI);
+        }
+
+        function getInitialLoadFactor(hour) {
+            const morning = 0.4 * Math.exp(-Math.pow(hour - 10, 2) / 10);
+            const evening = 0.6 * Math.exp(-Math.pow(hour - 19, 2) / 10);
+            const base = 0.3;
+            return Math.min(1.0, base + morning + evening);
+        }
+
+        // Color Interpolation (Hex to Hex)
+        function interpolateColor(color1, color2, factor) {
+            if (factor >= 1) return color2;
+            if (factor <= 0) return color1;
+
+            const r1 = parseInt(color1.substring(1, 3), 16);
+            const g1 = parseInt(color1.substring(3, 5), 16);
+            const b1 = parseInt(color1.substring(5, 7), 16);
+
+            const r2 = parseInt(color2.substring(1, 3), 16);
+            const g2 = parseInt(color2.substring(3, 5), 16);
+            const b2 = parseInt(color2.substring(5, 7), 16);
+
+            const r = Math.round(r1 + factor * (r2 - r1));
+            const g = Math.round(g1 + factor * (g2 - g1));
+            const b = Math.round(b1 + factor * (b2 - b1));
+
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
         }
     </script>
 </body>
