@@ -235,30 +235,46 @@
             bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
-            width: 400px;
-            background: rgba(255, 255, 255, 0.8);
+            width: 600px;
+            background: rgba(255, 255, 255, 0.75);
             backdrop-filter: blur(4px);
-            padding: 10px 20px;
+            padding: 12px 25px;
             border-radius: 30px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             z-index: 1000;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 5px;
+            gap: 3px;
             transition: all 0.3s ease;
         }
 
         #time-control-panel:hover {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.9);
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
         .slider-row {
             display: flex;
             align-items: center;
+            justify-content: center;
             width: 100%;
-            gap: 10px;
+            gap: 12px;
+        }
+
+        #timeBasedToggle {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #4A90A4;
+        }
+
+        .checkbox-label {
+            font-size: 12px;
+            color: #555;
+            white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
         }
 
         #timeSlider {
@@ -269,6 +285,7 @@
             outline: none;
             cursor: pointer;
             -webkit-appearance: none; /* Override default look */
+            opacity: 0.5; /* Start disabled */
         }
 
         /* Custom Slider Thumb */
@@ -290,10 +307,11 @@
         }
 
         #timeDisplay {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             color: #333;
             font-family: monospace; /* Consistent width */
+            margin-top: -2px;
         }
 
         .edit-icon-btn {
@@ -628,7 +646,9 @@
     <div id="map"></div>
     <div id="time-control-panel">
         <div class="slider-row">
-            <input type="range" id="timeSlider" min="0" max="23" value="12" step="1">
+            <input type="checkbox" id="timeBasedToggle">
+            <label for="timeBasedToggle" class="checkbox-label">Time-Based</label>
+            <input type="range" id="timeSlider" min="0" max="23" value="12" step="1" disabled>
             <button id="openProfileEditorBtn" class="edit-icon-btn" title="Edit Profiles">
                 <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
             </button>
@@ -2670,15 +2690,43 @@
             const timeSlider = document.getElementById('timeSlider');
             const timeDisplay = document.getElementById('timeDisplay');
             const simStatus = document.getElementById('simStatus');
+            const timeBasedToggle = document.getElementById('timeBasedToggle');
 
             // Initial update - small delay to ensure plants are loaded
             setTimeout(() => {
-                updateSimulation(parseInt(timeSlider.value));
+                if (timeBasedToggle.checked) {
+                    updateSimulation(parseInt(timeSlider.value));
+                }
             }, 1000);
+
+            // Handle checkbox toggle
+            timeBasedToggle.addEventListener('change', function() {
+                if (this.checked) {
+                    // Enable time-based simulation
+                    timeSlider.style.opacity = '1';
+                    timeSlider.disabled = false;
+                    updateSimulation(parseInt(timeSlider.value));
+                } else {
+                    // Disable time-based simulation - turn all plants OFF
+                    timeSlider.style.opacity = '0.5';
+                    timeSlider.disabled = true;
+
+                    // Turn all plants OFF
+                    activeGenerators = 0;
+                    networkGraph.plants.forEach(plant => {
+                        plant.isOn = false;
+                        const fuelType = (plant.fuel || 'UNKNOWN').toUpperCase();
+                        updatePlantMarker(plant, false, '#808080');
+                    });
+
+                    // Update flow to clear all animated lines
+                    updateFlow();
+                }
+            });
 
             timeSlider.addEventListener('input', function() {
                 const hour = parseInt(this.value);
-                
+
                 // Update Time Display
                 const ampm = hour >= 12 ? 'PM' : 'AM';
                 const displayHour = hour % 12 || 12;
@@ -2687,7 +2735,10 @@
                 // Update Simulation Status Text
                 updateStatusText(hour);
 
-                updateSimulation(hour);
+                // Only update simulation if time-based mode is enabled
+                if (timeBasedToggle.checked) {
+                    updateSimulation(hour);
+                }
             });
 
             setupProfileEditor();
@@ -2767,14 +2818,19 @@
 
             // Save Changes
             saveBtn.addEventListener('click', () => {
-                // Commit temp profiles to main profiles
-                profiles = JSON.parse(JSON.stringify(tempProfiles));
+                // Commit temp profiles to main profiles (update arrays, not reassign const)
+                profiles.solar = [...tempProfiles.solar];
+                profiles.wind = [...tempProfiles.wind];
+                profiles.load = [...tempProfiles.load];
+
+                // Close the modal
                 modal.style.display = 'none';
+
                 // Update simulation immediately with new profile data
                 const hour = parseInt(document.getElementById('timeSlider').value);
                 updateStatusText(hour);
                 updateSimulation(hour);
-                console.log('Profiles updated');
+                console.log('Profiles updated:', profiles);
             });
 
             // Reset Defaults
@@ -2795,18 +2851,22 @@
             // Determine color and label
             let barColor = '#888';
             let unitLabel = '';
+            let capacityBase = 0; // MW
             
             if (type === 'solar') {
                 barColor = '#FFD700';
-                unitLabel = 'Solar Output (% of Installed Capacity)';
+                capacityBase = 26617; // Total Solar MW
+                unitLabel = `Solar Output (% of ${capacityBase.toLocaleString()} MW)`;
             }
             if (type === 'wind') {
                 barColor = '#1E90FF';
-                unitLabel = 'Wind Output (% of Installed Capacity)';
+                capacityBase = 12714; // Total Wind MW
+                unitLabel = `Wind Output (% of ${capacityBase.toLocaleString()} MW)`;
             }
             if (type === 'load') {
                 barColor = '#FF4500';
-                unitLabel = 'Gross System Demand (% of Peak Load)';
+                capacityBase = 55000; // Assumed Peak Load
+                unitLabel = `Gross System Demand (% of ${capacityBase.toLocaleString()} MW Peak)`;
             }
             
             labelContainer.textContent = unitLabel;
@@ -2814,14 +2874,18 @@
             for (let i = 0; i < 24; i++) {
                 const group = document.createElement('div');
                 group.className = 'hour-slider-group';
+                
+                const valPercent = Math.round(data[i] * 100);
+                const valMW = Math.round(data[i] * capacityBase).toLocaleString();
 
                 const slider = document.createElement('input');
                 slider.type = 'range';
                 slider.min = '0';
                 slider.max = '100'; // Percent
-                slider.value = Math.round(data[i] * 100);
+                slider.value = valPercent;
                 slider.className = 'vertical-slider';
                 slider.dataset.hour = i;
+                slider.title = `${valPercent}% (~${valMW} MW)`; // Tooltip with MW
                 
                 // Style accent color if supported (browser dependent)
                 slider.style.accentColor = barColor;
@@ -2829,12 +2893,24 @@
                 const label = document.createElement('div');
                 label.className = 'hour-label';
                 label.textContent = `${i}:00`;
+                
+                // Hover Label for Value
+                const valDisplay = document.createElement('div');
+                valDisplay.style.fontSize = '8px';
+                valDisplay.style.color = '#888';
+                valDisplay.style.textAlign = 'center';
+                valDisplay.style.marginTop = '2px';
+                valDisplay.textContent = `${valPercent}%`;
 
                 // Event Listener to update temp data
                 slider.addEventListener('input', function() {
-                    tempProfiles[type][i] = parseInt(this.value) / 100;
+                    const newVal = parseInt(this.value);
+                    tempProfiles[type][i] = newVal / 100;
+                    valDisplay.textContent = `${newVal}%`;
+                    this.title = `${newVal}% (~${Math.round((newVal/100) * capacityBase).toLocaleString()} MW)`;
                 });
 
+                group.appendChild(valDisplay); // Value on top
                 group.appendChild(slider);
                 group.appendChild(label);
                 container.appendChild(group);
@@ -2844,16 +2920,46 @@
         function updateSimulation(hour) {
             if (!networkGraph.plants || networkGraph.plants.length === 0) return;
 
-            // 1. Retrieve Factors from Profiles
+            // System Capacities (Derived from Data)
+            const CAP_GAS = 41685;
+            const CAP_HYDRO = 15997;
+            const CAP_SOLAR = 26617;
+            const CAP_WIND = 12714;
+            const CAP_BASELOAD = 5100; // Nuclear + Geo + Biomass approx
+            const CAP_PEAK_LOAD = 55000; // Assumed System Peak
+
+            // 1. Retrieve Factors from Profiles (0.0 to 1.0)
             const solarFactor = profiles.solar[hour];
             const windFactor = profiles.wind[hour];
             const loadFactor = profiles.load[hour];
             
-            // Net Load Proxy = Load - Renewables
-            // This drives the dispatch of fossil fuels
-            // Solar reduces net load significantly (0.5 weight)
-            // Wind reduces net load somewhat (0.1 weight)
-            const netLoadProxy = Math.max(0.1, loadFactor - (solarFactor * 0.5) - (windFactor * 0.1)); 
+            // 2. Calculate MW Real-time values
+            const solarMW = solarFactor * CAP_SOLAR;
+            const windMW = windFactor * CAP_WIND;
+            const loadMW = loadFactor * CAP_PEAK_LOAD;
+            const baseloadMW = CAP_BASELOAD; // Always on (simplified)
+
+            // 3. Calculate Net Load (The demand left for dispatchable resources)
+            // Net Load = Total Demand - Renewables - Baseload
+            let netLoadMW = loadMW - solarMW - windMW - baseloadMW;
+            
+            // Ensure non-negative for calculation (though negative implies curtailment)
+            if (netLoadMW < 0) netLoadMW = 0;
+
+            // 4. Determine Dispatch Requirements
+            const totalDispatchableCap = CAP_GAS + CAP_HYDRO;
+            
+            // Dispatch Fraction: What % of our dispatchable fleet do we need?
+            // We add a 1.17x buffer to simulate CAISO reserve requirements (17% operating reserves)
+            // making the grid look "busier" at high loads, responding to user feedback.
+            let dispatchFraction = (netLoadMW / totalDispatchableCap) * 1.17;
+            
+            // Cap at 1.0 (100% on)
+            if (dispatchFraction > 1.0) dispatchFraction = 1.0;
+            if (dispatchFraction < 0) dispatchFraction = 0;
+
+            // Debug log to console to verify logic if needed
+            // console.log(`Hour ${hour}: Load ${Math.round(loadMW)}MW, Net ${Math.round(netLoadMW)}MW, Disp% ${(dispatchFraction*100).toFixed(1)}%`);
 
             activeGenerators = 0;
 
@@ -2862,81 +2968,60 @@
                 let shouldBeOn = false;
                 let customColor = null;
 
+                const plantHash = plant.id.split('').reduce((a,b)=>a+b.charCodeAt(0),0);
+                const randomVal = (plantHash % 100) / 100; // 0.0 to 1.0 deterministic random
+
                 if (fuelType === 'SUN') {
-                    // Solar Logic: Simply follows the factor
+                    // Solar Logic
                     if (solarFactor > 0.05) {
                         shouldBeOn = true;
-                        // Interpolate color: Grey (#808080) -> Gold (#FFD700)
                         customColor = interpolateColor('#808080', '#FFD700', solarFactor);
-                    } else {
-                        shouldBeOn = false;
                     }
 
-                } else if (fuelType === 'WND' || fuelType === 'WIND') {
-                    // Wind Logic: Probabilistic
-                    // If factor is 0.5, 50% of wind farms are ON
-                    const plantHash = plant.id.split('').reduce((a,b)=>a+b.charCodeAt(0),0);
-                    if ((plantHash % 100) / 100 < windFactor) {
-                        shouldBeOn = true;
-                    }
+                } else if (['WND', 'WIND'].includes(fuelType)) {
+                    // Wind Logic
+                    if (randomVal < windFactor) shouldBeOn = true;
 
                 } else if (['NG', 'GAS', 'OGW', 'OG', 'BIT', 'OIL', 'DFO'].includes(fuelType)) {
-                    // Dispatchable (Gas/Fossil) Logic
-                    // Driven by Net Load.
-                    // As Net Load increases, more plants turn on.
-                     const plantHash = plant.id.split('').reduce((a,b)=>a+b.charCodeAt(0),0);
-                     // Shift hash so different plants turn on than wind
-                     if (((plantHash + 50) % 100) / 100 < netLoadProxy) {
-                         shouldBeOn = true;
-                     }
+                    // Gas Logic: Dispatchable
+                    // We use the dispatchFraction calculated in MW
+                    // Shift hash slightly so Gas and Hydro don't turn on identically
+                    const gasRandom = ((plantHash + 33) % 100) / 100;
+                    if (gasRandom < dispatchFraction) shouldBeOn = true;
 
                 } else if (['WAT', 'HYD'].includes(fuelType)) {
-                     // Hydro Logic: Dispatchable Peaker
-                     // Hydro often follows load peaks but is limited by water availability.
-                     // We simulate it serving the top 90% of load curve or so.
-                     const plantHash = plant.id.split('').reduce((a,b)=>a+b.charCodeAt(0),0);
-                     if ((plantHash % 100) / 100 < (loadFactor * 0.8)) {
-                         shouldBeOn = true;
-                     }
+                     // Hydro Logic: Dispatchable
+                     // Hydro often has slightly different logic (peaking), but for simplicity 
+                     // and to ensure meeting demand, we use the same dispatch fraction
+                     if (randomVal < dispatchFraction) shouldBeOn = true;
 
                 } else if (['NUC', 'GEO', 'BIO', 'WH'].includes(fuelType)) {
-                     // Baseload Logic
-                     // Nuclear and Geothermal run 24/7 typically.
-                     // We'll keep them ON mostly, maybe small maintenance outage simulation (1%)
-                     const plantHash = plant.id.split('').reduce((a,b)=>a+b.charCodeAt(0),0);
-                     if ((plantHash % 100) > 5) { // 95% availability
-                        shouldBeOn = true;
-                     }
+                     // Baseload Logic (95% availability)
+                     if ((plantHash % 100) > 5) shouldBeOn = true;
+
                 } else if (['BAT', 'OTH'].includes(fuelType)) {
-                    // Battery Logic (Charging vs Discharging)
-                    // Net Load Proxy > 0.7 -> High Demand -> Discharge (Gold)
-                    // Solar Factor > 0.6 -> High Renewables -> Charge (Cyan)
+                    // Battery Logic
+                    // Charge when Solar is high (> 50% capacity)
+                    // Discharge when Dispatch Fraction is high (> 60% of gas fleet needed)
                     
-                    if (netLoadProxy > 0.7) {
-                        // Discharging
+                    if (dispatchFraction > 0.6) {
+                        // Discharge (Gold) - Peak Shaving
                         shouldBeOn = true;
-                        customColor = '#FFD700'; // Gold (Generating)
-                    } else if (solarFactor > 0.6) {
-                        // Charging
+                        customColor = '#FFD700'; 
+                    } else if (solarFactor > 0.5) {
+                        // Charge (Cyan) - Soaking up sun
                         shouldBeOn = true;
-                        customColor = '#00FFFF'; // Cyan (Charging/Load)
-                    } else {
-                        shouldBeOn = false; // Idle
+                        customColor = '#00FFFF'; 
                     }
-                } else {
-                    // Others
-                    shouldBeOn = false;
                 }
 
                 // Update State
                 plant.isOn = shouldBeOn;
-                
                 if (shouldBeOn) activeGenerators++;
 
                 // Update Visuals
                 const baseColor = getFuelColor(plant.fuel);
                 const displayColor = customColor || baseColor;
-
                 updatePlantMarker(plant, shouldBeOn, displayColor);
             });
 
