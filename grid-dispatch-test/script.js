@@ -3083,25 +3083,30 @@ function gameLoop() {
     updateSupplyValues();
 
     // Curtailment acts as negative supply (reduces net demand effectively)
-    const totalSupply = batteryMW + ccgtMW + ctMW + rngMW + hydrogenMW + hydroMW - solarCurtailmentMW - windCurtailmentMW;
+    // Constrain battery power based on SOC BEFORE applying it
+    let actualBatteryMW = batteryMW;
+    if (batterySOC <= 0.01 && batteryMW > 0) {
+        // Battery empty, cannot discharge
+        console.log(`[GameLoop] Cannot discharge ${batteryMW} MW - battery empty (SOC: ${(batterySOC * 100).toFixed(1)}%)`);
+        actualBatteryMW = 0;
+        batterySlider.value = 0;
+        updateSupplyValues();
+    } else if (batterySOC >= 0.99 && batteryMW < 0) {
+        // Battery full, cannot charge
+        console.log(`[GameLoop] Cannot charge at ${batteryMW} MW - battery full (SOC: ${(batterySOC * 100).toFixed(1)}%)`);
+        actualBatteryMW = 0;
+        batterySlider.value = 0;
+        updateSupplyValues();
+    }
+
+    const totalSupply = actualBatteryMW + ccgtMW + ctMW + rngMW + hydrogenMW + hydroMW - solarCurtailmentMW - windCurtailmentMW;
 
     // Update battery state of charge
     // Negative battery value = charging (increasing SOC)
     // Positive battery value = discharging (decreasing SOC)
-    const energyChangeMWh = -batteryMW * (1/12); // 5-minute intervals = 1/12 hour, MW to MWh
+    const energyChangeMWh = -actualBatteryMW * (1/12); // 5-minute intervals = 1/12 hour, MW to MWh
     const socChange = energyChangeMWh / BATTERY_CAPACITY_MWH;
     batterySOC = Math.max(0, Math.min(1, batterySOC + socChange));
-
-    // Constrain battery power based on SOC
-    if (batterySOC >= 1 && batteryMW < 0) {
-        // Battery full, can't charge more
-        batterySlider.value = 0;
-        updateSupplyValues();
-    } else if (batterySOC <= 0 && batteryMW > 0) {
-        // Battery empty, can't discharge more
-        batterySlider.value = 0;
-        updateSupplyValues();
-    }
 
     updateBatterySOCDisplay();
     updateTipsBanner();
@@ -3110,7 +3115,7 @@ function gameLoop() {
     // Cost = (Power in MW) * (Operating Cost in $/MWh) * (Duration in hours)
     // For 5-minute intervals, duration = 1/12 hour
     // For battery, we use absolute value since both charging and discharging have efficiency losses
-    const batteryCost = Math.abs(batteryMW) * BATTERY_OPCOST * (1/12);
+    const batteryCost = Math.abs(actualBatteryMW) * BATTERY_OPCOST * (1/12);
     const ccgtCost = calculateCCGTCost(ccgtMW) * (1/12);  // Linear cost function * time
     const ctCost = calculateCTCost(ctMW) * (1/12);        // Linear cost function * time
     const rngCost = calculateRNGCost(rngMW) * (1/12);     // Linear cost function * time
@@ -6054,7 +6059,22 @@ function executeScheduledEvents(currentTick) {
                 break;
 
             case 'set_battery':
-                batterySlider.value = event.value;
+                // Check battery SOC constraints before applying scheduled value
+                let requestedBatteryMW = event.value;
+
+                // If battery is empty (SOC <= 0) and trying to discharge (positive MW), prevent discharge
+                if (batterySOC <= 0.01 && requestedBatteryMW > 0) {
+                    console.log(`[Scheduled Battery] Cannot discharge ${requestedBatteryMW} MW - battery empty (SOC: ${(batterySOC * 100).toFixed(1)}%)`);
+                    requestedBatteryMW = 0; // Force to 0 MW
+                }
+
+                // If battery is full (SOC >= 1) and trying to charge (negative MW), prevent charging
+                if (batterySOC >= 0.99 && requestedBatteryMW < 0) {
+                    console.log(`[Scheduled Battery] Cannot charge at ${requestedBatteryMW} MW - battery full (SOC: ${(batterySOC * 100).toFixed(1)}%)`);
+                    requestedBatteryMW = 0; // Force to 0 MW
+                }
+
+                batterySlider.value = requestedBatteryMW;
                 updateSupplyValues();
                 break;
 
