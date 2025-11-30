@@ -4800,10 +4800,13 @@ function validateBatterySOC(newBatteryMW, atTick) {
                 const stopTick = Math.min(287, Math.max(lastEventTick + ticksToEmpty, lastEventTick + 1));
                 const timeStr = formatGameTime(stopTick);
 
+                // Determine if the violation is due to charging or discharging
+                const actionType = currentBatteryMW > 0 ? "discharging" : "charging";
+
                 return {
                     valid: false,
                     stopTick: stopTick,
-                    message: `Battery would fully discharge at ${timeStr}.\n\nAutomatically adding stop event to set battery to 0 MW at ${timeStr}.`
+                    message: `Schedule conflict: Battery would fully discharge at ${timeStr} (due to ${actionType} at ${Math.abs(currentBatteryMW)} MW).\n\nAutomatically adding stop event to set battery to 0 MW at ${timeStr}.`
                 };
             }
             if (currentSOC > BATTERY_CAPACITY_MWH) {
@@ -4817,7 +4820,7 @@ function validateBatterySOC(newBatteryMW, atTick) {
                 return {
                     valid: false,
                     stopTick: stopTick,
-                    message: `Battery would reach full capacity at ${timeStr}.\n\nAutomatically adding stop event to set battery to 0 MW at ${timeStr}.`
+                    message: `Battery would reach full capacity (100%) at ${timeStr} while charging at ${Math.abs(currentBatteryMW)} MW.\n\nAutomatically adding stop event to set battery to 0 MW at ${timeStr}.`
                 };
             }
 
@@ -4840,10 +4843,13 @@ function validateBatterySOC(newBatteryMW, atTick) {
             const stopTick = Math.min(287, Math.max(lastEventTick + ticksToEmpty, lastEventTick + 1));
             const timeStr = formatGameTime(stopTick);
 
+            // Determine if the violation is due to charging or discharging
+            const actionType = currentBatteryMW > 0 ? "discharging" : "charging";
+
             return {
                 valid: false,
                 stopTick: stopTick,
-                message: `Battery would fully discharge at ${timeStr}.\n\nAutomatically adding stop event to set battery to 0 MW at ${timeStr}.`
+                message: `Schedule conflict: Battery would fully discharge at ${timeStr} (due to ${actionType} at ${Math.abs(currentBatteryMW)} MW).\n\nAutomatically adding stop event to set battery to 0 MW at ${timeStr}.`
             };
         }
         if (currentSOC > BATTERY_CAPACITY_MWH) {
@@ -4856,7 +4862,7 @@ function validateBatterySOC(newBatteryMW, atTick) {
             return {
                 valid: false,
                 stopTick: stopTick,
-                message: `Battery would reach full capacity at ${timeStr}.\n\nAutomatically adding stop event to set battery to 0 MW at ${timeStr}.`
+                message: `Battery would reach full capacity (100%) at ${timeStr} while charging at ${Math.abs(currentBatteryMW)} MW.\n\nAutomatically adding stop event to set battery to 0 MW at ${timeStr}.`
             };
         }
     }
@@ -5909,12 +5915,25 @@ function executeScheduledEvents(currentTick) {
         switch(event.action) {
             case 'commit_ccgt':
                 // Find offline units and commit them
+                // Note: scheduled commits should bring units online immediately
+                // since effectiveTick already accounts for startup delay
                 let ccgtCommitted = 0;
                 for (let unit of ccgtUnits) {
                     if (unit.state === 'offline' && ccgtCommitted < event.count) {
-                        commitCCGTUnit(unit);
+                        // Bring unit online immediately (no additional startup delay)
+                        unit.state = 'online';
+                        unit.outputMW = CCGT_UNIT_SIZE_MW;
+                        unit.startupTicksRemaining = 0;
                         ccgtCommitted++;
                     }
+                }
+                // Update displays after committing units
+                if (ccgtCommitted > 0) {
+                    updateCCGTDisplay();
+                    updateCCGTPowerSlider();
+                    const targetMW = parseFloat(ccgtPowerSlider.value);
+                    distributePowerToUnits(ccgtUnits, targetMW, CCGT_UNIT_SIZE_MW);
+                    updateSupplyValues();
                 }
                 break;
 
@@ -5931,12 +5950,25 @@ function executeScheduledEvents(currentTick) {
 
             case 'commit_ct':
                 // Find offline units and commit them
+                // Note: scheduled commits should bring units online immediately
+                // since effectiveTick already accounts for startup delay
                 let ctCommitted = 0;
                 for (let unit of ctUnits) {
                     if (unit.state === 'offline' && ctCommitted < event.count) {
-                        commitCTUnit(unit);
+                        // Bring unit online immediately (no additional startup delay)
+                        unit.state = 'online';
+                        unit.outputMW = CT_UNIT_SIZE_MW;
+                        unit.startupTicksRemaining = 0;
                         ctCommitted++;
                     }
+                }
+                // Update displays after committing units
+                if (ctCommitted > 0) {
+                    updateCTDisplay();
+                    updateCTPowerSlider();
+                    const targetMW = parseFloat(ctPowerSlider.value);
+                    distributePowerToUnits(ctUnits, targetMW, CT_UNIT_SIZE_MW);
+                    updateSupplyValues();
                 }
                 break;
 
@@ -5953,12 +5985,25 @@ function executeScheduledEvents(currentTick) {
 
             case 'commit_rng':
                 // Find offline units and commit them
+                // Note: scheduled commits should bring units online immediately
+                // since effectiveTick already accounts for startup delay
                 let rngCommitted = 0;
                 for (let unit of rngUnits) {
                     if (unit.state === 'offline' && rngCommitted < event.count) {
-                        commitRNGUnit(unit);
+                        // Bring unit online immediately (no additional startup delay)
+                        unit.state = 'online';
+                        unit.outputMW = RNG_UNIT_SIZE_MW;
+                        unit.startupTicksRemaining = 0;
                         rngCommitted++;
                     }
+                }
+                // Update displays after committing units
+                if (rngCommitted > 0) {
+                    updateRNGDisplay();
+                    updateRNGPowerSlider();
+                    const targetMW = parseFloat(rngPowerSlider.value);
+                    distributePowerToUnits(rngUnits, targetMW, RNG_UNIT_SIZE_MW);
+                    updateSupplyValues();
                 }
                 break;
 
@@ -5975,12 +6020,25 @@ function executeScheduledEvents(currentTick) {
 
             case 'commit_hydrogen':
                 // Find offline units and commit them
+                // Note: scheduled commits should bring units online immediately
+                // since effectiveTick already accounts for startup delay
                 let hydrogenCommitted = 0;
                 for (let unit of hydrogenUnits) {
                     if (unit.state === 'offline' && hydrogenCommitted < event.count) {
-                        commitHydrogenUnit(unit);
+                        // Bring unit online immediately (no additional startup delay)
+                        unit.state = 'online';
+                        unit.outputMW = HYDROGEN_UNIT_SIZE_MW;
+                        unit.startupTicksRemaining = 0;
                         hydrogenCommitted++;
                     }
+                }
+                // Update displays after committing units
+                if (hydrogenCommitted > 0) {
+                    updateHydrogenDisplay();
+                    updateHydrogenPowerSlider();
+                    const targetMW = parseFloat(hydrogenPowerSlider.value);
+                    distributePowerToUnits(hydrogenUnits, targetMW, HYDROGEN_UNIT_SIZE_MW);
+                    updateSupplyValues();
                 }
                 break;
 
