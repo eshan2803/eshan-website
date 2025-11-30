@@ -395,6 +395,16 @@
                             </button>
                         </div>
 
+                        <!-- New Game / Retry Buttons (shown when game ends with schedule) -->
+                        <div id="endGameButtons" class="mb-3 hidden flex gap-3">
+                            <button id="newGameButton" class="flex-1 px-6 py-3 text-lg font-medium text-white bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 rounded-full transition-colors shadow-md">
+                                🆕 New Game
+                            </button>
+                            <button id="retryWithScheduleButton" class="flex-1 px-6 py-3 text-lg font-medium text-white bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 rounded-full transition-colors shadow-md">
+                                🔄 Retry with Schedule
+                            </button>
+                        </div>
+
                         <!-- Next Scheduled Event Ticker (shown during gameplay if schedule active) -->
                         <div id="nextEventTicker" class="mb-3 hidden">
                             <div class="px-4 py-2 bg-purple-50 border border-purple-200 rounded-lg">
