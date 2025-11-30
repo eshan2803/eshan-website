@@ -5346,6 +5346,11 @@ function updateSchedulerChartVisuals() {
     let currentRNG = 0;
     let currentHydrogen = 0;
 
+    // Track battery SOC to enforce physical constraints in visualization
+    const INITIAL_SOC_PERCENT = 0.2;
+    const TICK_DURATION_HOURS = 5 / 60; // 5 minutes = 1/12 hour
+    let batterySOC = BATTERY_CAPACITY_MWH * INITIAL_SOC_PERCENT;
+
     // Process each tick and apply scheduled events
     for (let tick = 0; tick < 289; tick++) {
         // Only process actual ticks (0-287)
@@ -5374,6 +5379,23 @@ function updateSchedulerChartVisuals() {
                     currentHydrogen = Math.max(0, currentHydrogen - event.count);
                 }
             });
+
+            // Enforce battery SOC constraints BEFORE applying to chart
+            let actualBatteryMW = currentBattery;
+            if (batterySOC <= 0.01 && currentBattery > 0) {
+                // Battery empty, cannot discharge
+                actualBatteryMW = 0;
+            } else if (batterySOC >= BATTERY_CAPACITY_MWH * 0.99 && currentBattery < 0) {
+                // Battery full, cannot charge
+                actualBatteryMW = 0;
+            }
+
+            // Update battery SOC for next tick based on actual battery MW
+            const energyChangeMWh = -actualBatteryMW * TICK_DURATION_HOURS;
+            batterySOC = Math.max(0, Math.min(BATTERY_CAPACITY_MWH, batterySOC + energyChangeMWh));
+
+            // Use actual battery MW (after SOC constraints) for chart
+            currentBattery = actualBatteryMW;
         }
 
         // Set data for this tick (carry forward to 24:00)
