@@ -7,6 +7,9 @@ const resumeButton = document.getElementById('resumeButton');
 const restartButton = document.getElementById('restartButton');
 const showScheduleBtn = document.getElementById('showScheduleBtn');
 const showScheduleButtonContainer = document.getElementById('showScheduleButtonContainer');
+const endGameButtons = document.getElementById('endGameButtons');
+const newGameButton = document.getElementById('newGameButton');
+const retryWithScheduleButton = document.getElementById('retryWithScheduleButton');
 
 // Leaderboard elements
 const usernameModal = document.getElementById('usernameModal');
@@ -1403,6 +1406,18 @@ async function initialize() {
                 createSchedulerChart();
             }
             updateSchedulerChart();
+        });
+
+        // End game button handlers
+        newGameButton.addEventListener('click', () => {
+            // Clear schedule and reset game
+            scheduledEvents = [];
+            resetGame();
+        });
+
+        retryWithScheduleButton.addEventListener('click', () => {
+            // Keep schedule and reset game
+            resetGame();
         });
 
         // Battery, Hydro, and Curtailment slider event listeners
@@ -3041,15 +3056,20 @@ function gameLoop() {
             submitScore();
         }
 
-        // Change button to "Reset" after user clicks OK
-        // Keep game in "started" state so button knows to call resetGame
-        startButton.textContent = 'Reset';
-        startButton.classList.remove('hidden');
+        // Show appropriate buttons based on whether there's a schedule
         pauseButtons.classList.add('hidden');
 
-        // Show "Show Schedule" button if there are scheduled events
         if (scheduledEvents.length > 0) {
+            // Game ended with schedule - show New Game/Retry buttons and Show Schedule button
+            startButton.classList.add('hidden');
+            endGameButtons.classList.remove('hidden');
             showScheduleButtonContainer.classList.remove('hidden');
+        } else {
+            // Game ended without schedule - show regular Reset button
+            startButton.textContent = 'Reset';
+            startButton.classList.remove('hidden');
+            endGameButtons.classList.add('hidden');
+            showScheduleButtonContainer.classList.add('hidden');
         }
 
         return;
@@ -3431,6 +3451,7 @@ function resumeGame() {
 
     // Hide "Resume" and "Restart" buttons, show "Pause" button
     pauseButtons.classList.add('hidden');
+    endGameButtons.classList.add('hidden');
     showScheduleButtonContainer.classList.add('hidden');
     startButton.classList.remove('hidden');
 
@@ -3449,6 +3470,7 @@ function resetGame() {
     startButton.className = 'w-full px-6 py-3 text-lg font-medium text-white bg-gray-400 cursor-not-allowed rounded-full transition-colors shadow-md';
     startButton.classList.remove('hidden');
     pauseButtons.classList.add('hidden');
+    endGameButtons.classList.add('hidden');
     showScheduleButtonContainer.classList.add('hidden');
 
     batterySlider.disabled = true;
@@ -5608,7 +5630,12 @@ function applySchedule() {
     // Close modal
     schedulerModal.classList.add('hidden');
 
-    alert(`Schedule applied! ${scheduledEvents.length} events will execute during gameplay.`);
+    // Check if game has ended (gameStarted is true but game has finished)
+    if (gameStarted && gameTick >= forecastData.length) {
+        alert(`Schedule updated! ${scheduledEvents.length} events saved.\n\nClick "Retry with Schedule" to use this updated schedule in your next game.`);
+    } else {
+        alert(`Schedule applied! ${scheduledEvents.length} events will execute during gameplay.`);
+    }
 }
 
 // Calculate what the Hour 0 state should be based on schedule
