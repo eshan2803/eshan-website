@@ -5,6 +5,8 @@ const startButton = document.getElementById('startButton');
 const pauseButtons = document.getElementById('pauseButtons');
 const resumeButton = document.getElementById('resumeButton');
 const restartButton = document.getElementById('restartButton');
+const showScheduleBtn = document.getElementById('showScheduleBtn');
+const showScheduleButtonContainer = document.getElementById('showScheduleButtonContainer');
 
 // Leaderboard elements
 const usernameModal = document.getElementById('usernameModal');
@@ -1393,6 +1395,15 @@ async function initialize() {
         // Resume and Restart button handlers
         resumeButton.addEventListener('click', resumeGame);
         restartButton.addEventListener('click', resetGame);
+
+        // Show Schedule button handler
+        showScheduleBtn.addEventListener('click', () => {
+            schedulerModal.classList.remove('hidden');
+            if (!schedulerChart) {
+                createSchedulerChart();
+            }
+            updateSchedulerChart();
+        });
 
         // Battery, Hydro, and Curtailment slider event listeners
         batterySlider.addEventListener('input', updateSupplyValues);
@@ -3036,6 +3047,11 @@ function gameLoop() {
         startButton.classList.remove('hidden');
         pauseButtons.classList.add('hidden');
 
+        // Show "Show Schedule" button if there are scheduled events
+        if (scheduledEvents.length > 0) {
+            showScheduleButtonContainer.classList.remove('hidden');
+        }
+
         return;
     }
 
@@ -3403,6 +3419,11 @@ function pauseGame() {
     // Hide "Pause" button and show "Resume" and "Restart" buttons
     startButton.classList.add('hidden');
     pauseButtons.classList.remove('hidden');
+
+    // Show "Show Schedule" button if there are scheduled events
+    if (scheduledEvents.length > 0) {
+        showScheduleButtonContainer.classList.remove('hidden');
+    }
 }
 
 function resumeGame() {
@@ -3410,6 +3431,7 @@ function resumeGame() {
 
     // Hide "Resume" and "Restart" buttons, show "Pause" button
     pauseButtons.classList.add('hidden');
+    showScheduleButtonContainer.classList.add('hidden');
     startButton.classList.remove('hidden');
 
     // Resume the game loop
@@ -3427,6 +3449,7 @@ function resetGame() {
     startButton.className = 'w-full px-6 py-3 text-lg font-medium text-white bg-gray-400 cursor-not-allowed rounded-full transition-colors shadow-md';
     startButton.classList.remove('hidden');
     pauseButtons.classList.add('hidden');
+    showScheduleButtonContainer.classList.add('hidden');
 
     batterySlider.disabled = true;
     batteryInput.disabled = true;
@@ -3441,6 +3464,13 @@ function resetGame() {
     // Clear scheduled random events
     scheduledCloudCoverTicks = [];
     scheduledDemandSpikeTicks = [];
+
+    // Regenerate forecast data to clear any random event modifications
+    forecastData = generateForecastFromProfile(currentSeason);
+    hourlyForecastData = extractHourlyForecast(forecastData);
+
+    // Update chart to show clean forecast data
+    updateChartData();
 
     // Hide active schedule indicator and next event ticker
     hideActiveScheduleIndicator();
