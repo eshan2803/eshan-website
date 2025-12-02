@@ -2855,30 +2855,15 @@
                 userDefaultState.cfProfileName = currentCFProfileName;
                 userDefaultState.hydroCF = currentHydroCF;
 
-                // Run simulation once and use it to set baseline AND display results
-                const result = setNewBaselineFromCurrentState();
+                // Set the new baseline from current state (runs simulation once)
+                setNewBaselineFromCurrentState();
 
                 userDefaultState.baselineCost = customBaselineSystemCost;
                 userDefaultState.baselineCO2 = customBaselineTotalAnnualCO2;
 
-                // Display the results directly without re-running simulation
-                // Since we just set the baseline from current state, the percentage change should be 0%
-                const selectedCountry = countrySelect.value;
-                const totalDailyCO2 = result.emissions.reduce((a, b) => a + b, 0);
-
-                updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, currentSolarCFProfile, currentWindCFProfile, currentOffshoreWindCFProfile, result.hourlyMarginalPrice);
-                updateGridMixSlider(currentCountryInstalledCapacity, defaultCapacityMix);
-                updateGenerationMixSlider(result.generation, defaultGenerationMix, result.curtailmentBySource);
-
-                // Display 0% for both costs since we just set the baseline to current state
-                billImpactEl.textContent = '0%';
-                systemCostImpactEl.textContent = '0%';
-                billImpactEl.className = 'text-5xl font-bold text-blue-600 mt-2';
-                systemCostImpactEl.className = 'text-5xl font-bold text-blue-600 mt-2';
-
-                // Display CO2 avoided as 0 since baseline is current state
-                co2AvoidedEl.textContent = `CO2 avoided: 0 tons (0%)`;
-                co2AvoidedEl.className = 'text-md font-medium text-gray-700';
+                // Run simulation again to update display
+                // This will show ~0% since baseline ≈ current state
+                runSimulation();
 
                 const modal = document.createElement('div');
                 modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50';
