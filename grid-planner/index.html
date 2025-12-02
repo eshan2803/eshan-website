@@ -2691,45 +2691,24 @@
                     const slider = sliders[key];
                     const input = inputs[key];
 
-                    // --- MODIFICATION: Special handling for carbon tax ---
-                    if (key === 'carbonTax') {
-                        slider.addEventListener('input', () => {
-                            syncInputs(slider, input);
-                            setNewBaselineFromCurrentState(); // Recalculate baseline on change
-                            runSimulation();
-                        });
+                    // All sliders behave the same way - just run simulation
+                    // Baseline only updates when "Make Default" is clicked
+                    slider.addEventListener('input', () => {
+                        syncInputs(slider, input);
+                        runSimulation();
+                    });
 
-                        input.addEventListener('input', () => {
-                            let value = parseFloat(input.value);
-                            const min = parseFloat(slider.min);
-                            const max = parseFloat(slider.max);
-                            if (isNaN(value)) value = min;
-                            if (value > max) value = max;
-                            if (value < min) value = min;
-                            input.value = value;
-                            syncInputs(input, slider);
-                            setNewBaselineFromCurrentState(); // Recalculate baseline on change
-                            runSimulation();
-                        });
-                    } else {
-                        // Original behavior for all other sliders
-                        slider.addEventListener('input', () => {
-                            syncInputs(slider, input);
-                            runSimulation();
-                        });
-
-                        input.addEventListener('input', () => {
-                            let value = parseFloat(input.value);
-                            const min = parseFloat(slider.min);
-                            const max = parseFloat(slider.max);
-                            if (isNaN(value)) value = min;
-                            if (value > max) value = max;
-                            if (value < min) value = min;
-                            input.value = value;
-                            syncInputs(input, slider);
-                            runSimulation();
-                        });
-                    }
+                    input.addEventListener('input', () => {
+                        let value = parseFloat(input.value);
+                        const min = parseFloat(slider.min);
+                        const max = parseFloat(slider.max);
+                        if (isNaN(value)) value = min;
+                        if (value > max) value = max;
+                        if (value < min) value = min;
+                        input.value = value;
+                        syncInputs(input, slider);
+                        runSimulation();
+                    });
 
                     slider.addEventListener('change', saveState);
                     input.addEventListener('change', saveState);
@@ -2855,15 +2834,28 @@
                 userDefaultState.cfProfileName = currentCFProfileName;
                 userDefaultState.hydroCF = currentHydroCF;
 
-                // Set the new baseline from current state (runs simulation once)
-                setNewBaselineFromCurrentState();
+                // Run simulation once and use that EXACT result for both baseline and display
+                const result = setNewBaselineFromCurrentState();
 
                 userDefaultState.baselineCost = customBaselineSystemCost;
                 userDefaultState.baselineCO2 = customBaselineTotalAnnualCO2;
 
-                // Run simulation again to update display
-                // This will show ~0% since baseline ≈ current state
-                runSimulation();
+                // Use the SAME simulation result to update display
+                // This ensures baseline and current are identical
+                const totalDailyCO2 = result.emissions.reduce((a, b) => a + b, 0);
+
+                // Update all displays using the simulation result
+                updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, currentSolarCFProfile, currentWindCFProfile, currentOffshoreWindCFProfile, result.hourlyMarginalPrice);
+                updateGridMixSlider(currentCountryInstalledCapacity, defaultCapacityMix);
+                updateGenerationMixSlider(result.generation, defaultGenerationMix, result.curtailmentBySource);
+
+                // Since baseline = current (same simulation), force display to 0%
+                billImpactEl.textContent = '0%';
+                systemCostImpactEl.textContent = '0%';
+                billImpactEl.className = 'text-5xl font-bold text-blue-600 mt-2';
+                systemCostImpactEl.className = 'text-5xl font-bold text-blue-600 mt-2';
+                co2AvoidedEl.textContent = `CO2 avoided: 0 tons (0%)`;
+                co2AvoidedEl.className = 'text-md font-medium text-gray-700';
 
                 const modal = document.createElement('div');
                 modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50';
