@@ -2762,19 +2762,20 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
             }
             
             // --- NEW: Function to set the baseline from the current state ---
+            // Returns the simulation result to avoid running the simulation twice
             function setNewBaselineFromCurrentState() {
                 const currentValues = {};
                 for (const key in sliders) {
                     currentValues[key] = parseFloat(sliders[key].value);
                 }
-                
+
                 let activePotentialGeneration = JSON.parse(JSON.stringify(BASELINE_POTENTIAL_GENERATION));
                 for (const tech in enabledTechnologies) {
                     if (!enabledTechnologies[tech]) {
                         activePotentialGeneration[tech] = Array(24).fill(0);
                     }
                 }
-                
+
                 const inputsForBaseline = {
                     capacity: {
                         solar: currentValues.solar, wind: currentValues.wind, offshoreWind: currentValues.offshoreWind,
@@ -2793,12 +2794,16 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                         exportPrice: currentValues.exportPrice,
                     }
                 };
-                
-                const { result: newBaselineResult } = runTwoPassSimulation(inputsForBaseline);
-                
+
+                const simulationResult = runTwoPassSimulation(inputsForBaseline);
+                const newBaselineResult = simulationResult.result;
+
                 customBaselineSystemCost = newBaselineResult.systemCost;
                 customBaselineConsumerCost = calculateAnnualConsumerCost(newBaselineResult.hourlyMarginalPrice, newBaselineResult.demand);
                 customBaselineTotalAnnualCO2 = newBaselineResult.emissions.reduce((a, b) => a + b, 0) * 365;
+
+                // Return the full simulation result so we can display it without re-running
+                return simulationResult;
             }
 
             // --- EVENT LISTENERS ---
@@ -3000,13 +3005,67 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                 userDefaultState.cfProfileName = currentCFProfileName;
                 userDefaultState.hydroCF = currentHydroCF;
 
-                setNewBaselineFromCurrentState(); // Use the new function
-                
+                // Run simulation once and use it to set baseline AND display results
+                const simulationResult = setNewBaselineFromCurrentState();
+
                 userDefaultState.baselineCost = customBaselineSystemCost;
                 userDefaultState.baselineCO2 = customBaselineTotalAnnualCO2;
 
-                runSimulation();
-                
+                // Display the results directly without re-running simulation
+                // Since we just set the baseline from current state, the percentage change should be 0%
+                const selectedCountry = countrySelect.value;
+                const baseSolarProfile = (countryProfiles[selectedCountry] || countryProfiles.default).solar;
+                const baseWindProfile = (countryProfiles[selectedCountry] || countryProfiles.default).wind;
+                const baseOffshoreWindProfile = (countryProfiles[selectedCountry] || countryProfiles.default).offshoreWind;
+                const baseSeason = currentDemandProfileName.split(' ')[0].toLowerCase();
+                const seasonalMultipliers = SEASONAL_MULTIPLIERS[baseSeason] || { solar: 1.0, wind: 1.0, offshoreWind: 1.0 };
+                const seasonalSolarProfile = currentSolarCFProfile.length > 0 ? currentSolarCFProfile : baseSolarProfile.map(cf => Math.min(1, cf * seasonalMultipliers.solar));
+                const seasonalWindProfile = currentWindCFProfile.length > 0 ? currentWindCFProfile : baseWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.wind));
+                const seasonalOffshoreWindProfile = currentOffshoreWindCFProfile.length > 0 ? currentOffshoreWindCFProfile : baseOffshoreWindProfile.map(cf => Math.min(1, cf * seasonalMultipliers.offshoreWind));
+
+                // Calculate result without storage for price comparison
+                const currentValues = {};
+                for (const key in sliders) {
+                    currentValues[key] = parseFloat(sliders[key].value);
+                }
+                const inputsForSim = {
+                    capacity: {
+                        solar: currentValues.solar, wind: currentValues.wind, offshoreWind: currentValues.offshoreWind,
+                        geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
+                        biomass: currentValues.biomass, rng: currentValues.rng,
+                        battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
+                        longduration: currentValues.longduration, dac: currentValues.dac,
+                        demandflex: currentValues.demandflex,
+                    },
+                    incentives: {
+                        solar: currentValues.solarIncentive, wind: currentValues.windIncentive, offshoreWind: currentValues.offshoreWindIncentive,
+                        geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
+                        biomass: currentValues.biomassIncentive, rng: currentValues.rngIncentive,
+                        storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
+                        carbonTax: currentValues.carbonTax,
+                        exportPrice: currentValues.exportPrice,
+                    }
+                };
+                const { result: resultWithoutStorage } = runTwoPassSimulation(inputsForSim, true);
+
+                const result = simulationResult.result;
+                const totalDailyCO2 = result.emissions.reduce((a, b) => a + b, 0);
+
+                updatePricingModelIndicator(simulationResult.useFullMeritOrder, simulationResult.actualRenewableShare);
+                updateCharts(result.generation, result.emissions, result.demand, totalDailyCO2, seasonalSolarProfile, seasonalWindProfile, seasonalOffshoreWindProfile, result.hourlyMarginalPrice, resultWithoutStorage.hourlyMarginalPrice);
+                updateGridMixSlider(currentCountryInstalledCapacity, defaultCapacityMix);
+                updateGenerationMixSlider(result.generation, defaultGenerationMix, result.curtailmentBySource);
+
+                // Display 0% for both costs since we just set the baseline to current state
+                billImpactEl.textContent = '0%';
+                systemCostImpactEl.textContent = '0%';
+                billImpactEl.className = 'text-5xl font-bold text-blue-600 mt-2';
+                systemCostImpactEl.className = 'text-5xl font-bold text-blue-600 mt-2';
+
+                // Display CO2 avoided as 0 since baseline is current state
+                co2AvoidedEl.textContent = `CO2 avoided: 0 tons (0%)`;
+                co2AvoidedEl.className = 'text-md font-medium text-gray-700';
+
                 const modal = document.createElement('div');
                 modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50';
                 modal.innerHTML = `
