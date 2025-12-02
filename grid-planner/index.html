@@ -790,9 +790,9 @@
                                     <label for="export-price-slider"
                                         class="block text-sm font-medium text-gray-700">Export Price</label>
                                     <div class="flex items-center space-x-2 mt-2">
-                                        <input type="range" id="export-price-slider" min="-100" max="100" value="20"
+                                        <input type="range" id="export-price-slider" min="-100" max="100" value="-20"
                                             class="w-full form-input thumb-neutral">
-                                        <input type="number" id="export-price-input" min="-100" max="100" value="20"
+                                        <input type="number" id="export-price-input" min="-100" max="100" value="-20"
                                             class="value-input">
                                         <span class="font-semibold text-gray-900 w-12 text-left"
                                             id="export-price-unit">$/MWh</span>
@@ -2625,7 +2625,7 @@
                         capacity: {
                             solar: currentValues.solar, wind: currentValues.wind, offshoreWind: currentValues.offshoreWind,
                             geothermal: currentValues.geothermal, nuclear: currentValues.nuclear,
-                            biomass: currentValues.biomass, rng: currentValues.rng,
+                            biomass: currentValues.biomass, rng: currentValues.rng, hydrogen: currentValues.hydrogen,
                             battery4hr: currentValues.battery4hr, battery8hr: currentValues.battery8hr,
                             longduration: currentValues.longduration, dac: currentValues.dac,
                             demandflex: currentValues.demandflex,
@@ -2633,7 +2633,7 @@
                         incentives: {
                             solar: currentValues.solarIncentive, wind: currentValues.windIncentive, offshoreWind: currentValues.offshoreWindIncentive,
                             geothermal: currentValues.geothermalIncentive, nuclear: currentValues.nuclearIncentive,
-                            biomass: currentValues.biomassIncentive, rng: currentValues.rngIncentive,
+                            biomass: currentValues.biomassIncentive, rng: currentValues.rngIncentive, hydrogen: currentValues.hydrogenIncentive,
                             storage: currentValues.storageIncentive, dac: currentValues.dacIncentive,
                             carbonTax: currentValues.carbonTax,
                             exportPrice: currentValues.exportPrice,
