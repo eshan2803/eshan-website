@@ -404,12 +404,20 @@
         }
 
         #timeDisplay {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: -2px;
+        }
+
+        #timeText {
             font-size: 13px;
             font-weight: 600;
             color: #333;
             font-family: monospace;
-            /* Consistent width */
-            margin-top: -2px;
+            min-width: 65px;
+            text-align: center;
         }
 
         .edit-icon-btn {
@@ -885,7 +893,7 @@
         <div class="slider-row">
             <input type="checkbox" id="timeBasedToggle">
             <label for="timeBasedToggle" class="checkbox-label">Time-Based</label>
-            <input type="range" id="timeSlider" min="0" max="23" value="12" step="1" disabled>
+            <input type="range" id="timeSlider" min="0" max="23" value="0" step="1" disabled>
             <button id="openProfileEditorBtn" class="edit-icon-btn" title="Edit Profiles">
                 <svg viewBox="0 0 24 24">
                     <path
@@ -893,7 +901,19 @@
                 </svg>
             </button>
         </div>
-        <div id="timeDisplay">12:00 PM</div>
+        <div id="timeDisplay">
+            <button id="prevHourBtn" class="edit-icon-btn" title="Previous Hour">
+                <svg viewBox="0 0 24 24">
+                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+                </svg>
+            </button>
+            <span id="timeText">12:00 AM</span>
+            <button id="nextHourBtn" class="edit-icon-btn" title="Next Hour">
+                <svg viewBox="0 0 24 24">
+                    <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+                </svg>
+            </button>
+        </div>
         <!-- Hidden status text for logic access -->
         <div id="simStatus" style="display: none;"></div>
     </div>
@@ -3051,9 +3071,11 @@
             initProfiles();
 
             const timeSlider = document.getElementById('timeSlider');
-            const timeDisplay = document.getElementById('timeDisplay');
+            const timeText = document.getElementById('timeText');
             const simStatus = document.getElementById('simStatus');
             const timeBasedToggle = document.getElementById('timeBasedToggle');
+            const prevHourBtn = document.getElementById('prevHourBtn');
+            const nextHourBtn = document.getElementById('nextHourBtn');
 
             // Initial update - small delay to ensure plants are loaded
             setTimeout(() => {
@@ -3093,7 +3115,7 @@
                 // Update Time Display
                 const ampm = hour >= 12 ? 'PM' : 'AM';
                 const displayHour = hour % 12 || 12;
-                timeDisplay.textContent = `${displayHour}:00 ${ampm}`;
+                timeText.textContent = `${displayHour}:00 ${ampm}`;
 
                 // Update Simulation Status Text
                 updateStatusText(hour);
@@ -3102,6 +3124,28 @@
                 if (timeBasedToggle.checked) {
                     updateSimulation(hour);
                 }
+            });
+
+            // Previous hour button handler
+            prevHourBtn.addEventListener('click', function () {
+                const currentHour = parseInt(timeSlider.value);
+                const newHour = currentHour === 0 ? 23 : currentHour - 1;
+                timeSlider.value = newHour;
+
+                // Trigger the input event to update display and simulation
+                const event = new Event('input');
+                timeSlider.dispatchEvent(event);
+            });
+
+            // Next hour button handler
+            nextHourBtn.addEventListener('click', function () {
+                const currentHour = parseInt(timeSlider.value);
+                const newHour = currentHour === 23 ? 0 : currentHour + 1;
+                timeSlider.value = newHour;
+
+                // Trigger the input event to update display and simulation
+                const event = new Event('input');
+                timeSlider.dispatchEvent(event);
             });
 
             setupProfileEditor();
