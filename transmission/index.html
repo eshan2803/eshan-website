@@ -299,6 +299,10 @@
             background-image: url('https://eshan2803.github.io/basemaps/population_tiles/6/10/24.png');
         }
 
+        #basemap-geothermal {
+            background-image: url('https://eshan2803.github.io/basemaps/geothermal_tiles/6/11/24.png');
+        }
+
         #basemap-ccus {
             background-image: url('https://eshan2803.github.io/basemaps/ccus_west_tiles/6/10/24.png');
         }
@@ -876,6 +880,10 @@
             <div class="basemap-option" id="basemap-ccus" data-layer="ccusWest" title="CO2 Storage Sites (West)">
                 <span class="label">CO<sub>2</sub> Storage</span>
             </div>
+            <div class="basemap-option" id="basemap-geothermal" data-layer="geothermalPotential"
+                title="Geothermal Potential (USGS)">
+                <span class="label">Geothermal</span>
+            </div>
             <div class="basemap-option" id="basemap-burn-probability" data-layer="burnProbability"
                 title="Wildfire Burn Probability">
                 <span class="label">Fire Risk</span>
@@ -1036,6 +1044,16 @@
                 attribution: 'USDA Forest Service',
                 pane: 'wmsOverlayPane',
                 opacity: 0.7
+            }),
+            geothermalPotential: L.tileLayer('https://eshan2803.github.io/basemaps/geothermal_tiles/{z}/{x}/{y}.png', {
+                attribution: 'Geothermal Data: NREL',
+                pane: 'wmsOverlayPane',
+                opacity: 0.7,
+                minZoom: 4,
+                maxZoom: 9,
+                maxNativeZoom: 9,
+                errorTileUrl: '',
+                bounds: [[31, -125], [49, -102]]  // Western US bounds
             })
         };
 
@@ -1073,6 +1091,17 @@
         // Track active generators
         let activeGenerators = 0;
         let minCapacity = 0; // Minimum capacity filter in MW
+
+        // Global state for System Capacities
+        let sysCap = {
+            GAS: 0,
+            HYDRO: 0,
+            SOLAR: 0,
+            WIND: 0,
+            BASELOAD: 0,
+            BATTERY: 0,
+            TOTAL: 0
+        };
 
         // Network graph data structures
         let networkGraph = {
@@ -1855,6 +1884,10 @@
                     });
                     console.log('Added CCS Storage overlay');
                     break;
+                case 'geothermalPotential':
+                    overlay = baseLayers.geothermalPotential.addTo(map);
+                    console.log('Added Geothermal Potential overlay');
+                    break;
                 case 'burnProbability':
                     overlay = baseLayers.burnProbability.addTo(map);
                     console.log('Added Burn Probability overlay');
@@ -1932,6 +1965,9 @@
                     case 'ccusWest':
                         shouldRemove = (overlay === baseLayers.ccusWest);
                         if (shouldRemove) isCCSActive = false;
+                        break;
+                    case 'geothermalPotential':
+                        shouldRemove = (overlay === baseLayers.geothermalPotential);
                         break;
                     case 'burnProbability':
                         shouldRemove = (overlay === baseLayers.burnProbability);
@@ -2265,6 +2301,7 @@
                 img.src = tileUrl;
             }, 150);
 
+
             // Listen to mouse movement
             map.on('mousemove', function (e) {
                 queryCCS(e.latlng);
@@ -2336,6 +2373,16 @@
             return new L.TriangleMarker(latlng, options);
         };
 
+        // Coordinate conversion for EPSG:3857 (Web Mercator) to EPSG:4326/4269 (Lon/Lat)
+        function project3857to4326(coords) {
+            const x = coords[0];
+            const y = coords[1];
+            const lon = (x / 20037508.34) * 180;
+            let lat = (y / 20037508.34) * 180;
+            lat = (180 / Math.PI) * (2 * Math.atan(Math.exp(lat * Math.PI / 180)) - Math.PI / 2);
+            return [lon, lat];
+        }
+
         // Build network graph from loaded data
         function buildNetworkGraph() {
             const TOLERANCE = 0.01; // ~1km tolerance for matching line endpoints to substations
@@ -2387,6 +2434,9 @@
                     actualCoords = coords[0];
                     if (!actualCoords || actualCoords.length < 2) return;
                 }
+
+                // Project coordinates from EPSG:3857 to EPSG:4326 (lon, lat)
+                actualCoords = actualCoords.map(c => project3857to4326(c));
 
                 // Validate start and end coordinates
                 const startCoord = actualCoords[0];
@@ -2557,6 +2607,79 @@
             // Log connectivity stats
             const connectedLines = networkGraph.lines.filter(l => l.startNodeId || l.endNodeId).length;
             console.log(`${connectedLines} lines connected to substations (${(connectedLines / networkGraph.lines.length * 100).toFixed(1)}%)`);
+            // 5. Update legend counts based on actual data
+            updateLegendCounts();
+
+            // 6. Calculate System Capacities
+            sysCap = { GAS: 0, HYDRO: 0, SOLAR: 0, WIND: 0, BASELOAD: 0, BATTERY: 0, TOTAL: 0 };
+            networkGraph.plants.forEach(p => {
+                const cap = p.capacity;
+                if (cap <= 0) return;
+
+                const f = (p.fuel || 'UNKNOWN').toUpperCase();
+
+                if (['NG', 'GAS', 'OGW', 'OG', 'BIT', 'OIL', 'DFO'].includes(f)) sysCap.GAS += cap;
+                else if (['WAT', 'HYD'].includes(f)) sysCap.HYDRO += cap;
+                else if (f === 'SUN') sysCap.SOLAR += cap;
+                else if (['WND', 'WIND'].includes(f)) sysCap.WIND += cap;
+                else if (['NUC', 'GEO', 'BIO', 'WH', 'LFG', 'WDS', 'OBG', 'MSW', 'AB', 'OBS'].includes(f)) sysCap.BASELOAD += cap;
+                else if (['BAT', 'OTH'].includes(f)) sysCap.BATTERY += cap;
+
+                sysCap.TOTAL += cap;
+            });
+            console.log('Calculated system capacities from data:', sysCap);
+        }
+
+        // Function to update legend counts dynamically
+        function updateLegendCounts() {
+            // Initialize counters
+            const counts = {};
+
+            // Count plants by fuel type
+            networkGraph.plants.forEach(plant => {
+                // Skip if capacity is 0 (likely retired)
+                if (plant.capacity <= 0) return;
+
+                const fuel = (plant.fuel || 'UNKNOWN').toUpperCase();
+                counts[fuel] = (counts[fuel] || 0) + 1;
+            });
+
+            // Update legend items
+            const legendItems = document.querySelectorAll('.legend-item.fuel-filter');
+            legendItems.forEach(item => {
+                const fuels = item.getAttribute('data-fuel').split(',');
+                let total = 0;
+
+                fuels.forEach(fuel => {
+                    total += (counts[fuel] || 0);
+                });
+
+                // Update text content, preserving the label name
+                // Text structure is usually "Label (Count)" inside the div, but often with an SVG span first
+                // We need to carefully update just the text node or reconstruct the innerHTML
+
+                // Get the label name (nodeValue of the text node, or derived from current text)
+                // The HTML structure is: <span>SVG</span> Label (Count)
+
+                // Safer approach: Get the label part by removing the numeric part
+                // Or hardcode the mapping based on data-fuel if needed, but parsing current text is better generic way
+
+                let labelText = item.textContent.trim();
+                const parenIndex = labelText.lastIndexOf('(');
+                if (parenIndex > -1) {
+                    labelText = labelText.substring(0, parenIndex).trim();
+                }
+
+                // Reconstruct HTML
+                const iconSpan = item.querySelector('span');
+                if (iconSpan) {
+                    item.innerHTML = '';
+                    item.appendChild(iconSpan);
+                    item.append(` ${labelText} (${total})`);
+                }
+            });
+
+            console.log('Legend counts updated');
         }
 
         // BFS to find all lines connected to a substation - REMOVED (Optimized with Island pre-calculation)
@@ -3327,11 +3450,11 @@
             if (!networkGraph.plants || networkGraph.plants.length === 0) return;
 
             // System Capacities (Derived from Data)
-            const CAP_GAS = 41685;
-            const CAP_HYDRO = 15997;
-            const CAP_SOLAR = 26617;
-            const CAP_WIND = 12714;
-            const CAP_BASELOAD = 5100; // Nuclear + Geo + Biomass approx
+            const CAP_GAS = sysCap.GAS || 41685;
+            const CAP_HYDRO = sysCap.HYDRO || 15997;
+            const CAP_SOLAR = sysCap.SOLAR || 26617;
+            const CAP_WIND = sysCap.WIND || 12714;
+            const CAP_BASELOAD = sysCap.BASELOAD || 5100;
             const CAP_PEAK_LOAD = 55000; // Assumed System Peak
 
             // 1. Retrieve Factors from Profiles (0.0 to 1.0)
