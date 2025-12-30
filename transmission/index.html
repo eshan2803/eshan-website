@@ -299,10 +299,6 @@
             background-image: url('https://eshan2803.github.io/basemaps/population_tiles/6/10/24.png');
         }
 
-        #basemap-geothermal {
-            background-image: url('https://eshan2803.github.io/basemaps/geothermal_tiles/6/11/24.png');
-        }
-
         #basemap-ccus {
             background-image: url('https://eshan2803.github.io/basemaps/ccus_west_tiles/6/10/24.png');
         }
@@ -880,10 +876,6 @@
             <div class="basemap-option" id="basemap-ccus" data-layer="ccusWest" title="CO2 Storage Sites (West)">
                 <span class="label">CO<sub>2</sub> Storage</span>
             </div>
-            <div class="basemap-option" id="basemap-geothermal" data-layer="geothermalPotential"
-                title="Geothermal Potential (USGS)">
-                <span class="label">Geothermal</span>
-            </div>
             <div class="basemap-option" id="basemap-burn-probability" data-layer="burnProbability"
                 title="Wildfire Burn Probability">
                 <span class="label">Fire Risk</span>
@@ -1044,16 +1036,6 @@
                 attribution: 'USDA Forest Service',
                 pane: 'wmsOverlayPane',
                 opacity: 0.7
-            }),
-            geothermalPotential: L.tileLayer('https://eshan2803.github.io/basemaps/geothermal_tiles/{z}/{x}/{y}.png', {
-                attribution: 'Geothermal Data: NREL',
-                pane: 'wmsOverlayPane',
-                opacity: 0.7,
-                minZoom: 4,
-                maxZoom: 9,
-                maxNativeZoom: 9,
-                errorTileUrl: '',
-                bounds: [[31, -125], [49, -102]]  // Western US bounds
             })
         };
 
@@ -1884,10 +1866,6 @@
                     });
                     console.log('Added CCS Storage overlay');
                     break;
-                case 'geothermalPotential':
-                    overlay = baseLayers.geothermalPotential.addTo(map);
-                    console.log('Added Geothermal Potential overlay');
-                    break;
                 case 'burnProbability':
                     overlay = baseLayers.burnProbability.addTo(map);
                     console.log('Added Burn Probability overlay');
@@ -1965,9 +1943,6 @@
                     case 'ccusWest':
                         shouldRemove = (overlay === baseLayers.ccusWest);
                         if (shouldRemove) isCCSActive = false;
-                        break;
-                    case 'geothermalPotential':
-                        shouldRemove = (overlay === baseLayers.geothermalPotential);
                         break;
                     case 'burnProbability':
                         shouldRemove = (overlay === baseLayers.burnProbability);
