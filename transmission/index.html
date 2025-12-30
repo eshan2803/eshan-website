@@ -287,6 +287,8 @@
             background-image: url('https://www.mrlc.gov/geoserver/mrlc_display/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&LAYERS=mrlc_display:NLCD_2021_Land_Cover_L48&WIDTH=256&HEIGHT=256&SRS=EPSG:3857&BBOX=-13358338.89519283,4383204.9499851465,-13210795.034662457,4530748.810515519');
         }
 
+
+
         #basemap-solar {
             background-image: url('https://eshan2803.github.io/basemaps/solar_tiles/6/10/24.png');
         }
@@ -509,6 +511,39 @@
             fill: currentColor;
         }
 
+        #lmp-trigger {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            color: #333;
+            /* Standard Black/Dark Grey */
+        }
+
+        #lmp-trigger:hover {
+            background: #f4f4f4;
+            transform: scale(1.05);
+        }
+
+        #lmp-trigger.active {
+            background: #4A90A4;
+            color: white;
+            border-color: #4A90A4;
+        }
+
+        #lmp-trigger svg {
+            width: 24px;
+            height: 24px;
+            /* fill: currentColor; - Removed since SVG has stroke/fill attributes inline */
+        }
+
         /* The list of basemaps */
         #basemap-list {
             background: white;
@@ -545,6 +580,91 @@
         .basemap-option {
             /* Existing styles should work, just ensuring flex containment */
             flex-shrink: 0;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+        }
+
+        .basemap-option:hover {
+            background-color: #f0f0f0;
+        }
+
+        .basemap-option.active {
+            background-color: #e3f2fd;
+            color: #1976D2;
+            font-weight: 600;
+        }
+
+        /* LMP List styles mimicking basemap-list */
+        #lmp-list {
+            background: white;
+            padding: 4px;
+            border-radius: 6px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+            display: none;
+            /* Hidden by default */
+            flex-direction: column;
+            gap: 2px;
+            position: absolute;
+            bottom: 60px;
+            /* Above the buttons */
+            right: 0;
+            /* Align to right so it doesn't get cut off */
+            left: auto;
+            z-index: 1000;
+            min-width: 140px;
+            /* Wider to accommodate text */
+            align-items: stretch;
+        }
+
+        #lmp-list.show {
+            display: flex;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        /* Checkbox Layout Styles */
+        /* Changed to .lmp-option to avoid conflict with basemap logic */
+        .lmp-option {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: flex-start;
+            /* Force Left Alignment */
+            gap: 8px;
+            /* Space between checkbox and label */
+            padding: 6px 10px;
+            /* Compact padding */
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+            position: relative;
+            background: transparent;
+            /* Reset tile properties */
+            width: auto;
+            height: auto;
+            border: none;
+        }
+
+        .lmp-option:hover {
+            background-color: #f0f0f0;
+        }
+
+        .lmp-option label {
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .lmp-option input[type="checkbox"] {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            accent-color: #4A90A4;
         }
 
         /* Profile Editor Modal - Keep existing styles */
@@ -869,6 +989,34 @@
         </div>
     </div>
     <div id="basemap-container">
+        <!-- LMP Price Mode List -->
+        <div id="lmp-list">
+            <div class="lmp-option" title="Color by Total LMP">
+                <input type="checkbox" id="lmp-total" data-mode="LMP_Total" checked>
+                <label for="lmp-total">Total LMP</label>
+            </div>
+            <div class="lmp-option" title="Color by Energy Component">
+                <input type="checkbox" id="lmp-energy" data-mode="LMP_Energy">
+                <label for="lmp-energy">Energy</label>
+            </div>
+            <div class="lmp-option" title="Color by Congestion Cost">
+                <input type="checkbox" id="lmp-congestion" data-mode="LMP_Congestion">
+                <label for="lmp-congestion">Congestion</label>
+            </div>
+            <div class="lmp-option" title="Color by Marginal Loss">
+                <input type="checkbox" id="lmp-loss" data-mode="LMP_Loss">
+                <label for="lmp-loss">Loss</label>
+            </div>
+            <div class="lmp-option" title="Color by GHG Cost">
+                <input type="checkbox" id="lmp-ghg" data-mode="LMP_GHG">
+                <label for="lmp-ghg">GHG</label>
+            </div>
+            <div style="border-top: 1px solid #eee; margin: 4px 0;"></div>
+            <div class="lmp-option" id="lmp-turn-off" style="color: #d32f2f;">
+                <span class="label">Hide Layer</span>
+            </div>
+        </div>
+
         <div id="basemap-list">
             <div class="basemap-option active" id="basemap-grayscale" data-layer="grayscale" title="Grayscale Map">
                 <span class="label">Street</span>
@@ -903,11 +1051,21 @@
                 <span class="label">Fire Risk</span>
             </div>
         </div>
-        <div id="basemap-trigger" title="Toggle Layers">
-            <svg viewBox="0 0 24 24">
-                <path
-                    d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z" />
-            </svg>
+        <div class="button-row" style="display: flex; gap: 10px; align-items: center;">
+            <div id="lmp-trigger" title="Show Day-Ahead Market Prices ($)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <!-- Removed circle, keeping just the $ symbol parts -->
+                    <path d="M12 2v20" />
+                    <path
+                        d="M15 9.5A2.5 2.5 0 0 0 12.5 7h-1A2.5 2.5 0 0 0 9 9.5v0A2.5 2.5 0 0 0 11.5 12h1A2.5 2.5 0 0 1 15 14.5v0A2.5 2.5 0 0 1 12.5 17h-1A2.5 2.5 0 0 1 9 14.5" />
+                </svg>
+            </div>
+            <div id="basemap-trigger" title="Show Map Layers">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z" />
+                </svg>
+            </div>
         </div>
     </div>
     <div id="map"></div>
@@ -1083,7 +1241,7 @@
 
         // URLs for local data
         const transmissionUrl = './transmission.geojson';
-        const substationsUrl = './substations.geojson'; // No data yet
+        const substationsUrl = './substations_with_prices.geojson'; // Loaded with LMP Prices
         const plantsUrl = './powerplant.geojson';
 
         // Layers (declared globally)
@@ -1174,6 +1332,7 @@
                     setupCapacitySlider();
                     setupLayerToggles();
                     setupBasemapToggle();
+                    setupLMPToggle();
                     setupHomeButton();
                     setupDocButton();
                     setupLandCoverHover();
@@ -2388,6 +2547,27 @@
 
         // Build network graph from loaded data
         function buildNetworkGraph() {
+            // Check for EPSG:3857 coordinates in transmission data and convert if necessary
+            if (transmissionData && transmissionData.features && transmissionData.features.length > 0) {
+                let firstFeature = transmissionData.features[0];
+                let checkCoords = firstFeature.geometry.coordinates;
+                // Handle MultiLineString (nested arrays)
+                if (checkCoords && Array.isArray(checkCoords[0]) && Array.isArray(checkCoords[0][0])) {
+                    checkCoords = checkCoords[0];
+                }
+
+                if (checkCoords && checkCoords.length > 0 && Array.isArray(checkCoords[0])) {
+                    const x = checkCoords[0][0];
+                    const y = checkCoords[0][1];
+                    // EPSG:3857 bounds are huge. WGS84 is -180 to 180.
+                    if (Math.abs(x) > 180 || Math.abs(y) > 90) {
+                        console.warn("Detected EPSG:3857 coordinates in transmission.geojson. Converting to WGS84...");
+                        // Use turf to convert the entire FeatureCollection
+                        transmissionData = turf.toWgs84(transmissionData);
+                    }
+                }
+            }
+
             const TOLERANCE = 0.01; // ~1km tolerance for matching line endpoints to substations
 
             // 1. Build substations nodes
@@ -2438,8 +2618,8 @@
                     if (!actualCoords || actualCoords.length < 2) return;
                 }
 
-                // NOTE: transmission.geojson already contains EPSG:4326 (lat/lng) coordinates
-                // Do NOT apply projection conversion - coordinates are already in correct format
+                // NOTE: transmission.geojson may contain EPSG:3857 (Web Mercator) coordinates
+                // These are automatically converted to WGS84 (lat/lng) at the start of buildNetworkGraph if detected.
 
                 // Validate start and end coordinates
                 const startCoord = actualCoords[0];
@@ -3272,13 +3452,13 @@
                 return Math.round(percent * 23);
             }
 
-            timeSlider.addEventListener('mouseenter', function(e) {
+            timeSlider.addEventListener('mouseenter', function (e) {
                 if (!this.disabled) {
                     tooltip.classList.add('visible');
                 }
             });
 
-            timeSlider.addEventListener('mousemove', function(e) {
+            timeSlider.addEventListener('mousemove', function (e) {
                 if (!this.disabled) {
                     const hour = getHourFromPosition(e, this);
                     tooltip.textContent = formatHour(hour);
@@ -3290,7 +3470,7 @@
                 }
             });
 
-            timeSlider.addEventListener('mouseleave', function() {
+            timeSlider.addEventListener('mouseleave', function () {
                 tooltip.classList.remove('visible');
             });
 
@@ -3695,7 +3875,316 @@
 
             return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
         }
+        // LMP Price Visualization Logic
+        let lmpLayer = L.layerGroup();
+        // Modes are determined by checking the DOM checkboxes directly
+
+        function showLMPPrices() {
+            // NOTE: Removed early return to allow re-rendering when time changes
+            lmpLayer.clearLayers();
+
+            const checkTotal = document.getElementById('lmp-total');
+            const checkEnergy = document.getElementById('lmp-energy');
+            const checkCongestion = document.getElementById('lmp-congestion');
+            const checkLoss = document.getElementById('lmp-loss');
+            const checkGHG = document.getElementById('lmp-ghg');
+
+            const activeModes = [];
+            if (checkTotal?.checked) activeModes.push('LMP_Total');
+            if (checkEnergy?.checked) activeModes.push('LMP_Energy');
+            if (checkCongestion?.checked) activeModes.push('LMP_Congestion');
+            if (checkLoss?.checked) activeModes.push('LMP_Loss');
+            if (checkGHG?.checked) activeModes.push('LMP_GHG');
+
+            // If nothing checked, effective hide? Or just show nothing?
+            if (activeModes.length === 0) {
+                // hideLMPPrices(); // Maybe just show empty layer?
+                // Let's keep layer but no markers
+                console.log("No LMP modes selected.");
+                return;
+            }
+
+            // Determine Hour Index (0-23)
+            let currentHourIndex = 0;
+            const useSliderTime = document.getElementById('timeBasedToggle')?.checked;
+
+            if (useSliderTime) {
+                // Use Slider Value
+                const sliderVal = document.getElementById('timeSlider')?.value;
+                currentHourIndex = parseInt(sliderVal) || 0;
+            } else {
+                // Use Real Time (PST)
+                try {
+                    const now = new Date();
+                    const options = { timeZone: 'America/Los_Angeles', hour: 'numeric', hour12: false };
+                    const formatter = new Intl.DateTimeFormat('en-US', options);
+                    let h = parseInt(formatter.format(now));
+                    if (isNaN(h)) h = 0;
+                    currentHourIndex = h % 24;
+                } catch (e) {
+                    console.error("Error determining PST time", e);
+                    currentHourIndex = new Date().getHours();
+                }
+            }
+
+            const he = currentHourIndex + 1; // Hour Ending
+            // console.log(`Displaying LMP Prices (${currentLMPMode}) for HE ${he}`); // Removed old log
+
+            // Iterate over substations to create price markers
+            networkGraph.substations.forEach(sub => {
+                const props = sub.feature.properties;
+
+                // Calculate Sum of Selected Components
+                let combinedPrice = 0;
+                let hasValidData = false;
+
+                activeModes.forEach(mode => {
+                    let val = null;
+                    if (props[mode + '_24h'] && Array.isArray(props[mode + '_24h'])) {
+                        val = props[mode + '_24h'][currentHourIndex];
+                    } else if (!useSliderTime) {
+                        // Fallback to scalar
+                        val = props[mode];
+                    }
+
+                    if (val !== null && val !== undefined) {
+                        combinedPrice += val;
+                        hasValidData = true;
+                    }
+                });
+
+                if (hasValidData) {
+                    // Determine Color Scale
+                    // If only one mode is selected, use its specific scale.
+                    // If multiple, use default price scale (unless all are typically small?)
+                    // For safety, if sum is large, use price scale.
+
+                    let scaleMode = 'LMP_Total';
+                    if (activeModes.length === 1) {
+                        scaleMode = activeModes[0];
+                    } else if (activeModes.length > 1) {
+                        scaleMode = 'Combined'; // Indicate combined mode for color function
+                    }
+
+
+                    const color = getLMPColor(combinedPrice, scaleMode);
+
+                    const marker = L.circleMarker(sub.latlng, {
+                        radius: 5,
+                        fillColor: color,
+                        color: '#000',
+                        weight: 1,
+                        opacity: 1,
+                        fillOpacity: 0.9
+                    });
+
+                    // Build tooltip
+                    let tooltipContent = `<strong>${sub.name}</strong><br>`;
+                    tooltipContent += `<small>Hour Ending ${he} (DAM Settled)</small><br>`;
+
+                    const fmt = (v) => (v !== null && v !== undefined) ? `$${v.toFixed(2)}` : 'N/A';
+
+                    // Show Combined Price if multiple or explicit
+                    if (activeModes.length > 1) {
+                        tooltipContent += `<b>Combined Price: ${fmt(combinedPrice)}</b><br>`;
+                        tooltipContent += `<small style="color:#666">(${activeModes.map(m => m.replace('LMP_', '')).join(' + ')})</small><br>`;
+                    } else {
+                        tooltipContent += `<b>${activeModes[0].replace('LMP_', '')}: ${fmt(combinedPrice)}</b><br>`;
+                    }
+
+                    tooltipContent += `<hr style="margin:4px 0">`;
+
+                    // Always show full breakdown for context
+                    const getVal = (key) => {
+                        if (props[key + '_24h'] && Array.isArray(props[key + '_24h'])) return props[key + '_24h'][currentHourIndex];
+                        return props[key];
+                    };
+
+                    tooltipContent += `Total: ${fmt(getVal('LMP_Total'))}<br>`;
+                    tooltipContent += `Energy: ${fmt(getVal('LMP_Energy'))}<br>`;
+                    tooltipContent += `Congestion: ${fmt(getVal('LMP_Congestion'))}<br>`;
+                    tooltipContent += `Loss: ${fmt(getVal('LMP_Loss'))}<br>`;
+                    tooltipContent += `GHG: ${fmt(getVal('LMP_GHG'))}`;
+
+                    marker.bindTooltip(tooltipContent, { direction: 'top' });
+
+                    lmpLayer.addLayer(marker);
+                }
+            });
+
+            if (!map.hasLayer(lmpLayer)) {
+                lmpLayer.addTo(map);
+            }
+        }
+
+        function getModeLabel(mode) {
+            // This function is no longer used with the new tooltip logic
+            switch (mode) {
+                case 'LMP_Total': return 'Total LMP';
+                case 'LMP_Energy': return 'Energy';
+                case 'LMP_Congestion': return 'Congestion';
+                case 'LMP_Loss': return 'Loss';
+                case 'LMP_GHG': return 'GHG';
+                default: return 'Price';
+            }
+        }
+
+        function hideLMPPrices() {
+            if (map.hasLayer(lmpLayer)) {
+                map.removeLayer(lmpLayer);
+                const btn = document.getElementById('lmp-trigger');
+                if (btn) btn.classList.remove('active');
+            }
+            // Also hide list
+            document.getElementById('lmp-list').classList.remove('show');
+        }
+
+        function setupLMPToggle() {
+            const btn = document.getElementById('lmp-trigger');
+            const list = document.getElementById('lmp-list');
+            if (!btn || !list) return;
+
+            // Toggle Menu
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                list.classList.toggle('show');
+
+                // If opening menu and nothing is showing, turn on?
+                if (list.classList.contains('show') && !map.hasLayer(lmpLayer)) {
+                    showLMPPrices();
+                    btn.classList.add('active');
+                }
+            });
+
+            // Handle Checkbox Changes
+            const inputs = list.querySelectorAll('input[type="checkbox"]');
+            inputs.forEach(input => {
+                input.addEventListener('change', (e) => {
+                    // Exclusive Logic
+                    if (input.id === 'lmp-total' && input.checked) {
+                        // Uncheck others
+                        inputs.forEach(i => {
+                            if (i.id !== 'lmp-total') i.checked = false;
+                        });
+                    } else if (input.checked) {
+                        // If any other component checked, uncheck Total
+                        const total = document.getElementById('lmp-total');
+                        if (total) total.checked = false;
+                    }
+
+                    // Re-render
+                    if (map.hasLayer(lmpLayer)) {
+                        showLMPPrices();
+                    } else {
+                        // If layer is hidden but user checks something, assume they want to see it?
+                        if (input.checked) {
+                            showLMPPrices();
+                            btn.classList.add('active');
+                        }
+                    }
+                });
+
+                // Prevent menu highlight click from toggling checkbox twice (if clicking label/row)
+                // The label handles click for input. Row click might be issue if logic added to row.
+                // Current structure: input inside div. Label for input.
+                // We don't need row click listener if label works.
+                // But let's stop propagation on input to be safe.
+                input.addEventListener('click', (e) => e.stopPropagation());
+            });
+
+            // Prevent div click from closing menu (bubble up)
+            list.addEventListener('click', (e) => e.stopPropagation());
+
+            // Handle "Hide Layer"
+            const hideBtn = document.getElementById('lmp-turn-off');
+            if (hideBtn) {
+                hideBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    hideLMPPrices();
+                });
+            }
+
+            // Close list when clicking outside
+            window.addEventListener('click', (e) => {
+                if (!list.contains(e.target) && !btn.contains(e.target)) {
+                    list.classList.remove('show');
+                }
+            });
+
+            // Slider & Toggle Integration (Existing)
+            const timeSlider = document.getElementById('timeSlider');
+            const timeToggle = document.getElementById('timeBasedToggle');
+
+            if (timeSlider) {
+                timeSlider.addEventListener('input', () => {
+                    if (map.hasLayer(lmpLayer) && timeToggle?.checked) showLMPPrices();
+                });
+            }
+            if (timeToggle) {
+                timeToggle.addEventListener('change', () => {
+                    if (map.hasLayer(lmpLayer)) showLMPPrices();
+                });
+            }
+        }
+
+        function getLMPColor(price, mode = 'LMP_Total') {
+            // Standard Price Scale (Total, Energy, or High Combined)
+            if (mode === 'LMP_GHG') {
+                // Usually small positive or zero
+                // User requested WHITE for GHG as they are all 0
+                return '#FFFFFF';
+            }
+
+            // Diverging Gradient for Components (Blue -> White -> Red)
+            if (mode === 'LMP_Congestion' || mode === 'LMP_Loss' || mode === 'Combined') {
+                // Baseline 0 = White (#FFFFFF)
+                // Positive = Red (#F44336)
+                // Negative = Blue (#2196F3)
+
+                // Define range roughly
+                let max = 15; // Max cost -> Red
+                let min = -15; // Max credit -> Blue
+
+                // For Total/Combined, prices are usually ~30. So this scale would be all red.
+                // We need adaptive scaling.
+                // If Combined and > 20, use Standard price scale?
+                // User asked for "Gradient... for Congestion and Loss".
+
+                if (mode === 'LMP_Congestion') {
+                    // Congestion usually 0-20. 
+                    // 0 -> White.
+                    // 15 -> Red.
+                    // -5 -> Blue (rare)
+                    if (price === 0) return '#FFFFFF';
+                    if (price > 0) return interpolateColor('#FFFFFF', '#F44336', Math.min(1, price / 15));
+                    return interpolateColor('#FFFFFF', '#2196F3', Math.min(1, Math.abs(price) / 5));
+                }
+
+                if (mode === 'LMP_Loss') {
+                    // Loss usually -5 to +5
+                    if (price === 0) return '#FFFFFF';
+                    if (price > 0) return interpolateColor('#FFFFFF', '#F44336', Math.min(1, price / 5));
+                    return interpolateColor('#FFFFFF', '#2196F3', Math.min(1, Math.abs(price) / 5));
+                }
+
+                // Fallback for Combined if dominated by components
+                // If value is small (< 10), use gradient?
+                if (Math.abs(price) < 15) {
+                    if (price >= 0) return interpolateColor('#FFFFFF', '#F44336', Math.min(1, price / 15));
+                    return interpolateColor('#FFFFFF', '#2196F3', Math.min(1, Math.abs(price) / 15));
+                }
+            }
+
+            // Standard Price Scale (Total, Energy, or High Combined)
+            // < $30 green, $30-60 yellow, > $60 red
+            if (price < 30) return '#4CAF50';
+            if (price < 45) return '#8BC34A';
+            if (price < 60) return '#FFEB3B';
+            if (price < 80) return '#FF9800';
+            return '#F44336';
+        }
     </script>
 </body>
 
 </html>
+```
