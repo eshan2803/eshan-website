@@ -2416,7 +2416,13 @@
                 }
 
                 // Project coordinates from EPSG:3857 to EPSG:4326 (lon, lat)
+                if (idx === 0) {
+                    console.log('BEFORE projection - first 3 coords:', actualCoords.slice(0, 3));
+                }
                 actualCoords = actualCoords.map(c => project3857to4326(c));
+                if (idx === 0) {
+                    console.log('AFTER projection - first 3 coords:', actualCoords.slice(0, 3));
+                }
 
                 // Validate start and end coordinates
                 const startCoord = actualCoords[0];
@@ -2458,6 +2464,11 @@
                 }
 
                 const lineId = `line_${idx}`;
+
+                if (idx === 0) {
+                    console.log('STORING in networkGraph - first 3 coords:', actualCoords.slice(0, 3));
+                }
+
                 networkGraph.lines.push({
                     id: lineId,
                     coords: actualCoords, // Use actualCoords instead of coords
