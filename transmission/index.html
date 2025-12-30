@@ -1378,24 +1378,27 @@
                 let matchingPlants = 0;
 
                 networkGraph.plants.forEach(plant => {
-                    // Skip plants below capacity cutoff
-                    if (plant.capacity < minCapacity) return;
+                    // Skip retired plants (no marker)
+                    if (!plant.marker) return;
 
                     const plantFuel = (plant.fuel || '').toUpperCase();
                     const isMatching = fuelTypes.includes(plantFuel);
 
                     if (isMatching) {
-                        matchingPlants++;
+                        // Only count if meets capacity requirement
+                        if (plant.capacity >= minCapacity) {
+                            matchingPlants++;
+                        }
 
-                        // Show matching plant
-                        if (plant.marker) {
+                        // Show matching plant only if meets capacity requirement
+                        if (plant.capacity >= minCapacity) {
                             if (!map.hasLayer(plant.marker)) {
                                 plantsLayer.addLayer(plant.marker);
                             }
                         }
 
-                        // Turn ON matching plant if not already
-                        if (!plant.isOn) {
+                        // Turn ON matching plant if meets capacity requirement and not already ON
+                        if (plant.capacity >= minCapacity && !plant.isOn) {
                             plant.isOn = true;
                             activeGenerators++;
 
