@@ -403,6 +403,27 @@
             transform: scale(1.2);
         }
 
+        /* Tooltip for time slider hover */
+        #timeSliderTooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+            pointer-events: none;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 10000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        #timeSliderTooltip.visible {
+            opacity: 1;
+        }
+
         #timeDisplay {
             display: flex;
             align-items: center;
@@ -894,6 +915,7 @@
             <input type="checkbox" id="timeBasedToggle">
             <label for="timeBasedToggle" class="checkbox-label">Time-Based</label>
             <input type="range" id="timeSlider" min="0" max="23" value="0" step="1" disabled>
+            <div id="timeSliderTooltip"></div>
             <button id="openProfileEditorBtn" class="edit-icon-btn" title="Edit Profiles">
                 <svg viewBox="0 0 24 24">
                     <path
@@ -3231,6 +3253,45 @@
                 if (timeBasedToggle.checked) {
                     updateSimulation(hour);
                 }
+            });
+
+            // Tooltip for slider hover
+            const tooltip = document.getElementById('timeSliderTooltip');
+
+            function formatHour(hour) {
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                const displayHour = hour % 12 || 12;
+                return `${displayHour}:00 ${ampm}`;
+            }
+
+            function getHourFromPosition(e, slider) {
+                const rect = slider.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const percent = Math.max(0, Math.min(1, x / rect.width));
+                return Math.round(percent * 23);
+            }
+
+            timeSlider.addEventListener('mouseenter', function(e) {
+                if (!this.disabled) {
+                    tooltip.classList.add('visible');
+                }
+            });
+
+            timeSlider.addEventListener('mousemove', function(e) {
+                if (!this.disabled) {
+                    const hour = getHourFromPosition(e, this);
+                    tooltip.textContent = formatHour(hour);
+
+                    // Position tooltip above cursor
+                    const rect = this.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    tooltip.style.left = (rect.left + x) + 'px';
+                    tooltip.style.top = (rect.top - 35) + 'px';
+                }
+            });
+
+            timeSlider.addEventListener('mouseleave', function() {
+                tooltip.classList.remove('visible');
             });
 
             // Previous hour button handler
