@@ -1182,8 +1182,8 @@
 
                 // Toggle all plants
                 networkGraph.plants.forEach(plantData => {
-                    // Skip plants below capacity cutoff
-                    if (plantData.capacity < minCapacity) return;
+                    // Skip plants below capacity cutoff or without markers (retired plants)
+                    if (plantData.capacity < minCapacity || !plantData.marker) return;
 
                     if (plantData.isOn !== allOn) {
                         const color = getFuelColor(plantData.fuel);
@@ -1641,20 +1641,22 @@
                     if (plant.isOn) {
                         plant.isOn = false;
                         // Reset marker style to OFF state (grey) just in case it's re-added later
-                        if (plant.marker instanceof L.CircleMarker) {
-                            plant.marker.setStyle({ fillColor: '#808080' });
-                        } else {
-                            const fuelType = (plant.fuel || 'UNKNOWN').toUpperCase();
-                            const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
-                            const isWind = ['WND', 'WIND'].includes(fuelType);
-                            const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
-                            const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
-                            plant.marker.setIcon(L.divIcon({
-                                className: 'custom-div-icon',
-                                html: getMarkerHTML(fuelType, '#808080', 'large'),
-                                iconSize: [markerSize, markerSize],
-                                iconAnchor: [markerAnchor, markerAnchor]
-                            }));
+                        if (plant.marker) {
+                            if (plant.marker instanceof L.CircleMarker) {
+                                plant.marker.setStyle({ fillColor: '#808080' });
+                            } else {
+                                const fuelType = (plant.fuel || 'UNKNOWN').toUpperCase();
+                                const isLargeMarker = ['WND', 'WIND', 'BAT', 'OTH', 'NUC'].includes(fuelType);
+                                const isWind = ['WND', 'WIND'].includes(fuelType);
+                                const markerSize = isWind ? 18 : (isLargeMarker ? 16 : 12);
+                                const markerAnchor = isWind ? 9 : (isLargeMarker ? 8 : 6);
+                                plant.marker.setIcon(L.divIcon({
+                                    className: 'custom-div-icon',
+                                    html: getMarkerHTML(fuelType, '#808080', 'large'),
+                                    iconSize: [markerSize, markerSize],
+                                    iconAnchor: [markerAnchor, markerAnchor]
+                                }));
+                            }
                         }
                     }
                 } else {
@@ -2813,6 +2815,11 @@
 
             // Render power plants with different shapes based on fuel type (all same small size)
             networkGraph.plants.forEach(plantData => {
+                // Skip retired plants (capacity <= 0)
+                if (plantData.capacity <= 0) {
+                    return;
+                }
+
                 const color = getFuelColor(plantData.fuel);
                 const fuelType = (plantData.fuel || 'UNKNOWN').toUpperCase();
 
@@ -3469,8 +3476,8 @@
             activeGenerators = 0;
 
             networkGraph.plants.forEach(plant => {
-                // Skip plants below capacity cutoff
-                if (plant.capacity < minCapacity) {
+                // Skip retired plants (capacity <= 0) or plants below capacity cutoff
+                if (plant.capacity <= 0 || plant.capacity < minCapacity) {
                     plant.isOn = false;
                     // Ensure visual state is off (even if hidden)
                     updatePlantMarker(plant, false, '#808080');
