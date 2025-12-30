@@ -2764,12 +2764,19 @@
 
             // Render transmission lines (visible but subtle initially)
             console.log(`Rendering ${networkGraph.lines.length} transmission lines...`);
+            console.log('staticLinesLayer:', staticLinesLayer, 'on map?', map.hasLayer(staticLinesLayer));
+
             networkGraph.lines.forEach((lineData, idx) => {
                 const coords = lineData.coords.map(c => [c[1], c[0]]); // Convert to [lat, lng]
 
                 // Debug first line
                 if (idx === 0) {
-                    console.log('First line coords:', coords.slice(0, 3), '...');
+                    console.log('First line RAW coords from lineData:', lineData.coords.slice(0, 3));
+                    console.log('First line SWAPPED coords:', coords.slice(0, 3), '...');
+                    console.log('First coord values:', coords[0], 'Type:', typeof coords[0], 'Is array?', Array.isArray(coords[0]));
+                    if (coords[0]) {
+                        console.log('  [0] lat:', coords[0][0], 'lng:', coords[0][1]);
+                    }
                 }
 
                 // Static line in subtle cyan/teal color (visible on greyscale)
@@ -2780,6 +2787,12 @@
                 });
                 staticLine.lineId = lineData.id;
                 staticLinesLayer.addLayer(staticLine);
+
+                // Debug first line addition
+                if (idx === 0) {
+                    console.log('First staticLine created:', staticLine);
+                    console.log('First staticLine bounds:', staticLine.getBounds());
+                }
 
                 // Pre-create animated line (hidden initially)
                 const antPath = L.polyline.antPath(coords, {
