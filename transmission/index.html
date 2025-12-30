@@ -2415,14 +2415,8 @@
                     if (!actualCoords || actualCoords.length < 2) return;
                 }
 
-                // Project coordinates from EPSG:3857 to EPSG:4326 (lon, lat)
-                if (idx === 0) {
-                    console.log('BEFORE projection - first 3 coords:', actualCoords.slice(0, 3));
-                }
-                actualCoords = actualCoords.map(c => project3857to4326(c));
-                if (idx === 0) {
-                    console.log('AFTER projection - first 3 coords:', actualCoords.slice(0, 3));
-                }
+                // NOTE: transmission.geojson already contains EPSG:4326 (lat/lng) coordinates
+                // Do NOT apply projection conversion - coordinates are already in correct format
 
                 // Validate start and end coordinates
                 const startCoord = actualCoords[0];
@@ -2464,11 +2458,6 @@
                 }
 
                 const lineId = `line_${idx}`;
-
-                if (idx === 0) {
-                    console.log('STORING in networkGraph - first 3 coords:', actualCoords.slice(0, 3));
-                }
-
                 networkGraph.lines.push({
                     id: lineId,
                     coords: actualCoords, // Use actualCoords instead of coords
@@ -2774,36 +2763,17 @@
             animatedLinesLayer = L.layerGroup();
 
             // Render transmission lines (visible but subtle initially)
-            console.log(`Rendering ${networkGraph.lines.length} transmission lines...`);
-            console.log('staticLinesLayer:', staticLinesLayer, 'on map?', map.hasLayer(staticLinesLayer));
-
             networkGraph.lines.forEach((lineData, idx) => {
                 const coords = lineData.coords.map(c => [c[1], c[0]]); // Convert to [lat, lng]
 
-                // Debug first line
-                if (idx === 0) {
-                    console.log('First line RAW coords from lineData:', lineData.coords.slice(0, 3));
-                    console.log('First line SWAPPED coords:', coords.slice(0, 3), '...');
-                    console.log('First coord values:', coords[0], 'Type:', typeof coords[0], 'Is array?', Array.isArray(coords[0]));
-                    if (coords[0]) {
-                        console.log('  [0] lat:', coords[0][0], 'lng:', coords[0][1]);
-                    }
-                }
-
                 // Static line in subtle cyan/teal color (visible on greyscale)
                 const staticLine = L.polyline(coords, {
-                    color: '#FF0000',  // BRIGHT RED for testing
-                    weight: 5,         // Thick for testing
-                    opacity: 1.0       // Fully opaque for testing
+                    color: '#4A90A4',  // Muted teal-blue that shows on greyscale
+                    weight: 2,
+                    opacity: 0.6
                 });
                 staticLine.lineId = lineData.id;
                 staticLinesLayer.addLayer(staticLine);
-
-                // Debug first line addition
-                if (idx === 0) {
-                    console.log('First staticLine created:', staticLine);
-                    console.log('First staticLine bounds:', staticLine.getBounds());
-                }
 
                 // Pre-create animated line (hidden initially)
                 const antPath = L.polyline.antPath(coords, {
