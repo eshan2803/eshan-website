@@ -303,6 +303,23 @@ def fetch_caiso_dam_prices():
             with open(temp_zip, 'wb') as f:
                 f.write(response.content)
             print(f"Saved API response to temporary file: {temp_zip}")
+
+            # --- Archive Logic ---
+            try:
+                archive_dir = "archive"
+                if not os.path.exists(archive_dir):
+                    os.makedirs(archive_dir)
+                
+                archive_name = f"caiso_dam_{now.strftime('%Y%m%d_%H%M')}.zip"
+                archive_path = os.path.join(archive_dir, archive_name)
+                
+                with open(archive_path, 'wb') as f:
+                    f.write(response.content)
+                print(f"Archived data to: {archive_path}")
+            except Exception as archive_err:
+                print(f"Warning: Failed to archive data: {archive_err}")
+            # ---------------------
+
             return temp_zip
 
     except Exception as e:
@@ -311,26 +328,22 @@ def fetch_caiso_dam_prices():
     return None
 
 if __name__ == "__main__":
-    # Check if a zip file was passed as argument
+    # Check if a zip file was passed as argument (manual override)
     local_zip = None
-    # Look in standard downloads folder if not provided
-    default_download = r"C:\Users\eshan\Downloads\20251230_20251230_DAM_LMP_GRP_N_N_v12_csv.zip"
     
     if len(sys.argv) > 1:
         local_zip = sys.argv[1]
-    elif os.path.exists(default_download):
-        local_zip = default_download
 
     if local_zip and os.path.exists(local_zip):
-        print(f"Using local zip: {local_zip}")
+        print(f"Using provided local zip: {local_zip}")
         process_local_zip(local_zip, "substations.geojson")
     else:
-        print("No local zip found, attempting API fetch...")
+        print("No command-line argument passed. Attempting automatic API fetch for today's data...")
         api_zip = fetch_caiso_dam_prices()
         if api_zip:
             process_local_zip(api_zip, "substations.geojson")
             # Optional: Clean up temp file
             # os.remove(api_zip)
         else:
-            print("API fetch failed, generating mock data...")
-            # subprocess.run(["python", "generate_mock_lmp.py"])
+            print("API fetch failed. Aborting update.")
+            sys.exit(1)
