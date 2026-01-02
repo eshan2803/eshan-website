@@ -1,6 +1,6 @@
 @echo off
-REM Navigate to the project directory
-cd /d "C:\Users\eshan\OneDrive\Desktop\eshan-website\eshan-website-simbooni_13112025\transmission"
+REM Navigate to the directory where this batch file is located
+cd /d "%~dp0"
 
 echo ===========================================
 echo CAISO LMP Daily Auto-Update
