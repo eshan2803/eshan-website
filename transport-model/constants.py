@@ -171,6 +171,7 @@ BOG_EQUIPMENT_CAPEX = {
 # CARBON TAX RATES BY COUNTRY ($/ton CO2)
 # =================================================================
 CARBON_TAX_PER_TON_CO2_DICT = {
+    "Unknown": 25.00,          # Default fallback rate (global average)
     "Sweden": 144.62,          # 2025 rate from Tax Foundation
     "Switzerland": 136.04,     # 2025 rate from Tax Foundation
     "Liechtenstein": 136.04,   # 2025 rate from Tax Foundation

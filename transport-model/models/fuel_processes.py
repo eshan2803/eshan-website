@@ -257,7 +257,8 @@ def H2_to_carrier_synthesis(H2_mass_kg, fuel_type, synthesis_args_tuple):
 
     # Carbon tax
     G_emission_tons = G_emission / 1000
-    carbon_tax_rate = carbon_tax_dict.get(country_name, carbon_tax_dict.get('Default', 0))
+    # Use country-specific rate, fallback to "Unknown" default (global average)
+    carbon_tax_rate = carbon_tax_dict.get(country_name, carbon_tax_dict.get('Unknown', 25.00))
     carbon_tax_money = G_emission_tons * carbon_tax_rate
 
     # No insurance for synthesis process (included in production)
