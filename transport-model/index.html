@@ -246,6 +246,19 @@
                             </select>
                         </div>
 
+                        <!-- Reconversion Toggle (shown only for ammonia and methanol) -->
+                        <div id="reconversionToggle" class="hidden mt-6">
+                            <label class="flex items-start space-x-2">
+                                <input type="checkbox" id="performReconversion" checked class="mt-1 text-blue-600">
+                                <div>
+                                    <span class="form-label mb-0">Reconvert to hydrogen at destination</span>
+                                    <span class="text-xs text-gray-500 block mt-1">
+                                        (When checked: Results show $/kg H<sub>2</sub>. When unchecked: Results show $/kg carrier)
+                                    </span>
+                                </div>
+                            </label>
+                        </div>
+
                         <div class="mt-6">
                             <label class="form-label">Boil-off Gas (BOG) Treatment</label>
                             <div class="flex space-x-6 mt-2">
@@ -500,6 +513,7 @@
             // --- FUEL TYPE DEPENDENT UI ---
             const fuelTypeSelect = document.getElementById('fuel_type');
             const capacityInputGroup = document.getElementById('capacity-input-group');
+            const reconversionToggle = document.getElementById('reconversionToggle');
 
             function updateUIForFuelType() {
                 const fuelType = parseInt(fuelTypeSelect.value);
@@ -509,6 +523,15 @@
                     capacityInputGroup.style.display = 'none';
                 } else {
                     capacityInputGroup.style.display = 'block';
+                }
+
+                // Show reconversion toggle only for Ammonia (1) and Methanol (2)
+                if (reconversionToggle) {
+                    if (fuelType === 1 || fuelType === 2) {
+                        reconversionToggle.classList.remove('hidden');
+                    } else {
+                        reconversionToggle.classList.add('hidden');
+                    }
                 }
             }
 
