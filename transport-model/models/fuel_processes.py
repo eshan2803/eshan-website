@@ -253,7 +253,7 @@ def H2_to_carrier_synthesis(H2_mass_kg, fuel_type, synthesis_args_tuple):
     # carbon_intensity is in kg CO2/kWh, need to convert to kg CO2/MJ
     # 1 kWh = 3.6 MJ, so kg CO2/MJ = carbon_intensity / 3.6
     carbon_intensity_per_mj = carbon_intensity / 3.6
-    G_emission = (energy_consumed_mj * carbon_intensity_per_mj) / 1000  # Convert g to kg
+    G_emission = energy_consumed_mj * carbon_intensity_per_mj
 
     # Carbon tax
     G_emission_tons = G_emission / 1000
