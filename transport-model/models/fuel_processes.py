@@ -233,7 +233,12 @@ def H2_to_carrier_synthesis(H2_mass_kg, fuel_type, synthesis_args_tuple):
     opex_electricity = energy_consumed_mj * electricity_price_usd_per_mj
 
     # OPEX: Maintenance and operations (typically 2-3% of CAPEX per year)
-    annual_production_kg = facility_capacity * 330  # 330 days/year operation
+    # CRITICAL: Synthesis plant capacity should scale with actual carrier production,
+    # NOT with the UI's facility_capacity input (which is for LH2 liquefaction).
+    # Assume plant processes one ship cargo per month (12 voyages/year)
+    cargos_per_year = 12
+    annual_production_kg = carrier_mass_kg * cargos_per_year
+
     capex_total = annual_production_kg * capex_usd_per_kg_capacity  # Total plant cost
     capex_annual = capex_total * annualization_factor  # Annualized CAPEX
     opex_maintenance = capex_total * 0.025  # 2.5% of total CAPEX per year
@@ -248,7 +253,7 @@ def H2_to_carrier_synthesis(H2_mass_kg, fuel_type, synthesis_args_tuple):
     # carbon_intensity is in kg CO2/kWh, need to convert to kg CO2/MJ
     # 1 kWh = 3.6 MJ, so kg CO2/MJ = carbon_intensity / 3.6
     carbon_intensity_per_mj = carbon_intensity / 3.6
-    G_emission = energy_consumed_mj * carbon_intensity_per_mj
+    G_emission = (energy_consumed_mj * carbon_intensity_per_mj) / 1000  # Convert g to kg
 
     # Carbon tax
     G_emission_tons = G_emission / 1000
