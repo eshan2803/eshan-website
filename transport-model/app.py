@@ -1075,7 +1075,11 @@ def run_lca_model(inputs):
             final_results_raw[0] += (opex_conv + capex_conv + carbon_tax_conv)
             final_results_raw[1] += energy_conv
             final_results_raw[2] += emission_conv
-            final_results_raw[3] = amount_after_conversion 
+            final_results_raw[3] = amount_after_conversion
+
+            # CRITICAL FIX: Update denominator to reflect kg of H2 (not kg of carrier)
+            # This ensures all $/kg calculations use the correct mass basis after reconversion
+            final_chem_kg_denominator = final_results_raw[3]
 
         # Recalculate totals from data_raw, which now includes the distinct "Insurance" row and potentially "chem_convert_to_H2"
         # Sum all components from data_raw, excluding the final "TOTAL" row itself for these sums
