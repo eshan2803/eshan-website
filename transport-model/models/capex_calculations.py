@@ -118,14 +118,11 @@ def calculate_storage_capex(fuel_type, capacity_tpd, storage_mass_kg, storage_da
     # Annualize CAPEX (9% annualization factor)
     annualized_capex = total_capex_usd * 0.09
 
-    # Calculate annual throughput based on fuel type
-    if fuel_type in [0, 1]:  # Hydrogen and Ammonia use cycle-based calculation
-        if storage_days == 0:
-            return 0, 0
-        cycles_per_year = 330 / storage_days
-        annual_throughput_kg = storage_mass_kg * cycles_per_year
-    else:  # Methanol uses capacity-based calculation
-        annual_throughput_kg = capacity_tpd * 1000 * 330
+    # Calculate annual throughput based on actual cargo cycles
+    if storage_days == 0:
+        return 0, 0
+    cycles_per_year = 330 / storage_days
+    annual_throughput_kg = storage_mass_kg * cycles_per_year
 
     if annual_throughput_kg == 0:
         return 0, 0
