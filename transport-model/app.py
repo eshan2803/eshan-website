@@ -862,7 +862,11 @@ def run_lca_model(inputs):
         NH3_ship_cosumption = (18.8*682*4170)/20000
         mass_conversion_to_H2 = [1, 0.176, 0.1875, 0.125]
         eff_energy_chem_to_H2 = [0, 0.7, 0.75, 0.70]
-        energy_chem_to_H2 = [0, 9.3, 5.3, 12.0]
+        # CORRECTED: Energy per kg of H2 produced (ideal, before efficiency losses)
+        # Ammonia: 2 kWh/kg H2 * 3.6 * 0.7 (eff) = 5.0 MJ/kg H2 (ideal)
+        # Methanol: 2.5 kWh/kg H2 * 3.6 * 0.75 (eff) = 6.75 MJ/kg H2 (ideal)
+        # Formula: energy_chem_to_H2 * kg_H2 / efficiency = actual energy needed
+        energy_chem_to_H2 = [0, 5.0, 6.75, 12.0]
         PH2_storage_V = 150.0
         numbers_of_PH2_storage_at_start = 50.0
         multistage_eff = 0.85

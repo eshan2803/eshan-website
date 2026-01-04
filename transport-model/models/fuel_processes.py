@@ -958,7 +958,10 @@ def chem_convert_to_H2(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_sto
         pass
     else:
         convert_to_H2_weight = A * mass_conversion_to_H2_arg[B_fuel_type]
-        convert_energy = energy_chem_to_H2_arg[B_fuel_type] * A / eff_energy_chem_to_H2_arg[B_fuel_type]
+        # CRITICAL FIX: Energy should be per kg of H2 PRODUCED, not per kg of carrier INPUT
+        # Old: energy_chem_to_H2 * A / efficiency (incorrectly used carrier mass)
+        # New: energy_chem_to_H2 * convert_to_H2_weight / efficiency (uses H2 mass)
+        convert_energy = energy_chem_to_H2_arg[B_fuel_type] * convert_to_H2_weight / eff_energy_chem_to_H2_arg[B_fuel_type]
 
         G_emission = convert_energy * 0.2778 * CO2e_end_arg * 0.001
         opex_money += convert_energy * end_electricity_price_tuple_arg[2]
