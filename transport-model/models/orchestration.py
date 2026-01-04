@@ -34,6 +34,7 @@ annual_working_days = ANNUAL_WORKING_DAYS
 # Import fuel process functions
 from models.fuel_processes import (
     site_A_chem_production,
+    H2_to_carrier_synthesis,
     site_A_chem_liquification,
     fuel_pump_transfer,
     fuel_road_transport,
@@ -392,7 +393,8 @@ def total_chem_base(A_optimized_chem_weight, B_fuel_type_tc, C_recirculation_BOG
         if func_to_call.__name__ == "site_A_chem_production":
             process_args_for_this_call_tc = (
                 GWP_chem, hydrogen_production_cost, start_country_name, carbon_tax_per_ton_co2_dict_tc,
-                selected_fuel_name_tc, searoute_coor_tc, port_to_port_duration_tc
+                selected_fuel_name_tc, searoute_coor_tc, port_to_port_duration_tc,
+                start_electricity_price, CO2e_start, LH2_plant_capacity
             )
         elif func_to_call.__name__ == "site_A_chem_liquification":
             process_args_for_this_call_tc = (LH2_plant_capacity, EIM_liquefication, specific_heat_chem, start_local_temperature, boiling_point_chem, latent_H_chem, COP_liq_dyn, start_electricity_price, CO2e_start, GWP_chem, calculate_liquefaction_capex, start_country_name, carbon_tax_per_ton_co2_dict_tc)

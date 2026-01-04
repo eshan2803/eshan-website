@@ -51,20 +51,26 @@ def site_A_chem_production(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E
     """
     Calculate costs and emissions for chemical production at Site A.
 
-    This function handles the initial production stage, calculating:
-    - Insurance costs based on cargo value and route characteristics
-    - Carbon tax based on production emissions
+    For LH2 and SAF:
+    - Assumes fuel is already produced (no synthesis step modeled)
+    - Calculates insurance based on hydrogen_production_cost
+
+    For Ammonia and Methanol:
+    - Models H2-to-carrier synthesis (Haber-Bosch or methanol synthesis)
+    - Calculates synthesis energy, costs, and emissions
+    - Then calculates insurance based on total value
 
     Args:
         A (float): Mass of chemical to produce (kg)
-        B_fuel_type (int): Fuel type (0=LH2, 1=Ammonia, 2=Methanol)
+        B_fuel_type (int): Fuel type (0=LH2, 1=Ammonia, 2=Methanol, 3=SAF)
         C_recirculation_BOG (int): BOG handling strategy
         D_truck_apply (int): Truck BOG recirculation option
         E_storage_apply (int): Storage BOG recirculation option
         F_maritime_apply (int): Maritime BOG recirculation option
         process_args_tuple (tuple): Contains GWP_chem_list, hydrogen_production_cost,
             start_country_name, carbon_tax_per_ton_co2_dict, selected_fuel_name,
-            searoute_coor, port_to_port_duration
+            searoute_coor, port_to_port_duration, start_electricity_price,
+            CO2e_start, facility_capacity
 
     Returns:
         tuple: (opex_money, capex_money, carbon_tax_money, convert_energy_consumed,
@@ -72,15 +78,63 @@ def site_A_chem_production(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E
     """
     from models.insurance_model import calculate_total_insurance_cost
 
-    (GWP_chem_list_arg, hydrogen_production_cost_arg, start_country_name_arg, carbon_tax_per_ton_co2_dict_arg,
-     selected_fuel_name_arg, searoute_coor_arg, port_to_port_duration_arg) = process_args_tuple
+    # Unpack arguments - need to handle both old and new formats
+    if len(process_args_tuple) == 7:
+        # Old format (for backward compatibility)
+        (GWP_chem_list_arg, hydrogen_production_cost_arg, start_country_name_arg, carbon_tax_per_ton_co2_dict_arg,
+         selected_fuel_name_arg, searoute_coor_arg, port_to_port_duration_arg) = process_args_tuple
+        start_electricity_price_arg = None
+        CO2e_start_arg = None
+        facility_capacity_arg = None
+    else:
+        # New format with synthesis parameters
+        (GWP_chem_list_arg, hydrogen_production_cost_arg, start_country_name_arg, carbon_tax_per_ton_co2_dict_arg,
+         selected_fuel_name_arg, searoute_coor_arg, port_to_port_duration_arg,
+         start_electricity_price_arg, CO2e_start_arg, facility_capacity_arg) = process_args_tuple
 
     opex_money = 0
     capex_money = 0
     carbon_tax_money = 0
     insurance_cost = 0
+    convert_energy_consumed = 0
+    G_emission = 0
+    BOG_loss = 0
 
-    cargo_value = A * hydrogen_production_cost_arg
+    # For Ammonia (1) and Methanol (2), model synthesis from H2 if parameters are available
+    if (B_fuel_type == 1 or B_fuel_type == 2) and start_electricity_price_arg is not None:
+        # Calculate H2 mass needed to produce A kg of carrier
+        # Reverse of synthesis mass ratio (accounting for efficiency in the function)
+        if B_fuel_type == 1:  # Ammonia
+            h2_mass_needed = A / 5.67  # Reverse of 5.67 kg NH3 per kg H2
+        else:  # Methanol
+            h2_mass_needed = A / 5.33  # Reverse of 5.33 kg MeOH per kg H2
+
+        # Call synthesis function
+        synthesis_args = (start_electricity_price_arg, CO2e_start_arg, start_country_name_arg,
+                         carbon_tax_per_ton_co2_dict_arg, facility_capacity_arg)
+
+        synth_opex, synth_capex, synth_carbon_tax, synth_energy, synth_emission, carrier_produced, h2_loss, _ = \
+            H2_to_carrier_synthesis(h2_mass_needed, B_fuel_type, synthesis_args)
+
+        # Add synthesis costs
+        opex_money += synth_opex
+        capex_money += synth_capex
+        carbon_tax_money += synth_carbon_tax
+        convert_energy_consumed += synth_energy
+        G_emission += synth_emission
+        BOG_loss += h2_loss
+
+        # H2 production cost (for the H2 input to synthesis)
+        h2_production_cost = h2_mass_needed * hydrogen_production_cost_arg
+
+        # Total cargo value = H2 cost + synthesis costs
+        cargo_value = h2_production_cost + synth_opex + synth_capex + synth_carbon_tax
+
+    else:
+        # For LH2 (0) and SAF (3), or if synthesis parameters not available
+        cargo_value = A * hydrogen_production_cost_arg
+
+    # Calculate insurance based on cargo value
     insurance_cost = calculate_total_insurance_cost(
         initial_cargo_value_usd=cargo_value,
         commodity_type_str=selected_fuel_name_arg,
@@ -88,14 +142,112 @@ def site_A_chem_production(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E
         port_to_port_duration_hrs=port_to_port_duration_arg
     )
 
-    G_emission = 0  # No emissions in this production step for this model
-    carbon_tax = carbon_tax_per_ton_co2_dict_arg.get(start_country_name_arg, 0) * (G_emission / 1000)
-    carbon_tax_money += carbon_tax
-
-    convert_energy_consumed = 0
-    BOG_loss = 0
-
     return opex_money, capex_money, carbon_tax_money, convert_energy_consumed, G_emission, A, BOG_loss, insurance_cost
+
+
+def H2_to_carrier_synthesis(H2_mass_kg, fuel_type, synthesis_args_tuple):
+    """
+    Convert green hydrogen to ammonia or methanol via synthesis.
+    This step models the Haber-Bosch process (for NH3) or methanol synthesis (for MeOH).
+
+    Args:
+        H2_mass_kg: Mass of hydrogen to be converted (kg)
+        fuel_type: 1 for ammonia, 2 for methanol
+        synthesis_args_tuple: (electricity_price_tuple, carbon_intensity, country_name, carbon_tax_dict, facility_capacity)
+
+    Returns:
+        tuple: (opex, capex, carbon_tax, energy, emissions, carrier_mass, h2_loss, insurance)
+    """
+    electricity_price_tuple, carbon_intensity, country_name, carbon_tax_dict, facility_capacity = synthesis_args_tuple
+    electricity_price_usd_per_mj = electricity_price_tuple[2]
+
+    # === SYNTHESIS PARAMETERS ===
+    # Based on literature for green ammonia/methanol production from electrolytic H2
+
+    if fuel_type == 1:  # Ammonia (Haber-Bosch)
+        # Mass conversion: 1 kg H2 → 5.67 kg NH3 (stoichiometric: N2 + 3H2 → 2NH3)
+        mass_ratio = 5.67  # kg NH3 per kg H2
+
+        # Energy consumption for synthesis (not including H2 production)
+        # Includes: ASU (Air Separation Unit) for N2, compression to 150-300 bar,
+        # heating to 400-500°C, cooling, separation
+        # Synthesis loop: 2.0-2.5 MJ/kg, ASU: ~0.7 MJ/kg
+        # Total: ~2.9 MJ electrical per kg NH3 produced
+        specific_energy_mj_per_kg_carrier = 2.9  # MJ electrical per kg NH3
+
+        # Process efficiency (accounts for H2 losses, purge streams)
+        efficiency = 0.95  # 95% of H2 is converted to NH3
+
+        # Capital cost for ammonia synthesis plant
+        # Small-scale green ammonia: ~$2000-3000 per tonne/year capacity
+        # Annualized over 20 years at 8% discount rate
+        capex_usd_per_kg_capacity_year = 2500 / 1000  # $2.5 per kg capacity per year
+        annualization_factor = 0.10  # 20 years, 8% discount
+
+    elif fuel_type == 2:  # Methanol
+        # Mass conversion: 1 kg H2 → 5.33 kg MeOH (stoichiometric: CO2 + 3H2 → CH3OH + H2O)
+        mass_ratio = 5.33  # kg MeOH per kg H2
+
+        # Energy consumption for methanol synthesis from H2 + CO2
+        # Includes: compression, heating, synthesis at 50-100 bar, 250°C
+        # NOTE: Does NOT include CO2 capture costs (should be added separately):
+        #   - Point-source CO2: $20-100/t CO2 (adds $9-46/t MeOH)
+        #   - DAC CO2: $100-600/t CO2 + 1-2 MWh/t energy (adds $50-250/t MeOH)
+        #   - Biogenic CO2: $10-50/t CO2 (adds $4.6-23/t MeOH)
+        specific_energy_mj_per_kg_carrier = 2.8  # MJ electrical per kg MeOH
+
+        # Process efficiency
+        efficiency = 0.92  # 92% of H2 is converted to MeOH
+
+        # Capital cost for methanol synthesis plant
+        # E-methanol plants: ~$1500-2500 per tonne/year capacity
+        # Small-scale assumption (100-500 kt/y)
+        capex_usd_per_kg_capacity_year = 2000 / 1000  # $2.0 per kg capacity per year
+        annualization_factor = 0.10
+
+    else:
+        # Not ammonia or methanol, no synthesis needed
+        return 0, 0, 0, 0, 0, H2_mass_kg, 0, 0
+
+    # === CALCULATIONS ===
+    # Carrier mass produced
+    carrier_mass_kg = H2_mass_kg * mass_ratio * efficiency
+
+    # H2 losses (unconverted)
+    h2_loss_kg = H2_mass_kg * (1 - efficiency)
+
+    # Energy consumption (electrical)
+    energy_consumed_mj = carrier_mass_kg * specific_energy_mj_per_kg_carrier
+
+    # OPEX: Electricity cost
+    opex_electricity = energy_consumed_mj * electricity_price_usd_per_mj
+
+    # OPEX: Maintenance and operations (typically 2-3% of CAPEX per year)
+    annual_production_kg = facility_capacity * 330  # 330 days/year operation
+    capex_total = annual_production_kg * capex_usd_per_kg_capacity_year / annualization_factor
+    opex_maintenance = capex_total * 0.025  # 2.5% of CAPEX
+    opex_maintenance_per_kg = opex_maintenance / annual_production_kg if annual_production_kg > 0 else 0
+    opex_money = opex_electricity + (opex_maintenance_per_kg * carrier_mass_kg)
+
+    # CAPEX: Annualized capital cost
+    capex_per_kg = capex_usd_per_kg_capacity_year * annualization_factor
+    capex_money = capex_per_kg * carrier_mass_kg
+
+    # Emissions from electricity use
+    # carbon_intensity is in kg CO2/kWh, need to convert to kg CO2/MJ
+    # 1 kWh = 3.6 MJ, so kg CO2/MJ = carbon_intensity / 3.6
+    carbon_intensity_per_mj = carbon_intensity / 3.6
+    G_emission = energy_consumed_mj * carbon_intensity_per_mj
+
+    # Carbon tax
+    G_emission_tons = G_emission / 1000
+    carbon_tax_rate = carbon_tax_dict.get(country_name, carbon_tax_dict.get('Default', 0))
+    carbon_tax_money = G_emission_tons * carbon_tax_rate
+
+    # No insurance for synthesis process (included in production)
+    insurance_cost = 0
+
+    return opex_money, capex_money, carbon_tax_money, energy_consumed_mj, G_emission, carrier_mass_kg, h2_loss_kg, insurance_cost
 
 
 def site_A_chem_liquification(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E_storage_apply, F_maritime_apply, process_specific_args_tuple):
