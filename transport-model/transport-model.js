@@ -382,6 +382,7 @@ async function handleCalculation(e) {
             BOG_recirculation_storage_apply: document.getElementById('bogRecirculationStorageApply').value,
             BOG_recirculation_mati_trans: parseFloat(document.getElementById('bogRecirculationMaritime').value),
             BOG_recirculation_mati_trans_apply: document.getElementById('bogRecirculationMaritimeApply').value,
+            perform_reconversion: document.getElementById('performReconversion') ? document.getElementById('performReconversion').checked : true,
         });
     } else if (commodity === 'food') {
         Object.assign(userInputs, {
