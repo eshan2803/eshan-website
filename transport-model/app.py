@@ -525,6 +525,7 @@ def run_lca_model(inputs):
     commodity_type = inputs.get('commodity_type', 'fuel')
     fuel_type_for_cost = inputs.get('fuel_type', 0) if commodity_type == 'fuel' else 0  # Extract early for production cost lookup
     marine_fuel_choice = inputs.get('marine_fuel_choice', 'VLSFO')
+    perform_reconversion = inputs.get('perform_reconversion', True)  # Default to True (current behavior)
     storage_time_A = inputs['storage_time_A']
     storage_time_B = inputs['storage_time_B']
     storage_time_C = inputs['storage_time_C']
@@ -1043,11 +1044,11 @@ def run_lca_model(inputs):
 
         final_chem_kg_denominator = final_results_raw[3] # This is the final quantity of chemical
 
-        # Handle conversion step if fuel type is not LH2 and not SAF
-        if user_define[1] != 0 and user_define[1] != 3: 
-            amount_before_conversion = final_results_raw[3] 
+        # Handle conversion step if fuel type is not LH2/SAF AND user wants reconversion
+        if user_define[1] != 0 and user_define[1] != 3 and perform_reconversion:
+            amount_before_conversion = final_results_raw[3]
             args_for_conversion = (mass_conversion_to_H2, eff_energy_chem_to_H2, energy_chem_to_H2, CO2e_end, end_electricity_price, end_country_name, CARBON_TAX_PER_TON_CO2_DICT)
-            
+
             # The chem_convert_to_H2 function now returns 8 elements
             opex_conv, capex_conv, carbon_tax_conv, energy_conv, emission_conv, amount_after_conversion, bog_conv, _ = \
                 chem_convert_to_H2(amount_before_conversion, user_define[1], user_define[2], user_define[3],
@@ -1055,7 +1056,7 @@ def run_lca_model(inputs):
 
             # Insert the conversion step into data_raw *before* the final TOTAL row
             # Ensure the row has 8 elements as per standard: [label, opex, capex, carbon_tax, energy, emissions, weight, loss]
-            data_raw.insert(-1, ["chem_convert_to_H2", opex_conv, capex_conv, carbon_tax_conv, energy_conv, emission_conv, amount_after_conversion, bog_conv])
+            data_raw.insert(-1, ["Reconversion to H2", opex_conv, capex_conv, carbon_tax_conv, energy_conv, emission_conv, amount_after_conversion, bog_conv])
 
             # Update final_results_raw (which comes from total_chem_base) to include conversion costs/emissions
             # NOTE: total_results[0] is the total money (opex + capex + carbon_tax) BEFORE insurance for now,
@@ -1091,7 +1092,13 @@ def run_lca_model(inputs):
             data_raw.append(["TOTAL", total_opex_money, total_capex_money, total_carbon_tax_money, total_energy, total_emissions, final_chem_kg_denominator, total_spoilage_loss])
 
 
-        final_energy_output_mj = final_chem_kg_denominator * HHV_chem[fuel_type] # Corrected variable name
+        # Use appropriate HHV based on whether reconversion happened
+        if user_define[1] != 0 and user_define[1] != 3 and perform_reconversion:
+            # Reconversion happened, use H2 HHV (index 0)
+            final_energy_output_mj = final_chem_kg_denominator * HHV_chem[0]
+        else:
+            # No reconversion, use carrier's HHV
+            final_energy_output_mj = final_chem_kg_denominator * HHV_chem[fuel_type]
         final_energy_output_gj = final_energy_output_mj / 1000
 
         # Now, create data_with_all_columns for charting/detailed display
@@ -1184,6 +1191,19 @@ def run_lca_model(inputs):
                 f"• Transport emission is {ratio_emission:.1f} times the SMR emission."
             )
 
+        # Determine appropriate unit label based on fuel type and reconversion
+        if user_define[1] == 0:  # Liquid Hydrogen
+            unit_label = "kg H<sub>2</sub>"
+        elif user_define[1] == 3:  # SAF
+            unit_label = "kg SAF"
+        elif perform_reconversion:
+            # Ammonia or Methanol with reconversion
+            unit_label = "kg H<sub>2</sub> delivered (after reconversion)"
+        else:
+            # Ammonia or Methanol without reconversion
+            fuel_names = ['', 'Ammonia', 'Methanol']
+            unit_label = f"kg {fuel_names[user_define[1]]} delivered"
+
         opex_per_kg_for_chart_idx = new_detailed_headers.index("Opex/kg ($/kg)")
         capex_per_kg_for_chart_idx = new_detailed_headers.index("Capex/kg ($/kg)")
         carbon_tax_per_kg_for_chart_idx = new_detailed_headers.index("Carbon Tax/kg ($/kg)")
@@ -1196,7 +1216,7 @@ def run_lca_model(inputs):
             'capex': [row[capex_per_kg_for_chart_idx] for row in aggregated_data_for_chart],
             'carbon_tax': [row[carbon_tax_per_kg_for_chart_idx] for row in aggregated_data_for_chart],
             'insurance': [row[insurance_per_kg_for_chart_idx] for row in aggregated_data_for_chart],
-            'title': 'Cost Breakdown per kg of Delivered Fuel',
+            'title': f'Cost Breakdown per {unit_label}',
             'x_label': 'Cost ($/kg)',
             'overlay_text': cost_overlay_text
         }
@@ -1204,14 +1224,14 @@ def run_lca_model(inputs):
         emission_chart_data = {
             'labels': [row[0] for row in data_for_emission_chart],
             'emissions': [row[eco2_per_kg_for_chart_idx] for row in data_for_emission_chart],
-            'title': 'CO2eq Breakdown per kg of Delivered Fuel',
+            'title': f'CO2eq Breakdown per {unit_label}',
             'x_label': 'CO2eq (kg/kg)',
             'overlay_text': emission_overlay_text
         }
         summary1_data = [
-            ["Cost ($/kg chemical)", f"{chem_cost:.2f}"],
-            ["Consumed Energy (MJ/kg chemical)", f"{chem_energy:.2f}"],
-            ["Emission (kg CO<sub>2eq</sub>/kg chemical)", f"{chem_CO2e:.2f}"]
+            [f"Cost ($/{unit_label})", f"{chem_cost:.2f}"],
+            [f"Consumed Energy (MJ/{unit_label})", f"{chem_energy:.2f}"],
+            [f"Emission (kg CO<sub>2eq</sub>/{unit_label})", f"{chem_CO2e:.2f}"]
         ]
 
         summary2_data = [
