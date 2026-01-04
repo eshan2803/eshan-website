@@ -171,7 +171,7 @@ BOG_EQUIPMENT_CAPEX = {
 # CARBON TAX RATES BY COUNTRY ($/ton CO2)
 # =================================================================
 CARBON_TAX_PER_TON_CO2_DICT = {
-    "Unknown": 25.00,          # Default fallback rate (global average)
+    "Unknown": 0.00,           # Default fallback for geocoding failures (no carbon tax assumed)
     "Sweden": 144.62,          # 2025 rate from Tax Foundation
     "Switzerland": 136.04,     # 2025 rate from Tax Foundation
     "Liechtenstein": 136.04,   # 2025 rate from Tax Foundation
@@ -196,7 +196,36 @@ CARBON_TAX_PER_TON_CO2_DICT = {
     "South Africa": 10.69,     # 2024 rate from World Population Review
     "Singapore": 19.55,        # 2024 rate from World Population Review
     "Uruguay": 167.00,         # 2024 rate from Statista
-    "Japan": 2.65              # Rate from academic sources, stable since implementation
+    "Japan": 2.65,             # Rate from academic sources, stable since implementation
+    # Countries without carbon tax (explicitly set to 0)
+    "United States": 0.00,     # No federal carbon tax
+    "China": 0.00,             # Regional ETS only, not universal tax
+    "Australia": 0.00,         # Carbon tax repealed in 2014
+    "Brazil": 0.00,            # No carbon tax
+    "Russia": 0.00,            # No carbon tax
+    "India": 0.00,             # No carbon tax (coal cess is different)
+    "Saudi Arabia": 0.00,      # No carbon tax
+    "United Arab Emirates": 0.00,  # No carbon tax
+    "Namibia": 0.00,           # No carbon tax
+    "Chile": 5.00,             # ~$5/tonne CO2 carbon tax since 2017
+    "Mexico": 3.00,            # ~$3/tonne CO2 carbon tax
+    "Colombia": 5.00,          # ~$5/tonne CO2 carbon tax
+    "Argentina": 0.00,         # No carbon tax
+    "New Zealand": 0.00,       # ETS but no direct carbon tax
+    "South Korea": 0.00,       # K-ETS but no direct carbon tax
+    "Indonesia": 0.00,         # No carbon tax yet
+    "Turkey": 0.00,            # No carbon tax
+    "Egypt": 0.00,             # No carbon tax
+    "Nigeria": 0.00,           # No carbon tax
+    "Kenya": 0.00,             # No carbon tax
+    "Ghana": 0.00,             # No carbon tax
+    "Morocco": 0.00,           # No carbon tax
+    "Thailand": 0.00,          # No carbon tax
+    "Vietnam": 0.00,           # No carbon tax
+    "Philippines": 0.00,       # No carbon tax
+    "Malaysia": 0.00,          # No carbon tax
+    "Pakistan": 0.00,          # No carbon tax
+    "Bangladesh": 0.00         # No carbon tax
 }
 
 # =================================================================
