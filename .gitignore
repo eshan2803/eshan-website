@@ -1,0 +1,5 @@
+archive/
+transmission/archive/
+**/temp_caiso_*.zip
+**/pipelines_raw.geojson
+**/pipelines_raw_osm.geojson
