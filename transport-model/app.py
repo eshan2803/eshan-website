@@ -811,6 +811,17 @@ def run_lca_model(inputs):
         BOG_recirculation_mati_trans = inputs['BOG_recirculation_mati_trans']
         BOG_recirculation_mati_trans_apply = inputs['BOG_recirculation_mati_trans_apply']
         user_define = [0, fuel_type, int(recirculation_BOG), int(BOG_recirculation_truck_apply), int(BOG_recirculation_storage_apply), int(BOG_recirculation_mati_trans_apply)]
+
+        # Update production label based on fuel type
+        if fuel_type == 0:  # Liquid Hydrogen
+            label_map["site_A_chem_production"] = "H2 Production"
+        elif fuel_type == 1:  # Ammonia
+            label_map["site_A_chem_production"] = "H2 to Ammonia Synthesis"
+        elif fuel_type == 2:  # Methanol
+            label_map["site_A_chem_production"] = "H2 to Methanol Synthesis"
+        elif fuel_type == 3:  # SAF
+            label_map["site_A_chem_production"] = "SAF Production"
+
         LH2_plant_capacity = facility_capacity
         volume_per_tank = total_ship_volume / ship_number_of_tanks
         if ship_tank_shape == 1:
@@ -1151,18 +1162,28 @@ def run_lca_model(inputs):
         aggregated_data_for_chart = []
         aggregated_overheads_row = ["Overheads & Fees", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         overhead_per_kg_col_idx = new_detailed_headers.index("Insurance/kg ($/kg)")
+
+        # Exclude production step for LH2/SAF (no synthesis costs) but INCLUDE for ammonia/methanol
+        production_labels_to_exclude = []
+        if fuel_type == 0 or fuel_type == 3:  # LH2 or SAF
+            production_labels_to_exclude = ["H2 Production", "SAF Production"]
+
         for row in data_with_all_columns:
             label = row[0]
             if label in overhead_labels:
                 aggregated_overheads_row[overhead_per_kg_col_idx] += float(row[overhead_per_kg_col_idx])
-            elif label not in ["TOTAL", "Initial Production (Placeholder)", "Harvesting & Preparation"]:
+            elif label not in ["TOTAL", "Harvesting & Preparation"] + production_labels_to_exclude:
                 aggregated_data_for_chart.append(row)
         aggregated_data_for_chart.append(aggregated_overheads_row)
+
         emission_chart_exclusions = [
-            "TOTAL", "Initial Production (Placeholder)", "Insurance",
+            "TOTAL", "Insurance",
             "Import Tariffs & Duties", "Financing Costs",
             "Brokerage & Agent Fees", "Contingency (10%)", "Safety Certifications",
         ]
+        # Exclude production for LH2/SAF (no emissions from this step) but INCLUDE for ammonia/methanol
+        if fuel_type == 0 or fuel_type == 3:
+            emission_chart_exclusions.extend(["H2 Production", "SAF Production"])
         data_for_emission_chart = [row for row in data_with_all_columns if row[0] not in emission_chart_exclusions]
 
         chem_cost = total_money / final_chem_kg_denominator if final_chem_kg_denominator > 0 else 0
