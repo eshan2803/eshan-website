@@ -103,11 +103,15 @@ def site_A_chem_production(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E
     # For Ammonia (1) and Methanol (2), model synthesis from H2 if parameters are available
     if (B_fuel_type == 1 or B_fuel_type == 2) and start_electricity_price_arg is not None:
         # Calculate H2 mass needed to produce A kg of carrier
-        # Reverse of synthesis mass ratio (accounting for efficiency in the function)
+        # Must account for synthesis efficiency: to get A kg output, need A/efficiency kg input
         if B_fuel_type == 1:  # Ammonia
-            h2_mass_needed = A / 5.67  # Reverse of 5.67 kg NH3 per kg H2
+            synthesis_efficiency = 0.95
+            mass_ratio = 5.67
+            h2_mass_needed = A / (mass_ratio * synthesis_efficiency)  # Account for 95% efficiency
         else:  # Methanol
-            h2_mass_needed = A / 5.33  # Reverse of 5.33 kg MeOH per kg H2
+            synthesis_efficiency = 0.92
+            mass_ratio = 5.33
+            h2_mass_needed = A / (mass_ratio * synthesis_efficiency)  # Account for 92% efficiency
 
         # Call synthesis function
         synthesis_args = (start_electricity_price_arg, CO2e_start_arg, start_country_name_arg,
@@ -130,9 +134,14 @@ def site_A_chem_production(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E
         # Total cargo value = H2 cost + synthesis costs
         cargo_value = h2_production_cost + synth_opex + synth_capex + synth_carbon_tax
 
+        # CRITICAL: Return the actual produced mass (carrier_produced), not the input (A)
+        # This ensures downstream processes calculate costs for the correct mass
+        final_mass_to_return = carrier_produced
+
     else:
         # For LH2 (0) and SAF (3), or if synthesis parameters not available
         cargo_value = A * hydrogen_production_cost_arg
+        final_mass_to_return = A
 
     # Calculate insurance based on cargo value
     insurance_cost = calculate_total_insurance_cost(
@@ -142,7 +151,7 @@ def site_A_chem_production(A, B_fuel_type, C_recirculation_BOG, D_truck_apply, E
         port_to_port_duration_hrs=port_to_port_duration_arg
     )
 
-    return opex_money, capex_money, carbon_tax_money, convert_energy_consumed, G_emission, A, BOG_loss, insurance_cost
+    return opex_money, capex_money, carbon_tax_money, convert_energy_consumed, G_emission, final_mass_to_return, BOG_loss, insurance_cost
 
 
 def H2_to_carrier_synthesis(H2_mass_kg, fuel_type, synthesis_args_tuple):
@@ -179,10 +188,11 @@ def H2_to_carrier_synthesis(H2_mass_kg, fuel_type, synthesis_args_tuple):
         efficiency = 0.95  # 95% of H2 is converted to NH3
 
         # Capital cost for ammonia synthesis plant
-        # Small-scale green ammonia: ~$2000-3000 per tonne/year capacity
+        # Commercial-scale green ammonia: ~$1000 per tonne/year capacity
+        # Ref: $1.4B for 1.4M tonne/year (IEA, 2024)
         # Annualized over 20 years at 8% discount rate
-        capex_usd_per_kg_capacity_year = 2500 / 1000  # $2.5 per kg capacity per year
-        annualization_factor = 0.10  # 20 years, 8% discount
+        capex_usd_per_kg_capacity = 1000 / 1000  # $1.0 per kg annual capacity (total plant cost)
+        annualization_factor = 0.08  # 20 years, 8% discount rate
 
     elif fuel_type == 2:  # Methanol
         # Mass conversion: 1 kg H2 → 5.33 kg MeOH (stoichiometric: CO2 + 3H2 → CH3OH + H2O)
@@ -200,10 +210,10 @@ def H2_to_carrier_synthesis(H2_mass_kg, fuel_type, synthesis_args_tuple):
         efficiency = 0.92  # 92% of H2 is converted to MeOH
 
         # Capital cost for methanol synthesis plant
-        # E-methanol plants: ~$1500-2500 per tonne/year capacity
-        # Small-scale assumption (100-500 kt/y)
-        capex_usd_per_kg_capacity_year = 2000 / 1000  # $2.0 per kg capacity per year
-        annualization_factor = 0.10
+        # E-methanol plants: ~$1000 per tonne/year capacity
+        # Similar to ammonia, based on industry estimates
+        capex_usd_per_kg_capacity = 1000 / 1000  # $1.0 per kg annual capacity (total plant cost)
+        annualization_factor = 0.08  # 20 years, 8% discount rate
 
     else:
         # Not ammonia or methanol, no synthesis needed
@@ -224,13 +234,14 @@ def H2_to_carrier_synthesis(H2_mass_kg, fuel_type, synthesis_args_tuple):
 
     # OPEX: Maintenance and operations (typically 2-3% of CAPEX per year)
     annual_production_kg = facility_capacity * 330  # 330 days/year operation
-    capex_total = annual_production_kg * capex_usd_per_kg_capacity_year / annualization_factor
-    opex_maintenance = capex_total * 0.025  # 2.5% of CAPEX
+    capex_total = annual_production_kg * capex_usd_per_kg_capacity  # Total plant cost
+    capex_annual = capex_total * annualization_factor  # Annualized CAPEX
+    opex_maintenance = capex_total * 0.025  # 2.5% of total CAPEX per year
     opex_maintenance_per_kg = opex_maintenance / annual_production_kg if annual_production_kg > 0 else 0
     opex_money = opex_electricity + (opex_maintenance_per_kg * carrier_mass_kg)
 
-    # CAPEX: Annualized capital cost
-    capex_per_kg = capex_usd_per_kg_capacity_year * annualization_factor
+    # CAPEX: Annualized capital cost per kg produced
+    capex_per_kg = capex_annual / annual_production_kg if annual_production_kg > 0 else 0
     capex_money = capex_per_kg * carrier_mass_kg
 
     # Emissions from electricity use
