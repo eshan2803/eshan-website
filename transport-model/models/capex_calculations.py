@@ -12,15 +12,19 @@ from constants import (
 )
 
 
-def calculate_liquefaction_capex(fuel_type, capacity_tpd):
+def calculate_liquefaction_capex(fuel_type, capacity_tpd, cargo_mass_kg=None):
     """
     Estimates the amortized capital cost per kg for liquefaction of hydrogen, ammonia, or methanol.
 
     Source: Based on industry data for hydrogen and ammonia liquefaction costs; methanol assumed zero.
 
+    For ammonia (fuel_type=1), uses cycle-based throughput calculation when cargo_mass_kg is provided,
+    since ammonia liquefaction is just simple refrigeration at -33°C (not exotic cryogenics like LH2).
+
     Args:
         fuel_type: 0 for hydrogen, 1 for ammonia, 2 for methanol
-        capacity_tpd: Daily throughput in tons
+        capacity_tpd: Daily throughput in tons (used for LH2 only)
+        cargo_mass_kg: Optional cargo mass for cycle-based calculation (used for ammonia)
 
     Returns:
         tuple: (capex_per_kg, om_cost_per_kg) - Both in USD/kg
@@ -31,7 +35,10 @@ def calculate_liquefaction_capex(fuel_type, capacity_tpd):
             "large_scale": {"base_capex_M_usd": 762.67, "base_capacity": 800, "power_law_exp": 0.62}
         },
         1: {
-            "default": {"base_capex_M_usd": 36.67, "base_capacity": 100, "power_law_exp": 0.7}
+            # Ammonia refrigeration (not cryogenics): -33°C vs -253°C for LH2
+            # Base cost: $5M for 1000 TPD (330k tonnes/year) industrial refrigeration plant
+            # This is ~27x cheaper per TPD than LH2 cryogenic systems, reflecting simpler technology
+            "default": {"base_capex_M_usd": 5.0, "base_capacity_tpy": 330000, "power_law_exp": 0.7}
         },
         2: {
             "default": {"base_capex_M_usd": 0, "base_capacity": 1, "power_law_exp": 0}
@@ -44,21 +51,35 @@ def calculate_liquefaction_capex(fuel_type, capacity_tpd):
     # Select appropriate cost model
     if fuel_type == 0:  # Hydrogen has scale-dependent models
         model = cost_models[0]["large_scale"] if capacity_tpd > 100 else cost_models[0]["small_scale"]
-    else:
-        model = cost_models[fuel_type]["default"]
 
-    # Calculate total CAPEX using power law scaling
-    total_capex_usd = (model['base_capex_M_usd'] * 1_000_000) * \
-                      (capacity_tpd / model['base_capacity']) ** model['power_law_exp']
+        # Calculate total CAPEX using power law scaling
+        total_capex_usd = (model['base_capex_M_usd'] * 1_000_000) * \
+                          (capacity_tpd / model['base_capacity']) ** model['power_law_exp']
+
+        # Calculate annual throughput (330 working days/year)
+        annual_throughput_kg = capacity_tpd * 1000 * 330
+
+    elif fuel_type == 1 and cargo_mass_kg is not None:  # Ammonia with cargo-based calculation
+        model = cost_models[1]["default"]
+
+        # Use cycle-based throughput (12 cargos per year)
+        cargos_per_year = 12
+        annual_throughput_kg = cargo_mass_kg * cargos_per_year
+
+        # Calculate total CAPEX using power law scaling based on annual throughput
+        total_capex_usd = (model['base_capex_M_usd'] * 1_000_000) * \
+                          (annual_throughput_kg / model['base_capacity_tpy']) ** model['power_law_exp']
+    else:
+        # Methanol or fallback
+        model = cost_models[fuel_type]["default"]
+        total_capex_usd = 0
+        annual_throughput_kg = 1
 
     # Calculate annual O&M cost (4% of total CAPEX)
     annual_om_cost = total_capex_usd * 0.04
 
     # Annualize CAPEX (9% annualization factor)
     annualized_capex = total_capex_usd * 0.09
-
-    # Calculate annual throughput (330 working days/year)
-    annual_throughput_kg = capacity_tpd * 1000 * 330
 
     if annual_throughput_kg == 0:
         return 0, 0

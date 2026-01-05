@@ -311,8 +311,8 @@ def site_A_chem_liquification(A, B_fuel_type, C_recirculation_BOG, D_truck_apply
     liquify_ener_consumed = liquify_energy_required * A
     opex_money += liquify_ener_consumed * start_electricity_price_tuple_arg[2]
 
-    # CAPEX
-    capex_per_kg, om_cost_per_kg = calculate_liquefaction_capex_helper_arg(B_fuel_type, LH2_plant_capacity_arg)
+    # CAPEX - pass cargo mass for cycle-based calculation (ammonia)
+    capex_per_kg, om_cost_per_kg = calculate_liquefaction_capex_helper_arg(B_fuel_type, LH2_plant_capacity_arg, A)
     capex_money += capex_per_kg * A
     opex_money += om_cost_per_kg * A
     G_emission_from_energy = liquify_ener_consumed * 0.2778 * CO2e_start_arg * 0.001
