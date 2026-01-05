@@ -250,10 +250,11 @@ def H2_to_carrier_synthesis(H2_mass_kg, fuel_type, synthesis_args_tuple):
     capex_money = capex_per_kg * carrier_mass_kg
 
     # Emissions from electricity use
-    # carbon_intensity is in kg CO2/kWh, need to convert to kg CO2/MJ
-    # 1 kWh = 3.6 MJ, so kg CO2/MJ = carbon_intensity / 3.6
-    carbon_intensity_per_mj = carbon_intensity / 3.6
-    G_emission = energy_consumed_mj * carbon_intensity_per_mj
+    # carbon_intensity is in g CO2/kWh from ElectricityMap API, need to convert to kg CO2/MJ
+    # Step 1: g CO2/kWh → g CO2/MJ: divide by 3.6 (since 1 kWh = 3.6 MJ)
+    # Step 2: g CO2 → kg CO2: divide by 1000
+    carbon_intensity_per_mj = carbon_intensity / 3.6  # g CO2/MJ
+    G_emission = (energy_consumed_mj * carbon_intensity_per_mj) / 1000  # Convert g to kg
 
     # Carbon tax
     G_emission_tons = G_emission / 1000
