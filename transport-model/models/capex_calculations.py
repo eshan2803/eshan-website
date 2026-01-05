@@ -36,9 +36,9 @@ def calculate_liquefaction_capex(fuel_type, capacity_tpd, cargo_mass_kg=None):
         },
         1: {
             # Ammonia refrigeration (not cryogenics): -33°C vs -253°C for LH2
-            # Base cost: $5M for 1000 TPD (330k tonnes/year) industrial refrigeration plant
+            # Base cost: $5M for 1000 TPD (330k tonnes/year = 330M kg/year) industrial refrigeration plant
             # This is ~27x cheaper per TPD than LH2 cryogenic systems, reflecting simpler technology
-            "default": {"base_capex_M_usd": 5.0, "base_capacity_tpy": 330000, "power_law_exp": 0.7}
+            "default": {"base_capex_M_usd": 5.0, "base_capacity_kg_per_year": 330_000_000, "power_law_exp": 0.7}
         },
         2: {
             "default": {"base_capex_M_usd": 0, "base_capacity": 1, "power_law_exp": 0}
@@ -68,7 +68,7 @@ def calculate_liquefaction_capex(fuel_type, capacity_tpd, cargo_mass_kg=None):
 
         # Calculate total CAPEX using power law scaling based on annual throughput
         total_capex_usd = (model['base_capex_M_usd'] * 1_000_000) * \
-                          (annual_throughput_kg / model['base_capacity_tpy']) ** model['power_law_exp']
+                          (annual_throughput_kg / model['base_capacity_kg_per_year']) ** model['power_law_exp']
     else:
         # Methanol or fallback
         model = cost_models[fuel_type]["default"]
