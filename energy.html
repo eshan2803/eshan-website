@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,7 +12,9 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap"
+        rel="stylesheet">
 
     <link rel="stylesheet" href="custom.css" />
 
@@ -19,11 +22,15 @@
         html {
             scroll-behavior: smooth;
         }
+
         body {
-            background-color: #fcfcfc; /* Comet-like off-white */
+            background-color: #fcfcfc;
+            /* Comet-like off-white */
             font-family: 'Inter', sans-serif;
-            cursor: none; /* Hide default cursor */
+            cursor: none;
+            /* Hide default cursor */
         }
+
         .font-lora {
             font-family: 'Lora', serif;
         }
@@ -42,6 +49,7 @@
             transition: width 0.2s, height 0.2s, border-width 0.2s, background-color 0.2s;
             z-index: 9999;
         }
+
         .cursor.hovered {
             width: 50px;
             height: 50px;
@@ -52,26 +60,34 @@
 
         /* Mesh Gradients */
         .mesh-gradient-1 {
-            background-image: radial-gradient(at 40% 20%, hsla(28,100%,74%,1) 0px, transparent 50%),
-                              radial-gradient(at 80% 20%, hsla(189,100%,56%,1) 0px, transparent 50%),
-                              radial-gradient(at 0% 50%, hsla(355,100%,93%,1) 0px, transparent 50%),
-                              radial-gradient(at 80% 50%, hsla(340,100%,76%,1) 0px, transparent 50%),
-                              radial-gradient(at 0% 100%, hsla(22,100%,77%,1) 0px, transparent 50%),
-                              radial-gradient(at 80% 100%, hsla(242,100%,70%,1) 0px, transparent 50%);
+            background-image: radial-gradient(at 40% 20%, hsla(28, 100%, 74%, 1) 0px, transparent 50%),
+                radial-gradient(at 80% 20%, hsla(189, 100%, 56%, 1) 0px, transparent 50%),
+                radial-gradient(at 0% 50%, hsla(355, 100%, 93%, 1) 0px, transparent 50%),
+                radial-gradient(at 80% 50%, hsla(340, 100%, 76%, 1) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, hsla(22, 100%, 77%, 1) 0px, transparent 50%),
+                radial-gradient(at 80% 100%, hsla(242, 100%, 70%, 1) 0px, transparent 50%);
             background-size: 100% 100%;
             filter: blur(15px) saturate(1.2);
             opacity: 0.15;
             position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             z-index: -1;
         }
 
         /* Rainbow Border Animation */
         @keyframes rainbow-border {
-            0% { background-position: 0% 50%; }
-            100% { background-position: 200% 50%; }
+            0% {
+                background-position: 0% 50%;
+            }
+
+            100% {
+                background-position: 200% 50%;
+            }
         }
-        
+
         .rainbow-glow {
             position: relative;
             background: linear-gradient(90deg, #ff0080, #ff8000, #ffff00, #80ff00, #00ff80, #0080ff, #8000ff, #ff0080);
@@ -80,7 +96,7 @@
             padding: 2px;
             border-radius: 9999px;
         }
-        
+
         .rainbow-glow .button-content {
             background: #f3f4f6;
             border-radius: 9999px;
@@ -91,14 +107,15 @@
             font-weight: 500;
             transition: background-color 0.3s;
         }
-        
+
         .rainbow-glow:hover .button-content {
             background: #e5e7eb;
         }
 
         /* Full-screen Folds */
         .fold {
-            min-height: 100vh; /* Hero fold is full height */
+            min-height: 100vh;
+            /* Hero fold is full height */
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -107,16 +124,21 @@
         }
 
         section.fold {
-            min-height: auto; /* Content folds are sized by content */
-            padding: 6rem 1.5rem; /* Adjust padding to control spacing */
+            min-height: auto;
+            /* Content folds are sized by content */
+            padding: 6rem 1.5rem;
+            /* Adjust padding to control spacing */
         }
 
         /* Glassmorphism & 3D Hover Cards */
         .glass-card {
-            background-color: rgba(255, 255, 255, 0.45); /* Slightly more opaque */
-            backdrop-filter: blur(16px); /* Enhanced frosted glass effect */
+            background-color: rgba(255, 255, 255, 0.45);
+            /* Slightly more opaque */
+            backdrop-filter: blur(16px);
+            /* Enhanced frosted glass effect */
             border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 1rem; /* 16px */
+            border-radius: 1rem;
+            /* 16px */
             transition: all 0.3s ease;
             transform-style: preserve-3d;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
@@ -124,8 +146,9 @@
             display: flex;
             flex-direction: column;
         }
+
         .glass-card:hover {
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
             transform: perspective(1000px) rotateX(var(--rotateX)) rotateY(var(--rotateY)) scale3d(1.05, 1.05, 1.05);
         }
 
@@ -139,6 +162,7 @@
         }
     </style>
 </head>
+
 <body class="antialiased">
 
     <!-- Magnetic Cursor -->
@@ -151,7 +175,8 @@
         <div class="container mx-auto flex justify-between items-center">
             <a href="index.html" class="font-lora text-2xl font-semibold">Dr. Eshan Singh</a>
             <nav class="flex items-center space-x-2">
-                <a href="energy.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
+                <a href="energy.html"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
                 <a href="/transport-model/index.html" class="rainbow-glow">
                     <span class="button-content">Transport Model</span>
                 </a>
@@ -159,12 +184,13 @@
                     <span class="button-content">Grid Planner</span>
                 </a>
                 <a href="grid-operator/index.html" class="rainbow-glow">
-                     <span class="button-content">Grid Operator</span>
+                    <span class="button-content">Grid Operator</span>
                 </a>
                 <a href="https://www.eshansingh.xyz/transmission/index.html" class="rainbow-glow">
                     <span class="button-content">CA Grid Map</span>
                 </a>
-                <a href="musings.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Musings</a>
+                <a href="musings.html"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Musings</a>
             </nav>
         </div>
     </header>
@@ -175,15 +201,12 @@
                 <h1 class="kinetic-headline font-lora text-5xl md:text-7xl font-medium leading-tight">
                     Energy Decarbonization Articles
                 </h1>
-                <p class="mt-4 text-lg text-gray-600 max-w-xl">Explore my writings and thought leadership on energy transition, climate innovation, and sustainability strategies.</p>
+                <p class="mt-4 text-lg text-gray-600 max-w-xl">Explore my writings and thought leadership on energy
+                    transition, climate innovation, and sustainability strategies.</p>
             </div>
             <div class="flex justify-center items-center">
-                <lottie-player 
-                    src="assets/wind-turbine.json"
-                    background="transparent"
-                    speed="1"
-                    style="width: 100%; max-width: 400px; height: auto;"
-                    loop autoplay>
+                <lottie-player src="assets/wind-turbine.json" background="transparent" speed="1"
+                    style="width: 100%; max-width: 400px; height: auto;" loop autoplay>
                 </lottie-player>
             </div>
         </div>
@@ -194,42 +217,71 @@
         <div class="mesh-gradient-1"></div>
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                
+
+                <div class="glass-card">
+                    <h3 class="text-xl font-lora font-semibold mb-2">California Energy 2025: A Year in Review</h3>
+                    <p class="text-gray-700 flex-grow">Interactive data visualization of California's energy grid in
+                        2025. Explore 365 days of load, solar, wind, and battery operations.</p>
+                    <a href="2025recap.html"
+                        class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Explore
+                        Data</a>
+                </div>
 
                 <div class="glass-card">
                     <h3 class="text-xl font-lora font-semibold mb-2">Entropy and Information</h3>
-                    <p class="text-gray-700 flex-grow">Understanding the fundamental link between entropy and how information shapes our universe.</p>
-                    <a href="https://www.linkedin.com/pulse/entropy-information-eshan-singh/" target="_blank" class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Read More</a>
+                    <p class="text-gray-700 flex-grow">Understanding the fundamental link between entropy and how
+                        information shapes our universe.</p>
+                    <a href="https://www.linkedin.com/pulse/entropy-information-eshan-singh/" target="_blank"
+                        class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Read
+                        More</a>
                 </div>
 
                 <div class="glass-card">
                     <h3 class="text-xl font-lora font-semibold mb-2">Some Thoughts on DAC</h3>
-                    <p class="text-gray-700 flex-grow">Exploring the potential, challenges, and realities of Direct Air Capture technologies.</p>
-                    <a href="https://www.linkedin.com/pulse/more-dac-eshan-singh-z84ac/" target="_blank" class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Read More</a>
+                    <p class="text-gray-700 flex-grow">Exploring the potential, challenges, and realities of Direct Air
+                        Capture technologies.</p>
+                    <a href="https://www.linkedin.com/pulse/more-dac-eshan-singh-z84ac/" target="_blank"
+                        class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Read
+                        More</a>
                 </div>
 
                 <div class="glass-card">
                     <h3 class="text-xl font-lora font-semibold mb-2">Hydrogen, Nuclear and the Clean Energy Quest</h3>
-                    <p class="text-gray-700 flex-grow">A critical look at how hydrogen and nuclear can shape the path toward sustainable energy.</p>
-                    <a href="https://www.linkedin.com/pulse/hydrogen-nuclear-clean-energy-quest-eshan-singh-3b9ge/" target="_blank" class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Read More</a>
+                    <p class="text-gray-700 flex-grow">A critical look at how hydrogen and nuclear can shape the path
+                        toward sustainable energy.</p>
+                    <a href="https://www.linkedin.com/pulse/hydrogen-nuclear-clean-energy-quest-eshan-singh-3b9ge/"
+                        target="_blank"
+                        class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Read
+                        More</a>
                 </div>
 
                 <div class="glass-card">
                     <h3 class="text-xl font-lora font-semibold mb-2">Will We Make It?</h3>
-                    <p class="text-gray-700 flex-grow">Reflections on climate urgency and whether humanity will meet the challenge of decarbonization.</p>
-                    <a href="https://www.linkedin.com/pulse/we-make-eshan-singh-tdpfc/" target="_blank" class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Read More</a>
+                    <p class="text-gray-700 flex-grow">Reflections on climate urgency and whether humanity will meet the
+                        challenge of decarbonization.</p>
+                    <a href="https://www.linkedin.com/pulse/we-make-eshan-singh-tdpfc/" target="_blank"
+                        class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Read
+                        More</a>
                 </div>
 
                 <div class="glass-card">
                     <h3 class="text-xl font-lora font-semibold mb-2">The Pear Paradox</h3>
-                    <p class="text-gray-700 flex-grow">How can we leverage carbon offsets to actually help the planet? Rethinking carbon strategy.</p>
-                    <a href="https://www.linkedin.com/pulse/pear-paradox-how-can-we-leverage-carbon-offsets-actually-eshan-singh-gacdc/" target="_blank" class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Read More</a>
+                    <p class="text-gray-700 flex-grow">How can we leverage carbon offsets to actually help the planet?
+                        Rethinking carbon strategy.</p>
+                    <a href="https://www.linkedin.com/pulse/pear-paradox-how-can-we-leverage-carbon-offsets-actually-eshan-singh-gacdc/"
+                        target="_blank"
+                        class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Read
+                        More</a>
                 </div>
 
                 <div class="glass-card">
                     <h3 class="text-xl font-lora font-semibold mb-2">Time for Negative-Emission Vehicles</h3>
-                    <p class="text-gray-700 flex-grow">Imagining a future where vehicles don't just emit less — but actually clean the atmosphere.</p>
-                    <a href="https://www.linkedin.com/pulse/time-negative-emissions-vehicles-eshan-singh-yuwuc/" target="_blank" class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Read More</a>
+                    <p class="text-gray-700 flex-grow">Imagining a future where vehicles don't just emit less — but
+                        actually clean the atmosphere.</p>
+                    <a href="https://www.linkedin.com/pulse/time-negative-emissions-vehicles-eshan-singh-yuwuc/"
+                        target="_blank"
+                        class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Read
+                        More</a>
                 </div>
 
             </div>
@@ -240,14 +292,16 @@
     <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
     <footer class="w-full text-center py-5 border-t border-gray-200/80">
         <div class="flex items-center justify-center space-x-4">
-             <p class="text-sm text-gray-500">&copy; 2025 Eshan & Associates LLC. All rights reserved.</p>
-             <a href="https://www.linkedin.com/in/eshan-singh-188b1554/" target="_blank" rel="noopener noreferrer" class="cursor-pointer">
-                <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn" class="h-5 w-5 hover:opacity-75 transition-opacity">
+            <p class="text-sm text-gray-500">&copy; 2025 Eshan & Associates LLC. All rights reserved.</p>
+            <a href="https://www.linkedin.com/in/eshan-singh-188b1554/" target="_blank" rel="noopener noreferrer"
+                class="cursor-pointer">
+                <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn"
+                    class="h-5 w-5 hover:opacity-75 transition-opacity">
             </a>
         </div>
     </footer>
 
-        <script>
+    <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- MAGNETIC CURSOR ---
             const cursor = document.querySelector('.cursor');
@@ -313,7 +367,7 @@
                 function animate() {
                     requestAnimationFrame(animate);
                     const t = clock.getElapsedTime();
-                    
+
                     wavesGroup.children.forEach(plane => {
                         const positions = plane.geometry.attributes.position;
                         const tOffset = plane.userData.tOffset;
@@ -392,8 +446,5 @@
     </script>
     <script src="custom.js"></script>
 </body>
+
 </html>
-
-
-
-

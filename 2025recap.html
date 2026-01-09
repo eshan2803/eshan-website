@@ -1,0 +1,3231 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>California Energy 2025: A Year in Review</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f172a;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        .hero {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 2rem;
+            background: radial-gradient(circle at center, rgba(15, 23, 42, 0.4) 0%, rgba(15, 23, 42, 0.9) 100%),
+                url('https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            position: relative;
+            scroll-snap-align: start;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, transparent 0%, #0f0c29 100%);
+            pointer-events: none;
+        }
+
+        .hero h1 {
+            font-size: 5rem;
+            font-weight: 900;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(to right, #ffecd2 0%, #fcb69f 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: glow 3s ease-in-out infinite alternate;
+            letter-spacing: -0.03em;
+            z-index: 1;
+            text-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        @keyframes glow {
+            from {
+                filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.5));
+            }
+
+            to {
+                filter: drop-shadow(0 0 40px rgba(255, 165, 0, 0.8));
+            }
+        }
+
+        .hero p {
+            font-size: 1.5rem;
+            color: #b8b8d1;
+            max-width: 800px;
+            line-height: 1.6;
+            font-weight: 400;
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 2rem;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            20%,
+            50%,
+            80%,
+            100% {
+                transform: translateY(0);
+            }
+
+            40% {
+                transform: translateY(-20px);
+            }
+
+            60% {
+                transform: translateY(-10px);
+            }
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            background: #000;
+        }
+
+
+        .section {
+            height: auto;
+            min-height: 100vh;
+            width: 100%;
+            padding: 4rem 6rem;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 4rem;
+            align-items: center;
+            scroll-snap-align: start;
+            position: relative;
+            background: transparent;
+            /* Changed from colored background to transparent */
+            /* border-bottom: 1px solid rgba(255, 255, 254, 0.05); Removed border for seamless flow */
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 1s ease, transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+            /* overflow: hidden; Removed to prevent cutting off content */
+            z-index: 1;
+        }
+
+        .section.alternate {
+            grid-template-columns: 400px 1fr;
+        }
+
+        .section.alternate .chart-container,
+        .section.alternate .heatmap-container {
+            grid-column: 2;
+        }
+
+        .section.alternate .section-content {
+            grid-column: 1;
+            grid-row: 1;
+        }
+
+        .section.full-width {
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .section.visible {
+            opacity: 1;
+            transform: translateY(0);
+            z-index: 2;
+        }
+
+        .section-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* Scatter the titles a bit */
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
+            text-align: left;
+            background: linear-gradient(45deg, #fff, #a5b4fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+            transform: translateX(-20px);
+            /* Slight random offset base */
+        }
+
+        .section.alternate .section-title {
+            text-align: right;
+            /* Align right for alternate sections */
+            transform: translateX(20px);
+        }
+
+        .section.full-width .section-title {
+            text-align: center;
+            transform: none;
+            font-size: 4rem;
+        }
+
+        .section-subtitle {
+            font-size: 1.2rem;
+            color: #cbd5e1;
+            text-align: left;
+            max-width: 100%;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+            font-weight: 400;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .section.alternate .section-subtitle {
+            text-align: right;
+        }
+
+        .section.full-width .section-subtitle {
+            text-align: center;
+            margin: 0 auto 2rem auto;
+        }
+
+
+
+        .chart-container {
+            width: 100%;
+            max-width: 1200px;
+            height: 58vh;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 20px;
+            padding: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            margin-bottom: 1.25rem;
+            position: relative;
+        }
+
+        .chart-container>div,
+        .heatmap-container>div {
+            width: 100%;
+            height: 100%;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            width: 90%;
+            max-width: 1000px;
+            margin: 2rem 0;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(45deg, #00f2fe, #4facfe);
+            /* Cooler, more modern blue gradient */
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 30px rgba(79, 172, 254, 0.3);
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #a0a0b0;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+
+        .insight-box {
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(10px);
+            border-left: 4px solid #4facfe;
+            padding: 2rem;
+            border-radius: 0 16px 16px 0;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transform: skewX(-2deg);
+            /* Added visual flair */
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .insight-box.no-border {
+            border-left: none !important;
+            border-right: none !important;
+            padding-left: 0;
+        }
+
+        .section.alternate .insight-box {
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+            border-right: 4px solid #ff9f43;
+            /* Different accent color */
+            border-radius: 16px 0 0 16px;
+            transform: skewX(2deg);
+        }
+
+        .insight-box h3 {
+            color: #4facfe;
+            margin-bottom: 1rem;
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transform: skewX(2deg);
+            /* Counter skew */
+        }
+
+        .section.alternate .insight-box h3 {
+            flex-direction: row-reverse;
+            color: #ff9f43;
+            transform: skewX(-2deg);
+        }
+
+        .insight-box p {
+            font-weight: 300;
+            line-height: 1.8;
+            color: #e2e8f0;
+            font-size: 1.1rem;
+            transform: skewX(2deg);
+            /* Counter skew */
+        }
+
+        .section.alternate .insight-box p {
+            text-align: right;
+            transform: skewX(-2deg);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 4rem;
+            font-size: 1.5rem;
+            color: #b8b8d1;
+        }
+
+        .energy-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .heatmap-container {
+            width: 100%;
+            max-width: 1400px;
+            height: 62vh;
+            background: rgba(15, 23, 42, 0.7);
+            border-radius: 24px;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        @media (max-width: 900px) {
+
+            .section,
+            .section.alternate {
+                grid-template-columns: 1fr;
+                /* Stack vertically */
+                height: auto;
+                padding: 3rem 2rem;
+                text-align: center;
+                gap: 2rem;
+            }
+
+            .section-content {
+                order: -1;
+                /* Text first on mobile usually looks better, or chart first? Let's do Text first for context */
+                width: 100%;
+                align-items: center;
+                /* Center align text content */
+            }
+
+            .section.alternate,
+            .section.alternate>* {
+                direction: ltr;
+                /* Reset direction hack */
+            }
+
+            .section-title,
+            .section.alternate .section-title,
+            .section.full-width .section-title {
+                text-align: center;
+                transform: none;
+                font-size: 2.5rem;
+            }
+
+            .section-subtitle,
+            .section.alternate .section-subtitle {
+                text-align: center;
+            }
+
+            .insight-box,
+            .section.alternate .insight-box {
+                width: 100%;
+                border-radius: 12px;
+                border-left: 4px solid #4facfe;
+                border-right: none;
+                transform: none;
+                /* Remove skew for simpler mobile view */
+                margin-top: 1rem;
+            }
+
+            .insight-box h3,
+            .insight-box p {
+                transform: none;
+                text-align: left;
+            }
+
+            .section.alternate .insight-box h3 {
+                flex-direction: row;
+            }
+
+            .hero h1 {
+                font-size: 3rem;
+            }
+
+            .chart-container,
+            .heatmap-container {
+                width: 100%;
+                height: 50vh;
+                /* Smaller height for mobile */
+                padding: 0.5rem;
+            }
+        }
+
+        /* Border Color Classes */
+        .insight-box.gold {
+            border-left-color: #FFD700;
+        }
+
+        .section.alternate .insight-box.gold {
+            border-right-color: #FFD700;
+            border-left: none;
+        }
+
+        .insight-box.cyan {
+            border-left-color: #00E5FF;
+        }
+
+        .section.alternate .insight-box.cyan {
+            border-right-color: #00E5FF;
+            border-left: none;
+        }
+
+        .insight-box.green {
+            border-left-color: #00E676;
+        }
+
+        .section.alternate .insight-box.green {
+            border-right-color: #00E676;
+            border-left: none;
+        }
+
+        .insight-box.red {
+            border-left-color: #FF5252;
+        }
+
+        .section.alternate .insight-box.red {
+            border-right-color: #FF5252;
+            border-left: none;
+        }
+
+        .insight-box.purple {
+            border-left-color: #7C4DFF;
+        }
+
+        .section.alternate .insight-box.purple {
+            border-right-color: #7C4DFF;
+            border-left: none;
+        }
+
+        /* Battery Animation */
+        .battery-icon {
+            width: 24px;
+            height: 12px;
+            border: 2px solid currentColor;
+            border-radius: 2px;
+            position: relative;
+            display: inline-block;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .battery-icon::before {
+            content: '';
+            position: absolute;
+            right: -4px;
+            top: 2px;
+            width: 2px;
+            height: 4px;
+            background: currentColor;
+        }
+
+        .battery-icon::after {
+            content: '';
+            position: absolute;
+            top: 1px;
+            left: 1px;
+            bottom: 1px;
+            background: currentColor;
+            width: 0%;
+            animation: charge 2s infinite linear;
+        }
+
+        @keyframes charge {
+            0% {
+                width: 0%;
+            }
+
+            100% {
+                width: calc(100% - 2px);
+            }
+        }
+
+        /* Scroll to Top Button */
+        .scroll-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .scroll-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .scroll-to-top:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6);
+        }
+
+        .scroll-to-top svg {
+            width: 24px;
+            height: 24px;
+            stroke: #0f172a;
+            stroke-width: 2.5;
+            fill: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="canvas-container"></div>
+
+    <!-- Scroll to Top Button -->
+    <button class="scroll-to-top" id="scrollToTop" title="Scroll to top">
+        <svg viewBox="0 0 24 24">
+            <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+    </button>
+
+    <div class="hero">
+        <h1>California Energy 2025</h1>
+        <p>A year of transformation on the power grid. From duck curves to battery breakthroughs,
+            explore how California powered through 2025 with unprecedented renewable energy integration.</p>
+        <div class="scroll-indicator">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4facfe" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </div>
+    </div>
+
+    <div class="section full-width" style="height: auto; min-height: 100vh; padding-top: 2rem; overflow: visible;">
+        <div class="section-content" style="align-items: center; width: 100%;">
+            <h2 class="section-title">The Year in Numbers</h2>
+            <p class="section-subtitle">2025 marked a pivotal year for California's energy transition</p>
+
+            <div class="insight-box no-border"
+                style="max-width: 800px; margin-top: 1rem; position: relative; z-index: 10; margin-bottom: 2rem; border: none; background: transparent;">
+                <p>2025 was a record-shattering year. Carbon-free energy regularly exceeded 100% of demand, and
+                    battery
+                    storage became the primary tool for managing evening peaks, fundamentally changing how California's
+                    grid operates.</p>
+            </div>
+
+            <div id="loading-stats" class="loading">Loading data...</div>
+            <div class="stats-grid" id="stats-grid" style="display: none; margin-top: 1rem;"></div>
+        </div>
+    </div>
+
+    <div class="section" id="section-capacity">
+        <div class="chart-container">
+            <div id="capacity-growth-chart"></div>
+        </div>
+        <div class="section-content">
+            <h2 class="section-title">How Far We've Come</h2>
+            <div class="insight-box gold">
+                <p>California's renewable capacity has grown exponentially since 2010.
+                    Solar capacity exploded from 1.0 GW in 2010 to over 25 GW by 2025, while batteries
+                    emerged as a major grid resource only in the last few years, now providing critical flexibility with
+                    over 15 GW installed. More importantly, we continued to decrease our emissions and are on track to
+                    reach zero emissions by 2045.</p>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="section alternate">
+        <div class="heatmap-container">
+            <div id="load-heatmap"></div>
+        </div>
+        <div class="section-content">
+            <h2 class="section-title">365 Days of Load</h2>
+            <p class="section-subtitle">Every hour of every day in 2025. Warmer colors = higher demand</p>
+            <div class="insight-box red">
+                <p>Summer afternoons show peak demand, with clear daily patterns of morning and evening peaks.
+                    Winter months show lower overall demand but strong evening peaks.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" id="section-solar">
+        <div class="heatmap-container">
+            <div id="solar-heatmap"></div>
+        </div>
+        <div class="section-content">
+            <h2 class="section-title">365 Days of Solar Generation</h2>
+            <p class="section-subtitle">The sun's daily dance across California. Dark blue to bright yellow = low to
+                high generation</p>
+            <div class="insight-box gold">
+                <p>Summer months show incredible solar peaks exceeding 20 GW. Unsurprisingly, winters suffer from
+                    lower solar generation capacity factors. Note the occasional gaps from cloudy weather.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section alternate" id="section-wind">
+        <div class="heatmap-container">
+            <div id="wind-heatmap"></div>
+        </div>
+        <div class="section-content">
+            <h2 class="section-title">365 Days of Wind Generation</h2>
+            <p class="section-subtitle">Wind patterns throughout the year</p>
+            <div class="insight-box cyan">
+                <p>Wind generation complements solar generation in spring-summer periods, but dips
+                    together with solar during winters. Unlike solar's predictable pattern, wind shows more variability
+                    and often generates at night.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" id="section-battery-ops">
+        <div class="heatmap-container">
+            <div id="battery-heatmap"></div>
+        </div>
+        <div class="section-content">
+            <h2 class="section-title">365 Days of Battery Operations</h2>
+            <p class="section-subtitle">Blue = charging, Red = discharging</p>
+            <div class="insight-box green">
+                <p>The daily battery cycle is crystal clear: charge during midday solar abundance (10 AM - 2 PM),
+                    discharge during evening peak (6-9 PM). The batteries are starting to help ease morning peaks as
+                    well, and charging overnight. We also witnessed batteries crossing 10GW discharge mark, helping push
+                    the use of natural gas generators down across the year.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section alternate" id="section-netload">
+        <div class="heatmap-container">
+            <div id="netload-heatmap"></div>
+        </div>
+        <div class="section-content">
+            <h2 class="section-title">365 Days of Net Load</h2>
+            <p class="section-subtitle">Load minus renewables = what the grid must supply from dispatchable sources</p>
+            <div class="insight-box purple">
+                <p>The duck curve pattern is visible every day! Deep midday valleys (solar reducing net load)
+                    and steep evening ramps. Spring shows the most dramatic ducks due to high solar and moderate load.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" id="section-emissions">
+        <div class="heatmap-container">
+            <div id="emissions-heatmap"></div>
+        </div>
+        <div class="section-content">
+            <h2 class="section-title">365 Days of CO2 Emissions</h2>
+            <p class="section-subtitle">Estimated hourly CO2 emissions (Metric Tons) from in-state generation and
+                imports</p>
+            <div class="insight-box red">
+                <p>Emissions closely track the "Net Load" rather than total load. Midday solar drives emissions down
+                    significantly,
+                    while evening peaks require ramping up natural gas and imports, spiking emissions.</p>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="section alternate" id="section-prices">
+        <div class="heatmap-container">
+            <div id="price-avg-heatmap"></div>
+        </div>
+        <div class="section-content">
+            <h2 class="section-title">365 Days of Electricity Prices (California Average)</h2>
+            <p class="section-subtitle">Average market prices across all three California regions (NP15, SP15, ZP26)</p>
+            <div class="insight-box green">
+                <p>Prices crater during midday solar over-generation, sometimes going negative. Evening prices
+                    spike as solar fades and demand remains high. This creates powerful arbitrage for batteries.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" id="section-backbone">
+        <div class="chart-container">
+            <div id="battery-chart"></div>
+        </div>
+        <div class="section-content">
+            <h2 class="section-title">Batteries: The Grid's New Backbone</h2>
+            <p class="section-subtitle">4-hour battery systems transformed from novelty to necessity,
+                absorbing midday solar and powering evening peaks</p>
+            <div class="insight-box green">
+                <p>Batteries charged during solar over-generation hours (negative values) and discharged precisely
+                    when the grid needed it most - during morening and evening peaks. They show up instantly, manage
+                    the regulation with finesse. In 2026, they will be moving further into long-duration regions.</p>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="section alternate" id="section-curtailment-local">
+        <div class="heatmap-container">
+            <div id="local-curtailment-heatmap"></div>
+        </div>
+        <div class="section-content">
+            <h2 class="section-title">365 Days of Local Curtailment</h2>
+            <p class="section-subtitle">Renewable energy that could not be delivered due to local transmission
+                constraints</p>
+            <div class="insight-box red">
+                <p>California had to curtail a lot of generation, and not all of it was due to oversupply. More
+                    often, this was renewable energy that could not be delivered due to local transmission constraints
+                    (transmission lines reaching the limit of how many MWs they can transfer).</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" id="section-curtailment-system">
+        <div class="heatmap-container">
+            <div id="system-curtailment-heatmap"></div>
+        </div>
+        <div class="section-content">
+            <h2 class="section-title">365 Days of System Curtailment</h2>
+            <p class="section-subtitle">Renewable energy oversupply that was curtailed to maintain system balance</p>
+            <div class="insight-box purple">
+                <p>Because of very prudent solar build-out, we also observe long periods when primarily solar energy
+                    oversupply was curtailed curtailed to maintain system balance.</p>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="section alternate" id="section-handoff">
+        <div class="chart-container">
+            <div id="gas-battery-chart"></div>
+        </div>
+        <div class="section-content">
+            <h2 class="section-title">The Evening Hand-off</h2>
+            <p class="section-subtitle">As the sun sets, batteries now take the first shift before natural gas ramps up
+            </p>
+            <div class="insight-box cyan">
+                <p>This is the new "Duck Curve" solution. Batteries (red) discharge furiously from 6-9 PM, blunting
+                    the
+                    sharp ramp that Natural Gas (grey) used to have to handle alone. This greatly reduces carbon
+                    emissions
+                    during peak hours.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" id="section-duration">
+        <div class="chart-container">
+            <div id="duration-curve-chart"></div>
+        </div>
+        <div class="section-content">
+            <h2 class="section-title">Renewable Duration Curve</h2>
+            <p class="section-subtitle">How often did we hit 100% clean energy?</p>
+            <div class="insight-box" id="duration-insight">
+                <!-- Content will be injected by JS -->
+            </div>
+        </div>
+    </div>
+
+    <div class="section alternate" id="section-milestones">
+        <div class="chart-container">
+            <div id="carbon-gauge"></div>
+        </div>
+        <div class="section-content">
+            <h2 class="section-title">Carbon-Free Milestones</h2>
+            <p class="section-subtitle">California's progress toward a 100% clean grid</p>
+            <div class="insight-box gold">
+                <p>The 57.3% figure represents the total in-state annual Carbon-Free Generation (Solar, Wind, Hydro,
+                    Nuclear, Geo, Bio) divided by Total Load. This does not include out-of-state clean generation that
+                    we import.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section full-width" id="section-looking-forward" style="min-height: 50vh; text-align: center;">
+        <h2 class="section-title" style="transform: none; text-align: center; margin-bottom: 2rem;">Looking Forward</h2>
+        <div class="insight-box"
+            style="max-width: 900px; margin: 0 auto; transform: none; border: none; background: transparent;">
+            <p style="text-align: center; font-size: 1.2rem; transform: none;">
+                2025 proved that a renewable-dominated grid isn't just possible—it's happening. As battery
+                storage scales and solar continues its exponential growth, We will (continue to) build batteries at
+                breakneck speed.
+                Batteries will replace natural gas in regions other than evening peaks. We might see a surge in
+                demand from large load. Hopefully that wont derail us from our emission targets.
+                <br><br>
+                California is writing the playbook for the world's clean energy future.
+                <br><br>
+                Please share your feedback at <a href="mailto:hello@eshansingh.xyz"
+                    style="color: #4facfe;">hello@eshansingh.xyz</a>
+                <br>
+                See my other work here: <a href="https://eshansingh.xyz" target="_blank"
+                    style="color: #4facfe;">eshansingh.xyz</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let data = [];
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+        // Load and parse CSV data
+        d3.csv('final_energy_data_2025_with_emissions.csv').then(function (csvData) {
+            data = csvData.map(d => {
+                const [datePart] = d.Date.split(' ');
+                const [month, day, year] = datePart.split('/').map(Number);
+                // Calculate Other Renewables (Geo + Bio + Small Hydro) based on Total Renewables - Solar - Wind
+                const renewables = +d.Renewables || 0;
+                const solar = +d.Solar || 0;
+                const wind = +d.Wind || 0;
+                const otherRenewables = Math.max(0, renewables - solar - wind);
+
+                return {
+                    year: year,
+                    month: month,
+                    day: day,
+                    hour: +d.Hour,
+                    load: (+d.Load || 0) / 1000, // Convert to GW
+                    batteries: (+d.Batteries || 0) / 1000, // Convert to GW
+                    solar: solar / 1000, // Convert to GW
+                    wind: wind / 1000, // Convert to GW
+                    naturalGas: (+d.Thermal || 0) / 1000, // Convert to GW
+                    nuclear: (+d.Nuclear || 0) / 1000, // Convert to GW
+                    hydro: (+d['Large Hydro'] || 0) / 1000, // Convert to GW
+                    otherRenewables: otherRenewables / 1000, // Convert to GW
+                    imports: (+d.Imports || 0) / 1000, // Convert to GW
+                    lmp_np15: +d.LMP_NP15,
+                    lmp_sp15: +d.LMP_SP15,
+                    lmp_zp26: +d.LMP_ZP26,
+                    width: +d.Width,
+                    // Wait, I need to match the CSV headers I saw: "Local Curtailment", "System Curtailment"
+                    localCurtailment: (+d['Local Curtailment'] || 0) / 1000, // Convert to GW
+                    systemCurtailment: (+d['System Curtailment'] || 0) / 1000, // Convert to GW
+                    co2: +d['Emissions (mTCO2/h)'],
+                    anl: (+d.ANL || 0) / 1000 // Convert to GW
+                };
+            });
+
+            createStats();
+            createCapacityGrowth();
+            createLoadHeatmap();
+            createSolarHeatmap();
+            createBatteryHeatmap();
+            createNetLoadHeatmap();
+            createEmissionsHeatmap();
+            createWindHeatmap();
+            createAveragePriceHeatmap();
+            createBatteryChart();
+            createLocalCurtailmentHeatmap();
+            createSystemCurtailmentHeatmap();
+            createGasBatteryChart();
+            createDurationCurve();
+            createCarbonGauge();
+        }).catch(error => {
+            console.error('Error loading data:', error);
+            const loadingStats = document.getElementById('loading-stats');
+            if (loadingStats) {
+                loadingStats.innerHTML = `
+                    <div style="color: #ff6b6b; padding: 20px; border: 1px solid #ff6b6b; border-radius: 8px; background: rgba(255,107,107,0.1);">
+                        <h3>Data Loading Error</h3>
+                        <p>Unable to load <b>final_energy_data_2025_with_emissions.csv</b>.</p>
+                        <p style="font-size: 0.9rem; margin-top: 10px;">Please ensure you are using a local web server (like VS Code Live Server) to bypass browser CORS restrictions for local files.</p>
+                    </div>
+                `;
+            }
+        });
+
+        function getDayOfYear(month, day) {
+            let dayOfYear = day;
+            for (let i = 0; i < month - 1; i++) {
+                dayOfYear += daysInMonth[i];
+            }
+            return dayOfYear;
+        }
+
+        function getDateFromDayOfYear(dayOfYear) {
+            let month = 0;
+            let day = dayOfYear;
+            for (let i = 0; i < 12; i++) {
+                if (day <= daysInMonth[i]) {
+                    month = i + 1;
+                    break;
+                }
+                day -= daysInMonth[i];
+            }
+            return { month, day };
+        }
+
+        function formatHour(hour) {
+            const h = hour + 1;
+            const period = h < 12 ? 'AM' : 'PM';
+            const displayHour = h === 12 ? 12 : h > 12 ? h - 12 : h;
+            return `${displayHour} ${period}`;
+        }
+
+        function createHeatmapData(metric) {
+            const heatmapData = Array(24).fill().map(() => Array(365).fill(0));
+
+            data.forEach(d => {
+                const dayOfYear = getDayOfYear(d.month, d.day) - 1;
+                const hour = d.hour - 1;
+                let value = 0;
+
+                if (metric === 'load') value = d.load;
+                else if (metric === 'solar') value = Math.max(0, d.solar);
+                else if (metric === 'wind') value = d.wind;
+                else if (metric === 'battery') value = d.batteries;
+                else if (metric === 'netload') value = d.anl;
+                else if (metric === 'emissions') value = d.co2;
+                else if (metric === 'local_curtailment') value = d.localCurtailment;
+                else if (metric === 'system_curtailment') value = d.systemCurtailment;
+                else if (metric === 'price_np15') value = d.lmp_np15;
+                else if (metric === 'price_sp15') value = d.lmp_sp15;
+                else if (metric === 'price_zp26') value = d.lmp_zp26;
+                else if (metric === 'price_avg') value = (d.lmp_np15 + d.lmp_sp15 + d.lmp_zp26) / 3;
+
+                heatmapData[hour][dayOfYear] = value;
+            });
+
+            return heatmapData;
+        }
+
+        function createCapacityGrowth() {
+            // Historical capacity data for California (2010-2025)
+            const years = [2010, 2015, 2018, 2020, 2021, 2022, 2023, 2024, 2025];
+
+            // Actual historical capacity data (utility-scale solar)
+            const historicalData = {
+                solar: [1.0, 9.0, 12.0, 14.0, 15.1, 16.9, 20.2, 22.5, 25.4],
+                wind: [3.2, 6.0, 6.0, 6.0, 6.2, 6.2, 6.3, 6.4, 6.4],
+                battery: [0, 0.2, 0.3, 0.5, 1.5, 2.5, 5.0, 15.0, 15.7],
+                naturalGas: [40.0, 40.0, 41.0, 39.5, 39.4, 39.5, 39.7, 38.6, 38.6]
+            };
+
+            // CO2 emissions data (mTCO2) - data from 2014-2025
+            const emissionsYears = [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025];
+            const emissionsData = [68780731, 66241778, 57959115, 52856896, 53938026, 51049895, 49626238, 53204059, 53129075, 44013190, 40576357, 38841595];
+            // Convert to millions of metric tons for readability
+            const emissionsDataMT = emissionsData.map(d => d / 1000000);
+
+            const traces = [
+                {
+                    x: years,
+                    y: historicalData.solar,
+                    name: 'Solar',
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    line: { width: 4, color: '#FFD700' },
+                    marker: { size: 8 },
+                    hovertemplate: '%{y:.2f} GW<extra></extra>'
+                },
+                {
+                    x: years,
+                    y: historicalData.battery,
+                    name: 'Battery Storage',
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    line: { width: 4, color: '#FF6347' },
+                    marker: { size: 8 },
+                    hovertemplate: '%{y:.2f} GW<extra></extra>'
+                },
+                {
+                    x: years,
+                    y: historicalData.wind,
+                    name: 'Wind',
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    line: { width: 4, color: '#4facfe' },
+                    marker: { size: 8 },
+                    hovertemplate: '%{y:.2f} GW<extra></extra>'
+                },
+                {
+                    x: years,
+                    y: historicalData.naturalGas,
+                    name: 'Natural Gas',
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    line: { width: 3, color: '#A9A9A9', dash: 'dash' },
+                    marker: { size: 6 },
+                    opacity: 0.7,
+                    hovertemplate: '%{y:.2f} GW<extra></extra>'
+                },
+                {
+                    x: emissionsYears,
+                    y: emissionsDataMT,
+                    name: 'CO2 Emissions',
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    line: { width: 4, color: '#8B4513' },
+                    marker: { size: 8, symbol: 'diamond' },
+                    yaxis: 'y2',
+                    hovertemplate: '%{y:.2f} Million MT<extra></extra>'
+                }
+            ];
+
+            const layout = {
+                title: {
+                    text: 'California Grid Capacity Growth & CO2 Emissions (2010-2025)',
+                    font: { size: 24, color: '#fff', family: 'Inter' }
+                },
+                xaxis: {
+                    title: 'Year',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    font: { family: 'Inter', size: 14 }
+                },
+                yaxis: {
+                    title: 'Installed Capacity (GW)',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    font: { family: 'Inter', size: 14 },
+                    range: [0, 50] // Aligning scale visually
+                },
+                yaxis2: {
+                    title: 'CO2 Emissions (Million MT)',
+                    overlaying: 'y',
+                    side: 'right',
+                    color: '#8B4513',
+                    gridcolor: 'rgba(139,69,19,0.1)',
+                    font: { family: 'Inter', size: 14 },
+                    range: [0, 70],
+                    tickformat: ',.0f'
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#fff', family: 'Inter' },
+                hoverlabel: {
+                    bgcolor: '#1e293b',
+                    font: { color: '#fff', family: 'Inter' }
+                },
+                hovermode: 'x unified',
+                margin: { l: 60, r: 80, t: 80, b: 60 },
+                legend: {
+                    orientation: 'h',
+                    y: -0.2,
+                    x: 0.5,
+                    xanchor: 'center',
+                    font: { family: 'Inter', size: 14 }
+                }
+            };
+
+            Plotly.newPlot('capacity-growth-chart', traces, layout, { responsive: true });
+        }
+
+        function createLoadHeatmap() {
+            const heatmapData = createHeatmapData('load');
+
+            const customData = [];
+            for (let hour = 0; hour < 24; hour++) {
+                const hourRow = [];
+                for (let day = 0; day < 365; day++) {
+                    const date = getDateFromDayOfYear(day + 1);
+                    hourRow.push({
+                        date: `${monthNames[date.month - 1]} ${date.day}`,
+                        hour: formatHour(hour),
+                        value: heatmapData[hour][day]
+                    });
+                }
+                customData.push(hourRow);
+            }
+
+            const trace = {
+                z: heatmapData,
+                type: 'heatmap',
+                colorscale: [
+                    [0, '#FFF59D'],
+                    [0.5, '#FF9800'],
+                    [1, '#D32F2F']
+                ],
+                colorbar: {
+                    title: { text: 'GW', font: { family: 'Inter' } },
+                    titleside: 'right',
+                    tickfont: { color: '#fff', family: 'Inter' },
+                    titlefont: { color: '#fff', family: 'Inter' }
+                },
+                hovertemplate: '<b>%{customdata.date}</b><br>%{customdata.hour}<br><b>%{customdata.value:.1f} GW</b><extra></extra>',
+                customdata: customData
+            };
+
+            const layout = {
+                title: {
+                    text: 'Hourly Load - Every Day of 2025',
+                    font: { size: 22, color: '#fff', family: 'Inter' }
+                },
+                xaxis: {
+                    title: 'Day of Year',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    tickvals: [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334],
+                    ticktext: monthNames,
+                    font: { family: 'Inter' }
+                },
+                yaxis: {
+                    title: 'Hour of Day',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    tickvals: [0, 6, 12, 18, 23],
+                    ticktext: ['1 AM', '7 AM', '1 PM', '7 PM', '12 AM'],
+                    font: { family: 'Inter' }
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#fff', family: 'Inter' },
+                hoverlabel: {
+                    bgcolor: '#1e293b',
+                    font: { color: '#fff', family: 'Inter' }
+                },
+                height: 700,
+                margin: { l: 60, r: 20, t: 60, b: 60 }
+            };
+
+            Plotly.newPlot('load-heatmap', [trace], layout, { responsive: true });
+        }
+
+        function createSolarHeatmap() {
+            const heatmapData = createHeatmapData('solar');
+
+            const customData = [];
+            for (let hour = 0; hour < 24; hour++) {
+                const hourRow = [];
+                for (let day = 0; day < 365; day++) {
+                    const date = getDateFromDayOfYear(day + 1);
+                    hourRow.push({
+                        date: `${monthNames[date.month - 1]} ${date.day}`,
+                        hour: formatHour(hour),
+                        value: heatmapData[hour][day]
+                    });
+                }
+                customData.push(hourRow);
+            }
+
+            const trace = {
+                z: heatmapData,
+                type: 'heatmap',
+                colorscale: [
+                    [0, '#000000'],      // Night (Black)
+                    [0.1, '#4E342E'],    // Deep Brown-Red
+                    [0.3, '#BF360C'],    // Deep Orange
+                    [0.5, '#FF6F00'],    // Amber
+                    [0.7, '#FFC107'],    // Light Amber
+                    [1, '#FFFF00']       // Bright Yellow
+                ],
+                colorbar: {
+                    title: { text: 'GW', font: { family: 'Inter' } },
+                    titleside: 'right',
+                    tickfont: { color: '#fff', family: 'Inter' },
+                    titlefont: { color: '#fff', family: 'Inter' }
+                },
+                hovertemplate: '<b>%{customdata.date}</b><br>%{customdata.hour}<br><b>%{customdata.value:.1f} GW</b><extra></extra>',
+                customdata: customData
+            };
+
+            const layout = {
+                title: {
+                    text: 'Hourly Solar Generation - Every Day of 2025',
+                    font: { size: 22, color: '#fff', family: 'Inter' }
+                },
+                xaxis: {
+                    title: 'Day of Year',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    tickvals: [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334],
+                    ticktext: monthNames,
+                    font: { family: 'Inter' }
+                },
+                yaxis: {
+                    title: 'Hour of Day',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    tickvals: [0, 6, 12, 18, 23],
+                    ticktext: ['1 AM', '7 AM', '1 PM', '7 PM', '12 AM'],
+                    font: { family: 'Inter' }
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#fff', family: 'Inter' },
+                hoverlabel: {
+                    bgcolor: '#1e293b',
+                    font: { color: '#fff', family: 'Inter' }
+                },
+                height: 700,
+                margin: { l: 60, r: 20, t: 60, b: 60 }
+            };
+
+            Plotly.newPlot('solar-heatmap', [trace], layout, { responsive: true });
+        }
+
+        function createBatteryHeatmap() {
+            const heatmapData = createHeatmapData('battery');
+
+            const customData = [];
+            for (let hour = 0; hour < 24; hour++) {
+                const hourRow = [];
+                for (let day = 0; day < 365; day++) {
+                    const date = getDateFromDayOfYear(day + 1);
+                    hourRow.push({
+                        date: `${monthNames[date.month - 1]} ${date.day}`,
+                        hour: formatHour(hour),
+                        value: heatmapData[hour][day]
+                    });
+                }
+                customData.push(hourRow);
+            }
+
+            const trace = {
+                z: heatmapData,
+                type: 'heatmap',
+                colorscale: [
+                    [0, '#0D47A1'],
+                    [0.4, '#42A5F5'],
+                    [0.5, '#FFFFFF'],
+                    [0.6, '#FF9800'],
+                    [1, '#D32F2F']
+                ],
+                colorbar: {
+                    title: { text: 'GW', font: { family: 'Inter' } },
+                    titleside: 'right',
+                    tickfont: { color: '#fff', family: 'Inter' },
+                    titlefont: { color: '#fff', family: 'Inter' }
+                },
+                zmid: 0,
+                hovertemplate: '<b>%{customdata.date}</b><br>%{customdata.hour}<br><b>%{customdata.value:.1f} GW</b><extra></extra>',
+                customdata: customData
+            };
+
+            const layout = {
+                title: {
+                    text: 'Hourly Battery Operations - Every Day of 2025',
+                    font: { size: 22, color: '#fff', family: 'Inter' }
+                },
+                xaxis: {
+                    title: 'Day of Year',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    tickvals: [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334],
+                    ticktext: monthNames,
+                    font: { family: 'Inter' }
+                },
+                yaxis: {
+                    title: 'Hour of Day',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    tickvals: [0, 6, 12, 18, 23],
+                    ticktext: ['1 AM', '7 AM', '1 PM', '7 PM', '12 AM'],
+                    font: { family: 'Inter' }
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#fff', family: 'Inter' },
+                hoverlabel: {
+                    bgcolor: '#1e293b',
+                    font: { color: '#fff', family: 'Inter' }
+                },
+                height: 700,
+                margin: { l: 60, r: 20, t: 60, b: 60 }
+            };
+
+            Plotly.newPlot('battery-heatmap', [trace], layout, { responsive: true });
+        }
+
+        function createNetLoadHeatmap() {
+            const heatmapData = createHeatmapData('netload');
+
+            const customData = [];
+            for (let hour = 0; hour < 24; hour++) {
+                const hourRow = [];
+                for (let day = 0; day < 365; day++) {
+                    const date = getDateFromDayOfYear(day + 1);
+                    hourRow.push({
+                        date: `${monthNames[date.month - 1]} ${date.day}`,
+                        hour: formatHour(hour),
+                        value: heatmapData[hour][day]
+                    });
+                }
+                customData.push(hourRow);
+            }
+
+            const trace = {
+                z: heatmapData,
+                type: 'heatmap',
+                colorscale: [
+                    [0, '#00C853'],
+                    [0.35, '#69F0AE'],
+                    [0.5, '#FFFFFF'],
+                    [0.65, '#FDD835'],
+                    [0.85, '#FF9800'],
+                    [1, '#D32F2F']
+                ],
+                colorbar: {
+                    title: { text: 'GW', font: { family: 'Inter' } },
+                    titleside: 'right',
+                    tickfont: { color: '#fff', family: 'Inter' },
+                    titlefont: { color: '#fff', family: 'Inter' }
+                },
+                zmid: 0,
+                hovertemplate: '<b>%{customdata.date}</b><br>%{customdata.hour}<br><b>%{customdata.value:.1f} GW</b><extra></extra>',
+                customdata: customData
+            };
+
+            const layout = {
+                title: {
+                    text: 'Hourly Net Load - Every Day of 2025',
+                    font: { size: 22, color: '#fff', family: 'Inter' }
+                },
+                xaxis: {
+                    title: 'Day of Year',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    tickvals: [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334],
+                    ticktext: monthNames,
+                    font: { family: 'Inter' }
+                },
+                yaxis: {
+                    title: 'Hour of Day',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    tickvals: [0, 6, 12, 18, 23],
+                    ticktext: ['1 AM', '7 AM', '1 PM', '7 PM', '12 AM'],
+                    font: { family: 'Inter' }
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#fff', family: 'Inter' },
+                hoverlabel: {
+                    bgcolor: '#1e293b',
+                    font: { color: '#fff', family: 'Inter' }
+                },
+                height: 700,
+                margin: { l: 60, r: 20, t: 60, b: 60 }
+            };
+
+            Plotly.newPlot('netload-heatmap', [trace], layout, { responsive: true });
+        }
+
+        function createEmissionsHeatmap() {
+            const heatmapData = createHeatmapData('emissions');
+
+            const customData = [];
+            for (let hour = 0; hour < 24; hour++) {
+                const hourRow = [];
+                for (let day = 0; day < 365; day++) {
+                    const date = getDateFromDayOfYear(day + 1);
+                    hourRow.push({
+                        date: `${monthNames[date.month - 1]} ${date.day}`,
+                        hour: formatHour(hour),
+                        value: heatmapData[hour][day]
+                    });
+                }
+                customData.push(hourRow);
+            }
+
+            const trace = {
+                z: heatmapData,
+                type: 'heatmap',
+                colorscale: [
+                    [0, '#66BB6A'], // Green (Low)
+                    [0.5, '#FFEE58'], // Yellow
+                    [1, '#263238']  // Dark Grey/Black (High)
+                ],
+                colorbar: {
+                    title: { text: 'MT CO2', font: { family: 'Inter' } },
+                    titleside: 'right',
+                    tickfont: { color: '#fff', family: 'Inter' },
+                    titlefont: { color: '#fff', family: 'Inter' }
+                },
+                hovertemplate: '<b>%{customdata.date}</b><br>%{customdata.hour}<br><b>%{customdata.value:.0f} MT</b><extra></extra>',
+                customdata: customData
+            };
+
+            const layout = {
+                title: {
+                    text: 'Hourly CO2 Emissions - Total Metric Tons',
+                    font: { size: 22, color: '#fff', family: 'Inter' }
+                },
+                xaxis: {
+                    title: 'Day of Year',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    tickvals: [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334],
+                    ticktext: monthNames,
+                    font: { family: 'Inter' }
+                },
+                yaxis: {
+                    title: 'Hour of Day',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    tickvals: [0, 6, 12, 18, 23],
+                    ticktext: ['1 AM', '7 AM', '1 PM', '7 PM', '12 AM'],
+                    font: { family: 'Inter' }
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#fff', family: 'Inter' },
+                hoverlabel: {
+                    bgcolor: '#1e293b',
+                    font: { color: '#fff', family: 'Inter' }
+                },
+                height: 700,
+                margin: { l: 60, r: 20, t: 60, b: 60 }
+            };
+
+            Plotly.newPlot('emissions-heatmap', [trace], layout, { responsive: true });
+        }
+
+        function createWindHeatmap() {
+            const heatmapData = createHeatmapData('wind');
+
+            const customData = [];
+            for (let hour = 0; hour < 24; hour++) {
+                const hourRow = [];
+                for (let day = 0; day < 365; day++) {
+                    const date = getDateFromDayOfYear(day + 1);
+                    hourRow.push({
+                        date: `${monthNames[date.month - 1]} ${date.day}`,
+                        hour: formatHour(hour),
+                        value: heatmapData[hour][day]
+                    });
+                }
+                customData.push(hourRow);
+            }
+
+            const trace = {
+                z: heatmapData,
+                type: 'heatmap',
+                colorscale: [
+                    [0, '#000000'],
+                    [0.5, '#42A5F5'],
+                    [1, '#00E5FF']
+                ],
+                colorbar: {
+                    title: { text: 'GW', font: { family: 'Inter' } },
+                    titleside: 'right',
+                    tickfont: { color: '#fff', family: 'Inter' },
+                    titlefont: { color: '#fff', family: 'Inter' }
+                },
+                hovertemplate: '<b>%{customdata.date}</b><br>%{customdata.hour}<br><b>%{customdata.value:.1f} GW</b><extra></extra>',
+                customdata: customData
+            };
+
+            const layout = {
+                title: {
+                    text: 'Hourly Wind Generation - Every Day of 2025',
+                    font: { size: 22, color: '#fff', family: 'Inter' }
+                },
+                xaxis: {
+                    title: 'Day of Year',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    tickvals: [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334],
+                    ticktext: monthNames,
+                    font: { family: 'Inter' }
+                },
+                yaxis: {
+                    title: 'Hour of Day',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    tickvals: [0, 6, 12, 18, 23],
+                    ticktext: ['1 AM', '7 AM', '1 PM', '7 PM', '12 AM'],
+                    font: { family: 'Inter' }
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#fff', family: 'Inter' },
+                hoverlabel: {
+                    bgcolor: '#1e293b',
+                    font: { color: '#fff', family: 'Inter' }
+                },
+                height: 700,
+                margin: { l: 60, r: 20, t: 60, b: 60 }
+            };
+
+            Plotly.newPlot('wind-heatmap', [trace], layout, { responsive: true });
+        }
+
+
+        function createAveragePriceHeatmap() {
+            const heatmapData = createHeatmapData('price_avg');
+
+            const customData = [];
+            for (let hour = 0; hour < 24; hour++) {
+                const hourRow = [];
+                for (let day = 0; day < 365; day++) {
+                    const date = getDateFromDayOfYear(day + 1);
+                    hourRow.push({
+                        date: `${monthNames[date.month - 1]} ${date.day}`,
+                        hour: formatHour(hour),
+                        value: heatmapData[hour][day]
+                    });
+                }
+                customData.push(hourRow);
+            }
+
+            const trace = {
+                z: heatmapData,
+                type: 'heatmap',
+                colorscale: [
+                    [0, '#1A237E'],
+                    [0.3, '#42A5F5'],
+                    [0.5, '#FFEB3B'],
+                    [0.7, '#FF9800'],
+                    [1, '#D32F2F']
+                ],
+                colorbar: {
+                    title: { text: '$/MWh', font: { family: 'Inter' } },
+                    titleside: 'right',
+                    tickfont: { color: '#fff', family: 'Inter' },
+                    titlefont: { color: '#fff', family: 'Inter' }
+                },
+                hovertemplate: '<b>%{customdata.date}</b><br>%{customdata.hour}<br><b>$%{customdata.value:.2f}/MWh</b><extra></extra>',
+                customdata: customData
+            };
+
+            const layout = {
+                title: {
+                    text: 'Hourly Electricity Prices (California Average) - Every Day of 2025',
+                    font: { size: 22, color: '#fff', family: 'Inter' }
+                },
+                xaxis: {
+                    title: 'Day of Year',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    tickvals: [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334],
+                    ticktext: monthNames,
+                    font: { family: 'Inter' }
+                },
+                yaxis: {
+                    title: 'Hour of Day',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    tickvals: [0, 6, 12, 18, 23],
+                    ticktext: ['1 AM', '7 AM', '1 PM', '7 PM', '12 AM'],
+                    font: { family: 'Inter' }
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#fff', family: 'Inter' },
+                hoverlabel: {
+                    bgcolor: '#1e293b',
+                    font: { color: '#fff', family: 'Inter' }
+                },
+                height: 700,
+                margin: { l: 60, r: 20, t: 60, b: 60 }
+            };
+
+            Plotly.newPlot('price-avg-heatmap', [trace], layout, { responsive: true });
+        }
+
+        function createStats() {
+            // Updated statistics manually as requested or calculated where appropriate
+            const stats = [
+                {
+                    label: 'Clean Energy Generation',
+                    value: '57.3%',
+                    icon: '☀️',
+                    desc: 'Sum of in-state solar, wind, large hydro, nuclear, geothermal, biomass and biogas'
+                },
+                {
+                    label: 'Solar Generated',
+                    value: '57.0 TWh',
+                    icon: '⚡',
+                    desc: 'We added 2.9 GW of new solar capacity'
+                },
+                {
+                    label: 'Peak Battery Output',
+                    value: '10.7 GW',
+                    icon: '🔋',
+                    desc: 'Batteries surpassed 10GW mark not once but more than 10 hours this year'
+                },
+                {
+                    label: 'Electricity Curtailed',
+                    value: '3.8 TWh',
+                    icon: '✂️',
+                    desc: '3.12 TWh of curtailment came from transmission congestion rather than oversupply of renewables'
+                },
+                {
+                    label: 'Peak Solar Generation',
+                    value: '21.6 GW',
+                    icon: '🌞',
+                    desc: 'Solar generation crossed the 20 GW in more than 500 hours, mostly in spring-summer season'
+                },
+                {
+                    label: 'Battery Energy Cycled',
+                    value: '14.2 TWh',
+                    icon: '🔄',
+                    desc: 'Batteries regularly contributed to evening ramps, and now impacting morning ramps and longer durations'
+                }
+            ];
+
+            const statsGrid = document.getElementById('stats-grid');
+            // Check if stats are already populated to prevent duplicate if function called twice
+            if (statsGrid.innerHTML.trim() !== "") return;
+
+            // Hide loading text and show grid
+            document.getElementById('loading-stats').style.display = 'none';
+            statsGrid.style.display = 'grid';
+
+            stats.forEach((stat, index) => {
+                const card = document.createElement('div');
+                card.className = 'stat-card';
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.title = stat.desc; // Native tooltip
+
+                // Add custom tooltip behavior could be here, but using 'title' attribute for simplicity first
+
+                card.innerHTML = `
+                    <div class="energy-icon">${stat.icon}</div>
+                    <div class="stat-value">${stat.value}</div>
+                    <div class="stat-label">${stat.label}</div>
+                    <div class="stat-desc" style="display:none; position:absolute; bottom:100%; left:0; width:100%; background:rgba(0,0,0,0.9); padding:0.5rem; font-size:0.8rem; border-radius:8px; pointer-events:none; z-index:100;">${stat.desc}</div>
+                `;
+
+                // Enhance tooltip with JS
+                card.addEventListener('mouseenter', () => {
+                    card.querySelector('.stat-desc').style.display = 'block';
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.querySelector('.stat-desc').style.display = 'none';
+                });
+
+                statsGrid.appendChild(card);
+
+                // Staggered animation
+                setTimeout(() => {
+                    card.style.transition = 'all 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        }
+
+        function createBatteryChart() {
+            const hourlyBattery = d3.rollup(
+                data,
+                v => d3.mean(v, d => d.batteries),
+                d => d.hour
+            );
+
+            const hours = Array.from({ length: 24 }, (_, i) => i + 1);
+            const batteryValues = hours.map(h => hourlyBattery.get(h) || 0);
+
+            const trace = {
+                x: hours,
+                y: batteryValues,
+                type: 'bar',
+                marker: {
+                    color: batteryValues.map(v => v < 0 ? 'rgb(79, 172, 254)' : 'rgb(255, 165, 0)'),
+                },
+                hovertemplate: '%{y:.2f} GW<br>%{x}:00<extra></extra>'
+            };
+
+            const layout = {
+                title: {
+                    text: 'Average Battery Operation by Hour (Negative = Charging)',
+                    font: { size: 22, color: '#fff', family: 'Inter' }
+                },
+                xaxis: {
+                    title: 'Hour of Day',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    font: { family: 'Inter' }
+                },
+                yaxis: {
+                    title: 'Battery Power (GW)',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    zeroline: true,
+                    zerolinecolor: 'rgba(255,255,255,0.3)',
+                    zerolinewidth: 2,
+                    font: { family: 'Inter' }
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#fff', family: 'Inter' },
+                hoverlabel: {
+                    bgcolor: '#1e293b',
+                    font: { color: '#fff', family: 'Inter' }
+                }
+            };
+
+            Plotly.newPlot('battery-chart', [trace], layout, { responsive: true, displayModeBar: false });
+        }
+
+
+
+        function createLocalCurtailmentHeatmap() {
+            const heatmapData = createHeatmapData('local_curtailment');
+            createCurtailmentHeatmap(heatmapData, 'local-curtailment-heatmap', 'Local Curtailment (GW)', '#FF5252'); // Red/Orange theme
+        }
+
+        function createSystemCurtailmentHeatmap() {
+            const heatmapData = createHeatmapData('system_curtailment');
+            createCurtailmentHeatmap(heatmapData, 'system-curtailment-heatmap', 'System Curtailment (GW)', '#7C4DFF'); // Deep Purple theme
+        }
+
+        function createCurtailmentHeatmap(heatmapData, divId, title, colorTrace) {
+            const customData = [];
+            for (let hour = 0; hour < 24; hour++) {
+                const hourRow = [];
+                for (let day = 0; day < 365; day++) {
+                    const date = getDateFromDayOfYear(day + 1);
+                    hourRow.push({
+                        date: `${monthNames[date.month - 1]} ${date.day}`,
+                        hour: formatHour(hour),
+                        value: heatmapData[hour][day]
+                    });
+                }
+                customData.push(hourRow);
+            }
+
+            const trace = {
+                z: heatmapData,
+                type: 'heatmap',
+                colorscale: [
+                    [0, '#000000'], // No curtailment
+                    [0.01, '#1A237E'], // Low
+                    [0.2, colorTrace],
+                    [1, '#FFFFFF']  // High
+                ],
+                colorbar: {
+                    title: { text: 'GW', font: { family: 'Inter' } },
+                    titleside: 'right',
+                    tickfont: { color: '#fff', family: 'Inter' },
+                    titlefont: { color: '#fff', family: 'Inter' }
+                },
+                hovertemplate: '<b>%{customdata.date}</b><br>%{customdata.hour}<br><b>%{customdata.value:.2f} GW</b><extra></extra>',
+                customdata: customData
+            };
+
+            const layout = {
+                title: {
+                    text: title + ' - Every Day of 2025',
+                    font: { size: 22, color: '#fff', family: 'Inter' }
+                },
+                xaxis: {
+                    title: 'Day of Year',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    tickvals: [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334],
+                    ticktext: monthNames,
+                    font: { family: 'Inter' }
+                },
+                yaxis: {
+                    title: 'Hour of Day',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    tickvals: [0, 6, 12, 18, 23],
+                    ticktext: ['1 AM', '7 AM', '1 PM', '7 PM', '12 AM'],
+                    font: { family: 'Inter' }
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#fff', family: 'Inter' },
+                hoverlabel: {
+                    bgcolor: '#1e293b',
+                    font: { color: '#fff', family: 'Inter' }
+                },
+                height: 700, // Match other heatmaps
+                margin: { l: 60, r: 20, t: 60, b: 60 }
+            };
+
+            Plotly.newPlot(divId, [trace], layout, { responsive: true });
+        }
+
+        function createGasBatteryChart() {
+            const hourlyData = d3.rollup(
+                data,
+                v => ({
+                    gas: d3.mean(v, d => d.naturalGas),
+                    battery: d3.mean(v, d => d.batteries),
+                    solar: d3.mean(v, d => d.solar)
+                }),
+                d => d.hour
+            );
+
+            const hours = Array.from({ length: 24 }, (_, i) => i + 1);
+
+            const traces = [
+                {
+                    x: hours,
+                    y: hours.map(h => hourlyData.get(h)?.gas || 0),
+                    name: 'Natural Gas',
+                    type: 'scatter',
+                    mode: 'lines',
+                    fill: 'tozeroy', // Create an area chart
+                    line: { width: 0, color: 'rgba(169, 169, 169, 0.8)' },
+                    fillcolor: 'rgba(169, 169, 169, 0.3)'
+                },
+                {
+                    x: hours,
+                    y: hours.map(h => hourlyData.get(h)?.battery || 0),
+                    name: 'Battery Discharge',
+                    type: 'bar', // Overlay bars
+                    marker: {
+                        color: hours.map(h => (hourlyData.get(h)?.battery || 0) > 0 ? '#D32F2F' : 'rgba(0,0,0,0)'), // Only show discharging in Red
+                    }
+                },
+                {
+                    x: hours,
+                    y: hours.map(h => (hourlyData.get(h)?.solar || 0)),
+                    name: 'Solar',
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { width: 3, color: '#FFD700' }
+                }
+            ];
+
+            const layout = {
+                title: {
+                    text: 'Average Daily Ramp: Gas vs Battery (New "Duck Curve" Response)',
+                    font: { size: 22, color: '#fff', family: 'Inter' }
+                },
+                xaxis: {
+                    title: 'Hour of Day',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    font: { family: 'Inter' }
+                },
+                yaxis: {
+                    title: 'Generation (GW)',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    font: { family: 'Inter' }
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#fff', family: 'Inter' },
+                hoverlabel: {
+                    bgcolor: '#1e293b',
+                    font: { color: '#fff', family: 'Inter' }
+                },
+                barmode: 'overlay', // Allow battery bars to sit on top
+                legend: {
+                    orientation: 'h',
+                    y: -0.15,
+                    font: { family: 'Inter' }
+                }
+            };
+
+            Plotly.newPlot('gas-battery-chart', traces, layout, { responsive: true });
+        }
+
+        function createDurationCurve() {
+            const hourlyPctsData = data.map((d, i) => {
+                const cleanGen = Math.max(0, d.solar) + d.wind + d.otherRenewables + d.hydro + d.nuclear;
+                const load = d.load || 1;
+                // Calculate rough day of year for coloring
+                const dayOfYear = Math.floor(i / 24) + 1;
+                return {
+                    pct: (cleanGen / load) * 100,
+                    label: `${monthNames[d.month - 1]} ${d.day}, ${formatHour(d.hour - 1)}`,
+                    day: dayOfYear
+                };
+            }).filter(d => isFinite(d.pct) && d.pct >= 0);
+
+            // Sort descending by percentage
+            hourlyPctsData.sort((a, b) => b.pct - a.pct);
+
+            const hours = hourlyPctsData.map((_, i) => i + 1);
+            const days = hourlyPctsData.map(d => d.day);
+
+            // Calculate Stats for Insight Box
+            const hoursAbove100 = hourlyPctsData.filter(d => d.pct >= 100).length;
+            const daysWith100Set = new Set();
+            data.forEach(d => {
+                const cleanGen = Math.max(0, d.solar) + d.wind + d.otherRenewables + d.hydro + d.nuclear;
+                if ((cleanGen / d.load) * 100 >= 100) {
+                    daysWith100Set.add(`${d.year}-${d.month}-${d.day}`);
+                }
+            });
+
+            const insightBox = document.getElementById('duration-insight');
+            insightBox.innerHTML = `
+                <p>600 different hours passed the 100% carbon-free energy mark in 2025. California's grid operated with surplus clean energy for significant durations, proving the viability of a renewable-heavy grid.</p>
+            `;
+
+            const trace = {
+                x: hours,
+                y: hourlyPctsData.map(d => d.pct),
+                customdata: hourlyPctsData.map(d => d.label),
+                type: 'bar',
+                marker: {
+                    color: days,
+                    colorscale: 'Turbo', // Gradient from time of year
+                    cmin: 0,
+                    cmax: 365,
+                    colorbar: {
+                        title: 'Day of Year',
+                        titleside: 'right',
+                        tickfont: { color: '#fff' }
+                    }
+                },
+                name: 'Renewable %',
+                hovertemplate: '<b>%{customdata}</b><br>Carbon-Free: <b>%{y:.1f}%</b><extra></extra>'
+            };
+
+            const layout = {
+                title: {
+                    text: 'Carbon-Free Energy Duration Curve',
+                    font: { size: 22, color: '#fff', family: 'Inter' }
+                },
+                xaxis: {
+                    title: 'Hours (Sorted from Highest to Lowest)',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    font: { family: 'Inter' }
+                },
+                yaxis: {
+                    title: 'Carbon-Free Generation % of Load',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#b8b8d1',
+                    font: { family: 'Inter' }
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#fff', family: 'Inter' },
+                hoverlabel: {
+                    bgcolor: '#1e293b',
+                    font: { color: '#fff', family: 'Inter' }
+                },
+                shapes: [{
+                    type: 'line',
+                    y0: 100,
+                    y1: 100,
+                    x0: 0,
+                    x1: 8760,
+                    line: {
+                        color: '#32CD32',
+                        width: 2,
+                        dash: 'dashdot'
+                    }
+                }],
+                annotations: [{
+                    x: 1000,
+                    y: 105,
+                    text: '100% Threshold',
+                    showarrow: false,
+                    font: { color: '#32CD32', family: 'Inter' }
+                }],
+                bargap: 0 // Make bars touch to look like an area
+            };
+
+            Plotly.newPlot('duration-curve-chart', [trace], layout, { responsive: true });
+        }
+
+        function createCarbonGauge() {
+            // Calculate avg carbon free %
+            const totalLoad = d3.sum(data, d => d.load);
+            const totalCarbonFree = d3.sum(data, d =>
+                Math.max(0, d.solar) + d.wind + d.hydro + d.nuclear + d.otherRenewables
+            );
+            const percent = (totalCarbonFree / totalLoad) * 100;
+
+            const trace = {
+                type: "indicator",
+                mode: "gauge+number",
+                value: percent,
+                title: { text: "2025 Avg Carbon-Free %", font: { size: 24, color: '#fff' } },
+                number: { suffix: "%", font: { color: '#4facfe' } },
+                gauge: {
+                    axis: { range: [0, 100], tickwidth: 1, tickcolor: "#fff" },
+                    bar: { color: "#4facfe" },
+                    bgcolor: "rgba(255,255,255,0.1)",
+                    borderwidth: 2,
+                    bordercolor: "#fff",
+                    steps: [
+                        { range: [0, 50], color: "rgba(255,0,0,0.1)" },
+                        { range: [50, 100], color: "rgba(0,255,0,0.1)" }
+                    ],
+                }
+            };
+
+            const layout = {
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: "#fff", family: "Inter" },
+                hoverlabel: {
+                    bgcolor: '#1e293b',
+                    font: { color: '#fff', family: 'Inter' }
+                }
+            };
+
+            Plotly.newPlot('carbon-gauge', [trace], layout, { responsive: true });
+        }
+
+        // Three.js Background Animation
+        const canvasContainer = document.getElementById('canvas-container');
+        gsap.registerPlugin(ScrollTrigger);
+        const scene = new THREE.Scene();
+
+        // Use window dimensions for proper aspect ratio
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        canvasContainer.appendChild(renderer.domElement);
+
+        // Resize handler
+        const onWindowResize = () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        };
+
+        // Enhanced Lighting Setup
+        const ambientLight = new THREE.AmbientLight(0x404050, 1.5);
+        scene.add(ambientLight);
+
+        // Key Light (warm)
+        const keyLight = new THREE.DirectionalLight(0xfff0dd, 2.5);
+        keyLight.position.set(5, 8, 5);
+        scene.add(keyLight);
+
+        // Fill Light (cool, softer)
+        const fillLight = new THREE.DirectionalLight(0xaabbff, 1.0);
+        fillLight.position.set(-5, 3, -3);
+        scene.add(fillLight);
+
+        // Rim Light (backlight for depth)
+        const rimLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        rimLight.position.set(0, -5, -10);
+        scene.add(rimLight);
+
+        // Starfield (Background)
+        const starGeometry = new THREE.BufferGeometry();
+        const starCount = 2000;
+        const posArray = new Float32Array(starCount * 3);
+
+        for (let i = 0; i < starCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 50;
+        }
+
+        starGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const starMaterial = new THREE.PointsMaterial({
+            size: 0.05,
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.8
+        });
+        const starMesh = new THREE.Points(starGeometry, starMaterial);
+        scene.add(starMesh);
+
+        // Section Objects Group
+        const objects = {};
+
+        // 1. Realistic Sun (Shader)
+        const sunUniforms = {
+            time: { value: 0 }
+        };
+        // Simple noise shader logic
+        const vertexShader = `
+            varying vec2 vUv;
+            varying vec3 vNormal;
+            void main() {
+                vUv = uv;
+                vNormal = normal;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        `;
+        const fragmentShader = `
+            uniform float time;
+            varying vec2 vUv;
+            varying vec3 vNormal;
+            // ASHIMA SIMPLEX NOISE
+            vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+            vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+            float snoise(vec3 v) {
+                const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+                const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+                vec3 i  = floor(v + dot(v, C.yyy) );
+                vec3 x0 = v - i + dot(i, C.xxx) ;
+                vec3 g = step(x0.yzx, x0.xyz);
+                vec3 l = 1.0 - g;
+                vec3 i1 = min( g.xyz, l.zxy );
+                vec3 i2 = max( g.xyz, l.zxy );
+                vec3 x1 = x0 - i1 + C.xxx;
+                vec3 x2 = x0 - i2 + C.yyy;
+                vec3 x3 = x0 - D.yyy;
+                i = mod289(i); 
+                vec4 p = permute( permute( permute( 
+                            i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
+                        + i.y + vec4(0.0, i1.y, i2.y, 1.0 )) 
+                        + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+                float n_ = 0.142857142857;
+                vec3  ns = n_ * D.wyz - D.xzx;
+                vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+                vec4 x_ = floor(j * ns.z);
+                vec4 y_ = floor(j - 7.0 * x_ );
+                vec4 x = x_ *ns.x + ns.yyyy;
+                vec4 y = y_ *ns.x + ns.yyyy;
+                vec4 h = 1.0 - abs(x) - abs(y);
+                vec4 b0 = vec4( x.xy, y.xy );
+                vec4 b1 = vec4( x.zw, y.zw );
+                vec4 s0 = floor(b0)*2.0 + 1.0;
+                vec4 s1 = floor(b1)*2.0 + 1.0;
+                vec4 sh = -step(h, vec4(0.0));
+                vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
+                vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
+                vec3 p0 = vec3(a0.xy,h.x);
+                vec3 p1 = vec3(a0.zw,h.y);
+                vec3 p2 = vec3(a1.xy,h.z);
+                vec3 p3 = vec3(a1.zw,h.w);
+                vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+                p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+                vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+                m = m * m;
+                return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3) ) );
+            }
+
+            void main() {
+                float noise = snoise(vNormal * 4.0 + time * 0.5);
+                vec3 color = mix(vec3(1.0, 0.4, 0.0), vec3(1.0, 0.95, 0.5), noise * 0.5 + 0.5);
+                float intensity = pow(0.6 - dot(vNormal, vec3(0, 0, 1.0)), 2.0);
+                gl_FragColor = vec4(color + vec3(intensity * 0.8), 1.0);
+            }
+        `;
+        const sunMaterial = new THREE.ShaderMaterial({
+            uniforms: sunUniforms,
+            vertexShader: vertexShader,
+            fragmentShader: fragmentShader
+        });
+        const sun = new THREE.Mesh(new THREE.SphereGeometry(2, 64, 64), sunMaterial);
+        sun.userData = { uniforms: sunUniforms };
+
+        // Inner Glow (bright core bloom)
+        const innerGlow = new THREE.Mesh(
+            new THREE.SphereGeometry(2.1, 32, 32),
+            new THREE.MeshBasicMaterial({
+                color: 0xFFDD00,
+                transparent: true,
+                opacity: 0.3,
+                blending: THREE.AdditiveBlending
+            })
+        );
+        sun.add(innerGlow);
+
+        // Mid Corona
+        const midCorona = new THREE.Mesh(
+            new THREE.SphereGeometry(2.5, 32, 32),
+            new THREE.MeshBasicMaterial({
+                color: 0xFF8C00,
+                transparent: true,
+                opacity: 0.15,
+                blending: THREE.AdditiveBlending
+            })
+        );
+        sun.add(midCorona);
+
+        // Outer Corona (softer, larger)
+        const outerCorona = new THREE.Mesh(
+            new THREE.SphereGeometry(3.2, 32, 32),
+            new THREE.MeshBasicMaterial({
+                color: 0xFF4500,
+                transparent: true,
+                opacity: 0.08,
+                blending: THREE.AdditiveBlending
+            })
+        );
+        sun.add(outerCorona);
+
+        // Distant Halo
+        const halo = new THREE.Mesh(
+            new THREE.SphereGeometry(4.5, 16, 16),
+            new THREE.MeshBasicMaterial({
+                color: 0xFFAA00,
+                transparent: true,
+                opacity: 0.03,
+                blending: THREE.AdditiveBlending,
+                side: THREE.BackSide
+            })
+        );
+        sun.add(halo);
+
+        sun.position.set(-3, 1, -5);
+        sun.visible = false;
+        scene.add(sun);
+        objects['solar'] = sun;
+
+        // 2. Wind Turbines (Wind)
+        const turbinesGroup = new THREE.Group();
+
+        function createRealisticTurbine(x, z, scale) {
+            const group = new THREE.Group();
+
+            // Materials - PBR for realism
+            const towerMat = new THREE.MeshStandardMaterial({
+                color: 0xF0F0F0,
+                roughness: 0.4,
+                metalness: 0.3
+            });
+            const bladeMat = new THREE.MeshStandardMaterial({
+                color: 0xFFFFFF,
+                roughness: 0.3,
+                metalness: 0.1
+            });
+
+            // Tower (Tapered)
+            const towerGeo = new THREE.CylinderGeometry(0.1, 0.28, 6, 16);
+            const tower = new THREE.Mesh(towerGeo, towerMat);
+            tower.position.y = 1;
+            group.add(tower);
+
+            // Nacelle (housing)
+            const nacelleGeo = new THREE.BoxGeometry(0.5, 0.4, 1.0);
+            const nacelle = new THREE.Mesh(nacelleGeo, towerMat);
+            nacelle.position.y = 4;
+            nacelle.position.z = -0.3;
+            group.add(nacelle);
+
+            // Warning Light on nacelle
+            const lightGeo = new THREE.SphereGeometry(0.06, 8, 8);
+            const lightMat = new THREE.MeshBasicMaterial({ color: 0xFF0000 });
+            const warningLight = new THREE.Mesh(lightGeo, lightMat);
+            warningLight.position.set(0, 4.25, -0.3);
+            warningLight.name = 'warningLight';
+            group.add(warningLight);
+
+            // Hub (nose cone)
+            const hubGeo = new THREE.ConeGeometry(0.25, 0.4, 16);
+            const hub = new THREE.Mesh(hubGeo, towerMat);
+            hub.rotation.x = Math.PI / 2;
+            hub.position.y = 4;
+            hub.position.z = 0.35;
+            group.add(hub);
+
+            // Blades Group
+            const blades = new THREE.Group();
+            blades.position.set(0, 4, 0.35);
+
+            // Blade Geometry - longer, more aerodynamic
+            const bladeShape = new THREE.Shape();
+            bladeShape.moveTo(0, 0);
+            bladeShape.quadraticCurveTo(0.25, 0.8, 0.06, 3.5);
+            bladeShape.lineTo(0, 3.5);
+            bladeShape.quadraticCurveTo(-0.08, 1.2, 0, 0);
+
+            const bladeGeo = new THREE.ExtrudeGeometry(bladeShape, { depth: 0.06, bevelEnabled: false, steps: 1 });
+
+            for (let i = 0; i < 3; i++) {
+                const b = new THREE.Mesh(bladeGeo, bladeMat);
+                b.rotation.z = i * (Math.PI * 2 / 3);
+                blades.add(b);
+            }
+            group.add(blades);
+
+            group.position.set(x, -3, z);
+            group.scale.setScalar(scale);
+            group.userData = { blades: blades, speed: 0.02 + Math.random() * 0.02, warningLight: warningLight };
+            return group;
+        }
+
+        turbinesGroup.add(createRealisticTurbine(2, -5, 1));
+        turbinesGroup.add(createRealisticTurbine(5, -7, 0.8));
+        turbinesGroup.add(createRealisticTurbine(-1, -6, 0.9));
+
+        turbinesGroup.visible = false;
+        scene.add(turbinesGroup);
+        objects['wind'] = turbinesGroup;
+
+        // 4. Battery Megapack Animation (Realistic)
+        const batteryGroup = new THREE.Group();
+
+        function createRealisticBatteryPack(x, z) {
+            const grp = new THREE.Group();
+            // Main Cabinet
+            const cabGeo = new THREE.BoxGeometry(0.8, 1.4, 0.5);
+            const cabMat = new THREE.MeshStandardMaterial({ color: 0xF5F5F5, roughness: 0.5, metalness: 0.1 });
+            const cab = new THREE.Mesh(cabGeo, cabMat);
+            grp.add(cab);
+
+            // Dark Vent/Door Panel
+            const ventGeo = new THREE.PlaneGeometry(0.7, 1.0);
+            const ventMat = new THREE.MeshBasicMaterial({ color: 0x333333 });
+            const vent = new THREE.Mesh(ventGeo, ventMat);
+            vent.position.set(0, -0.1, 0.26); // Front face
+            grp.add(vent);
+
+            // LED Status Bar
+            const ledGeo = new THREE.BoxGeometry(0.6, 0.05, 0.55);
+            const ledMat = new THREE.MeshBasicMaterial({ color: 0x00E676 });
+            const led = new THREE.Mesh(ledGeo, ledMat);
+            led.position.set(0, 0.55, 0); // Top lip
+            led.name = "led";
+            grp.add(led);
+
+            grp.position.set(x, 0, z);
+            return grp;
+        }
+
+        for (let i = 0; i < 5; i++) {
+            for (let j = 0; j < 3; j++) {
+                const pack = createRealisticBatteryPack((i - 2) * 1.0, (j - 1) * 1.2);
+                batteryGroup.add(pack);
+            }
+        }
+
+        batteryGroup.position.set(0, -5, -6);
+        batteryGroup.visible = false;
+        scene.add(batteryGroup);
+        objects['battery'] = batteryGroup;
+
+        // 5. Transmission Towers with Congested Lines (Larger, More Realistic)
+        const networkGroup = new THREE.Group();
+
+        // Create a realistic lattice transmission tower
+        function createTransmissionTower(x, z, height = 8) {
+            const towerGroup = new THREE.Group();
+            const metalMat = new THREE.MeshStandardMaterial({
+                color: 0x707070,
+                roughness: 0.5,
+                metalness: 0.6
+            });
+
+            // Base width tapers to top
+            const baseWidth = 1.0;
+            const topWidth = 0.4;
+
+            // Main vertical legs (4 corners, angled inward)
+            const legGeo = new THREE.CylinderGeometry(0.06, 0.1, height, 8);
+            const legPositions = [
+                [-baseWidth / 2, -topWidth / 2], [baseWidth / 2, -topWidth / 2],
+                [-baseWidth / 2, topWidth / 2], [baseWidth / 2, topWidth / 2]
+            ];
+
+            legPositions.forEach((pos, idx) => {
+                const leg = new THREE.Mesh(legGeo, metalMat);
+                // Angle the legs inward
+                const topX = pos[0] * 0.4;
+                const topZ = pos[1] * 0.4;
+                leg.position.set((pos[0] + topX) / 2, height / 2, (pos[1] + topZ) / 2);
+                // Slight tilt
+                leg.rotation.z = pos[0] > 0 ? -0.1 : 0.1;
+                leg.rotation.x = pos[1] > 0 ? 0.1 : -0.1;
+                towerGroup.add(leg);
+            });
+
+            // Horizontal cross braces at multiple levels
+            const braceGeo = new THREE.BoxGeometry(baseWidth * 1.2, 0.04, 0.04);
+            const braceZGeo = new THREE.BoxGeometry(0.04, 0.04, baseWidth * 0.8);
+
+            [0.5, 2, 4, 6].forEach(y => {
+                const braceX = new THREE.Mesh(braceGeo, metalMat);
+                braceX.position.y = y;
+                towerGroup.add(braceX);
+
+                const braceZ = new THREE.Mesh(braceZGeo, metalMat);
+                braceZ.position.y = y;
+                towerGroup.add(braceZ);
+            });
+
+            // Diagonal bracing (X pattern)
+            const diagGeo = new THREE.CylinderGeometry(0.02, 0.02, 2.5, 4);
+            [1.5, 4.5].forEach(y => {
+                const diag1 = new THREE.Mesh(diagGeo, metalMat);
+                diag1.position.set(0, y, 0);
+                diag1.rotation.z = 0.8;
+                towerGroup.add(diag1);
+
+                const diag2 = new THREE.Mesh(diagGeo, metalMat);
+                diag2.position.set(0, y, 0);
+                diag2.rotation.z = -0.8;
+                towerGroup.add(diag2);
+            });
+
+            // Main cross arm at top
+            const armGeo = new THREE.BoxGeometry(3.5, 0.1, 0.1);
+            const arm = new THREE.Mesh(armGeo, metalMat);
+            arm.position.y = height - 0.5;
+            towerGroup.add(arm);
+
+            // Second arm slightly lower
+            const arm2 = new THREE.Mesh(armGeo, metalMat);
+            arm2.position.y = height - 1.5;
+            towerGroup.add(arm2);
+
+            // Vertical supports on arms
+            const armSupportGeo = new THREE.CylinderGeometry(0.03, 0.03, 1.0, 6);
+            [-1.4, -0.7, 0, 0.7, 1.4].forEach(xPos => {
+                const support = new THREE.Mesh(armSupportGeo, metalMat);
+                support.position.set(xPos, height - 1, 0);
+                towerGroup.add(support);
+            });
+
+            // Insulators (ceramic, hanging from arms)
+            const insulatorGeo = new THREE.CylinderGeometry(0.08, 0.06, 0.25, 8);
+            const insulatorMat = new THREE.MeshStandardMaterial({
+                color: 0x4FC3F7,
+                roughness: 0.3,
+                metalness: 0.1
+            });
+
+            const wireXPositions = [-1.4, -0.7, 0, 0.7, 1.4];
+            wireXPositions.forEach(xPos => {
+                const ins = new THREE.Mesh(insulatorGeo, insulatorMat);
+                ins.position.set(xPos, height - 0.7, 0);
+                towerGroup.add(ins);
+            });
+
+            towerGroup.position.set(x, -3, z);
+            towerGroup.userData = { height: height, wirePoints: [] };
+
+            // Store wire attachment points (5 wires per arm)
+            wireXPositions.forEach(xPos => {
+                towerGroup.userData.wirePoints.push(
+                    new THREE.Vector3(x + xPos, height - 3.8, z)
+                );
+            });
+
+            return towerGroup;
+        }
+
+        // Create 3 towers in a row (positioned further right)
+        const towers = [
+            createTransmissionTower(-2, -6, 8),
+            createTransmissionTower(2, -6, 9),
+            createTransmissionTower(6, -6, 8)
+        ];
+        towers.forEach(t => networkGroup.add(t));
+
+        // Create glowing power lines between towers
+        const lineMat = new THREE.LineBasicMaterial({
+            color: 0xFF3300,
+            transparent: true,
+            opacity: 0.9,
+            linewidth: 2
+        });
+
+        // Store lines for animation
+        const powerLines = [];
+
+        for (let t = 0; t < towers.length - 1; t++) {
+            const fromTower = towers[t];
+            const toTower = towers[t + 1];
+
+            // Connect each wire point
+            for (let w = 0; w < 5; w++) { // 5 wires now
+                const from = fromTower.userData.wirePoints[w];
+                const to = toTower.userData.wirePoints[w];
+
+                // Create catenary curve (sagging wire)
+                const curve = new THREE.CatmullRomCurve3([
+                    from,
+                    new THREE.Vector3((from.x + to.x) / 2, Math.min(from.y, to.y) - 0.8, from.z),
+                    to
+                ]);
+
+                const points = curve.getPoints(25);
+                const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+                const line = new THREE.Line(lineGeo, lineMat.clone());
+                line.userData = { baseOpacity: 0.9, phase: Math.random() * Math.PI * 2 };
+                powerLines.push(line);
+                networkGroup.add(line);
+            }
+        }
+
+        // Store for animation access
+        networkGroup.userData = { powerLines: powerLines };
+
+        // Position to the RIGHT side of screen
+        networkGroup.position.set(4, 0, 0);
+        networkGroup.visible = false;
+        scene.add(networkGroup);
+        objects['congestion'] = networkGroup;
+
+        // 6. Powerplant (CO2 Emissions) - Realistic
+        const powerplantGroup = new THREE.Group();
+        // Cooling Tower (Hyperboloid)
+        const towerGeo = new THREE.CylinderGeometry(0.6, 1.2, 3, 32, 1, true);
+        const towerMat = new THREE.MeshLambertMaterial({ color: 0x90A4AE, side: THREE.DoubleSide });
+        const tower = new THREE.Mesh(towerGeo, towerMat);
+        tower.position.set(-1.5, -0.5, 0);
+        powerplantGroup.add(tower);
+
+        // Smokestack (Tall)
+        const stackGeo = new THREE.CylinderGeometry(0.3, 0.4, 4, 16);
+        const stackMat = new THREE.MeshLambertMaterial({ color: 0x455A64 });
+        const stack = new THREE.Mesh(stackGeo, stackMat);
+        stack.position.set(1.5, 0, 0);
+        powerplantGroup.add(stack);
+
+        // Base
+        const pBaseGeo = new THREE.BoxGeometry(5, 0.5, 2);
+        const pBase = new THREE.Mesh(pBaseGeo, stackMat);
+        pBase.position.y = -2;
+        powerplantGroup.add(pBase);
+
+        // Volumetric Smoke (Texture)
+        const sCanvas = document.createElement('canvas');
+        sCanvas.width = 32; sCanvas.height = 32;
+        const sCtx = sCanvas.getContext('2d');
+        const sGrad = sCtx.createRadialGradient(16, 16, 0, 16, 16, 16);
+        sGrad.addColorStop(0, 'rgba(150, 150, 150, 0.8)');
+        sGrad.addColorStop(1, 'rgba(150, 150, 150, 0)');
+        sCtx.fillStyle = sGrad;
+        sCtx.fillRect(0, 0, 32, 32);
+        const smokeTex = new THREE.CanvasTexture(sCanvas);
+
+        const smokeGeo = new THREE.BufferGeometry();
+        const sCount = 60;
+        const sPos = new Float32Array(sCount * 3);
+        const sData = [];
+        for (let i = 0; i < sCount; i++) {
+            // Emitting from stack
+            sPos[i * 3] = 1.5 + (Math.random() - 0.5) * 0.2;
+            sPos[i * 3 + 1] = 2 + Math.random() * 3;
+            sPos[i * 3 + 2] = (Math.random() - 0.5) * 0.2;
+            sData.push({ speed: 0.01 + Math.random() * 0.02, offset: Math.random() * Math.PI });
+        }
+        smokeGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+        const smokeMat = new THREE.PointsMaterial({
+            map: smokeTex,
+            size: 1.5,
+            transparent: true,
+            opacity: 0.4,
+            depthWrite: false, // Soft blending
+            blending: THREE.NormalBlending
+        });
+        const smoke = new THREE.Points(smokeGeo, smokeMat);
+        smoke.userData = { animData: sData };
+        powerplantGroup.add(smoke);
+
+        powerplantGroup.position.set(2, -1, -5);
+        powerplantGroup.rotation.y = -0.3;
+        powerplantGroup.visible = false;
+        scene.add(powerplantGroup);
+        objects['emissions'] = powerplantGroup;
+
+        // 7. Falling Dollars (Prices) - Highly Realistic Texture
+        const moneyGroup = new THREE.Group();
+
+        // Generate detailed dollar bill texture
+        const bCanvas = document.createElement('canvas');
+        bCanvas.width = 256; bCanvas.height = 128; // Higher res
+        const bCtx = bCanvas.getContext('2d');
+
+        // Base green background with gradient
+        const bgGrad = bCtx.createLinearGradient(0, 0, 256, 128);
+        bgGrad.addColorStop(0, '#6b9b4e');
+        bgGrad.addColorStop(0.5, '#85bb65');
+        bgGrad.addColorStop(1, '#6b9b4e');
+        bCtx.fillStyle = bgGrad;
+        bCtx.fillRect(0, 0, 256, 128);
+
+        // Outer decorative border
+        bCtx.strokeStyle = '#e8dfc4';
+        bCtx.lineWidth = 6;
+        bCtx.strokeRect(6, 6, 244, 116);
+
+        // Inner border
+        bCtx.strokeStyle = '#1a4d1a';
+        bCtx.lineWidth = 2;
+        bCtx.strokeRect(12, 12, 232, 104);
+
+        // Filigree pattern (decorative lines)
+        bCtx.strokeStyle = 'rgba(255,255,255,0.15)';
+        bCtx.lineWidth = 1;
+        for (let i = 0; i < 20; i++) {
+            bCtx.beginPath();
+            bCtx.moveTo(20 + i * 11, 20);
+            bCtx.lineTo(20 + i * 11, 108);
+            bCtx.stroke();
+        }
+
+        // Central portrait frame (oval)
+        bCtx.fillStyle = '#d4c9a8';
+        bCtx.beginPath();
+        bCtx.ellipse(128, 64, 35, 40, 0, 0, Math.PI * 2);
+        bCtx.fill();
+        bCtx.strokeStyle = '#1a4d1a';
+        bCtx.lineWidth = 3;
+        bCtx.stroke();
+
+        // Portrait silhouette
+        bCtx.fillStyle = '#1a4d1a';
+        bCtx.beginPath();
+        bCtx.ellipse(128, 55, 15, 18, 0, 0, Math.PI * 2);
+        bCtx.fill();
+        bCtx.beginPath();
+        bCtx.ellipse(128, 80, 20, 12, 0, 0, Math.PI);
+        bCtx.fill();
+
+        // Large denomination text
+        bCtx.fillStyle = '#1a4d1a';
+        bCtx.font = 'bold 28px serif';
+        bCtx.textAlign = 'center';
+        bCtx.textBaseline = 'middle';
+        bCtx.fillText('100', 45, 64);
+        bCtx.fillText('100', 211, 64);
+
+        // Corner denominations
+        bCtx.font = 'bold 16px serif';
+        bCtx.fillText('100', 30, 25);
+        bCtx.fillText('100', 226, 25);
+        bCtx.fillText('100', 30, 103);
+        bCtx.fillText('100', 226, 103);
+
+        // Treasury seal (left side)
+        bCtx.fillStyle = '#2e7d32';
+        bCtx.beginPath();
+        bCtx.arc(55, 90, 15, 0, Math.PI * 2);
+        bCtx.fill();
+        bCtx.fillStyle = '#fff';
+        bCtx.font = '8px sans-serif';
+        bCtx.fillText('SEAL', 55, 90);
+
+        // Serial number
+        bCtx.fillStyle = '#2e7d32';
+        bCtx.font = '10px monospace';
+        bCtx.fillText('AB12345678C', 200, 35);
+
+        // "Federal Reserve" text
+        bCtx.fillStyle = 'rgba(26, 77, 26, 0.6)';
+        bCtx.font = '9px sans-serif';
+        bCtx.fillText('FEDERAL RESERVE NOTE', 128, 18);
+
+        // "ONE HUNDRED DOLLARS" text
+        bCtx.fillStyle = 'rgba(26, 77, 26, 0.6)';
+        bCtx.font = '8px sans-serif';
+        bCtx.fillText('ONE HUNDRED DOLLARS', 128, 115);
+
+        const billTex = new THREE.CanvasTexture(bCanvas);
+        billTex.anisotropy = 16; // Sharper at angles
+
+        const billGeo = new THREE.PlaneGeometry(1.4, 0.7); // Aspect ratio 2:1
+        const billMat = new THREE.MeshLambertMaterial({
+            map: billTex,
+            side: THREE.DoubleSide,
+            transparent: true
+        });
+
+        const bills = [];
+        for (let i = 0; i < 20; i++) { // Reduced for less clutter
+            const bill = new THREE.Mesh(billGeo, billMat);
+            bill.position.set(
+                (Math.random() - 0.5) * 8,
+                Math.random() * 10 - 5,
+                (Math.random() - 0.5) * 4 - 3
+            );
+            bill.rotation.set(
+                Math.random() * Math.PI,
+                Math.random() * Math.PI,
+                Math.random() * Math.PI
+            );
+            bill.userData = {
+                speedY: 0.02 + Math.random() * 0.03,
+                rotSpeed: 0.012 + Math.random() * 0.015
+            };
+            moneyGroup.add(bill);
+            bills.push(bill);
+        }
+        moneyGroup.visible = false;
+        scene.add(moneyGroup);
+        objects['prices'] = moneyGroup;
+
+        camera.position.z = 5;
+
+        // --- ScrollTriggers for All 3D Sections ---
+
+        // --- Helpers ---
+        function moveObj(objKey, x, y, z) {
+            if (objects[objKey]) {
+                const obj = objects[objKey];
+                obj.visible = true;
+                gsap.to(obj.position, { x: x, y: y, z: z, duration: 1.5, ease: "power2.out" });
+            }
+        }
+
+        function showTrio() {
+            hideAllObjects();
+            // Solar Top Right
+            moveObj('solar', 5, 2, -5);
+            // Wind Left
+            moveObj('wind', -5, 0, -5);
+            // Battery Bottom Center
+            if (objects['battery']) {
+                objects['battery'].visible = true;
+                gsap.to(objects['battery'].position, { x: 0, y: -4, z: -6, duration: 1.5 });
+                updateBatteryColor(0x00E676, 1);
+            }
+        }
+
+        function setNetworkColor(hex) {
+            if (objects['congestion']) {
+                objects['congestion'].children.forEach(c => {
+                    if (c.material) c.material.color.setHex(hex); // Nodes
+                    if (c.userData.links) {
+                        c.userData.links.forEach(l => l.line.material.color.setHex(hex)); // Lines
+                    }
+                });
+            }
+        }
+
+        // --- Triggers ---
+
+        // Year in Numbers (Stats) - No 3D
+        ScrollTrigger.create({
+            trigger: ".section:has(#stats-grid)",
+            start: "top center",
+            end: "bottom center",
+            onEnter: () => { hideAllObjects(); },
+            onEnterBack: () => { hideAllObjects(); }
+        });
+
+        // How Far We've Come (Capacity) - No 3D
+        ScrollTrigger.create({
+            trigger: "#section-capacity",
+            start: "top center",
+            end: "bottom center",
+            onEnter: () => { hideAllObjects(); },
+            onEnterBack: () => { hideAllObjects(); }
+        });
+
+        // Solar - Sun Right (Move animation)
+        ScrollTrigger.create({
+            trigger: "#section-solar",
+            start: "top center",
+            end: "bottom center",
+            onEnter: () => {
+                hideAllObjects();
+                moveObj('solar', 5, 2, -5);
+            },
+            onEnterBack: () => {
+                hideAllObjects();
+                moveObj('solar', 5, 2, -5);
+            }
+        });
+
+        // Wind
+        ScrollTrigger.create({
+            trigger: "#section-wind",
+            start: "top center",
+            end: "bottom center",
+            onEnter: () => { hideAllObjects(); if (objects['wind']) objects['wind'].visible = true; },
+            onEnterBack: () => { hideAllObjects(); if (objects['wind']) objects['wind'].visible = true; }
+        });
+
+        // Emissions - Shift Right
+        ScrollTrigger.create({
+            trigger: "#section-emissions",
+            start: "top center",
+            end: "bottom center",
+            onEnter: () => {
+                hideAllObjects();
+                moveObj('emissions', 6, -1, -5);
+            },
+            onEnterBack: () => {
+                hideAllObjects();
+                moveObj('emissions', 6, -1, -5);
+            }
+        });
+
+        // Prices
+        ScrollTrigger.create({
+            trigger: "#section-prices",
+            start: "top center",
+            end: "bottom center",
+            onEnter: () => { hideAllObjects(); if (objects['prices']) objects['prices'].visible = true; },
+            onEnterBack: () => { hideAllObjects(); if (objects['prices']) objects['prices'].visible = true; }
+        });
+
+        // Battery Ops - Shift Right
+        ScrollTrigger.create({
+            trigger: "#section-battery-ops",
+            start: "top 60%",
+            end: "bottom center",
+            onEnter: () => {
+                hideAllObjects();
+                if (objects['battery']) objects['battery'].visible = true;
+                gsap.to(objects['battery'].position, { x: 3, y: -5, z: -6, duration: 1 }); // Shift Right
+                updateBatteryColor(0x00E676, 1);
+            },
+            onEnterBack: () => {
+                hideAllObjects();
+                if (objects['battery']) objects['battery'].visible = true;
+                gsap.to(objects['battery'].position, { x: 3, y: -5, z: -6, duration: 1 });
+                updateBatteryColor(0x00E676, 1);
+            }
+        });
+
+        // Net Load (Hide)
+        ScrollTrigger.create({
+            trigger: "#section-netload",
+            start: "top 80%",
+            end: "bottom center",
+            onEnter: () => { hideAllObjects(); }
+        });
+
+        // Backbone - Battery (Center/Left)
+        ScrollTrigger.create({
+            trigger: "#section-backbone",
+            start: "top center",
+            end: "bottom center",
+            onEnter: () => {
+                hideAllObjects();
+                if (objects['battery']) objects['battery'].visible = true;
+                gsap.to(objects['battery'].position, { x: -2, y: -5, z: -6, duration: 1 });
+                updateBatteryColor(0xFF5252, -1);
+            },
+            onEnterBack: () => {
+                hideAllObjects();
+                if (objects['battery']) objects['battery'].visible = true;
+                gsap.to(objects['battery'].position, { x: -2, y: -5, z: -6, duration: 1 });
+                updateBatteryColor(0xFF5252, -1);
+            }
+        });
+
+        // Local Curtailment - Network Red Left
+        ScrollTrigger.create({
+            trigger: "#section-curtailment-local",
+            start: "top center",
+            end: "bottom center",
+            onEnter: () => {
+                hideAllObjects();
+                moveObj('congestion', -3, 0, -5);
+                setNetworkColor(0xFF5252);
+            },
+            onEnterBack: () => {
+                hideAllObjects();
+                moveObj('congestion', -3, 0, -5);
+                setNetworkColor(0xFF5252);
+            }
+        });
+
+        // System Curtailment - Network Red Right
+        ScrollTrigger.create({
+            trigger: "#section-curtailment-system",
+            start: "top center",
+            end: "bottom center",
+            onEnter: () => {
+                hideAllObjects();
+                moveObj('congestion', 3, 0, -5);
+                setNetworkColor(0xFF5252);
+            },
+            onEnterBack: () => {
+                hideAllObjects();
+                moveObj('congestion', 3, 0, -5);
+                setNetworkColor(0xFF5252);
+            }
+        });
+
+        // Hand off - Battery Center
+        ScrollTrigger.create({
+            trigger: "#section-handoff",
+            start: "top center",
+            end: "bottom center",
+            onEnter: () => {
+                hideAllObjects();
+                if (objects['battery']) objects['battery'].visible = true;
+                gsap.to(objects['battery'].position, { x: 0, y: -5, z: -6, duration: 1 });
+                updateBatteryColor(0xFF5252, -1);
+            },
+            onEnterBack: () => {
+                hideAllObjects();
+                if (objects['battery']) objects['battery'].visible = true;
+                gsap.to(objects['battery'].position, { x: 0, y: -5, z: -6, duration: 1 });
+                updateBatteryColor(0xFF5252, -1);
+            }
+        });
+
+        // Duration Curve - TRIO
+        ScrollTrigger.create({
+            trigger: "#section-duration",
+            start: "top center",
+            end: "bottom center",
+            onEnter: () => { showTrio(); },
+            onEnterBack: () => { showTrio(); }
+        });
+
+        // Milestones - TRIO
+        ScrollTrigger.create({
+            trigger: "#section-milestones",
+            start: "top center",
+            end: "bottom center",
+            onEnter: () => { showTrio(); },
+            onEnterBack: () => { showTrio(); }
+        });
+
+        // Looking Forward - No 3D
+        ScrollTrigger.create({
+            trigger: "#section-looking-forward",
+            start: "top center",
+            end: "bottom center",
+            onEnter: () => { hideAllObjects(); },
+            onEnterBack: () => { hideAllObjects(); }
+        });
+
+
+        function updateBatteryColor(colorHex, direction) {
+            const grp = objects['battery'];
+            grp.children.forEach(child => {
+                if (child.isMesh && child.children.length > 0) { // It's a pack with LED
+                    const led = child.children.find(c => c.name === 'led');
+                    if (led) led.material.color.setHex(colorHex);
+                } else if (child.isPoints) {
+                    child.material.color.setHex(colorHex);
+                    child.userData.direction = direction; // 1 = up (charge), -1 = down (discharge)
+                }
+            });
+        }
+
+        function hideAllObjects() {
+            Object.values(objects).forEach(obj => {
+                if (obj) obj.visible = false
+            });
+        }
+
+        // Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = Date.now() * 0.001;
+
+            // Solar Animation
+            if (objects['solar'] && objects['solar'].visible) {
+                objects['solar'].rotation.y += 0.001;
+                if (objects['solar'].userData.uniforms) {
+                    objects['solar'].userData.uniforms.time.value = time;
+                }
+                // Pulse all corona layers at different rates
+                const children = objects['solar'].children;
+                if (children[0]) children[0].scale.setScalar(1 + Math.sin(time * 2) * 0.03); // Inner glow
+                if (children[1]) children[1].scale.setScalar(1 + Math.sin(time * 1.5) * 0.04); // Mid corona
+                if (children[2]) children[2].scale.setScalar(1 + Math.sin(time * 1) * 0.05); // Outer corona
+                if (children[3]) children[3].scale.setScalar(1 + Math.sin(time * 0.5) * 0.03); // Halo
+            }
+
+            // Wind Animation
+            if (objects['wind'] && objects['wind'].visible) {
+                objects['wind'].rotation.y += 0.0005;
+                objects['wind'].children.forEach(turbine => {
+                    if (turbine.userData.blades) {
+                        turbine.userData.blades.rotation.z -= turbine.userData.speed;
+                    }
+                    // Blink warning light
+                    if (turbine.userData.warningLight) {
+                        const blink = Math.sin(time * 3) > 0.7;
+                        turbine.userData.warningLight.material.opacity = blink ? 1 : 0.2;
+                        turbine.userData.warningLight.material.transparent = true;
+                    }
+                });
+            }
+
+            // Battery Animation (Megapacks)
+            if (objects['battery'] && objects['battery'].visible) {
+                const grp = objects['battery'];
+                // Update particles
+                const particles = grp.children.find(c => c.isPoints);
+                if (particles) {
+                    const positions = particles.geometry.attributes.position.array;
+                    const animData = particles.userData.animData;
+                    const direction = particles.userData.direction || 1;
+
+                    for (let i = 0; i < animData.length; i++) {
+                        // Move Y
+                        positions[i * 3 + 1] += animData[i].speed * direction;
+
+                        // Reset if out of bounds
+                        if (direction === 1 && positions[i * 3 + 1] > 4) {
+                            positions[i * 3 + 1] = 0.5;
+                        } else if (direction === -1 && positions[i * 3 + 1] < 0.5) {
+                            positions[i * 3 + 1] = 4;
+                        }
+                    }
+                    particles.geometry.attributes.position.needsUpdate = true;
+                }
+            }
+
+            // Powerplant Smoke Animation
+            if (objects['emissions'] && objects['emissions'].visible) {
+                const smoke = objects['emissions'].children.find(c => c.isPoints);
+                if (smoke) {
+                    const positions = smoke.geometry.attributes.position.array;
+                    const sData = smoke.userData.animData;
+                    for (let i = 0; i < sData.length; i++) {
+                        // Rise
+                        positions[i * 3 + 1] += sData[i].speed;
+                        // Horizontal drift (wind effect)
+                        positions[i * 3] += Math.sin(time + sData[i].offset) * 0.003;
+                        // Spread as it rises
+                        positions[i * 3 + 2] += Math.cos(time * 0.5 + sData[i].offset) * 0.002;
+
+                        // Reset if top
+                        if (positions[i * 3 + 1] > 6) {
+                            positions[i * 3 + 1] = 2;
+                            positions[i * 3] = 1.5 + (Math.random() - 0.5) * 0.3;
+                            positions[i * 3 + 2] = (Math.random() - 0.5) * 0.3;
+                        }
+                    }
+                    smoke.geometry.attributes.position.needsUpdate = true;
+                }
+            }
+
+            // Falling Money Animation
+            if (objects['prices'] && objects['prices'].visible) {
+                objects['prices'].children.forEach((bill, idx) => {
+                    bill.position.y -= bill.userData.speedY;
+                    // Flutter effect
+                    bill.position.x += Math.sin(time * 2 + idx * 0.5) * 0.01;
+                    // Tumble rotation
+                    bill.rotation.x += bill.userData.rotSpeed;
+                    bill.rotation.y += bill.userData.rotSpeed * 0.7;
+                    bill.rotation.z += bill.userData.rotSpeed * 0.3;
+
+                    if (bill.position.y < -5) bill.position.y = 5;
+                });
+            }
+
+            // Transmission Lines Congestion Animation
+            const netGroup = objects['congestion'];
+            if (netGroup && netGroup.visible) {
+                netGroup.rotation.y += 0.001;
+
+                // Pulse the power lines to show congestion
+                if (netGroup.userData && netGroup.userData.powerLines) {
+                    netGroup.userData.powerLines.forEach((line, idx) => {
+                        // Pulsing glow effect
+                        const pulse = Math.sin(time * 4 + line.userData.phase) * 0.3 + 0.7;
+                        line.material.opacity = pulse;
+
+                        // Color shift from orange to red based on intensity
+                        const intensity = Math.sin(time * 2 + idx) * 0.5 + 0.5;
+                        const r = 1.0;
+                        const g = 0.2 * (1 - intensity);
+                        const b = 0;
+                        line.material.color.setRGB(r, g, b);
+                    });
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Scroll Observer
+        const observerOptions = {
+            threshold: 0.3
+        };
+
+        // Simplified Observer to just handle text fade-in
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    // Add visible class for CSS fade in
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.section, .hero').forEach(section => {
+            observer.observe(section);
+        });
+
+        // Handle Scroll Indicator
+        const indicator = document.querySelector('.scroll-indicator');
+        if (indicator) {
+            indicator.addEventListener('click', () => {
+                window.scrollTo({
+                    top: window.innerHeight,
+                    behavior: 'smooth'
+                });
+            });
+        }
+
+        let currentObj = null;
+
+        function handleSectionChange(text) {
+            let targetKey = 'hero'; // Default
+
+            if (text.includes('solar')) targetKey = 'solar';
+            else if (text.includes('wind')) targetKey = 'wind';
+            else if (text.includes('battery') || text.includes('batteries') || text.includes('hand-off')) targetKey = 'battery';
+            else if (text.includes('curtailment') || text.includes('prices')) targetKey = 'congestion';
+            else if (text.includes('numbers') || text.includes('2025') || text.includes('california')) targetKey = 'hero';
+            else targetKey = 'hero';
+
+            // Hide all first
+            Object.values(objects).forEach(obj => {
+                if (obj !== objects[targetKey]) {
+                    if (obj.visible) {
+                        gsap.to(obj.position, { y: -10, opacity: 0, duration: 1, onComplete: () => { obj.visible = false; } });
+                    }
+                }
+            });
+
+            if (targetKey && objects[targetKey]) {
+                const obj = objects[targetKey];
+                obj.visible = true;
+
+                // Determine position based on section text context? 
+                // Currently generic. We can alternate position if we knew the section class.
+                // For now, let's just make sure they enter nicely.
+
+                gsap.killTweensOf(obj.position);
+                gsap.fromTo(obj.position,
+                    { y: 5 },
+                    { y: 0, duration: 1.5, ease: "power2.out" }
+                );
+            }
+        }
+
+        // Resize Handler
+        window.addEventListener('resize', onWindowResize);
+        // Initial sizing check to fix aspect ratio
+        onWindowResize();
+        // Double check after small delay for layout weirdness
+        setTimeout(onWindowResize, 100);
+
+        // Scroll to Top Button
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > window.innerHeight * 0.5) {
+                scrollToTopBtn.classList.add('visible');
+            } else {
+                scrollToTopBtn.classList.remove('visible');
+            }
+        });
+
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    </script>
+</body>
+
+</html>
