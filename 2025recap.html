@@ -614,6 +614,255 @@
             stroke-width: 2.5;
             fill: none;
         }
+
+        /* Landscape Rotation Prompt */
+        .rotate-prompt {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.95);
+            z-index: 9999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .rotate-prompt svg {
+            width: 80px;
+            height: 80px;
+            stroke: #4facfe;
+            fill: none;
+            margin-bottom: 1.5rem;
+            animation: rotate-phone 2s ease-in-out infinite;
+        }
+
+        @keyframes rotate-phone {
+
+            0%,
+            100% {
+                transform: rotate(0deg);
+            }
+
+            50% {
+                transform: rotate(90deg);
+            }
+        }
+
+        .rotate-prompt h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: #fff;
+        }
+
+        .rotate-prompt p {
+            color: #94a3b8;
+            font-size: 1rem;
+            max-width: 280px;
+        }
+
+        .rotate-prompt .dismiss-btn {
+            margin-top: 1.5rem;
+            padding: 0.75rem 2rem;
+            background: transparent;
+            border: 1px solid #4facfe;
+            color: #4facfe;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .rotate-prompt .dismiss-btn:hover {
+            background: #4facfe;
+            color: #0f172a;
+        }
+
+        /* Mobile Responsive Styles */
+        @media screen and (max-width: 1024px) {
+            .section {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+                padding: 3rem 2rem;
+            }
+
+            .section.alternate {
+                grid-template-columns: 1fr;
+            }
+
+            .section.alternate .chart-container,
+            .section.alternate .heatmap-container {
+                grid-column: 1;
+            }
+
+            .section.alternate .section-content {
+                grid-column: 1;
+                grid-row: auto;
+            }
+
+            .section-title {
+                font-size: 2.5rem;
+                transform: none !important;
+                text-align: center !important;
+            }
+
+            .section.alternate .section-title {
+                text-align: center !important;
+                transform: none !important;
+            }
+
+            .section-subtitle {
+                text-align: center !important;
+            }
+
+            .section.alternate .section-subtitle {
+                text-align: center !important;
+            }
+
+            .chart-container {
+                height: 50vh;
+                min-height: 350px;
+            }
+
+            .heatmap-container {
+                height: 50vh;
+                min-height: 350px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+                width: 100%;
+            }
+
+            .insight-box {
+                max-width: 100% !important;
+            }
+        }
+
+        @media screen and (max-width: 768px) {
+            html {
+                scroll-snap-type: none;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+                padding: 0 1rem;
+            }
+
+            .section {
+                padding: 2rem 1rem;
+                min-height: auto;
+            }
+
+            .section-title {
+                font-size: 2rem;
+                margin-bottom: 1rem;
+            }
+
+            .section.full-width .section-title {
+                font-size: 2.2rem;
+            }
+
+            .section-subtitle {
+                font-size: 1rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .chart-container {
+                height: 45vh;
+                min-height: 300px;
+                padding: 0.75rem;
+                border-radius: 12px;
+            }
+
+            .heatmap-container {
+                height: 40vh;
+                min-height: 280px;
+                padding: 0.75rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .stat-card {
+                padding: 1rem;
+            }
+
+            .stat-value {
+                font-size: 1.8rem;
+            }
+
+            .stat-label {
+                font-size: 0.85rem;
+            }
+
+            .insight-box {
+                padding: 1rem !important;
+                font-size: 0.9rem;
+            }
+
+            .insight-box p {
+                font-size: 0.9rem !important;
+            }
+
+            .scroll-to-top {
+                width: 44px;
+                height: 44px;
+                bottom: 1rem;
+                right: 1rem;
+            }
+
+            .scroll-to-top svg {
+                width: 20px;
+                height: 20px;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .section-title {
+                font-size: 1.6rem;
+            }
+
+            .section.full-width .section-title {
+                font-size: 1.8rem;
+            }
+
+            .chart-container {
+                height: 40vh;
+                min-height: 250px;
+            }
+
+            .heatmap-container {
+                height: 35vh;
+                min-height: 220px;
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Show rotate prompt on portrait mobile */
+        @media screen and (max-width: 768px) and (orientation: portrait) {
+            .rotate-prompt.active {
+                display: flex;
+            }
+        }
     </style>
 </head>
 
@@ -626,6 +875,17 @@
             <polyline points="18 15 12 9 6 15"></polyline>
         </svg>
     </button>
+
+    <!-- Landscape Rotation Prompt for Mobile -->
+    <div class="rotate-prompt active" id="rotatePrompt">
+        <svg viewBox="0 0 24 24" stroke-width="2">
+            <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
+            <line x1="12" y1="18" x2="12" y2="18"></line>
+        </svg>
+        <h2>Rotate for Best Experience</h2>
+        <p>This visualization is optimized for landscape viewing. Please rotate your device.</p>
+        <button class="dismiss-btn" id="dismissRotate">Continue Anyway</button>
+    </div>
 
     <div class="hero">
         <h1>California Energy 2025</h1>
@@ -3224,6 +3484,37 @@
                 top: 0,
                 behavior: 'smooth'
             });
+        });
+
+        // Rotate Prompt Handler
+        const rotatePrompt = document.getElementById('rotatePrompt');
+        const dismissRotateBtn = document.getElementById('dismissRotate');
+
+        if (dismissRotateBtn) {
+            dismissRotateBtn.addEventListener('click', () => {
+                rotatePrompt.classList.remove('active');
+                // Save preference in session
+                sessionStorage.setItem('dismissedRotatePrompt', 'true');
+            });
+        }
+
+        // Check if already dismissed
+        if (sessionStorage.getItem('dismissedRotatePrompt') === 'true') {
+            rotatePrompt.classList.remove('active');
+        }
+
+        // Auto-hide when rotated to landscape
+        window.addEventListener('orientationchange', () => {
+            if (window.innerWidth > window.innerHeight) {
+                rotatePrompt.classList.remove('active');
+            }
+        });
+
+        // Also check on resize (for testing in dev tools)
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768 || window.innerWidth > window.innerHeight) {
+                rotatePrompt.classList.remove('active');
+            }
         });
     </script>
 </body>
