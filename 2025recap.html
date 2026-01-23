@@ -1033,7 +1033,7 @@
             <h2 class="section-title">365 Days of Electricity Prices (California Average)</h2>
             <p class="section-subtitle">Average market prices across all three California regions (NP15, SP15, ZP26)</p>
             <div class="insight-box green">
-                <p>Prices crater during midday solar over-generation, sometimes going negative. Evening prices
+                <p>Prices crater during midday solar over-supply, sometimes going negative. Evening prices
                     spike as solar fades and demand remains high. This creates powerful arbitrage for batteries.</p>
             </div>
         </div>
@@ -1048,8 +1048,8 @@
             <p class="section-subtitle">4-hour battery systems transformed from novelty to necessity,
                 absorbing midday solar and powering evening peaks</p>
             <div class="insight-box green">
-                <p>Batteries charged during solar over-generation hours (negative values) and discharged precisely
-                    when the grid needed it most - during morening and evening peaks. They show up instantly, manage
+                <p>Batteries charged during solar over-supply hours (negative prices) and discharged precisely
+                    when the grid needed it most - during morning and evening peaks. They show up instantly, manage
                     the regulation with finesse. In 2026, they will be moving further into long-duration regions.</p>
             </div>
         </div>
@@ -1457,7 +1457,8 @@
                     color: '#b8b8d1',
                     tickvals: [0, 6, 12, 18, 23],
                     ticktext: ['1 AM', '7 AM', '1 PM', '7 PM', '12 AM'],
-                    font: { family: 'Inter' }
+                    font: { family: 'Inter' },
+                    autorange: 'reversed'
                 },
                 paper_bgcolor: 'rgba(0,0,0,0)',
                 plot_bgcolor: 'rgba(0,0,0,0)',
@@ -1530,7 +1531,8 @@
                     color: '#b8b8d1',
                     tickvals: [0, 6, 12, 18, 23],
                     ticktext: ['1 AM', '7 AM', '1 PM', '7 PM', '12 AM'],
-                    font: { family: 'Inter' }
+                    font: { family: 'Inter' },
+                    autorange: 'reversed'
                 },
                 paper_bgcolor: 'rgba(0,0,0,0)',
                 plot_bgcolor: 'rgba(0,0,0,0)',
@@ -1603,7 +1605,8 @@
                     color: '#b8b8d1',
                     tickvals: [0, 6, 12, 18, 23],
                     ticktext: ['1 AM', '7 AM', '1 PM', '7 PM', '12 AM'],
-                    font: { family: 'Inter' }
+                    font: { family: 'Inter' },
+                    autorange: 'reversed'
                 },
                 paper_bgcolor: 'rgba(0,0,0,0)',
                 plot_bgcolor: 'rgba(0,0,0,0)',
@@ -1677,7 +1680,8 @@
                     color: '#b8b8d1',
                     tickvals: [0, 6, 12, 18, 23],
                     ticktext: ['1 AM', '7 AM', '1 PM', '7 PM', '12 AM'],
-                    font: { family: 'Inter' }
+                    font: { family: 'Inter' },
+                    autorange: 'reversed'
                 },
                 paper_bgcolor: 'rgba(0,0,0,0)',
                 plot_bgcolor: 'rgba(0,0,0,0)',
@@ -1747,7 +1751,8 @@
                     color: '#b8b8d1',
                     tickvals: [0, 6, 12, 18, 23],
                     ticktext: ['1 AM', '7 AM', '1 PM', '7 PM', '12 AM'],
-                    font: { family: 'Inter' }
+                    font: { family: 'Inter' },
+                    autorange: 'reversed'
                 },
                 paper_bgcolor: 'rgba(0,0,0,0)',
                 plot_bgcolor: 'rgba(0,0,0,0)',
@@ -1817,7 +1822,8 @@
                     color: '#b8b8d1',
                     tickvals: [0, 6, 12, 18, 23],
                     ticktext: ['1 AM', '7 AM', '1 PM', '7 PM', '12 AM'],
-                    font: { family: 'Inter' }
+                    font: { family: 'Inter' },
+                    autorange: 'reversed'
                 },
                 paper_bgcolor: 'rgba(0,0,0,0)',
                 plot_bgcolor: 'rgba(0,0,0,0)',
@@ -1890,7 +1896,8 @@
                     color: '#b8b8d1',
                     tickvals: [0, 6, 12, 18, 23],
                     ticktext: ['1 AM', '7 AM', '1 PM', '7 PM', '12 AM'],
-                    font: { family: 'Inter' }
+                    font: { family: 'Inter' },
+                    autorange: 'reversed'
                 },
                 paper_bgcolor: 'rgba(0,0,0,0)',
                 plot_bgcolor: 'rgba(0,0,0,0)',
@@ -2044,13 +2051,22 @@
 
 
 
+        // Compute shared max for both curtailment heatmaps
+        let curtailmentSharedMax = 0;
+
         function createLocalCurtailmentHeatmap() {
             const heatmapData = createHeatmapData('local_curtailment');
+            // Update shared max
+            const localMax = Math.max(...heatmapData.flat());
+            if (localMax > curtailmentSharedMax) curtailmentSharedMax = localMax;
             createCurtailmentHeatmap(heatmapData, 'local-curtailment-heatmap', 'Local Curtailment (GW)', '#FF5252'); // Red/Orange theme
         }
 
         function createSystemCurtailmentHeatmap() {
             const heatmapData = createHeatmapData('system_curtailment');
+            // Update shared max
+            const systemMax = Math.max(...heatmapData.flat());
+            if (systemMax > curtailmentSharedMax) curtailmentSharedMax = systemMax;
             createCurtailmentHeatmap(heatmapData, 'system-curtailment-heatmap', 'System Curtailment (GW)', '#7C4DFF'); // Deep Purple theme
         }
 
@@ -2078,6 +2094,8 @@
                     [0.2, colorTrace],
                     [1, '#FFFFFF']  // High
                 ],
+                zmin: 0,
+                zmax: curtailmentSharedMax, // Use shared max for consistent scale
                 colorbar: {
                     title: { text: 'GW', font: { family: 'Inter' } },
                     titleside: 'right',
@@ -2107,7 +2125,8 @@
                     color: '#b8b8d1',
                     tickvals: [0, 6, 12, 18, 23],
                     ticktext: ['1 AM', '7 AM', '1 PM', '7 PM', '12 AM'],
-                    font: { family: 'Inter' }
+                    font: { family: 'Inter' },
+                    autorange: 'reversed'
                 },
                 paper_bgcolor: 'rgba(0,0,0,0)',
                 plot_bgcolor: 'rgba(0,0,0,0)',
@@ -2122,6 +2141,7 @@
 
             Plotly.newPlot(divId, [trace], layout, { responsive: true });
         }
+
 
         function createGasBatteryChart() {
             const hourlyData = d3.rollup(
@@ -2242,13 +2262,28 @@
                 type: 'bar',
                 marker: {
                     color: days,
-                    colorscale: 'Turbo', // Gradient from time of year
+                    // Custom seasonal colorscale: Winter(Blue) → Spring(Green) → Summer(Yellow) → Fall(Purple) → Winter(Blue)
+                    colorscale: [
+                        [0, '#2196F3'],      // January - Winter Blue
+                        [0.16, '#4CAF50'],   // March - Early Spring Green
+                        [0.25, '#8BC34A'],   // Late March - Spring Green
+                        [0.41, '#CDDC39'],   // Mid-May - Late Spring
+                        [0.5, '#FFEB3B'],    // June - Summer Yellow
+                        [0.58, '#FFC107'],   // July - Peak Summer Amber
+                        [0.66, '#FF9800'],   // August - Late Summer Orange
+                        [0.75, '#9C27B0'],   // September - Fall Purple
+                        [0.83, '#7B1FA2'],   // October - Deep Purple
+                        [0.92, '#3F51B5'],   // November - Late Fall Blue-Purple
+                        [1, '#2196F3']       // December - Winter Blue (cycle back)
+                    ],
                     cmin: 0,
                     cmax: 365,
                     colorbar: {
                         title: 'Day of Year',
                         titleside: 'right',
-                        tickfont: { color: '#fff' }
+                        tickfont: { color: '#fff' },
+                        tickvals: [1, 91, 182, 274, 365],
+                        ticktext: ['Jan', 'Apr', 'Jul', 'Oct', 'Dec']
                     }
                 },
                 name: 'Renewable %',
