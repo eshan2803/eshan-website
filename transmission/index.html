@@ -24,16 +24,62 @@
             /* Full width */
         }
 
-        #controls {
+        #controls-wrapper {
             position: absolute;
             top: 10px;
-            right: 10px;
+            right: 0;
             z-index: 1000;
+            display: flex;
+            align-items: flex-start;
+            overflow: hidden;
+        }
+
+        #controls-toggle {
+            width: 24px;
+            height: 40px;
+            background: white;
+            border: none;
+            border-radius: 8px 0 0 8px;
+            box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        #controls-toggle:hover {
+            background: #f4f4f4;
+        }
+
+        #controls-toggle svg {
+            width: 16px;
+            height: 16px;
+            fill: #666;
+            transition: transform 0.3s ease;
+        }
+
+        #controls-toggle.collapsed svg {
+            transform: rotate(180deg);
+        }
+
+        #controls {
             background: white;
             padding: 15px;
-            border-radius: 8px;
+            border-radius: 8px 0 0 8px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
             max-width: 300px;
+            transition: max-width 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+            opacity: 1;
+            overflow: hidden;
+        }
+
+        #controls.hidden {
+            max-width: 0;
+            padding: 15px 0;
+            opacity: 0;
+            pointer-events: none;
         }
 
         #controls p {
@@ -849,23 +895,32 @@
         <div class="loading-text">Energizing the Grid...</div>
         <div class="loading-subtext">Please wait while we spin up the turbines.</div>
     </div>
-    <div id="controls">
-        <p><strong>California Power Grid Map</strong></p>
-        <p style="margin: 5px 0; font-size: 13px;">Hover over plants to see details.</p>
-        <p style="margin: 5px 0; font-size: 13px;">Click on plants to turn them ON/OFF.</p>
-        <p style="margin: 5px 0; font-size: 13px;">Select Generator Type by clicking on the Legend Label.</p>
-        <p style="margin: 5px 0; font-size: 13px;">Select multiple Generators by Ctrl/Cmd and clicking on Legend Labels.
-        </p>
-        <p style="margin: 5px 0; font-size: 13px;">Select multiple Basemaps by Ctrl/Cmd and clicking on Basemap Toggles.
-        </p>
-        <p id="status"
-            style="margin-top: 10px; padding: 5px; background-color: #f0f0f0; border-radius: 4px; text-align: center;">
-            <strong>Active Plants: <span id="activeCount">0</span></strong>
-        </p>
-        <button id="toggleAllBtn"
-            style="width: 100%; margin-top: 10px; padding: 8px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
-            Turn All Plants ON
+    <div id="controls-wrapper">
+        <button id="controls-toggle" title="Hide/Show instructions">
+            <svg viewBox="0 0 24 24">
+                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+            </svg>
         </button>
+        <div id="controls">
+            <p><strong>California Power Grid Map</strong></p>
+            <p style="margin: 5px 0; font-size: 13px;">Hover over plants to see details.</p>
+            <p style="margin: 5px 0; font-size: 13px;">Click on plants to turn them ON/OFF.</p>
+            <p style="margin: 5px 0; font-size: 13px;">Select Generator Type by clicking on the Legend Label.</p>
+            <p style="margin: 5px 0; font-size: 13px;">Select multiple Generators by Ctrl/Cmd and clicking on Legend
+                Labels.
+            </p>
+            <p style="margin: 5px 0; font-size: 13px;">Select multiple Basemaps by Ctrl/Cmd and clicking on Basemap
+                Toggles.
+            </p>
+            <p id="status"
+                style="margin-top: 10px; padding: 5px; background-color: #f0f0f0; border-radius: 4px; text-align: center;">
+                <strong>Active Plants: <span id="activeCount">0</span></strong>
+            </p>
+            <button id="toggleAllBtn"
+                style="width: 100%; margin-top: 10px; padding: 8px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                Turn All Plants ON
+            </button>
+        </div>
     </div>
     <div id="legend">
         <div id="legend-items">
@@ -961,9 +1016,9 @@
                     </svg>
                 </span>Battery (13)
             </div>
-            <div class="legend-item" style="margin-top: 5px;"><span class="legend-color"
-                    style="background-color: #808080; width: 14px; height: 14px;"></span>OFF</div>
-            <div class="legend-item"><span class="legend-color"
+            <div class="legend-item" id="legend-activeflow-toggle"
+                style="margin-top: 5px; cursor: pointer; user-select: none;"
+                title="Click to hide/show active flow animations"><span class="legend-color"
                     style="background-color: #39FF14; width: 14px; height: 14px;"></span>Active Flow
             </div>
             <div class="legend-item" id="legend-lines-toggle" style="cursor: pointer; user-select: none;"
@@ -1254,6 +1309,7 @@
         // Track active generators
         let activeGenerators = 0;
         let minCapacity = 0; // Minimum capacity filter in MW
+        let activeFlowEnabled = true; // Track if Active Flow animations are enabled
 
         // Global state for System Capacities
         let sysCap = {
@@ -1338,6 +1394,8 @@
                     setupLandCoverHover();
                     setupCCSHover();
                     setupTimeSimulation();
+                    setupControlsToggle();
+                    setupActiveFlowToggle();
 
                     // Hide loading overlay
                     const overlay = document.getElementById('loading-overlay');
@@ -3338,9 +3396,11 @@
                     }
                 });
 
-                // Show animated layer (static layer stays visible)
-                if (!map.hasLayer(animatedLinesLayer)) {
+                // Show animated layer (static layer stays visible) - only if Active Flow is enabled
+                if (activeFlowEnabled && !map.hasLayer(animatedLinesLayer)) {
                     animatedLinesLayer.addTo(map);
+                } else if (!activeFlowEnabled && map.hasLayer(animatedLinesLayer)) {
+                    map.removeLayer(animatedLinesLayer);
                 }
             } else {
                 // No active generators - restore all static lines to teal-blue
@@ -4183,8 +4243,79 @@
             if (price < 80) return '#FF9800';
             return '#F44336';
         }
+
+        // Setup controls panel toggle (hide/show with arrow button and swipe support)
+        function setupControlsToggle() {
+            const wrapper = document.getElementById('controls-wrapper');
+            const toggle = document.getElementById('controls-toggle');
+            const controls = document.getElementById('controls');
+
+            if (!toggle || !controls) return;
+
+            // Click handler for toggle button
+            toggle.addEventListener('click', () => {
+                controls.classList.toggle('hidden');
+                toggle.classList.toggle('collapsed');
+            });
+
+            // Swipe gesture support for mobile
+            let touchStartX = 0;
+            let touchEndX = 0;
+            const minSwipeDistance = 50;
+
+            wrapper.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+
+            wrapper.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            }, { passive: true });
+
+            function handleSwipe() {
+                const swipeDistance = touchEndX - touchStartX;
+
+                // Swipe right to hide (on left-to-right swipe when panel is showing)
+                if (swipeDistance > minSwipeDistance && !controls.classList.contains('hidden')) {
+                    controls.classList.add('hidden');
+                    toggle.classList.add('collapsed');
+                }
+                // Swipe left to show (on right-to-left swipe when panel is hidden)
+                else if (swipeDistance < -minSwipeDistance && controls.classList.contains('hidden')) {
+                    controls.classList.remove('hidden');
+                    toggle.classList.remove('collapsed');
+                }
+            }
+        }
+
+        // Setup active flow toggle in legend
+        function setupActiveFlowToggle() {
+            const activeFlowToggle = document.getElementById('legend-activeflow-toggle');
+            if (!activeFlowToggle) return;
+
+            activeFlowToggle.addEventListener('click', () => {
+                activeFlowEnabled = !activeFlowEnabled;
+
+                if (activeFlowEnabled) {
+                    // Show animated flow if there are active generators
+                    if (activeGenerators > 0 && !map.hasLayer(animatedLinesLayer)) {
+                        map.addLayer(animatedLinesLayer);
+                    }
+                } else {
+                    // Hide animated flow
+                    if (map.hasLayer(animatedLinesLayer)) {
+                        map.removeLayer(animatedLinesLayer);
+                    }
+                }
+
+                // Update styling to indicate state
+                activeFlowToggle.style.opacity = activeFlowEnabled ? '1' : '0.5';
+                activeFlowToggle.style.textDecoration = activeFlowEnabled ? 'none' : 'line-through';
+
+                console.log(`Active flow animations ${activeFlowEnabled ? 'enabled' : 'disabled'}`);
+            });
+        }
     </script>
 </body>
 
 </html>
-```
