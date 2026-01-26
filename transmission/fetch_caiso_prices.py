@@ -306,7 +306,10 @@ def fetch_caiso_dam_prices():
 
             # --- Archive Logic ---
             try:
-                archive_dir = "archive"
+                # Use absolute path or relative to script to points to root archive folder
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+                archive_dir = os.path.join(os.path.dirname(script_dir), "archive")
+                
                 if not os.path.exists(archive_dir):
                     os.makedirs(archive_dir)
                 

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,7 +10,9 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap"
+        rel="stylesheet">
 
     <link rel="stylesheet" href="custom.css" />
 
@@ -17,11 +20,15 @@
         html {
             scroll-behavior: smooth;
         }
+
         body {
-            background-color: #fcfcfc; /* Comet-like off-white */
+            background-color: #fcfcfc;
+            /* Comet-like off-white */
             font-family: 'Inter', sans-serif;
-            cursor: none; /* Hide default cursor */
+            cursor: none;
+            /* Hide default cursor */
         }
+
         .font-lora {
             font-family: 'Lora', serif;
         }
@@ -40,6 +47,7 @@
             transition: width 0.2s, height 0.2s, border-width 0.2s, background-color 0.2s;
             z-index: 9999;
         }
+
         .cursor.hovered {
             width: 50px;
             height: 50px;
@@ -50,26 +58,34 @@
 
         /* Mesh Gradients */
         .mesh-gradient-1 {
-            background-image: radial-gradient(at 40% 20%, hsla(28,100%,74%,1) 0px, transparent 50%),
-                              radial-gradient(at 80% 20%, hsla(189,100%,56%,1) 0px, transparent 50%),
-                              radial-gradient(at 0% 50%, hsla(355,100%,93%,1) 0px, transparent 50%),
-                              radial-gradient(at 80% 50%, hsla(340,100%,76%,1) 0px, transparent 50%),
-                              radial-gradient(at 0% 100%, hsla(22,100%,77%,1) 0px, transparent 50%),
-                              radial-gradient(at 80% 100%, hsla(242,100%,70%,1) 0px, transparent 50%);
+            background-image: radial-gradient(at 40% 20%, hsla(28, 100%, 74%, 1) 0px, transparent 50%),
+                radial-gradient(at 80% 20%, hsla(189, 100%, 56%, 1) 0px, transparent 50%),
+                radial-gradient(at 0% 50%, hsla(355, 100%, 93%, 1) 0px, transparent 50%),
+                radial-gradient(at 80% 50%, hsla(340, 100%, 76%, 1) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, hsla(22, 100%, 77%, 1) 0px, transparent 50%),
+                radial-gradient(at 80% 100%, hsla(242, 100%, 70%, 1) 0px, transparent 50%);
             background-size: 100% 100%;
             filter: blur(15px) saturate(1.2);
             opacity: 0.15;
             position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             z-index: -1;
         }
 
         /* Rainbow Border Animation */
         @keyframes rainbow-border {
-            0% { background-position: 0% 50%; }
-            100% { background-position: 200% 50%; }
+            0% {
+                background-position: 0% 50%;
+            }
+
+            100% {
+                background-position: 200% 50%;
+            }
         }
-        
+
         .rainbow-glow {
             position: relative;
             background: linear-gradient(90deg, #ff0080, #ff8000, #ffff00, #80ff00, #00ff80, #0080ff, #8000ff, #ff0080);
@@ -77,27 +93,31 @@
             animation: rainbow-border 2s linear infinite;
             padding: 2px;
             border-radius: 9999px;
-            display: inline-block; /* Added for proper layout */
+            display: inline-block;
+            /* Added for proper layout */
         }
-        
+
         .rainbow-glow .button-content {
             background: #f3f4f6;
             border-radius: 9999px;
-            padding: 0.75rem 1.5rem; /* Increased padding for better appearance */
+            padding: 0.75rem 1.5rem;
+            /* Increased padding for better appearance */
             display: block;
             color: #374151;
-            font-size: 1rem; /* Slightly larger font */
+            font-size: 1rem;
+            /* Slightly larger font */
             font-weight: 500;
             transition: background-color 0.3s;
         }
-        
+
         .rainbow-glow:hover .button-content {
             background: #e5e7eb;
         }
 
         /* Full-screen Folds */
         .fold {
-            min-height: 100vh; /* Hero fold is full height */
+            min-height: 100vh;
+            /* Hero fold is full height */
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -106,22 +126,28 @@
         }
 
         section.fold {
-            min-height: auto; /* Content folds are sized by content */
-            padding: 6rem 1.5rem; /* Adjust padding to control spacing */
+            min-height: auto;
+            /* Content folds are sized by content */
+            padding: 6rem 1.5rem;
+            /* Adjust padding to control spacing */
         }
 
         /* Glassmorphism & 3D Hover Cards */
         .glass-card {
-            background-color: rgba(255, 255, 255, 0.45); /* Slightly more opaque */
-            backdrop-filter: blur(16px); /* Enhanced frosted glass effect */
+            background-color: rgba(255, 255, 255, 0.45);
+            /* Slightly more opaque */
+            backdrop-filter: blur(16px);
+            /* Enhanced frosted glass effect */
             border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 1rem; /* 16px */
+            border-radius: 1rem;
+            /* 16px */
             transition: all 0.3s ease;
             transform-style: preserve-3d;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
         }
+
         .glass-card:hover {
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
             transform: perspective(1000px) rotateX(var(--rotateX)) rotateY(var(--rotateY)) scale3d(1.05, 1.05, 1.05);
         }
 
@@ -135,6 +161,7 @@
         }
     </style>
 </head>
+
 <body class="antialiased">
 
     <div class="cursor hidden md:block"></div>
@@ -145,20 +172,26 @@
         <div class="container mx-auto flex justify-between items-center">
             <a href="#" class="font-lora text-2xl font-semibold">Dr. Eshan Singh</a>
             <nav class="flex items-center space-x-2">
-                <a href="energy.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
+                <a href="energy.html"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
+                <a href="2025recap.html"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">2025
+                    Recap</a>
                 <a href="/transport-model/index.html" class="rainbow-glow">
-                    <span class="button-content" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Transport Model</span>
+                    <span class="button-content" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Transport
+                        Model</span>
                 </a>
                 <a href="/grid-planner/index.html" class="rainbow-glow">
                     <span class="button-content" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Grid Planner</span>
                 </a>
                 <a href="grid-operator/index.html" class="rainbow-glow">
-                     <span class="button-content" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Grid Operator</span>
+                    <span class="button-content" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Grid Operator</span>
                 </a>
                 <a href="https://www.eshansingh.xyz/transmission/index.html" class="rainbow-glow">
                     <span class="button-content" style="padding: 0.5rem 1rem; font-size: 0.875rem;">CA Grid Map</span>
                 </a>
-                <a href="musings.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Musings</a>
+                <a href="musings.html"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Musings</a>
             </nav>
         </div>
     </header>
@@ -167,8 +200,9 @@
         <h1 class="kinetic-headline font-lora text-5xl md:text-7xl font-bold leading-tight text-center text-gray-800">
             Driving the Future of <em class="font-lora italic">Clean Energy</em>
         </h1>
-        <p class="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">From deep science to real-world impact, I am dedicated to accelerating the transition to a sustainable energy future.</p>
-        
+        <p class="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">From deep science to real-world impact, I am dedicated
+            to accelerating the transition to a sustainable energy future.</p>
+
         <div class="mt-8">
             <a href="mailto:hello@eshansingh.xyz" class="rainbow-glow">
                 <span class="button-content">Start a Conversation</span>
@@ -178,70 +212,102 @@
     </main>
 
 
-        <section id="intro" class="fold relative overflow-hidden will-change-transform">
-            <div class="mesh-gradient-1"></div>
-             <div class="max-w-5xl mx-auto grid md:grid-cols-3 gap-12 items-center">
-                <div class="md:col-span-1">
-                    <img src="assets/eshan-headshot.jpg" alt="Eshan Singh Headshot" class="rounded-full shadow-lg mx-auto w-48 h-48 object-cover">
-                </div>
-                <div class="md:col-span-2">
-                    <h2 class="text-4xl font-lora font-semibold mb-4 text-left">Hello!</h2>
-                    <p class="text-left text-lg text-gray-700 leading-relaxed">
-                       I'm Eshan, a scientist and engineer dedicated to accelerating the transition to a sustainable energy future. My work focuses on developing and scaling innovative technologies in renewable energy systems, from next-generation fuels to carbon capture. With a foundation in rigorous academic research and a passion for tangible impact, I bridge the gap between laboratory discoveries and commercial viability.
-                   </p>
-                   <p class="text-left text-lg text-gray-700 leading-relaxed mt-4">
-                        My mission is to leverage deep scientific expertise to solve critical challenges in energy storage and conversion. I aim to create scalable, cost-effective, and sustainable solutions that combat climate change and power our world cleanly and efficiently.
-                   </p>
-                </div>
-             </div>
-        </section>
-
-
-
-        <section id="work" class="fold relative overflow-hidden will-change-transform">
-            <div class="mesh-gradient-1" style="filter: blur(15px) saturate(1.2) hue-rotate(220deg);"></div>
-            <div class="max-w-6xl mx-auto grid md:grid-cols-2 gap-16">
-
-                <div class="flex flex-col">
-                    <h2 class="flex items-center justify-center text-3xl font-lora font-semibold mb-8 text-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                        Selected Publications
-                    </h2>
-                    <p class="text-center text-base text-gray-700 mb-6">A full list is available on my <a href="https://scholar.google.com/citations?user=VhYa_v4AAAAJ&hl=en" target="_blank" class="text-gray-800 hover:text-black font-medium underline">Google Scholar page</a>.</p>
-                    <div class="space-y-4">
-                        <div class="glass-card p-6">
-                            <a href="https://www.sciencedirect.com/science/article/abs/pii/S036031992502422X" target="_blank" class="font-medium text-gray-800 hover:text-black">A life cycle assessment of e-hydrogen production using proton-exchange membrane water electrolysis coupled with desalination in Saudi Arabia. 2025</a>
-                        </div>
-                        <div class="glass-card p-6">
-                           <a href="https://www.sciencedirect.com/science/article/pii/S2666691X2200046X" target="_blank" class="font-medium text-gray-800 hover:text-black">Review of life cycle assessments (LCA) for mobility powertrains. 2022</a>
-                        </div>
-                         <div class="glass-card p-6">
-                           <a href="https://www.sciencedirect.com/science/article/abs/pii/B9780323884570000059" target="_blank" class="font-medium text-gray-800 hover:text-black">Using deep learning to diagnose preignition in turbocharged spark-ignited engines. 2022</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex flex-col">
-                     <h2 class="flex items-center justify-center text-3xl font-lora font-semibold mb-8 text-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                        Patents
-                    </h2>
-                    <p class="text-center text-base text-gray-700 mb-6">Innovations in sustainable energy technology.</p>
-                    <div class="space-y-4">
-                        <div class="glass-card p-6">
-                           <a href="https://patents.google.com/patent/US11708805B2/en" target="_blank" class="font-medium text-gray-800 hover:text-black">US Patent 11,708,805 — Engine and power cycles fueled by performic acid or formic acid</a>
-                        </div>
-                        <div class="glass-card p-6">
-                            <a href="https://patents.google.com/patent/US11473550B2/en" target="_blank" class="font-medium text-gray-800 hover:text-black">US Patent 11,473,550 — Internal combustion engines having super knock mitigation controls and methods for their operation</a>
-                        </div>
-                         <div class="glass-card p-6">
-                            <a href="https://patents.google.com/patent/US11236698B2/en" target="_blank" class="font-medium text-gray-800 hover:text-black">US Patent 11,236,698 — Internal combustion engines having pre-ignition mitigation controls and methods for their operation</a>
-                        </div>
-                    </div>
-                </div>
-
+    <section id="intro" class="fold relative overflow-hidden will-change-transform">
+        <div class="mesh-gradient-1"></div>
+        <div class="max-w-5xl mx-auto grid md:grid-cols-3 gap-12 items-center">
+            <div class="md:col-span-1">
+                <img src="assets/eshan-headshot.jpg" alt="Eshan Singh Headshot"
+                    class="rounded-full shadow-lg mx-auto w-48 h-48 object-cover">
             </div>
-        </section>
+            <div class="md:col-span-2">
+                <h2 class="text-4xl font-lora font-semibold mb-4 text-left">Hello!</h2>
+                <p class="text-left text-lg text-gray-700 leading-relaxed">
+                    I'm Eshan, a scientist and engineer dedicated to accelerating the transition to a sustainable energy
+                    future. My work focuses on developing and scaling innovative technologies in renewable energy
+                    systems, from next-generation fuels to carbon capture. With a foundation in rigorous academic
+                    research and a passion for tangible impact, I bridge the gap between laboratory discoveries and
+                    commercial viability.
+                </p>
+                <p class="text-left text-lg text-gray-700 leading-relaxed mt-4">
+                    My mission is to leverage deep scientific expertise to solve critical challenges in energy storage
+                    and conversion. I aim to create scalable, cost-effective, and sustainable solutions that combat
+                    climate change and power our world cleanly and efficiently.
+                </p>
+            </div>
+        </div>
+    </section>
+
+
+
+    <section id="work" class="fold relative overflow-hidden will-change-transform">
+        <div class="mesh-gradient-1" style="filter: blur(15px) saturate(1.2) hue-rotate(220deg);"></div>
+        <div class="max-w-6xl mx-auto grid md:grid-cols-2 gap-16">
+
+            <div class="flex flex-col">
+                <h2 class="flex items-center justify-center text-3xl font-lora font-semibold mb-8 text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-3" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    Selected Publications
+                </h2>
+                <p class="text-center text-base text-gray-700 mb-6">A full list is available on my <a
+                        href="https://scholar.google.com/citations?user=VhYa_v4AAAAJ&hl=en" target="_blank"
+                        class="text-gray-800 hover:text-black font-medium underline">Google Scholar page</a>.</p>
+                <div class="space-y-4">
+                    <div class="glass-card p-6">
+                        <a href="https://www.sciencedirect.com/science/article/abs/pii/S036031992502422X"
+                            target="_blank" class="font-medium text-gray-800 hover:text-black">A life cycle assessment
+                            of e-hydrogen production using proton-exchange membrane water electrolysis coupled with
+                            desalination in Saudi Arabia. 2025</a>
+                    </div>
+                    <div class="glass-card p-6">
+                        <a href="https://www.sciencedirect.com/science/article/pii/S2666691X2200046X" target="_blank"
+                            class="font-medium text-gray-800 hover:text-black">Review of life cycle assessments (LCA)
+                            for mobility powertrains. 2022</a>
+                    </div>
+                    <div class="glass-card p-6">
+                        <a href="https://www.sciencedirect.com/science/article/abs/pii/B9780323884570000059"
+                            target="_blank" class="font-medium text-gray-800 hover:text-black">Using deep learning to
+                            diagnose preignition in turbocharged spark-ignited engines. 2022</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col">
+                <h2 class="flex items-center justify-center text-3xl font-lora font-semibold mb-8 text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-3" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    Patents
+                </h2>
+                <p class="text-center text-base text-gray-700 mb-6">Innovations in sustainable energy technology.</p>
+                <div class="space-y-4">
+                    <div class="glass-card p-6">
+                        <a href="https://patents.google.com/patent/US11708805B2/en" target="_blank"
+                            class="font-medium text-gray-800 hover:text-black">US Patent 11,708,805 — Engine and power
+                            cycles fueled by performic acid or formic acid</a>
+                    </div>
+                    <div class="glass-card p-6">
+                        <a href="https://patents.google.com/patent/US11473550B2/en" target="_blank"
+                            class="font-medium text-gray-800 hover:text-black">US Patent 11,473,550 — Internal
+                            combustion engines having super knock mitigation controls and methods for their
+                            operation</a>
+                    </div>
+                    <div class="glass-card p-6">
+                        <a href="https://patents.google.com/patent/US11236698B2/en" target="_blank"
+                            class="font-medium text-gray-800 hover:text-black">US Patent 11,236,698 — Internal
+                            combustion engines having pre-ignition mitigation controls and methods for their
+                            operation</a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
 
 
 
@@ -249,14 +315,16 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <footer class="w-full text-center py-5 border-t border-gray-200/80">
         <div class="flex items-center justify-center space-x-4">
-             <p class="text-sm text-gray-500">&copy; 2025 Eshan & Associates LLC. All rights reserved.</p>
-             <a href="https://www.linkedin.com/in/eshan-singh-188b1554/" target="_blank" rel="noopener noreferrer" class="cursor-pointer">
-                <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn" class="h-5 w-5 hover:opacity-75 transition-opacity">
+            <p class="text-sm text-gray-500">&copy; 2025 Eshan & Associates LLC. All rights reserved.</p>
+            <a href="https://www.linkedin.com/in/eshan-singh-188b1554/" target="_blank" rel="noopener noreferrer"
+                class="cursor-pointer">
+                <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn"
+                    class="h-5 w-5 hover:opacity-75 transition-opacity">
             </a>
         </div>
     </footer>
 
-        <script>
+    <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- MAGNETIC CURSOR ---
             const cursor = document.querySelector('.cursor');
@@ -322,7 +390,7 @@
                 function animate() {
                     requestAnimationFrame(animate);
                     const t = clock.getElapsedTime();
-                    
+
                     wavesGroup.children.forEach(plane => {
                         const positions = plane.geometry.attributes.position;
                         const tOffset = plane.userData.tOffset;
@@ -387,7 +455,7 @@
                 parallaxFolds.forEach(fold => {
                     const foldTop = fold.offsetTop;
                     const speed = 0.5;
-                    
+
                     // Check if the fold is in the viewport
                     if (scrollY + window.innerHeight > foldTop && scrollY < foldTop + fold.offsetHeight) {
                         const yPos = (scrollY - foldTop) * speed;
@@ -422,4 +490,5 @@
     </script>
     <script src="custom.js"></script>
 </body>
+
 </html>
