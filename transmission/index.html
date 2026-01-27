@@ -884,6 +884,211 @@
             background-color: #4CAF50;
             color: white;
         }
+
+        /* Trends Button Styles */
+        #trends-trigger {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            color: #333;
+        }
+
+        #trends-trigger:hover {
+            background: #f4f4f4;
+            transform: scale(1.05);
+        }
+
+        #trends-trigger.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        #trends-trigger svg {
+            width: 22px;
+            height: 22px;
+            fill: currentColor;
+        }
+
+        /* Trends Modal */
+        #trends-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #trends-modal.show {
+            display: flex;
+        }
+
+        .trends-modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .trends-modal-content h3 {
+            margin: 0 0 16px 0;
+            color: #333;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .trends-modal-content h3 svg {
+            width: 24px;
+            height: 24px;
+            fill: #667eea;
+        }
+
+        .date-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .date-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .date-input-group label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .date-input-group input[type="date"] {
+            padding: 10px 12px;
+            border: 1.5px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .date-input-group input[type="date"]:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+
+        .trends-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .trends-actions .btn {
+            min-width: 80px;
+        }
+
+        .btn-trends {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-trends:hover {
+            opacity: 0.9;
+        }
+
+        #trends-status {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 12px;
+            padding: 8px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            display: none;
+        }
+
+        #trends-status.show {
+            display: block;
+        }
+
+        #trends-status.loading {
+            color: #667eea;
+        }
+
+        #trends-status.error {
+            color: #d32f2f;
+            background: #ffebee;
+        }
+
+        #trends-status.success {
+            color: #388e3c;
+            background: #e8f5e9;
+        }
+
+        .btn-preset {
+            padding: 6px 10px;
+            font-size: 11px;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-preset:hover {
+            background: #e3f2fd;
+            border-color: #667eea;
+        }
+
+        .btn-preset.selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        /* Trends Loading Overlay on Map */
+        #trends-loading-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            z-index: 1500;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #trends-loading-overlay.show {
+            display: flex;
+        }
+
+        #trends-loading-overlay .spinner-small {
+            width: 30px;
+            height: 30px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/leaflet-ant-path@1.3.0/dist/leaflet-ant-path.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
@@ -1107,6 +1312,11 @@
             </div>
         </div>
         <div class="button-row" style="display: flex; gap: 10px; align-items: center;">
+            <div id="trends-trigger" title="Historical Trends (Avg Congestion)">
+                <svg viewBox="0 0 24 24">
+                    <path d="M3 17h2v5H3zm6-8h2v13H9zm6-4h2v17h-2zm6-4h2v21h-2z" />
+                </svg>
+            </div>
             <div id="lmp-trigger" title="Show Day-Ahead Market Prices ($)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <!-- Removed circle, keeping just the $ symbol parts -->
@@ -1123,7 +1333,103 @@
             </div>
         </div>
     </div>
-    <div id="map"></div>
+
+    <!-- Trends Modal -->
+    <div id="trends-modal">
+        <div class="trends-modal-content">
+            <h3>
+                <svg viewBox="0 0 24 24">
+                    <path d="M3 17h2v5H3zm6-8h2v13H9zm6-4h2v17h-2zm6-4h2v21h-2z" />
+                </svg>
+                Historical Congestion Trends
+            </h3>
+            <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
+                View average congestion prices over time. Select a preset range or enter custom dates.
+            </p>
+
+            <!-- Preset Range Buttons -->
+            <div id="trends-presets" style="max-height: 200px; overflow-y: auto; margin-bottom: 16px;">
+                <!-- Year & Current -->
+                <div style="margin-bottom: 8px;">
+                    <div style="font-size: 10px; color: #999; margin-bottom: 4px; font-weight: 600;">YEAR</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                        <button class="btn btn-preset" data-start="2025-01-01" data-end="2025-12-31">Full Year
+                            2025</button>
+                        <button class="btn btn-preset" data-start="2026-01-01" data-end="2026-01-26">Jan 2026</button>
+                    </div>
+                </div>
+
+                <!-- Quarters -->
+                <div style="margin-bottom: 8px;">
+                    <div style="font-size: 10px; color: #999; margin-bottom: 4px; font-weight: 600;">QUARTERS</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                        <button class="btn btn-preset" data-start="2025-01-01" data-end="2025-03-31">Q1</button>
+                        <button class="btn btn-preset" data-start="2025-04-01" data-end="2025-06-30">Q2</button>
+                        <button class="btn btn-preset" data-start="2025-07-01" data-end="2025-09-30">Q3</button>
+                        <button class="btn btn-preset" data-start="2025-10-01" data-end="2025-12-31">Q4</button>
+                    </div>
+                </div>
+
+                <!-- Seasons -->
+                <div style="margin-bottom: 8px;">
+                    <div style="font-size: 10px; color: #999; margin-bottom: 4px; font-weight: 600;">SEASONS</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                        <button class="btn btn-preset" data-start="2025-03-01" data-end="2025-05-31">🌸 Spring</button>
+                        <button class="btn btn-preset" data-start="2025-07-01" data-end="2025-09-30">☀️ Summer</button>
+                        <button class="btn btn-preset" data-start="2025-10-01" data-end="2025-11-30">🍂 Fall</button>
+                        <button class="btn btn-preset" data-start="2025-12-01" data-end="2026-01-31">❄️ Winter</button>
+                    </div>
+                </div>
+
+                <!-- Months -->
+                <div>
+                    <div style="font-size: 10px; color: #999; margin-bottom: 4px; font-weight: 600;">MONTHS 2025</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                        <button class="btn btn-preset" data-start="2025-01-01" data-end="2025-01-31">Jan</button>
+                        <button class="btn btn-preset" data-start="2025-02-01" data-end="2025-02-28">Feb</button>
+                        <button class="btn btn-preset" data-start="2025-03-01" data-end="2025-03-31">Mar</button>
+                        <button class="btn btn-preset" data-start="2025-04-01" data-end="2025-04-30">Apr</button>
+                        <button class="btn btn-preset" data-start="2025-05-01" data-end="2025-05-31">May</button>
+                        <button class="btn btn-preset" data-start="2025-06-01" data-end="2025-06-30">Jun</button>
+                        <button class="btn btn-preset" data-start="2025-07-01" data-end="2025-07-31">Jul</button>
+                        <button class="btn btn-preset" data-start="2025-08-01" data-end="2025-08-31">Aug</button>
+                        <button class="btn btn-preset" data-start="2025-09-01" data-end="2025-09-30">Sep</button>
+                        <button class="btn btn-preset" data-start="2025-10-01" data-end="2025-10-31">Oct</button>
+                        <button class="btn btn-preset" data-start="2025-11-01" data-end="2025-11-30">Nov</button>
+                        <button class="btn btn-preset" data-start="2025-12-01" data-end="2025-12-31">Dec</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="date-inputs">
+                <div class="date-input-group">
+                    <label for="trends-start-date">Start Date</label>
+                    <input type="date" id="trends-start-date" value="2026-01-01">
+                </div>
+                <div class="date-input-group">
+                    <label for="trends-end-date">End Date</label>
+                    <input type="date" id="trends-end-date" value="2026-01-26">
+                </div>
+            </div>
+            <div id="trends-status"></div>
+            <div class="trends-actions">
+                <button class="btn btn-secondary" id="trends-cancel">Cancel</button>
+                <button class="btn" id="trends-hide" style="background:#ef5350; color:white; display:none;">Hide
+                    Layer</button>
+                <button class="btn btn-trends" id="trends-apply">Show Trends</button>
+            </div>
+            <p style="font-size: 11px; color: #999; margin-top: 12px; font-style: italic;">
+                Note: Only pre-generated date ranges are available. Custom ranges require backend processing.
+            </p>
+        </div>
+    </div>
+
+    <div id="map">
+        <div id="trends-loading-overlay">
+            <div class="spinner-small"></div>
+            <span style="font-size: 13px; color: #667eea; font-weight: 600;">Loading Trends...</span>
+        </div>
+    </div>
     <div id="time-control-panel">
         <div class="slider-row">
             <input type="checkbox" id="timeBasedToggle">
@@ -4315,6 +4621,250 @@
                 console.log(`Active flow animations ${activeFlowEnabled ? 'enabled' : 'disabled'}`);
             });
         }
+
+        // ============================================
+        // TRENDS FEATURE - Historical Congestion Visualization
+        // ============================================
+        let trendsLayer = L.layerGroup();
+        let trendsData = null;
+
+        function setupTrendsFeature() {
+            const triggerBtn = document.getElementById('trends-trigger');
+            const modal = document.getElementById('trends-modal');
+            const cancelBtn = document.getElementById('trends-cancel');
+            const applyBtn = document.getElementById('trends-apply');
+            const hideBtn = document.getElementById('trends-hide');
+            const statusEl = document.getElementById('trends-status');
+            const loadingOverlay = document.getElementById('trends-loading-overlay');
+            const presetBtns = document.querySelectorAll('.btn-preset');
+
+            if (!triggerBtn || !modal) return;
+
+            // Update hide button visibility based on layer state
+            function updateHideButton() {
+                if (hideBtn) {
+                    hideBtn.style.display = map.hasLayer(trendsLayer) ? 'inline-block' : 'none';
+                }
+            }
+
+            // Open modal on trigger click
+            triggerBtn.addEventListener('click', () => {
+                updateHideButton();
+                modal.classList.add('show');
+            });
+
+            // Close modal
+            cancelBtn.addEventListener('click', () => {
+                modal.classList.remove('show');
+                statusEl.className = '';
+                statusEl.textContent = '';
+            });
+
+            // Close on backdrop click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('show');
+                    statusEl.className = '';
+                    statusEl.textContent = '';
+                }
+            });
+
+            // Hide layer button
+            if (hideBtn) {
+                hideBtn.addEventListener('click', () => {
+                    hideTrendsLayer();
+                    hideBtn.style.display = 'none';
+                    modal.classList.remove('show');
+                    statusEl.className = '';
+                    statusEl.textContent = '';
+                });
+            }
+
+            // Preset buttons
+            presetBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const startVal = btn.dataset.start;
+                    const endVal = btn.dataset.end;
+
+                    // Update date inputs
+                    document.getElementById('trends-start-date').value = startVal;
+                    document.getElementById('trends-end-date').value = endVal;
+
+                    // Update selected state
+                    presetBtns.forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                });
+            });
+
+            // Apply trends
+            applyBtn.addEventListener('click', async () => {
+                const startDate = document.getElementById('trends-start-date').value;
+                const endDate = document.getElementById('trends-end-date').value;
+
+                if (!startDate || !endDate) {
+                    statusEl.textContent = 'Please select both start and end dates.';
+                    statusEl.className = 'show error';
+                    return;
+                }
+
+                // Convert to YYYYMMDD format
+                const startStr = startDate.replace(/-/g, '');
+                const endStr = endDate.replace(/-/g, '');
+
+                // Validate dates
+                if (startStr > endStr) {
+                    statusEl.textContent = 'Start date must be before end date.';
+                    statusEl.className = 'show error';
+                    return;
+                }
+
+                // Close modal immediately and show loading on map
+                modal.classList.remove('show');
+                statusEl.className = '';
+                statusEl.textContent = '';
+
+                if (loadingOverlay) loadingOverlay.classList.add('show');
+
+                try {
+                    // Try to fetch pre-generated JSON
+                    const jsonFile = `congestion_avg_${startStr}_${endStr}.json`;
+                    const response = await fetch(jsonFile);
+
+                    if (!response.ok) {
+                        throw new Error(`Data not available for ${startDate} to ${endDate}. Try a preset range.`);
+                    }
+
+                    trendsData = await response.json();
+
+                    // Render the trends on the map
+                    renderTrendsLayer();
+
+                    // Activate the button
+                    triggerBtn.classList.add('active');
+
+                    console.log(`Loaded ${trendsData.node_count.toLocaleString()} nodes (${trendsData.days_processed} days)`);
+
+                } catch (err) {
+                    console.error('Trends fetch error:', err);
+                    // Show error in a toast or alert
+                    alert(err.message || 'Failed to load trends data.');
+                } finally {
+                    if (loadingOverlay) loadingOverlay.classList.remove('show');
+                }
+            });
+        }
+
+
+        function renderTrendsLayer() {
+            // Clear any existing trends markers
+            trendsLayer.clearLayers();
+
+            // Hide LMP layer if active to avoid overlap
+            if (map.hasLayer(lmpLayer)) {
+                map.removeLayer(lmpLayer);
+                const lmpBtn = document.getElementById('lmp-trigger');
+                if (lmpBtn) lmpBtn.classList.remove('active');
+            }
+
+            if (!trendsData || !trendsData.nodes) {
+                console.warn('No trends data to render.');
+                return;
+            }
+
+            // Create a lookup map for quick node matching
+            const nodeMap = {};
+            trendsData.nodes.forEach(n => {
+                nodeMap[n.node] = n.avg_congestion;
+            });
+
+            // Iterate over substations and match to nodes
+            let matchedCount = 0;
+
+            networkGraph.substations.forEach(sub => {
+                const subName = (sub.name || '').toUpperCase().replace(/\s+/g, '');
+
+                // Find matching nodes (same logic as price matching)
+                let matchingNodes = Object.keys(nodeMap).filter(nodeName =>
+                    nodeName.startsWith(subName) || nodeName.includes(subName)
+                );
+
+                if (matchingNodes.length > 0) {
+                    // Calculate average of matching nodes
+                    let sum = 0;
+                    let count = 0;
+                    matchingNodes.forEach(n => {
+                        if (nodeMap[n] !== null && nodeMap[n] !== undefined) {
+                            sum += nodeMap[n];
+                            count++;
+                        }
+                    });
+
+                    if (count > 0) {
+                        const avgCongestion = sum / count;
+                        const color = getTrendsCongestionColor(avgCongestion);
+
+                        const marker = L.circleMarker(sub.latlng, {
+                            radius: 6,
+                            fillColor: color,
+                            color: '#333',
+                            weight: 1,
+                            opacity: 1,
+                            fillOpacity: 0.85
+                        });
+
+                        const tooltipContent = `
+                            <strong>${sub.name}</strong><br>
+                            <small style="color:#667eea;">Historical Avg (${trendsData.start_date} - ${trendsData.end_date})</small><br>
+                            <b>Avg Congestion: $${avgCongestion.toFixed(2)}</b><br>
+                            <small style="color:#888;">${matchingNodes.length} node(s) matched</small>
+                        `;
+
+                        marker.bindTooltip(tooltipContent, { direction: 'top' });
+                        trendsLayer.addLayer(marker);
+                        matchedCount++;
+                    }
+                }
+            });
+
+            console.log(`Trends layer: Matched ${matchedCount} substations`);
+
+            if (!map.hasLayer(trendsLayer)) {
+                trendsLayer.addTo(map);
+            }
+        }
+
+        function getTrendsCongestionColor(price) {
+            // Diverging scale: Blue (negative/credits) -> White (zero) -> Red/Purple (positive/costs)
+            // Most congestion values are positive (costs)
+
+            if (price === null || price === undefined) return '#CCCCCC';
+
+            // Typical range: -5 to +15
+            if (Math.abs(price) < 0.5) return '#FFFFFF'; // Near zero = white
+
+            if (price > 0) {
+                // Positive: White to Purple gradient
+                // 0 = white, 5 = light purple, 15+ = deep purple
+                const intensity = Math.min(1, price / 12);
+                return interpolateColor('#FFFFFF', '#7B1FA2', intensity);
+            } else {
+                // Negative (credits): White to Blue gradient
+                const intensity = Math.min(1, Math.abs(price) / 5);
+                return interpolateColor('#FFFFFF', '#1565C0', intensity);
+            }
+        }
+
+        function hideTrendsLayer() {
+            if (map.hasLayer(trendsLayer)) {
+                map.removeLayer(trendsLayer);
+            }
+            const triggerBtn = document.getElementById('trends-trigger');
+            if (triggerBtn) triggerBtn.classList.remove('active');
+            trendsData = null;
+        }
+
+        // Initialize trends feature
+        setupTrendsFeature();
     </script>
 </body>
 

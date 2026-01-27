@@ -19,6 +19,9 @@ if %ERRORLEVEL% EQU 0 (
     git add substations_with_prices.geojson
     git commit -m "Auto-update LMP prices for %date%"
     
+    echo Pulling latest changes from GitHub...
+    git pull --rebase
+    
     echo Pushing to GitHub...
     git push
     
