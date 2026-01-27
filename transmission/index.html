@@ -111,7 +111,8 @@
             flex-direction: column;
         }
 
-        #capacity-slider-container {
+        #capacity-slider-container,
+        #voltage-slider-container {
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -119,6 +120,33 @@
             padding: 5px 0 5px 10px;
             border-left: 1px solid #eee;
             min-width: 50px;
+        }
+
+        #voltageSlider {
+            writing-mode: bt-lr;
+            -webkit-appearance: slider-vertical;
+            appearance: slider-vertical;
+            width: 6px;
+            flex-grow: 1;
+            outline: none;
+            margin: 5px 0;
+            cursor: pointer;
+            background: linear-gradient(to top, #4A90A4, #9C27B0);
+            border-radius: 3px;
+            --thumb-color: #4A90A4;
+        }
+
+        #voltageSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--thumb-color);
+            border: 1px solid #fff;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            margin-left: -4px;
         }
 
         #capacitySlider {
@@ -1243,8 +1271,16 @@
             <div style="font-size: 10px; color: #666; text-align: center; margin-bottom: 5px; white-space: nowrap;">Min.
                 MW</div>
             <input type="range" id="capacitySlider" min="0" max="1000" value="0" step="10"
-                title="Filter by Minimum Capacity">
+                title="Filter Power Plants by Minimum Capacity">
             <div id="capacityValue" style="font-size: 10px; color: #4CAF50; font-weight: bold; margin-top: 5px;">0 MW
+            </div>
+        </div>
+        <div id="voltage-slider-container">
+            <div style="font-size: 10px; color: #666; text-align: center; margin-bottom: 5px; white-space: nowrap;">Min.
+                kV</div>
+            <input type="range" id="voltageSlider" min="0" max="500" value="0" step="10"
+                title="Filter Substations by Minimum Voltage">
+            <div id="voltageValue" style="font-size: 10px; color: #4A90A4; font-weight: bold; margin-top: 5px;">0 kV
             </div>
         </div>
     </div>
@@ -1615,6 +1651,7 @@
         // Track active generators
         let activeGenerators = 0;
         let minCapacity = 0; // Minimum capacity filter in MW
+        let minVoltage = 0;  // Minimum voltage filter in kV for substations
         let activeFlowEnabled = true; // Track if Active Flow animations are enabled
 
         // Global state for System Capacities
@@ -1692,6 +1729,7 @@
                     setupToggleAllButton();
                     setupLegendInteractivity();
                     setupCapacitySlider();
+                    setupVoltageSlider();
                     setupLayerToggles();
                     setupBasemapToggle();
                     setupLMPToggle();
@@ -2237,8 +2275,89 @@
             activeGenerators = activeCount;
             document.getElementById('activeCount').textContent = activeGenerators;
 
-            // Update flow visualization
             updateFlow();
+        }
+
+        // Setup voltage slider functionality for substation filtering
+        function setupVoltageSlider() {
+            const slider = document.getElementById('voltageSlider');
+            const valueDisplay = document.getElementById('voltageValue');
+
+            if (!slider) return;
+
+            // Helper to interpolate colors: Blue -> Purple (for voltage)
+            function getColor(value) {
+                // value 0 to 500
+                const percent = value / 500;
+                // Blue: #4A90A4 (74, 144, 164)
+                // Purple: #9C27B0 (156, 39, 176)
+                const r = Math.round(74 + (156 - 74) * percent);
+                const g = Math.round(144 + (39 - 144) * percent);
+                const b = Math.round(164 + (176 - 164) * percent);
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+
+            function updateSliderVisuals() {
+                const val = parseInt(slider.value);
+                const color = getColor(val);
+
+                valueDisplay.textContent = val + ' kV';
+                valueDisplay.style.color = color;
+                slider.style.setProperty('--thumb-color', color);
+            }
+
+            slider.addEventListener('input', function () {
+                minVoltage = parseInt(this.value);
+                updateSliderVisuals();
+
+                // Update visibility of all substations based on new voltage filter
+                updateSubstationVisibilityByVoltage();
+            });
+
+            // Initialize visuals
+            updateSliderVisuals();
+        }
+
+        // Update substation visibility based on voltage filter
+        function updateSubstationVisibilityByVoltage() {
+            const substationsToggle = document.getElementById('legend-substations-toggle');
+            const substationsVisible = substationsToggle && substationsToggle.style.opacity !== '0.5';
+
+            let visibleCount = 0;
+            let hiddenCount = 0;
+
+            networkGraph.substations.forEach(sub => {
+                const voltage = sub.voltage || 0;
+
+                if (voltage < minVoltage) {
+                    // Below minimum voltage - hide it
+                    if (sub.marker && map.hasLayer(sub.marker)) {
+                        substationsLayer.removeLayer(sub.marker);
+                    }
+                    hiddenCount++;
+                } else {
+                    // Meets voltage requirement - show if substations are visible
+                    if (substationsVisible && sub.marker && !map.hasLayer(sub.marker)) {
+                        substationsLayer.addLayer(sub.marker);
+                    }
+                    visibleCount++;
+                }
+            });
+
+            // Update legend count to show filtered count
+            if (substationsToggle) {
+                const originalText = substationsToggle.innerHTML;
+                const countMatch = originalText.match(/\((\d+)\)/);
+                if (countMatch || minVoltage > 0) {
+                    // Update the count in the legend
+                    substationsToggle.innerHTML = substationsToggle.innerHTML.replace(
+                        /\(\d+\)/,
+                        `(${visibleCount})`
+                    );
+                }
+            }
+
+            console.log(`Voltage filter: ${minVoltage}kV - Showing ${visibleCount}, Hidden ${hiddenCount}`);
         }
 
         // Setup basemap toggle functionality with multi-select support
