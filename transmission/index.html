@@ -438,6 +438,9 @@
             height: 18px;
             cursor: pointer;
             accent-color: #4A90A4;
+            position: relative;
+            z-index: 2000;
+            pointer-events: auto;
         }
 
         .checkbox-label {
@@ -446,6 +449,9 @@
             white-space: nowrap;
             cursor: pointer;
             user-select: none;
+            position: relative;
+            z-index: 2000;
+            pointer-events: auto;
         }
 
         #timeSlider {
@@ -3863,7 +3869,11 @@
 
         function setupTimeSimulation() {
             // Initialize Profiles
-            initProfiles();
+            try {
+                initProfiles();
+            } catch (e) {
+                console.error("Error initializing profiles:", e);
+            }
 
             const timeSlider = document.getElementById('timeSlider');
             const timeText = document.getElementById('timeText');
@@ -3872,37 +3882,42 @@
             const prevHourBtn = document.getElementById('prevHourBtn');
             const nextHourBtn = document.getElementById('nextHourBtn');
 
+            // Force enable checkbox just in case
+            if (timeBasedToggle) timeBasedToggle.disabled = false;
+
             // Initial update - small delay to ensure plants are loaded
             setTimeout(() => {
-                if (timeBasedToggle.checked) {
+                if (timeBasedToggle && timeBasedToggle.checked) {
                     updateSimulation(parseInt(timeSlider.value));
                 }
             }, 1000);
 
             // Handle checkbox toggle
-            timeBasedToggle.addEventListener('change', function () {
-                if (this.checked) {
-                    // Enable time-based simulation
-                    timeSlider.style.opacity = '1';
-                    timeSlider.disabled = false;
-                    updateSimulation(parseInt(timeSlider.value));
-                } else {
-                    // Disable time-based simulation - turn all plants OFF
-                    timeSlider.style.opacity = '0.5';
-                    timeSlider.disabled = true;
+            if (timeBasedToggle) {
+                timeBasedToggle.addEventListener('change', function () {
+                    if (this.checked) {
+                        // Enable time-based simulation
+                        timeSlider.style.opacity = '1';
+                        timeSlider.disabled = false;
+                        updateSimulation(parseInt(timeSlider.value));
+                    } else {
+                        // Disable time-based simulation - turn all plants OFF
+                        timeSlider.style.opacity = '0.5';
+                        timeSlider.disabled = true;
 
-                    // Turn all plants OFF
-                    activeGenerators = 0;
-                    networkGraph.plants.forEach(plant => {
-                        plant.isOn = false;
-                        const fuelType = (plant.fuel || 'UNKNOWN').toUpperCase();
-                        updatePlantMarker(plant, false, '#808080');
-                    });
+                        // Turn all plants OFF
+                        activeGenerators = 0;
+                        networkGraph.plants.forEach(plant => {
+                            plant.isOn = false;
+                            const fuelType = (plant.fuel || 'UNKNOWN').toUpperCase();
+                            updatePlantMarker(plant, false, '#808080');
+                        });
 
-                    // Update flow to clear all animated lines
-                    updateFlow();
-                }
-            });
+                        // Update flow to clear all animated lines
+                        updateFlow();
+                    }
+                });
+            }
 
             timeSlider.addEventListener('input', function () {
                 const hour = parseInt(this.value);
@@ -4746,6 +4761,7 @@
         // ============================================
         let trendsLayer = L.layerGroup();
         let trendsData = null;
+        let matchedNodesCache = null;
 
         function setupTrendsFeature() {
             const triggerBtn = document.getElementById('trends-trigger');
@@ -4875,6 +4891,16 @@
 
 
         function renderTrendsLayer() {
+            // Force enable checkbox to ensure it's accessible
+            const tToggle = document.getElementById('timeBasedToggle');
+            if (tToggle) {
+                tToggle.disabled = false;
+                tToggle.style.pointerEvents = 'auto';
+            }
+
+            // Ensure loading overlay is gone (unless we need it for building cache)
+            const tOverlay = document.getElementById('trends-loading-overlay');
+
             // Clear any existing trends markers
             trendsLayer.clearLayers();
 
@@ -4887,40 +4913,88 @@
 
             if (!trendsData || !trendsData.nodes) {
                 console.warn('No trends data to render.');
+                if (tOverlay) tOverlay.classList.remove('show');
                 return;
             }
 
-            // Create a lookup map for quick node matching
+            // 1. Prepare Data Map (Fast lookup by node name)
             const nodeMap = {};
             trendsData.nodes.forEach(n => {
-                nodeMap[n.node] = n.avg_congestion;
+                // Store both daily average and hourly array
+                nodeMap[n.node] = {
+                    avg: n.avg_congestion,
+                    hourly: n.hourly || null
+                };
             });
 
-            // Iterate over substations and match to nodes
+            // 2. Check or Build Cache
+            if (!matchedNodesCache) {
+                // Show overlay with status update
+                if (tOverlay) {
+                    tOverlay.classList.add('show');
+                    const span = tOverlay.querySelector('span');
+                    if (span) span.textContent = "Matching Network Nodes...";
+                }
+
+                // Build Cache Async to prevent browser hang
+                buildTrendsCache(Object.keys(nodeMap), () => {
+                    // On Complete
+                    console.log("Cache built. Rendering.");
+                    if (tOverlay) {
+                        const span = tOverlay.querySelector('span');
+                        if (span) span.textContent = "Loading Trends..."; // Reset text
+                    }
+                    renderTrendsLayer(); // Re-run now that cache is ready
+                });
+                return;
+            } else {
+                // Cache exists, hide overlay immediately
+                if (tOverlay) tOverlay.classList.remove('show');
+            }
+
+            // 3. Render using Cache (Fast)
+            const useTimeBased = document.getElementById('timeBasedToggle')?.checked;
+            let currentHourIndex = 0;
+
+            if (useTimeBased) {
+                // Use Slider Value for hour
+                const sliderVal = document.getElementById('timeSlider')?.value;
+                currentHourIndex = parseInt(sliderVal) || 0;
+            }
+
+            // Iterate over substations and use cached matches
             let matchedCount = 0;
 
             networkGraph.substations.forEach(sub => {
-                const subName = (sub.name || '').toUpperCase().replace(/\s+/g, '');
+                const matchedNames = matchedNodesCache[sub.id];
 
-                // Find matching nodes (same logic as price matching)
-                let matchingNodes = Object.keys(nodeMap).filter(nodeName =>
-                    nodeName.startsWith(subName) || nodeName.includes(subName)
-                );
-
-                if (matchingNodes.length > 0) {
+                if (matchedNames && matchedNames.length > 0) {
                     // Calculate average of matching nodes
                     let sum = 0;
                     let count = 0;
-                    matchingNodes.forEach(n => {
-                        if (nodeMap[n] !== null && nodeMap[n] !== undefined) {
-                            sum += nodeMap[n];
+                    matchedNames.forEach(n => {
+                        const nodeData = nodeMap[n];
+                        // If data layout changed since cache build (unlikely), handle gracefully
+                        if (!nodeData) return;
+
+                        let value;
+                        if (useTimeBased && nodeData.hourly && Array.isArray(nodeData.hourly) && nodeData.hourly.length > currentHourIndex) {
+                            // Use hourly value for the selected hour
+                            value = nodeData.hourly[currentHourIndex];
+                        } else {
+                            // Fallback to daily average
+                            value = nodeData.avg;
+                        }
+
+                        if (value !== null && value !== undefined) {
+                            sum += value;
                             count++;
                         }
                     });
 
                     if (count > 0) {
-                        const avgCongestion = sum / count;
-                        const color = getTrendsCongestionColor(avgCongestion);
+                        const congestionValue = sum / count;
+                        const color = getTrendsCongestionColor(congestionValue);
 
                         const marker = L.circleMarker(sub.latlng, {
                             radius: 6,
@@ -4931,11 +5005,20 @@
                             fillOpacity: 0.85
                         });
 
+                        // Build tooltip with appropriate label
+                        let timeLabel;
+                        if (useTimeBased) {
+                            const he = currentHourIndex + 1;
+                            timeLabel = `Hourly Avg HE ${he} (${trendsData.start_date} - ${trendsData.end_date})`;
+                        } else {
+                            timeLabel = `Daily Avg (${trendsData.start_date} - ${trendsData.end_date})`;
+                        }
+
                         const tooltipContent = `
                             <strong>${sub.name}</strong><br>
-                            <small style="color:#667eea;">Historical Avg (${trendsData.start_date} - ${trendsData.end_date})</small><br>
-                            <b>Avg Congestion: $${avgCongestion.toFixed(2)}</b><br>
-                            <small style="color:#888;">${matchingNodes.length} node(s) matched</small>
+                            <small style="color:#667eea;">${timeLabel}</small><br>
+                            <b>Congestion: $${congestionValue.toFixed(2)}</b><br>
+                            <small style="color:#888;">${matchedNames.length} node(s) matched</small>
                         `;
 
                         marker.bindTooltip(tooltipContent, { direction: 'top' });
@@ -4945,11 +5028,45 @@
                 }
             });
 
-            console.log(`Trends layer: Matched ${matchedCount} substations`);
+            console.log(`Trends layer: Matched ${matchedCount} substations (Time-Based: ${useTimeBased ? 'HE ' + (currentHourIndex + 1) : 'Daily Avg'})`);
 
             if (!map.hasLayer(trendsLayer)) {
                 trendsLayer.addTo(map);
             }
+        }
+
+        // Helper to build node cache in chunks to prevent UI freeze
+        function buildTrendsCache(allNodeNames, onComplete) {
+            matchedNodesCache = {};
+            const subs = networkGraph.substations;
+            let index = 0;
+            const chunkSize = 100; // Process 100 substations per tick
+
+            function processChunk() {
+                const end = Math.min(index + chunkSize, subs.length);
+                for (; index < end; index++) {
+                    const sub = subs[index];
+                    const subName = (sub.name || '').toUpperCase().replace(/\s+/g, '');
+
+                    // The Expensive Search (O(20k) per sub)
+                    // We must check if any node starts with or includes the sub name
+                    const matches = allNodeNames.filter(nodeName =>
+                        nodeName.startsWith(subName) || nodeName.includes(subName)
+                    );
+
+                    if (matches.length > 0) {
+                        matchedNodesCache[sub.id] = matches;
+                    }
+                }
+
+                if (index < subs.length) {
+                    setTimeout(processChunk, 0); // Yield to main thread
+                } else {
+                    onComplete();
+                }
+            }
+            // Start processing
+            processChunk();
         }
 
         function getTrendsCongestionColor(price) {
@@ -4984,6 +5101,30 @@
 
         // Initialize trends feature
         setupTrendsFeature();
+
+        // Add event listeners for trends layer to respond to time slider and toggle changes
+        (function () {
+            const timeSlider = document.getElementById('timeSlider');
+            const timeToggle = document.getElementById('timeBasedToggle');
+
+            if (timeSlider) {
+                timeSlider.addEventListener('input', () => {
+                    // Re-render trends layer if it's currently displayed and time-based is enabled
+                    if (map.hasLayer(trendsLayer) && timeToggle?.checked && trendsData) {
+                        renderTrendsLayer();
+                    }
+                });
+            }
+
+            if (timeToggle) {
+                timeToggle.addEventListener('change', () => {
+                    // Re-render trends layer if it's currently displayed
+                    if (map.hasLayer(trendsLayer) && trendsData) {
+                        renderTrendsLayer();
+                    }
+                });
+            }
+        })();
     </script>
 </body>
 
