@@ -14,6 +14,7 @@
             height: 100%;
             margin: 0;
             padding: 0;
+            overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
         }
 
@@ -4001,6 +4002,11 @@
                             showLMPPrices();
                         }
                     }
+
+                    // Update Trends Layer if active
+                    if (typeof renderTrendsLayer === 'function' && map.hasLayer(trendsLayer)) {
+                        renderTrendsLayer();
+                    }
                 });
             }
 
@@ -4016,8 +4022,12 @@
                 updateStatusText(hour);
 
                 // Only update simulation if time-based mode is enabled
-                if (timeBasedToggle.checked) {
+                if (timeBasedToggle.classList.contains('active')) {
                     updateSimulation(hour);
+                    // Update Trends if active
+                    if (typeof renderTrendsLayer === 'function' && map.hasLayer(trendsLayer)) {
+                        renderTrendsLayer();
+                    }
                 }
             });
 
