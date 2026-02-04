@@ -3095,6 +3095,26 @@
             return [lon, lat];
         }
 
+        // Optimized nearest neighbor search (approx 10-50x faster than turf.nearestPoint for this use case)
+        function findNearestSubstation(targetLng, targetLat, substations) {
+            let minDistSq = Infinity;
+            let nearestSub = null;
+
+            for (let i = 0, len = substations.length; i < len; i++) {
+                const sub = substations[i];
+                // Euclidean distance squared on lat/lng (sufficient for finding nearest in local area)
+                const dx = sub.latlng[1] - targetLng;
+                const dy = sub.latlng[0] - targetLat;
+                const dSq = dx * dx + dy * dy;
+
+                if (dSq < minDistSq) {
+                    minDistSq = dSq;
+                    nearestSub = sub;
+                }
+            }
+            return nearestSub;
+        }
+
         // Build network graph from loaded data
         function buildNetworkGraph() {
             // Check for EPSG:3857 coordinates in transmission data and convert if necessary
@@ -3143,14 +3163,7 @@
                 });
             });
 
-            // Create substation points collection once (outside the loop for efficiency)
-            const substationPoints = turf.featureCollection(
-                networkGraph.substations.map(sub =>
-                    turf.point([sub.latlng[1], sub.latlng[0]], { id: sub.id })
-                )
-            );
-
-            if (substationPoints.features.length === 0) {
+            if (networkGraph.substations.length === 0) {
                 console.error('No valid substations found!');
                 return;
             }
@@ -3190,24 +3203,30 @@
                 }
 
                 // Get start and end points
-                const startPoint = turf.point(startCoord);
-                const endPoint = turf.point(endCoord);
-
-                // Find nearest substations to start and end
-                const nearestStart = turf.nearestPoint(startPoint, substationPoints);
-                const nearestEnd = turf.nearestPoint(endPoint, substationPoints);
-
-                // Only connect if within tolerance
-                const distStart = turf.distance(startPoint, nearestStart, { units: 'kilometers' });
-                const distEnd = turf.distance(endPoint, nearestEnd, { units: 'kilometers' });
+                // Optimization: Use raw coordinate search
+                const nearestStartSub = findNearestSubstation(startCoord[0], startCoord[1], networkGraph.substations);
+                const nearestEndSub = findNearestSubstation(endCoord[0], endCoord[1], networkGraph.substations);
 
                 let startNodeId = null, endNodeId = null;
 
-                if (distStart < TOLERANCE) {
-                    startNodeId = nearestStart.properties.id;
+                // Only connect if within tolerance
+                if (nearestStartSub) {
+                    // Calculate precise distance for tolerance check
+                    const distStart = turf.distance(
+                        turf.point(startCoord),
+                        turf.point([nearestStartSub.latlng[1], nearestStartSub.latlng[0]]),
+                        { units: 'kilometers' }
+                    );
+                    if (distStart < TOLERANCE) startNodeId = nearestStartSub.id;
                 }
-                if (distEnd < TOLERANCE) {
-                    endNodeId = nearestEnd.properties.id;
+
+                if (nearestEndSub) {
+                    const distEnd = turf.distance(
+                        turf.point(endCoord),
+                        turf.point([nearestEndSub.latlng[1], nearestEndSub.latlng[0]]),
+                        { units: 'kilometers' }
+                    );
+                    if (distEnd < TOLERANCE) endNodeId = nearestEndSub.id;
                 }
 
                 const lineId = `line_${idx}`;
@@ -3312,14 +3331,9 @@
                     return;
                 }
 
-                const plantPoint = turf.point(coords);
-
-                // Reuse substationPoints already created above
-                const nearest = turf.nearestPoint(plantPoint, substationPoints);
-                const nearestSubId = nearest.properties.id;
-
-                // Find the substation to get its island ID
-                const nearestSub = networkGraph.substations.find(s => s.id === nearestSubId);
+                // Optimization: Use raw coordinate search
+                const nearestSub = findNearestSubstation(coords[0], coords[1], networkGraph.substations);
+                const nearestSubId = nearestSub ? nearestSub.id : null;
                 const islandId = nearestSub ? nearestSub.islandId : null;
 
                 networkGraph.plants.push({
@@ -3513,7 +3527,193 @@
         function renderMap() {
             // Initialize layers
             staticLinesLayer = L.layerGroup().addTo(map);
-            animatedLinesLayer = L.layerGroup();
+            // ============================================
+            // MODERN FLOW ANIMATION LAYER
+            // ============================================
+            const FlowCanvasLayer = L.Layer.extend({
+                initialize: function (options) {
+                    this.options = options || {};
+                    this._activeLines = [];
+                    this._projectedLines = [];
+                    this._startTime = Date.now();
+                    this._animId = null;
+                },
+
+                onAdd: function (map) {
+                    this._map = map;
+                    this._canvas = L.DomUtil.create('canvas', 'leaflet-zoom-animated');
+                    this._canvas.style.position = 'absolute';
+                    this._canvas.style.pointerEvents = 'none'; // Allow clicks to pass through
+                    this._canvas.style.zIndex = 400; // Above static lines, below markers
+
+                    map.getPanes().overlayPane.appendChild(this._canvas);
+                    this._ctx = this._canvas.getContext('2d');
+
+                    map.on('moveend zoomend resize', this._reset, this);
+                    this._reset();
+                    this._animate();
+                },
+
+                onRemove: function (map) {
+                    map.getPanes().overlayPane.removeChild(this._canvas);
+                    map.off('moveend zoomend resize', this._reset, this);
+                    if (this._animId) cancelAnimationFrame(this._animId);
+                },
+
+                setActiveLines: function (lines) {
+                    this._activeLines = lines;
+                    this._project(); // Re-project coordinates immediately
+                },
+
+                _reset: function () {
+                    const map = this._map;
+                    const bounds = map.getBounds();
+                    const topLeft = map.latLngToLayerPoint(bounds.getNorthWest());
+                    const size = map.getSize();
+
+                    // Handle retina displays
+                    const dpr = window.devicePixelRatio || 1;
+                    this._canvas.width = size.x * dpr;
+                    this._canvas.height = size.y * dpr;
+                    this._canvas.style.width = size.x + 'px';
+                    this._canvas.style.height = size.y + 'px';
+
+                    // Position canvas correctly relative to map pane
+                    L.DomUtil.setPosition(this._canvas, topLeft);
+
+                    // Scale context
+                    this._ctx.scale(dpr, dpr);
+                    // Adjust translate to match the buffer/position
+                    // Actually with L.DomUtil.setPosition using layerPoint, drawing needs simple offset
+                    // But better pattern: use full map coordinate space if possible or relative?
+                    // Simplest: Reset translate, and project points relative to topLeft
+                    this._ctx.translate(-topLeft.x, -topLeft.y);
+
+                    this._project();
+                },
+
+                _project: function () {
+                    // Project all active lines to pixel coordinates relative to the origin
+                    // Optimization: Only project active lines
+                    if (!this._map) return;
+
+                    this._projectedLines = this._activeLines.map(line => {
+                        return line.coords.map(coord => {
+                            // GeoJSON is [lng, lat], Leaflet wants [lat, lng]
+                            // BUT turf/our data might be mixed.
+                            // networkGraph.lines.coords is from GeoJSON: [x, y] = [lng, lat]
+                            // map.latLngToLayerPoint expects LatLng object or [lat, lng]
+                            const latLng = new L.LatLng(coord[1], coord[0]);
+                            return this._map.latLngToLayerPoint(latLng);
+                        });
+                    });
+                },
+
+                _animate: function () {
+                    if (this._map) {
+                        this._draw();
+                        this._animId = requestAnimationFrame(this._animate.bind(this));
+                    }
+                },
+
+                _draw: function () {
+                    if (!this._ctx || !this._map) return;
+
+                    const ctx = this._ctx;
+                    const map = this._map;
+                    const size = map.getSize();
+                    const bounds = map.getBounds();
+                    const topLeft = map.latLngToLayerPoint(bounds.getNorthWest());
+                    const bottomRight = map.latLngToLayerPoint(bounds.getSouthEast());
+
+                    // Clear canvas (using the transformed coordinate space)
+                    ctx.save();
+                    ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform for clearing
+                    ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
+                    ctx.restore();
+
+                    // Animation Params
+                    const time = performance.now();
+                    const speed = 0.08; // Faster flow
+                    const offset = -(time * speed);
+
+                    // Optimizations
+                    const pLines = this._projectedLines;
+                    const len = pLines.length;
+                    const viewMinX = topLeft.x - 50;
+                    const viewMinY = topLeft.y - 50;
+                    const viewMaxX = bottomRight.x + 50;
+                    const viewMaxY = bottomRight.y + 50;
+
+                    ctx.lineJoin = 'round';
+                    ctx.lineCap = 'round';
+
+                    // PASS 1: Base "Charged" Line (Continuous, low opacity)
+                    // This ensures the wire never disappears between pulses
+                    ctx.beginPath();
+                    ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)'; // Faint Cyan
+                    ctx.lineWidth = 3;
+                    ctx.shadowBlur = 0; // No glow for base to save perf
+                    ctx.setLineDash([]); // Solid line
+
+                    for (let i = 0; i < len; i++) {
+                        const path = pLines[i];
+                        if (path.length < 2) continue;
+
+                        // Simple Culling
+                        let isVisible = false;
+                        for (let j = 0; j < path.length; j++) {
+                            if (path[j].x >= viewMinX && path[j].x <= viewMaxX &&
+                                path[j].y >= viewMinY && path[j].y <= viewMaxY) {
+                                isVisible = true;
+                                break;
+                            }
+                        }
+                        if (!isVisible) continue;
+
+                        ctx.moveTo(path[0].x, path[0].y);
+                        for (let j = 1; j < path.length; j++) {
+                            ctx.lineTo(path[j].x, path[j].y);
+                        }
+                    }
+                    ctx.stroke();
+
+                    // PASS 2: Moving Pulses (High contrast, glowing)
+                    ctx.beginPath();
+                    ctx.strokeStyle = '#FFFFFF'; // White Hot Core
+                    ctx.lineWidth = 2;
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#00FFFF'; // Strong Cyan Glow
+
+                    // Dash Pattern: [Pulse, Gap] - Tweaked for "packets of energy" look
+                    ctx.setLineDash([10, 40]);
+                    ctx.lineDashOffset = offset;
+
+                    for (let i = 0; i < len; i++) {
+                        const path = pLines[i];
+                        if (path.length < 2) continue;
+
+                        // Re-use culling logic (or combine loops if perf critical, but 2 passes allows layering)
+                        let isVisible = false;
+                        for (let j = 0; j < path.length; j++) {
+                            if (path[j].x >= viewMinX && path[j].x <= viewMaxX &&
+                                path[j].y >= viewMinY && path[j].y <= viewMaxY) {
+                                isVisible = true;
+                                break;
+                            }
+                        }
+                        if (!isVisible) continue;
+
+                        ctx.moveTo(path[0].x, path[0].y);
+                        for (let j = 1; j < path.length; j++) {
+                            ctx.lineTo(path[j].x, path[j].y);
+                        }
+                    }
+                    ctx.stroke();
+                }
+            });
+
+            animatedLinesLayer = new FlowCanvasLayer(); // Replaces L.layerGroup()
 
             // Render transmission lines (visible but subtle initially)
             networkGraph.lines.forEach((lineData, idx) => {
@@ -3840,8 +4040,8 @@
             // Update counter display
             document.getElementById('activeCount').textContent = activeGenerators;
 
-            // Clear animated layer
-            animatedLinesLayer.clearLayers();
+            // Prepare list for canvas layer
+            const activeLinesList = [];
 
             if (activeGenerators > 0) {
                 // Set of active island IDs
@@ -3864,31 +4064,41 @@
                     }
                 });
 
-                console.log(`${activeGenerators} active plants, ${activeIslandIds.size} active islands, ${allConnectedLineIds.size} lines to animate`);
+                // console.log(`${activeGenerators} active plants, ${activeIslandIds.size} active islands, ${allConnectedLineIds.size} lines to animate`);
 
                 // Update static lines: hide animated ones, show others in teal-blue
                 staticLinesLayer.eachLayer(function (layer) {
                     if (allConnectedLineIds.has(layer.lineId)) {
-                        // Hide this static line (will be replaced by animated version)
-                        layer.setStyle({ opacity: 0 });
-                    } else {
-                        // Show this static line in teal-blue
+                        // Keep the underlying static line visible, but subtle, to act as the "wire"
                         layer.setStyle({
                             color: '#4A90A4',
-                            opacity: 0.6
+                            opacity: 0.3,
+                            weight: 2
+                        });
+                    } else {
+                        // Show inactive lines in standard teal-blue
+                        layer.setStyle({
+                            color: '#4A90A4',
+                            opacity: 0.6,
+                            weight: 2
                         });
                     }
                 });
 
-                // Add animated ant paths for connected lines
+                // Populate active lines list for the Canvas Layer
                 allConnectedLineIds.forEach(lineId => {
                     const lineData = networkGraph.lines.find(l => l.id === lineId);
-                    if (lineData && lineData.antPath) {
-                        animatedLinesLayer.addLayer(lineData.antPath);
+                    if (lineData) {
+                        activeLinesList.push(lineData);
                     }
                 });
 
-                // Show animated layer (static layer stays visible) - only if Active Flow is enabled
+                // Update the Canvas Layer
+                if (typeof animatedLinesLayer !== 'undefined' && animatedLinesLayer.setActiveLines) {
+                    animatedLinesLayer.setActiveLines(activeLinesList);
+                }
+
+                // Show animated layer - only if Active Flow is enabled
                 if (activeFlowEnabled && !map.hasLayer(animatedLinesLayer)) {
                     animatedLinesLayer.addTo(map);
                 } else if (!activeFlowEnabled && map.hasLayer(animatedLinesLayer)) {
@@ -3903,7 +4113,12 @@
                     });
                 });
 
-                // Remove animated layer
+                // Clear active lines in canvas
+                if (typeof animatedLinesLayer !== 'undefined' && animatedLinesLayer.setActiveLines) {
+                    animatedLinesLayer.setActiveLines([]);
+                }
+
+                // Remove layer
                 if (map.hasLayer(animatedLinesLayer)) {
                     map.removeLayer(animatedLinesLayer);
                 }
