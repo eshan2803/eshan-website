@@ -413,88 +413,73 @@
                         Tons)</h2>
                     <canvas id="co2EmissionsChart" height="100"></canvas>
                 </div>
+
+                <!-- Capacity Factor Chart -->
+                <div id="tutorial-step-2" class="glass-card rounded-lg w-full">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-lora font-semibold text-gray-800">Hourly Capacity Factors</h2>
+                        <div class="flex items-center space-x-2">
+                            <div id="cf-edit-controls" class="flex items-center space-x-1">
+                                <button id="edit-cf-btn" class="p-2 rounded-full hover:bg-gray-200"
+                                    title="Edit capacity factor profiles">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
+                                        fill="currentColor">
+                                        <path
+                                            d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                                        <path fill-rule="evenodd"
+                                            d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <button id="revert-cf-btn" class="p-2 rounded-full hover:bg-gray-200 hidden"
+                                    title="Revert to original capacity factor profiles">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700"
+                                        viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd"
+                                            d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <button id="confirm-cf-btn" class="p-2 rounded-full hover:bg-gray-200 hidden"
+                                    title="Confirm changes to capacity factors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500"
+                                        viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd"
+                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <canvas id="capacityFactorChart" height="100"></canvas>
+                </div>
             </div>
 
-            <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-                <!-- Sliders Section Container -->
-                <div id="tutorial-step-2" class="lg:col-span-2 glass-card rounded-lg">
-
-                    <div id="tutorial-step-4" class="mt-8">
-                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Installed Capacity Mix (%)</h2>
-                        <div id="grid-mix-sliders" class="space-y-3">
-                            <!-- Sliders will be dynamically inserted here -->
-                        </div>
-                        <!-- NEW: Container for storage capacity display -->
-                        <div id="storage-capacity-display" class="mt-6"></div>
+            <!-- Row 1: Installed Capacity Mix | Generation Mix (Full Width) -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <!-- Installed Capacity Mix -->
+                <div id="tutorial-step-4" class="glass-card rounded-lg">
+                    <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Installed Capacity Mix (%)</h2>
+                    <div id="grid-mix-sliders" class="space-y-3">
+                        <!-- Sliders will be dynamically inserted here -->
                     </div>
-                    <div class="mt-8">
-                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Yearly Generation Mix (%)</h2>
-                        <div id="generation-mix-sliders" class="space-y-3">
-                            <!-- New chart sliders will be dynamically inserted here -->
-                        </div>
-                    </div>
-                    <div class="mt-8">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-2xl font-lora font-semibold text-gray-800">Hourly Capacity Factors</h2>
-                            <div class="flex items-center space-x-2">
-                                <div id="cf-edit-controls" class="flex items-center space-x-1">
-                                    <button id="edit-cf-btn" class="p-2 rounded-full hover:bg-gray-200"
-                                        title="Edit capacity factor profiles">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
-                                            fill="currentColor">
-                                            <path
-                                                d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
-                                            <path fill-rule="evenodd"
-                                                d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                    </button>
-                                    <button id="revert-cf-btn" class="p-2 rounded-full hover:bg-gray-200 hidden"
-                                        title="Revert to original capacity factor profiles">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700"
-                                            viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd"
-                                                d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                    </button>
-                                    <button id="confirm-cf-btn" class="p-2 rounded-full hover:bg-gray-200 hidden"
-                                        title="Confirm changes to capacity factors">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500"
-                                            viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd"
-                                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <canvas id="capacityFactorChart"></canvas>
-                    </div>
+                    <!-- NEW: Container for storage capacity display -->
+                    <div id="storage-capacity-display" class="mt-6"></div>
                 </div>
 
-                <div class="lg:col-span-1 space-y-8">
-                    <div id="tutorial-step-5" class="glass-card rounded-lg sticky top-6 z-10">
-                        <div class="grid grid-cols-2 gap-4 text-center">
-                            <div
-                                title="Based on the average wholesale price of electricity&#10;Assuming natural gas plant on the margin drives the price">
-                                <h3 class="text-xl font-lora font-semibold text-gray-800">Marginal Price</h3>
-                                <p id="bill-impact" class="text-5xl font-bold text-blue-600 mt-2">0%</p>
-                            </div>
-                            <div title="Based on the total annualized cost to operate the grid">
-                                <h3 class="text-xl font-lora font-semibold text-gray-800">System Cost</h3>
-                                <p id="system-cost-impact" class="text-5xl font-bold text-blue-600 mt-2">0%</p>
-                            </div>
-                        </div>
-                        <div class="text-center mt-2">
-                            <p id="co2-avoided-text" class="text-md font-medium text-gray-700"></p>
-                        </div>
+                <!-- Generation Mix -->
+                <div class="glass-card rounded-lg">
+                    <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Yearly Generation Mix (%)</h2>
+                    <div id="generation-mix-sliders" class="space-y-3">
+                        <!-- New chart sliders will be dynamically inserted here -->
                     </div>
+                </div>
+            </div>
 
-
-
+            <!-- Row 2: Policy Levers | (Metrics + Government Incentives) -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <!-- Left: Policy Levers -->
                     <div id="tutorial-step-3" class="glass-card space-y-6 rounded-lg">
                         <div class="mb-6">
                             <label for="country-select" class="block text-md font-medium text-gray-700 mb-2">Select
@@ -689,14 +674,48 @@
                                             id="demandflex-unit">%</span>
                                     </div>
                                 </div>
+                                <div>
+                                    <label for="dac-slider" class="block text-md font-medium text-gray-700">Direct Air Capture
+                                        Deployment</label>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <input type="range" id="dac-slider" min="0" max="10000" value="0"
+                                            class="w-full form-input thumb-neutral">
+                                        <input type="number" id="dac-input" min="0" max="10000" value="0" class="value-input">
+                                        <span class="font-semibold text-gray-900 w-12 text-left" id="dac-unit">t/hr</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+                    </div>
 
-                        <div>
-                            <h2
-                                class="text-2xl font-lora font-semibold mb-4 border-b border-t border-gray-300 pt-6 pb-4 text-gray-800">
-                                Government Incentives</h2>
-                            <div class="space-y-6 pt-4">
+
+                <!-- Right: Metrics + Government Incentives -->
+                <div class="space-y-8">
+                    <div id="tutorial-step-5" class="glass-card rounded-lg sticky top-6 z-10">
+                        <div class="grid grid-cols-2 gap-4 text-center">
+                            <div
+                                title="Based on the average wholesale price of electricity&#10;Assuming natural gas plant on the margin drives the price">
+                                <h3 class="text-xl font-lora font-semibold text-gray-800">Marginal Price</h3>
+                                <p id="bill-impact" class="text-5xl font-bold text-blue-600 mt-2">0%</p>
+                            </div>
+                            <div title="Based on the total annualized cost to operate the grid">
+                                <h3 class="text-xl font-lora font-semibold text-gray-800">System Cost</h3>
+                                <p id="system-cost-impact" class="text-5xl font-bold text-blue-600 mt-2">0%</p>
+                            </div>
+                        </div>
+                        <div class="text-center mt-2">
+                            <p id="co2-avoided-text" class="text-md font-medium text-gray-700"></p>
+                        </div>
+                    </div>
+
+
+
+                    <!-- Government Incentives Section -->
+                    <div class="glass-card rounded-lg">
+                        <h2
+                            class="text-2xl font-lora font-semibold mb-4 border-b border-t border-gray-300 pt-4 pb-4 text-gray-800">
+                            Government Incentives</h2>
+                        <div class="space-y-6 pt-4">
                                 <!-- Incentive levers -->
                                 <div>
                                     <label for="carbon-tax-slider"
@@ -846,21 +865,14 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="border-t border-gray-300 pt-6">
-                            <label for="dac-slider" class="block text-md font-medium text-gray-700">Direct Air Capture
-                                Deployment</label>
-                            <div class="flex items-center space-x-2 mt-2">
-                                <input type="range" id="dac-slider" min="0" max="10000" value="0"
-                                    class="w-full form-input thumb-neutral">
-                                <input type="number" id="dac-input" min="0" max="10000" value="0" class="value-input">
-                                <span class="font-semibold text-gray-900 w-12 text-left" id="dac-unit">t/hr</span>
-                            </div>
-                        </div>
                     </div>
                 </div>
+                </div>
+            </div>
+
+            </div>
         </div>
     </div>
-    </main>
     </div>
     </div>
     <!-- Copyright Footer -->
@@ -1238,7 +1250,7 @@
             const capacityFactorCtx = document.getElementById('capacityFactorChart').getContext('2d');
 
             const COLORS = {
-                naturalGas: 'rgba(107, 114, 128, 0.8)', hydro: 'rgba(59, 130, 246, 0.8)',
+                naturalGas: 'rgba(156, 163, 175, 0.9)', hydro: 'rgba(59, 130, 246, 0.8)',
                 nuclear: 'rgba(239, 68, 68, 0.8)', solar: 'rgba(251, 191, 36, 1)',
                 wind: 'rgba(52, 211, 153, 0.8)', /* CHANGE: Lighter green for Onshore Wind */
                 offshoreWind: 'rgba(12, 148, 103, 0.8)',
@@ -1387,7 +1399,7 @@
                                 maxRotation: 0
                             }
                         },
-                        y: { stacked: true, title: { display: true, text: 'Generation (GWh)' } }
+                        y: { stacked: true, min: 0, title: { display: true, text: 'Generation (GWh)' } }
                     }
                 }
             };
