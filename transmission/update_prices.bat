@@ -47,7 +47,7 @@ if %ERRORLEVEL% EQU 0 (
     echo [SUCCESS] Prices updated.
     
     echo [GIT] Committing changes...
-    git add substations_with_prices.geojson
+    git add -f substations_with_prices.geojson
     git commit -m "Auto-update LMP prices for %date%"
 
     echo [GIT] Pushing to GitHub...
