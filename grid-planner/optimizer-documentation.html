@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimizer Documentation | Dr. Eshan Singh</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+
+    <style>
+        html { scroll-behavior: smooth; }
+        body {
+            background-color: #fcfcfc;
+            font-family: 'Inter', sans-serif;
+        }
+        .font-lora { font-family: 'Lora', serif; }
+
+        @keyframes rainbow-border {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+        .rainbow-glow {
+            position: relative;
+            background: linear-gradient(90deg, #ff0080, #ff8000, #ffff00, #80ff00, #00ff80, #0080ff, #8000ff, #ff0080);
+            background-size: 200% 200%;
+            animation: rainbow-border 2s linear infinite;
+            padding: 2px;
+            border-radius: 9999px;
+        }
+        .rainbow-glow .button-content {
+            background: #f3f4f6;
+            border-radius: 9999px;
+            padding: 0.5rem 1rem;
+            display: block;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        .rainbow-glow:hover .button-content { background: #e5e7eb; }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        /* Documentation styles */
+        .documentation-content h3 {
+            font-size: 1.5rem;
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 0.5rem;
+            color: #1f2937;
+        }
+        .documentation-content h4 {
+            font-size: 1.2rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        .documentation-content h5 {
+            font-size: 1.1rem;
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+            color: #374151;
+            font-weight: 600;
+        }
+        .documentation-content p, .documentation-content li {
+            line-height: 1.7;
+            text-align: justify;
+            color: #4b5563;
+        }
+        .documentation-content ul, .documentation-content ol {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .documentation-content ul { list-style-type: disc; }
+        .documentation-content ol { list-style-type: decimal; }
+        .documentation-content ol li { margin-bottom: 0.75rem; }
+        .documentation-content strong { color: #1f2937; }
+        .documentation-content a { color: #3b82f6; text-decoration: none; font-weight: 500; }
+        .documentation-content a:hover { text-decoration: underline; }
+        .documentation-content code {
+            background-color: rgba(59, 130, 246, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.875rem;
+            color: #3b82f6;
+        }
+        .formula-block {
+            background: #f8fafc;
+            border-left: 4px solid #3b82f6;
+            padding: 1rem 1.25rem;
+            margin: 1rem 0;
+            border-radius: 0 0.5rem 0.5rem 0;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            color: #1e293b;
+            overflow-x: auto;
+        }
+        .parameter-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(4px);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        .parameter-table th, .parameter-table td {
+            padding: 0.75rem 1rem;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            text-align: left;
+        }
+        .parameter-table th {
+            background-color: #3b82f6;
+            color: white;
+            font-weight: 600;
+        }
+        .parameter-table tbody tr:nth-child(even) {
+            background-color: rgba(59, 130, 246, 0.05);
+        }
+        .toc-link {
+            display: block;
+            padding: 0.25rem 0;
+            color: #3b82f6;
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .toc-link:hover { text-decoration: underline; }
+        .toc-link.sub { padding-left: 1.5rem; font-size: 0.9rem; color: #6b7280; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <header class="p-8">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="/index.html" class="font-lora text-2xl font-semibold">Dr. Eshan Singh</a>
+            <nav class="flex items-center space-x-2">
+                <a href="/energy.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
+                <a href="/transport-model/index.html" class="rainbow-glow"><span class="button-content">Transport Model</span></a>
+                <a href="/grid-planner/index.html" class="rainbow-glow"><span class="button-content">Grid Planner</span></a>
+                <a href="/grid-operator/index.html" class="rainbow-glow"><span class="button-content">Grid Operator</span></a>
+                <a href="https://www.eshansingh.xyz/transmission/index.html" class="rainbow-glow"><span class="button-content">CA Grid Map</span></a>
+                <a href="/musings.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Musings</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-8 pb-16">
+        <div class="glass-card rounded-2xl p-8 shadow-xl">
+            <section class="documentation-content">
+                <h2 class="text-center text-4xl font-bold text-gray-800 mb-4 font-lora">Optimizer Documentation</h2>
+                <p class="text-center text-gray-500 mb-8">
+                    Technical documentation for the capacity expansion optimization engine.
+                    <br>
+                    <a href="planner_optimizer.html" class="text-blue-600 hover:underline text-sm">&larr; Back to Grid Planner</a>
+                    &nbsp;|&nbsp;
+                    <a href="grid-model-documentation.html" class="text-blue-600 hover:underline text-sm">Simulation Model Docs &rarr;</a>
+                </p>
+
+                <!-- Table of Contents -->
+                <div class="bg-blue-50 rounded-xl p-6 mb-8 border border-blue-200">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-3" style="margin-top:0">Table of Contents</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                        <div>
+                            <a href="#introduction" class="toc-link">1. Introduction</a>
+                            <a href="#time-model" class="toc-link">2. Time Resolution & Demand Model</a>
+                            <a href="#cost-model" class="toc-link">3. Technology Cost Model</a>
+                            <a href="#cost-data" class="toc-link sub">3.1 Cost Data</a>
+                            <a href="#crf" class="toc-link sub">3.2 Capital Recovery Factor</a>
+                            <a href="#annualized-costs" class="toc-link sub">3.3 Annualized Cost Formulas</a>
+                            <a href="#incentives" class="toc-link sub">3.4 Incentives</a>
+                            <a href="#total-system-cost" class="toc-link sub">3.5 Total System Cost</a>
+                            <a href="#dispatch" class="toc-link">4. Dispatch Simulation</a>
+                            <a href="#emissions" class="toc-link sub">4.1 Emissions Calculation</a>
+                        </div>
+                        <div>
+                            <a href="#algorithm" class="toc-link">5. Optimization Algorithm</a>
+                            <a href="#initial-guess" class="toc-link sub">5.1 Initial Guess Heuristic</a>
+                            <a href="#main-loop" class="toc-link sub">5.2 Main Optimization Loop</a>
+                            <a href="#feasibility" class="toc-link sub">5.3 Feasibility Constraints</a>
+                            <a href="#convergence" class="toc-link sub">5.4 Convergence & Early Stopping</a>
+                            <a href="#nelder-mead" class="toc-link sub">5.5 Nelder-Mead Refinement</a>
+                            <a href="#dac" class="toc-link">6. Direct Air Capture (DAC)</a>
+                            <a href="#reserve-margin" class="toc-link">7. Reserve Margin</a>
+                            <a href="#capacity-bounds" class="toc-link">8. Capacity Bounds</a>
+                            <a href="#stranded-assets" class="toc-link">9. Stranded Asset Detection</a>
+                            <a href="#config" class="toc-link">10. Configuration Parameters</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1. Introduction -->
+                <h3 id="introduction">1. Introduction</h3>
+                <p>
+                    The optimizer performs <strong>least-cost capacity expansion planning</strong> under a CO2 emissions constraint. Given a target annual CO2 level (in million metric tons), it determines the optimal mix of new generation, storage, and carbon removal technologies to add to the existing grid that minimizes total annualized system cost while meeting the emissions target and reliability constraints.
+                </p>
+                <p>
+                    Unlike <strong>Manual Mode</strong>, where the user adjusts technology sliders by hand and observes the impact, <strong>Optimize Mode</strong> automates this process. It runs hundreds of dispatch simulations internally, evaluating different capacity combinations to find the most cost-effective portfolio that meets the CO2 target.
+                </p>
+                <p>
+                    <strong>Key outputs:</strong> Recommended capacity additions (GW or GWh per technology), total system cost ($/year), achieved CO2 emissions, reserve margin, curtailment rate, and a detailed cost breakdown including abatement costs.
+                </p>
+
+                <!-- 2. Time Resolution -->
+                <h3 id="time-model">2. Time Resolution & Demand Model</h3>
+                <p>
+                    The model uses a <strong>288-hour representative year</strong>, consisting of 12 months &times; 24 hours. Each month is represented by a single "typical day" of 24 hourly time steps. This compact representation captures seasonal and diurnal variation while keeping computation fast enough for interactive use.
+                </p>
+                <p>
+                    To convert hourly simulation values to annual totals, each hour is weighted by the number of days in its month:
+                </p>
+                <div class="formula-block">
+                    Annual Value = &sum;<sub>i=0</sub><sup>287</sup> Hourly[i] &times; DaysInMonth[&lfloor;i/24&rfloor;]
+                </div>
+                <p>where:</p>
+                <table class="parameter-table">
+                    <thead><tr><th>Month</th><th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>May</th><th>Jun</th><th>Jul</th><th>Aug</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dec</th></tr></thead>
+                    <tbody><tr><td><strong>Days</strong></td><td>31</td><td>28</td><td>31</td><td>30</td><td>31</td><td>30</td><td>31</td><td>31</td><td>30</td><td>31</td><td>30</td><td>31</td></tr></tbody>
+                </table>
+                <p>
+                    Demand is provided as a 288-element array in GW (12 months × 24 hours). For California, the system uses direct CAISO-derived monthly profiles where each of the 12 months has a complete 24-hour demand pattern with realistic diurnal variation. For other regions, four seasonal base 24-hour shapes (spring, summer, fall, winter) are scaled by per-month multipliers to generate 12 monthly profiles, preserving backward compatibility while capturing month-to-month variation.
+                </p>
+
+                <!-- 3. Cost Model -->
+                <h3 id="cost-model">3. Technology Cost Model</h3>
+
+                <h4 id="cost-data">3.1 Cost Data</h4>
+                <p>
+                    Each technology has four cost parameters plus a lifetime. Users can edit these values in the "Edit Cost & Performance Assumptions" panel. Default values are:
+                </p>
+                <table class="parameter-table">
+                    <thead>
+                        <tr><th>Technology</th><th>CAPEX</th><th>Fixed O&M</th><th>Variable O&M</th><th>Lifetime</th><th>Capacity Factor</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Solar PV</td><td>$1,200/kW</td><td>$15/kW-yr</td><td>$0/MWh</td><td>30 yr</td><td>25%</td></tr>
+                        <tr><td>Onshore Wind</td><td>$1,500/kW</td><td>$35/kW-yr</td><td>$1/MWh</td><td>30 yr</td><td>35%</td></tr>
+                        <tr><td>Offshore Wind</td><td>$5,000/kW</td><td>$100/kW-yr</td><td>$0/MWh</td><td>30 yr</td><td>50%</td></tr>
+                        <tr><td>Nuclear</td><td>$7,242/kW</td><td>$140/kW-yr</td><td>$10/MWh</td><td>60 yr</td><td>90%</td></tr>
+                        <tr><td>Geothermal</td><td>$3,329/kW</td><td>$120/kW-yr</td><td>$5/MWh</td><td>30 yr</td><td>90%</td></tr>
+                        <tr><td>Biomass</td><td>$3,500/kW</td><td>$100/kW-yr</td><td>$10/MWh</td><td>25 yr</td><td>85%</td></tr>
+                        <tr><td>RNG (Biogas)</td><td>$3,000/kW</td><td>$95/kW-yr</td><td>$50/MWh</td><td>25 yr</td><td>85%</td></tr>
+                        <tr><td>Hydrogen</td><td>$3,500/kW</td><td>$90/kW-yr</td><td>$410/MWh</td><td>30 yr</td><td>20%</td></tr>
+                        <tr><td>Gas CCGT</td><td>$1,300/kW</td><td>$20/kW-yr</td><td>$35&ndash;80/MWh</td><td>30 yr</td><td>55%</td></tr>
+                        <tr><td>Coal</td><td>$4,407/kW</td><td>$40/kW-yr</td><td>$30/MWh</td><td>40 yr</td><td>60%</td></tr>
+                        <tr><td>Battery (4-hr)</td><td>$350/kWh</td><td>$15/kW-yr</td><td>$2/MWh</td><td>15 yr</td><td>&mdash;</td></tr>
+                        <tr><td>Battery (8-hr)</td><td>$300/kWh</td><td>$15/kW-yr</td><td>$2/MWh</td><td>15 yr</td><td>&mdash;</td></tr>
+                        <tr><td>Long-Duration (24-hr)</td><td>$300/kWh</td><td>$60/kW-yr</td><td>$1/MWh</td><td>25 yr</td><td>&mdash;</td></tr>
+                        <tr><td>DAC</td><td>$1,000/ton-yr</td><td>$20/ton-yr</td><td>$400/ton</td><td>25 yr</td><td>&mdash;</td></tr>
+                    </tbody>
+                </table>
+                <p><em>Note: Storage CAPEX is in $/kWh of energy capacity. DAC costs are per annual ton of CO2 capture capacity.</em></p>
+
+                <h4 id="crf">3.2 Capital Recovery Factor (CRF)</h4>
+                <p>
+                    Capital costs are annualized using the <strong>Capital Recovery Factor</strong>, which converts a lump-sum investment into equal annual payments over the asset's lifetime at a given discount rate:
+                </p>
+                <div class="formula-block">
+                    CRF(d, n) = d &times; (1 + d)<sup>n</sup> / [(1 + d)<sup>n</sup> &minus; 1]
+                </div>
+                <p>
+                    where <code>d</code> is the discount rate (default: 7% = 0.07) and <code>n</code> is the asset lifetime in years.
+                </p>
+                <p>
+                    For example, a solar plant (30 years, 7% discount):
+                    CRF = 0.07 &times; 1.07<sup>30</sup> / (1.07<sup>30</sup> &minus; 1) &asymp; 0.0806, meaning ~8.06% of capital cost is paid annually.
+                </p>
+
+                <h4 id="annualized-costs">3.3 Annualized Cost Formulas</h4>
+
+                <h5>Generation Technologies (Solar, Wind, Nuclear, etc.)</h5>
+                <div class="formula-block">
+                    Annual CAPEX = Capacity (kW) &times; CAPEX ($/kW) &times; CRF(d, n)<br>
+                    Annual Fixed O&M = Capacity (kW) &times; Fixed O&M ($/kW-yr)<br>
+                    Annual Variable O&M = Annual Generation (MWh) &times; Variable O&M ($/MWh)<br>
+                    <br>
+                    Total Annual Cost = Annual CAPEX + Fixed O&M + Variable O&M
+                </div>
+                <p>
+                    Annual generation is computed by summing hourly dispatch across all 288 hours, weighted by days in each month.
+                </p>
+
+                <h5>Storage Technologies (Battery, Long-Duration)</h5>
+                <p>
+                    Storage is specified in GWh of energy capacity. Power capacity is derived from the duration:
+                </p>
+                <div class="formula-block">
+                    Power (kW) = Energy (kWh) / Duration (hours)<br>
+                    &nbsp;&nbsp;4-hr battery: Duration = 4 hours<br>
+                    &nbsp;&nbsp;8-hr battery: Duration = 8 hours<br>
+                    &nbsp;&nbsp;Long-duration: Duration = 24 hours<br>
+                    <br>
+                    Annual CAPEX = Energy (kWh) &times; CAPEX ($/kWh) &times; CRF(d, n)<br>
+                    Annual Fixed O&M = Power (kW) &times; Fixed O&M ($/kW-yr)<br>
+                    Annual Variable O&M = Annual Discharge (MWh) &times; Variable O&M ($/MWh)
+                </div>
+                <p>
+                    Round-trip efficiency for all storage types is <strong>85%</strong>. This means for every 1 MWh charged, only 0.85 MWh is available for discharge.
+                </p>
+
+                <h5>Direct Air Capture (DAC)</h5>
+                <div class="formula-block">
+                    Annual Capture Capacity = Hourly Rate (t/hr) &times; 24 &times; 365 (tons/yr)<br>
+                    Annual CAPEX = Annual Capacity &times; CAPEX ($/ton-yr) &times; CRF(d, n)<br>
+                    Annual Fixed O&M = Annual Capacity &times; Fixed O&M ($/ton-yr)<br>
+                    Annual Variable O&M = Annual Capacity &times; Variable O&M ($/ton)
+                </div>
+
+                <h4 id="incentives">3.4 Incentives</h4>
+                <p>
+                    Government incentives reduce technology costs:
+                </p>
+                <ul>
+                    <li><strong>Production Tax Credit (PTC):</strong> Applied as $/MWh to annual generation. Reduces the annual cost of the technology by <code>Annual Generation (MWh) &times; PTC rate</code>. Available for solar, wind, offshore wind, nuclear, geothermal, biomass, RNG, and hydrogen.</li>
+                    <li><strong>Investment Tax Credit (ITC):</strong> Applied to storage. Reduces cost by <code>Energy Capacity (kWh) &times; CAPEX &times; ITC rate &times; CRF</code> (annualized).</li>
+                    <li><strong>DAC Incentive:</strong> Per-ton subsidy that directly reduces DAC annual cost.</li>
+                    <li><strong>Carbon Tax:</strong> Adds cost: <code>(Annual CO2 in kg / 1000) &times; Carbon Tax ($/ton)</code>.</li>
+                    <li><strong>Export Price:</strong> Curtailed energy can be "exported" at a given price (can be negative). Revenue = <code>Curtailment (GWh) &times; 1000 &times; Export Price ($/MWh)</code>.</li>
+                </ul>
+
+                <h4 id="total-system-cost">3.5 Total System Cost</h4>
+                <div class="formula-block">
+                    Total System Cost ($/yr) = <br>
+                    &nbsp;&nbsp;&sum; Generation Tech Costs (CAPEX + Fixed O&M + Var O&M &minus; PTC)<br>
+                    + &sum; Storage Costs (CAPEX + Fixed O&M + Var O&M &minus; ITC)<br>
+                    + DAC Cost (CAPEX + Fixed O&M + Var O&M &minus; DAC Incentive)<br>
+                    + Carbon Tax Cost<br>
+                    &minus; Export Revenue
+                </div>
+                <p>
+                    This cost includes <strong>both existing baseline capacity and new additions</strong>. The optimizer minimizes this total while meeting the CO2 constraint.
+                </p>
+
+                <!-- 4. Dispatch Simulation -->
+                <h3 id="dispatch">4. Dispatch Simulation</h3>
+                <p>
+                    Every candidate solution is evaluated by running a full hourly dispatch simulation (<code>getSimulationResult</code>). This determines how the grid operates each hour: which plants run, how storage charges/discharges, what gets curtailed, and the resulting emissions. The dispatch follows a merit order, prioritizing low-cost and zero-carbon sources.
+                </p>
+
+                <h5>Dispatch Order (each hour)</h5>
+                <ol>
+                    <li><strong>Must-run baseload:</strong> Nuclear, geothermal, and biomass run at their capacity factor regardless of demand. Hydro runs at its country-specific capacity factor.</li>
+                    <li><strong>Variable Renewable Energy (VRE):</strong> Solar and wind generation is computed as <code>Capacity (GW) &times; CF Profile[hour]</code>. The CF profile varies by hour and month, capturing diurnal and seasonal patterns.</li>
+                    <li><strong>Net Load calculation:</strong> <code>Net Load = Demand &minus; Must-run &minus; VRE</code>. If net load is negative, there is excess generation.</li>
+                    <li><strong>Storage dispatch:</strong> Storage operates via economic arbitrage. It charges during hours of excess generation (low prices) and discharges during high net-load hours (high prices). The algorithm sorts hours by net load, identifies cheap charging hours and expensive discharging hours, and dispatches optimally subject to energy capacity and power constraints. Round-trip efficiency is 85%.</li>
+                    <li><strong>Thermal dispatch:</strong> Remaining net load (after storage) is met by fossil fuels in merit order: Natural Gas CCGT (cheapest) &rarr; Natural Gas CT &rarr; Coal (most expensive). Each plant ramps between a minimum and maximum output, with the marginal cost increasing linearly as output increases.</li>
+                    <li><strong>RNG and Hydrogen:</strong> These clean dispatchable sources are dispatched before fossil fuels to reduce emissions, operating as flexible generation.</li>
+                    <li><strong>Curtailment:</strong> If total generation exceeds demand after all dispatch, the excess is curtailed. <code>Curtailment Rate = Curtailed Energy / (Total Generation + Curtailment)</code>.</li>
+                </ol>
+
+                <h4 id="emissions">4.1 Emissions Calculation</h4>
+                <p>
+                    Hourly emissions are computed by multiplying each technology's generation by its emission factor:
+                </p>
+                <div class="formula-block">
+                    Hourly CO2 (kg/hr) = &sum; Generation[tech] (GW) &times; 1000 &times; EmissionFactor[tech] (kg/MWh) &minus; DAC Rate (kg/hr)
+                </div>
+
+                <table class="parameter-table">
+                    <thead><tr><th>Technology</th><th>Emission Factor (kg CO2/MWh)</th></tr></thead>
+                    <tbody>
+                        <tr><td>Natural Gas (generic)</td><td>410</td></tr>
+                        <tr><td>Natural Gas CCGT</td><td>370</td></tr>
+                        <tr><td>Natural Gas CT</td><td>500</td></tr>
+                        <tr><td>Coal</td><td>920</td></tr>
+                        <tr><td>Biomass</td><td>50 (net, after regrowth offset)</td></tr>
+                        <tr><td>All other (solar, wind, nuclear, etc.)</td><td>0</td></tr>
+                    </tbody>
+                </table>
+
+                <p>
+                    Annual CO2 is then computed by summing hourly emissions weighted by days per month:
+                </p>
+                <div class="formula-block">
+                    Annual CO2 (kg) = &sum;<sub>i=0</sub><sup>287</sup> HourlyEmissions[i] &times; DaysInMonth[&lfloor;i/24&rfloor;]
+                </div>
+
+                <!-- 5. Optimization Algorithm -->
+                <h3 id="algorithm">5. Optimization Algorithm</h3>
+                <p>
+                    The optimizer uses a <strong>three-phase approach</strong>: (1) a heuristic initial guess, (2) an iterative neighbor-search main loop guided by system-value adjusted LCOE, and (3) a Nelder-Mead simplex refinement. This hybrid approach balances exploration (finding good regions of the solution space) with exploitation (fine-tuning the best solution found).
+                </p>
+
+                <h4 id="initial-guess">5.1 Initial Guess Heuristic</h4>
+                <p>
+                    Rather than starting from zero capacity, the optimizer estimates a reasonable starting point based on the CO2 reduction needed:
+                </p>
+                <div class="formula-block">
+                    Baseline CO2 = Emissions from existing grid with zero new capacity<br>
+                    CO2 Reduction Needed = max(0, Baseline CO2 &minus; Target CO2)<br>
+                    <br>
+                    Total Clean Capacity Needed (GW) = CO2 Reduction / 1.1 &times; 10<sup>9</sup><br>
+                    <em>(Empirical rate: ~1.1 million MT CO2 reduced per GW of clean capacity)</em><br>
+                    <br>
+                    Initial Solar = min(100, 60% of Total Clean Capacity)<br>
+                    Initial Wind = min(80, 40% of Total Clean Capacity)<br>
+                    Initial Battery = min(50, 25% of VRE Capacity) [GWh, 4-hr]
+                </div>
+
+                <h5>Reserve Margin Gap Check</h5>
+                <p>
+                    Before starting the main loop, the optimizer checks whether the existing grid plus the initial guess has sufficient flexible capacity. If the reserve margin target (20%) is not met, it adds:
+                </p>
+                <ul>
+                    <li>80% of the gap as 4-hr battery (GWh = gap &times; 4 &times; 0.8)</li>
+                    <li>15% as RNG</li>
+                    <li>5% as Hydrogen</li>
+                </ul>
+
+                <h5>Adaptive Scaling</h5>
+                <p>
+                    If a previous optimization overshot the target (CO2 came in &gt;5% below target), the initial guess is scaled down to prevent the same overshoot. The scale factor is <code>max(0.5, 1.0 &minus; previousGapPercent/100)</code>, capping at 50% reduction.
+                </p>
+
+                <h4 id="main-loop">5.2 Main Optimization Loop</h4>
+                <p>
+                    The core loop runs up to 1000 iterations (configurable). Each iteration:
+                </p>
+                <ol>
+                    <li>
+                        <strong>Compute system-value adjusted LCOE</strong> for each technology using <code>calculateMarginalLCOEWithSystemValue</code>. This starts from the base LCOE but adjusts based on current system conditions:
+                        <ul>
+                            <li>If <strong>curtailment &gt; 10%</strong>: VRE LCOE is penalized (solar &times;(1 + curtailment rate), wind &times;(1 + curtailment &times; 0.5), offshore &times;(1 + curtailment &times; 0.3)) since adding more VRE will further increase curtailment.</li>
+                            <li>If <strong>reserve margin &lt; target</strong>: Flexible technology LCOEs receive a 90% discount (multiplied by 0.1), and firm baseload (nuclear, geothermal) gets a 50% discount.</li>
+                            <li>If <strong>CO2 gap exists</strong>: All zero-carbon technologies get a 10% discount. If the gap is severe (&gt;1.5&times; target), DAC gets a 30% discount.</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Generate candidate solutions:</strong> Technologies are ranked by adjusted LCOE. For each technology (in LCOE order), candidates are generated by adding or subtracting a step size. Step sizes vary by technology:
+                        <table class="parameter-table">
+                            <thead><tr><th>Technology</th><th>Step Size</th><th>Unit</th></tr></thead>
+                            <tbody>
+                                <tr><td>Solar</td><td>1.0 &ndash; 5.0</td><td>GW</td></tr>
+                                <tr><td>Wind</td><td>1.0 &ndash; 5.0</td><td>GW</td></tr>
+                                <tr><td>Offshore Wind</td><td>0.5 &ndash; 2.0</td><td>GW</td></tr>
+                                <tr><td>Nuclear</td><td>0.5 &ndash; 2.0</td><td>GW</td></tr>
+                                <tr><td>Geothermal</td><td>0.5 &ndash; 1.0</td><td>GW</td></tr>
+                                <tr><td>Biomass</td><td>0.5 &ndash; 1.0</td><td>GW</td></tr>
+                                <tr><td>RNG / Hydrogen</td><td>0.5 &ndash; 2.0</td><td>GW</td></tr>
+                                <tr><td>Battery (4-hr / 8-hr)</td><td>2.0 &ndash; 10.0</td><td>GWh</td></tr>
+                                <tr><td>Long-Duration</td><td>5.0 &ndash; 20.0</td><td>GWh</td></tr>
+                                <tr><td>DAC</td><td>100 &ndash; 500</td><td>t/hr</td></tr>
+                            </tbody>
+                        </table>
+                        <p>The step size adapts based on iteration count (larger early, smaller later) and system conditions.</p>
+                    </li>
+                    <li>
+                        <strong>Quick feasibility pre-screen:</strong> Before running a full simulation, candidates are checked with a fast reserve margin estimate. Candidates that clearly fail are skipped.
+                    </li>
+                    <li>
+                        <strong>Full evaluation:</strong> Remaining candidates are evaluated via complete dispatch simulation, computing cost, CO2, reserve margin, curtailment, and energy balance.
+                    </li>
+                    <li>
+                        <strong>Selection:</strong> The best feasible candidate is selected. Under normal operation, the lowest-cost feasible solution wins. When the current best solution is &gt;10% below the CO2 target, a weighted objective is used: 70% cost + 30% proximity to target, to push the solution back toward the target.
+                    </li>
+                    <li>
+                        <strong>Improvement check:</strong> An improvement is "meaningful" if cost improves by &gt;0.01% or the CO2 gap narrows by &gt;1%. If meaningful, the no-improvement counter resets. Otherwise, it increments.
+                    </li>
+                </ol>
+
+                <h4 id="feasibility">5.3 Feasibility Constraints</h4>
+                <p>
+                    A solution must pass <strong>all four constraints</strong> to be considered feasible:
+                </p>
+                <table class="parameter-table">
+                    <thead><tr><th>Constraint</th><th>Requirement</th><th>Tolerance</th></tr></thead>
+                    <tbody>
+                        <tr><td><strong>CO2 Target</strong></td><td>Annual CO2 &le; Target CO2</td><td>2% above target allowed</td></tr>
+                        <tr><td><strong>Reserve Margin</strong></td><td>Flexible Capacity / Peak Demand &minus; 1 &ge; 0.20</td><td>None</td></tr>
+                        <tr><td><strong>Curtailment Cap</strong></td><td>Curtailment Rate &le; 20%</td><td>Only if enabled by user</td></tr>
+                        <tr><td><strong>Energy Balance</strong></td><td>Unmet Energy &lt; 10 MWh/yr</td><td>None</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    The <strong>quick feasibility check</strong> only tests reserve margin (fast to compute). The <strong>full feasibility check</strong> tests all four constraints after running the complete dispatch simulation.
+                </p>
+
+                <h4 id="convergence">5.4 Convergence & Early Stopping</h4>
+                <p>
+                    The optimizer stops when no meaningful improvement is found for a number of consecutive iterations:
+                </p>
+                <ul>
+                    <li><strong>Normal convergence:</strong> 50 iterations with no meaningful improvement.</li>
+                    <li><strong>Below-target mode:</strong> When the best solution's CO2 is &gt;10% below target, the threshold increases to 200 iterations to allow the optimizer more time to find solutions closer to the target.</li>
+                    <li><strong>Near-minimum capacity:</strong> If baseload capacity &lt; 1 GW and total non-flexible capacity &lt; 8 GW, the threshold reverts to 50 since we've hit a physical limit.</li>
+                </ul>
+
+                <h5>Perturbation (Escaping Local Minima)</h5>
+                <p>
+                    After 30 iterations without improvement, the current solution is randomly perturbed. Each technology's capacity is multiplied by a random factor between 0.7 and 1.3 (up to &plusmn;30% change). This helps the optimizer explore different regions of the solution space.
+                </p>
+
+                <h4 id="nelder-mead">5.5 Nelder-Mead Local Refinement</h4>
+                <p>
+                    After the main loop converges, the best solution is refined using the <strong>Nelder-Mead simplex algorithm</strong>. This derivative-free optimization method works in the space of "active" technologies (those with non-zero capacity in the best solution).
+                </p>
+
+                <h5>Simplex Initialization</h5>
+                <p>
+                    For N active technologies, a simplex of N+1 points is created. The first point is the current best solution. The remaining N points are created by perturbing each technology dimension: &plusmn;0.5 GW for generation, &plusmn;2.0 GWh for storage.
+                </p>
+
+                <h5>Simplex Operations</h5>
+                <p>
+                    Each iteration sorts the simplex by cost, then attempts to replace the worst point using these transformations:
+                </p>
+                <div class="formula-block">
+                    Centroid: c = (1/N) &times; &sum;(all points except worst)<br>
+                    <br>
+                    Reflection:&nbsp;&nbsp;&nbsp; x<sub>r</sub> = c + &alpha;(c &minus; x<sub>worst</sub>)&nbsp;&nbsp;&nbsp; [&alpha; = 1.0]<br>
+                    Expansion:&nbsp;&nbsp;&nbsp; x<sub>e</sub> = c + &gamma;(x<sub>r</sub> &minus; c)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [&gamma; = 2.0]<br>
+                    Contraction:&nbsp; x<sub>c</sub> = c + &rho;(x<sub>worst</sub> &minus; c)&nbsp;&nbsp; [&rho; = 0.5]<br>
+                    Shrink:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; x<sub>i</sub> = x<sub>best</sub> + &sigma;(x<sub>i</sub> &minus; x<sub>best</sub>) [&sigma; = 0.5]
+                </div>
+                <p>
+                    The algorithm first tries reflection. If the reflected point is the best so far, it tries expansion. If reflection is worse than the second-worst, it tries contraction. If all fail, it shrinks the entire simplex toward the best point.
+                </p>
+                <p>
+                    <strong>Convergence:</strong> The refinement stops when the cost range across the simplex (worst &minus; best) is less than 1% of the best cost, or after 150 iterations.
+                </p>
+
+                <!-- 6. DAC -->
+                <h3 id="dac">6. Direct Air Capture (DAC)</h3>
+                <p>
+                    DAC is a technology that actively removes CO2 from the atmosphere. In the optimizer, it acts as negative emissions.
+                </p>
+                <h5>When DAC is Enabled</h5>
+                <p>
+                    DAC is only added to the candidate technology list when the CO2 target is <strong>aggressive</strong>: specifically, when the target is less than 60% of the baseline emissions. For easier targets, DAC is excluded because conventional clean generation is more cost-effective. DAC can also be manually disabled by the user via a checkbox.
+                </p>
+                <h5>LCOE Adjustments for DAC</h5>
+                <p>
+                    When the CO2 gap is severe (&gt;1.5&times; the target), DAC receives a 30% LCOE discount to make it more competitive. This reflects that DAC becomes increasingly valuable when other options are insufficient.
+                </p>
+
+                <!-- 7. Reserve Margin -->
+                <h3 id="reserve-margin">7. Reserve Margin</h3>
+                <p>
+                    The reserve margin measures how much <strong>flexible, dispatchable capacity</strong> exceeds peak demand. It is a proxy for grid reliability&mdash;ensuring there is enough backup capacity for unexpected demand spikes or generator outages.
+                </p>
+                <div class="formula-block">
+                    Reserve Margin = (Total Flexible Capacity / Peak Demand) &minus; 1.0<br>
+                    <br>
+                    Target: &ge; 0.20 (20%)
+                </div>
+
+                <h5>What Counts as Flexible Capacity</h5>
+                <table class="parameter-table">
+                    <thead><tr><th>Flexible (counted)</th><th>Not Flexible (excluded)</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                Natural Gas (all types)<br>
+                                RNG (Biogas)<br>
+                                Hydrogen<br>
+                                Hydro<br>
+                                Battery power capacity (GWh / Duration)
+                            </td>
+                            <td>
+                                Solar (intermittent)<br>
+                                Wind (intermittent)<br>
+                                Offshore Wind (intermittent)<br>
+                                Nuclear (inflexible baseload)<br>
+                                Geothermal (inflexible baseload)<br>
+                                Biomass (inflexible baseload)<br>
+                                Coal (inflexible baseload)
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p>
+                    <em>Note:</em> Battery storage contributes its <strong>power capacity</strong> (energy / duration), not its energy capacity. A 100 GWh, 4-hour battery provides 25 GW of flexible power capacity.
+                </p>
+
+                <!-- 8. Capacity Bounds -->
+                <h3 id="capacity-bounds">8. Capacity Bounds</h3>
+                <p>
+                    Each technology has minimum and maximum capacity limits. These prevent unrealistic solutions and keep the optimization space manageable:
+                </p>
+                <table class="parameter-table">
+                    <thead><tr><th>Technology</th><th>Min</th><th>Max</th><th>Unit</th></tr></thead>
+                    <tbody>
+                        <tr><td>Solar</td><td>0</td><td>100</td><td>GW</td></tr>
+                        <tr><td>Onshore Wind</td><td>0</td><td>80</td><td>GW</td></tr>
+                        <tr><td>Offshore Wind</td><td>0</td><td>50</td><td>GW</td></tr>
+                        <tr><td>Nuclear</td><td>0</td><td>30</td><td>GW</td></tr>
+                        <tr><td>Geothermal</td><td>0</td><td>20</td><td>GW</td></tr>
+                        <tr><td>Biomass</td><td>0</td><td>20</td><td>GW</td></tr>
+                        <tr><td>RNG</td><td>0</td><td>20</td><td>GW</td></tr>
+                        <tr><td>Hydrogen</td><td>0</td><td>20</td><td>GW</td></tr>
+                        <tr><td>Battery (4-hr)</td><td>0</td><td>100</td><td>GWh</td></tr>
+                        <tr><td>Battery (8-hr)</td><td>0</td><td>100</td><td>GWh</td></tr>
+                        <tr><td>Long-Duration (24-hr)</td><td>0</td><td>200</td><td>GWh</td></tr>
+                        <tr><td>DAC</td><td>0</td><td>10,000</td><td>t/hr</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    These bounds represent <strong>new capacity additions</strong> only, not total installed capacity. Existing baseline capacity is separate.
+                </p>
+
+                <!-- 9. Stranded Assets -->
+                <h3 id="stranded-assets">9. Stranded Asset Detection</h3>
+                <p>
+                    After optimization, the model checks whether existing fossil fuel capacity is underutilized. If the optimized grid's <strong>peak hourly usage</strong> of natural gas or coal is less than 80% of the installed capacity, the system flags these as potentially stranded assets.
+                </p>
+                <div class="formula-block">
+                    Stranded if: Max Hourly Usage &lt; 0.80 &times; Installed Capacity
+                </div>
+                <p>
+                    When stranded capacity is detected, the user is offered the option to <strong>re-optimize with reduced fossil baseline</strong>. The suggested new capacity is set to 110% of the peak optimized usage (a 10% buffer). Reducing fossil capacity lowers Fixed O&M costs but may require additional flexible clean resources (batteries, RNG, hydrogen) to maintain the reserve margin.
+                </p>
+
+                <!-- 10. Configuration -->
+                <h3 id="config">10. Configuration Parameters</h3>
+
+                <h4>Optimization Configuration</h4>
+                <table class="parameter-table">
+                    <thead><tr><th>Parameter</th><th>Value</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td>MAX_ITERATIONS</td><td>1000</td><td>Maximum iterations in main loop</td></tr>
+                        <tr><td>RESERVE_MARGIN_TARGET</td><td>0.20</td><td>20% flexible capacity above peak demand</td></tr>
+                        <tr><td>Discount Rate</td><td>0.07</td><td>7% real discount rate for CRF</td></tr>
+                        <tr><td>CO2 Tolerance</td><td>2%</td><td>Solutions up to 2% above target are feasible</td></tr>
+                        <tr><td>Curtailment Cap</td><td>20%</td><td>Max allowed curtailment (if enabled)</td></tr>
+                        <tr><td>Convergence Threshold</td><td>50 / 200</td><td>Iterations without improvement before stopping</td></tr>
+                        <tr><td>Perturbation Trigger</td><td>30</td><td>No-improvement iterations before random perturbation</td></tr>
+                        <tr><td>Nelder-Mead Iterations</td><td>150</td><td>Maximum iterations for local refinement</td></tr>
+                        <tr><td>Storage Efficiency</td><td>85%</td><td>Round-trip efficiency for all storage</td></tr>
+                        <tr><td>Cache Precision</td><td>0.1 GW</td><td>Solution hashing rounds to nearest 0.1 GW</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>Monthly VRE Capacity Factor Profiles</h4>
+                <p>
+                    Capacity factor profiles for solar, onshore wind, and offshore wind vary by month to capture seasonal patterns. Two approaches are used:
+                </p>
+                <ul>
+                    <li><strong>California:</strong> Uses direct 12-month × 24-hour profiles extracted from CAISO 2025 Summer Assessment (Figures 2.4 &amp; 2.5). Each month has a unique diurnal pattern with realistic shapes and all capacity factors ≤ 1.0.</li>
+                    <li><strong>Other regions:</strong> Uses a base 24-hour profile scaled by monthly multipliers. All resulting CFs are capped at 1.0 via <code>Math.min(1, baseCF &times; multiplier)</code>.</li>
+                </ul>
+
+                <h5>California Monthly Profiles (CAISO-derived, rescaled to peak=1.0)</h5>
+                <table class="parameter-table">
+                    <thead><tr><th>Month</th><th>Solar Peak CF</th><th>Wind Peak CF</th><th>Offshore Wind Peak CF</th><th>Pattern Notes</th></tr></thead>
+                    <tbody>
+                        <tr><td>January</td><td>0.58</td><td>0.30</td><td>0.50</td><td>10 sun hours, winter-boosted offshore</td></tr>
+                        <tr><td>February</td><td>0.70</td><td>0.39</td><td>0.65</td><td>11 sun hours, strengthening wind</td></tr>
+                        <tr><td>March</td><td>0.81</td><td>0.57</td><td>0.80</td><td>13 sun hours, spring transition</td></tr>
+                        <tr><td>April</td><td>0.91</td><td>0.79</td><td>1.00</td><td>14 sun hours, wind ramping up</td></tr>
+                        <tr><td>May</td><td>0.98</td><td>0.91</td><td>0.93</td><td>15 sun hours, peak solar &amp; wind correlation</td></tr>
+                        <tr><td>June</td><td>1.00</td><td>1.00</td><td>0.89</td><td>16 sun hours, strongest wind, reduced offshore</td></tr>
+                        <tr><td>July</td><td>0.96</td><td>0.79</td><td>0.80</td><td>15 sun hours, sustained summer peak</td></tr>
+                        <tr><td>August</td><td>0.91</td><td>0.66</td><td>0.76</td><td>14 sun hours, beginning descent</td></tr>
+                        <tr><td>September</td><td>0.83</td><td>0.63</td><td>0.72</td><td>12 sun hours, fall transition</td></tr>
+                        <tr><td>October</td><td>0.70</td><td>0.39</td><td>0.50</td><td>11 sun hours, weakening wind</td></tr>
+                        <tr><td>November</td><td>0.56</td><td>0.30</td><td>0.46</td><td>10 sun hours, winter approaching</td></tr>
+                        <tr><td>December</td><td>0.48</td><td>0.29</td><td>0.44</td><td>9 sun hours, winter minimum</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    <strong>Key California pattern:</strong> Unlike most US regions, California wind is <em>summer-peaking</em> due to the coastal-to-inland thermal gradient driving strong winds through mountain passes (Tehachapi, Altamont, San Gorgonio). Both solar and wind peak in May&ndash;June (positively correlated). Offshore wind uses season-dependent transformation: winter-boosted (1.3×), summer-reduced (0.7×), then smoothed to reflect steadier marine winds. All profiles have been rescaled so the peak CF across all months equals 1.0, providing accurate relative seasonal variation while allowing maximum theoretical output during optimal conditions.
+                </p>
+
+                <h5>Default (other regions)</h5>
+                <table class="parameter-table">
+                    <thead><tr><th>Month</th><th>Solar</th><th>Onshore Wind</th><th>Offshore Wind</th></tr></thead>
+                    <tbody>
+                        <tr><td>January</td><td>0.60</td><td>1.15</td><td>1.15</td></tr>
+                        <tr><td>February</td><td>0.70</td><td>1.10</td><td>1.10</td></tr>
+                        <tr><td>March</td><td>0.85</td><td>1.05</td><td>1.05</td></tr>
+                        <tr><td>April</td><td>0.95</td><td>0.95</td><td>1.00</td></tr>
+                        <tr><td>May</td><td>1.05</td><td>0.90</td><td>0.95</td></tr>
+                        <tr><td>June</td><td>1.15</td><td>0.85</td><td>0.90</td></tr>
+                        <tr><td>July</td><td>1.15</td><td>0.80</td><td>0.85</td></tr>
+                        <tr><td>August</td><td>1.10</td><td>0.80</td><td>0.85</td></tr>
+                        <tr><td>September</td><td>0.95</td><td>0.85</td><td>0.90</td></tr>
+                        <tr><td>October</td><td>0.80</td><td>0.95</td><td>1.00</td></tr>
+                        <tr><td>November</td><td>0.65</td><td>1.10</td><td>1.10</td></tr>
+                        <tr><td>December</td><td>0.55</td><td>1.15</td><td>1.15</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    In the default pattern, solar is strongest in summer and weakest in winter, while wind has the opposite pattern (strongest in winter). This seasonal complementarity is typical for most US and European regions.</p>
+
+                <h4>Monthly Demand Profiles</h4>
+                <p>
+                    Demand profiles vary by month to capture seasonal load patterns. Two approaches are used:
+                </p>
+                <ul>
+                    <li><strong>California:</strong> Uses direct 12-month × 24-hour demand profiles derived from CAISO operational data. Each month has a complete hourly pattern with realistic diurnal variation, including subtle midday plateau characteristics.</li>
+                    <li><strong>Other regions:</strong> Uses seasonal base 24-hour profiles (spring, summer, fall, winter) scaled by per-month multipliers. Each month maps to its season's shape, then is scaled by a multiplier to capture month-to-month intensity variation.</li>
+                </ul>
+
+                <h5>California Monthly Demand Profiles (CAISO-derived)</h5>
+                <table class="parameter-table">
+                    <thead><tr><th>Month</th><th>Peak Demand (GW)</th><th>Overnight Min (GW)</th><th>Pattern Characteristics</th></tr></thead>
+                    <tbody>
+                        <tr><td>January</td><td>29.5</td><td>19.3</td><td>Moderate winter, evening peak</td></tr>
+                        <tr><td>February</td><td>28.0</td><td>18.2</td><td>Mildest month (lowest peak)</td></tr>
+                        <tr><td>March</td><td>27.0</td><td>16.3</td><td>Spring transition, lowest demand season</td></tr>
+                        <tr><td>April</td><td>26.5</td><td>16.4</td><td>Annual minimum, mild spring weather</td></tr>
+                        <tr><td>May</td><td>31.0</td><td>17.5</td><td>Warming, early AC usage begins</td></tr>
+                        <tr><td>June</td><td>38.5</td><td>21.7</td><td>Early summer, AC demand rising</td></tr>
+                        <tr><td>July</td><td>45.0</td><td>25.3</td><td>Peak summer heat, AC-driven evening peak</td></tr>
+                        <tr><td>August</td><td>46.5</td><td>26.2</td><td>Hottest month (highest consistent peak)</td></tr>
+                        <tr><td>September</td><td>46.0</td><td>26.9</td><td>Late summer heatwaves, volatile (historical record 52 GW)</td></tr>
+                        <tr><td>October</td><td>34.5</td><td>20.1</td><td>Fall transition, cooling down</td></tr>
+                        <tr><td>November</td><td>29.0</td><td>18.5</td><td>Cooling down, lower demand</td></tr>
+                        <tr><td>December</td><td>30.0</td><td>19.1</td><td>Winter, holiday lighting and heating</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    <strong>California pattern:</strong> Profiles exhibit subtle midday plateau (1-2 GW dip below morning peak) before the evening peak, characteristic of CAISO operational data. Demand follows a clear seasonal pattern: spring (March-April) represents the annual minimum at ~26-27 GW due to mild weather and high solar output offsetting daytime load. Summer months (July-September) show the highest peaks at 45-46 GW driven by air conditioning demand, with September being particularly volatile due to late-season heatwaves (CAISO's all-time record of 52 GW occurred in September 2022). Winter and fall months range from 28-35 GW. All values based on typical CAISO operational ranges.
+                </p>
+
+                <h5>Default (other regions)</h5>
+                <p>
+                    For non-California regions, the system uses four seasonal base 24-hour profiles (spring, summer, fall, winter) scaled by per-month multipliers ranging from 0.92 to 1.11. This preserves backward compatibility while still capturing month-to-month demand variation.
+                </p>
+
+                <h4>Solution Caching</h4>
+                <p>
+                    To avoid redundant dispatch simulations, the optimizer caches evaluation results. Solutions are hashed by rounding each technology's capacity to the nearest 0.1 GW (or GWh for storage, t/hr for DAC). If a solution with the same hash has been evaluated before, the cached result is returned directly. The cache is cleared at the start of each optimization run.
+                </p>
+
+            </section>
+        </div>
+    </main>
+
+    <footer class="container mx-auto p-4 mt-12 text-center border-t border-gray-200">
+        <p class="text-sm text-gray-600">
+            &copy; 2025 <a href="https://eshansingh.xyz" class="font-medium text-gray-800 hover:text-blue-600">Dr. Eshan Singh</a>. All rights reserved.
+        </p>
+    </footer>
+
+</body>
+</html>
