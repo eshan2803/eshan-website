@@ -1180,6 +1180,132 @@
                         </div>
                         <p class="text-xs text-gray-500 mt-2 italic">* Storage CAPEX is $/kWh. DAC CAPEX is $/ton/yr. NG
                             Variable O&M shows start-end range implies ramp.</p>
+
+                        <!-- Supply Curves Section -->
+                        <div class="mt-6 pt-6 border-t border-gray-300">
+                            <h4 class="font-semibold text-gray-800 text-sm mb-3">Supply Curves (Resource-Constrained Technologies)</h4>
+                            <p class="text-xs text-gray-600 mb-3">CAPEX multipliers increase as deployment grows. Base CAPEX (from table above) × multiplier = effective CAPEX.</p>
+
+                            <!-- Geothermal Supply Curve -->
+                            <div class="mb-4 bg-blue-50 rounded p-3 border border-blue-200">
+                                <label class="block text-xs font-semibold text-gray-700 mb-2">Geothermal Supply Curve</label>
+                                <div class="grid grid-cols-3 gap-2 text-xs">
+                                    <div>
+                                        <label class="block text-[10px] text-gray-500 mb-1">0-2 GW Multiplier</label>
+                                        <input type="number" id="geo-mult-1" step="0.1" min="0.5" max="3.0"
+                                            class="w-full text-xs border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] text-gray-500 mb-1">2-4 GW Multiplier</label>
+                                        <input type="number" id="geo-mult-2" step="0.1" min="0.5" max="3.0"
+                                            class="w-full text-xs border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] text-gray-500 mb-1">4-5 GW Multiplier</label>
+                                        <input type="number" id="geo-mult-3" step="0.1" min="0.5" max="3.0"
+                                            class="w-full text-xs border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Biomass Supply Curve -->
+                            <div class="mb-4 bg-green-50 rounded p-3 border border-green-200">
+                                <label class="block text-xs font-semibold text-gray-700 mb-2">Biomass Supply Curve</label>
+                                <div class="grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                        <label class="block text-[10px] text-gray-500 mb-1">0-1.5 GW Multiplier</label>
+                                        <input type="number" id="bio-mult-1" step="0.1" min="0.5" max="3.0"
+                                            class="w-full text-xs border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] text-gray-500 mb-1">1.5-3 GW Multiplier</label>
+                                        <input type="number" id="bio-mult-2" step="0.1" min="0.5" max="3.0"
+                                            class="w-full text-xs border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Capacity Bounds Section -->
+                        <div class="mt-6 pt-6 border-t border-gray-300">
+                            <h4 class="font-semibold text-gray-800 text-sm mb-3">Capacity Bounds (Max New Additions)</h4>
+                            <p class="text-xs text-gray-600 mb-3">Maximum capacity additions for each technology. Generation in GW, Storage in GWh.</p>
+
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                                <div>
+                                    <label class="block text-[10px] text-gray-500 mb-1">Solar Max (GW)</label>
+                                    <input type="number" id="bound-solar" step="5" min="0" max="500"
+                                        class="w-full text-xs border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-gray-500 mb-1">Wind Max (GW)</label>
+                                    <input type="number" id="bound-wind" step="5" min="0" max="500"
+                                        class="w-full text-xs border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-gray-500 mb-1">Offshore Max (GW)</label>
+                                    <input type="number" id="bound-offshoreWind" step="5" min="0" max="200"
+                                        class="w-full text-xs border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-gray-500 mb-1">Nuclear Max (GW)</label>
+                                    <input type="number" id="bound-nuclear" step="5" min="0" max="100"
+                                        class="w-full text-xs border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div class="bg-blue-50 border border-blue-200">
+                                    <label class="block text-[10px] text-gray-500 mb-1 px-2 pt-1">Geothermal Max (GW)</label>
+                                    <input type="number" id="bound-geothermal" step="1" min="0" max="20"
+                                        class="w-full text-xs border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500 px-2 pb-1">
+                                </div>
+                                <div class="bg-green-50 border border-green-200">
+                                    <label class="block text-[10px] text-gray-500 mb-1 px-2 pt-1">Biomass Max (GW)</label>
+                                    <input type="number" id="bound-biomass" step="0.5" min="0" max="10"
+                                        class="w-full text-xs border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500 px-2 pb-1">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-gray-500 mb-1">RNG Max (GW)</label>
+                                    <input type="number" id="bound-rng" step="5" min="0" max="50"
+                                        class="w-full text-xs border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-gray-500 mb-1">Hydrogen Max (GW)</label>
+                                    <input type="number" id="bound-hydrogen" step="5" min="0" max="50"
+                                        class="w-full text-xs border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-gray-500 mb-1">Battery 4hr Max (GWh)</label>
+                                    <input type="number" id="bound-battery4hr" step="10" min="0" max="500"
+                                        class="w-full text-xs border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-gray-500 mb-1">Battery 8hr Max (GWh)</label>
+                                    <input type="number" id="bound-battery8hr" step="10" min="0" max="500"
+                                        class="w-full text-xs border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-gray-500 mb-1">Long-Duration Max (GWh)</label>
+                                    <input type="number" id="bound-longduration" step="10" min="0" max="1000"
+                                        class="w-full text-xs border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-gray-500 mb-1">DAC Max (tons/hr)</label>
+                                    <input type="number" id="bound-dac" step="1000" min="0" max="50000"
+                                        class="w-full text-xs border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2 italic">Bounds represent maximum new capacity additions (not total installed capacity).</p>
+                        </div>
+
+                        <!-- How the Optimizer Uses These Values -->
+                        <div class="mt-6 pt-6 border-t border-gray-300 bg-gray-50 rounded p-4">
+                            <h4 class="font-semibold text-gray-800 text-sm mb-2">How the Optimizer Uses These Parameters</h4>
+                            <div class="text-xs text-gray-700 space-y-2">
+                                <p><strong>Base CAPEX & O&M:</strong> Used to calculate annualized costs for each technology. The optimizer minimizes total system cost while meeting demand and CO2 targets.</p>
+                                <p><strong>Supply Curves:</strong> For geothermal and biomass, costs increase with deployment. The optimizer sees: Base CAPEX × multiplier = effective cost. This reflects resource quality degradation as the best sites are used first.</p>
+                                <p><strong>Capacity Bounds:</strong> Hard constraints on maximum deployments. When a technology hits its bound, the optimizer explores alternative solutions. Tighter bounds force more diverse technology portfolios.</p>
+                                <p class="italic text-gray-600">💡 Tip: Geothermal and biomass are resource-constrained (tightened bounds + supply curves) to reflect realistic deployment limits in California.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1598,7 +1724,7 @@
 
         const DEFAULT_COST_DATA = {
             capex: {
-                solar: 1200, wind: 1500, offshoreWind: 5000, nuclear: 7242, geothermal: 3329, biomass: 3500, rng: 3000, hydrogen: 3500,
+                solar: 800, wind: 1200, offshoreWind: 5000, nuclear: 7242, geothermal: 3329, biomass: 3500, rng: 3000, hydrogen: 3500,
                 naturalGas: 1300, hydro: 3336, coal: 4407,
                 battery4hr: 350, battery8hr: 300, longduration: 300, // $/kWh
                 dac: 1000 // $/ton/year
@@ -1632,6 +1758,66 @@
 
         // Initialize mutable cost data for the session
         let COST_DATA = JSON.parse(JSON.stringify(DEFAULT_COST_DATA));
+
+        // Supply curves: CAPEX increases with deployment for resource-constrained technologies
+        // Each step defines capacity threshold (GW) and cost multiplier relative to base CAPEX
+        const SUPPLY_CURVES = {
+            geothermal: [
+                { upToGW: 2, multiplier: 1.0 },   // Best hydrothermal sites
+                { upToGW: 4, multiplier: 1.3 },   // Good sites, higher drilling costs
+                { upToGW: 5, multiplier: 1.6 }    // Marginal sites, enhanced geothermal
+            ],
+            biomass: [
+                { upToGW: 1.5, multiplier: 1.0 }, // Cheapest feedstock (waste, residues)
+                { upToGW: 3.0, multiplier: 1.4 }  // Dedicated energy crops, longer transport
+            ]
+        };
+
+        // Get blended (average) CAPEX for a technology at a given total capacity
+        // Used for total system cost calculations
+        function getBlendedCapex(tech, totalCapacityGW) {
+            const curve = SUPPLY_CURVES[tech];
+            if (!curve || totalCapacityGW <= 0) return COST_DATA.capex[tech];
+
+            const baseCapex = COST_DATA.capex[tech];
+            let totalCost = 0;
+            let remainingGW = totalCapacityGW;
+            let prevThreshold = 0;
+
+            for (const step of curve) {
+                const bandWidth = step.upToGW - prevThreshold;
+                const gwInBand = Math.min(remainingGW, bandWidth);
+                if (gwInBand <= 0) break;
+
+                totalCost += gwInBand * baseCapex * step.multiplier;
+                remainingGW -= gwInBand;
+                prevThreshold = step.upToGW;
+            }
+
+            // Any capacity beyond the last step uses the last multiplier
+            if (remainingGW > 0) {
+                const lastMultiplier = curve[curve.length - 1].multiplier;
+                totalCost += remainingGW * baseCapex * lastMultiplier;
+            }
+
+            return totalCost / totalCapacityGW; // weighted average $/kW
+        }
+
+        // Get marginal CAPEX for the next unit of capacity at current deployment level
+        // Used for LCOE-guided technology selection in the optimizer
+        function getMarginalCapex(tech, currentCapacityGW) {
+            const curve = SUPPLY_CURVES[tech];
+            if (!curve) return COST_DATA.capex[tech];
+
+            const baseCapex = COST_DATA.capex[tech];
+            for (const step of curve) {
+                if (currentCapacityGW < step.upToGW) {
+                    return baseCapex * step.multiplier;
+                }
+            }
+            // Beyond last step: use last multiplier
+            return baseCapex * curve[curve.length - 1].multiplier;
+        }
 
         document.addEventListener('DOMContentLoaded', async function () {
             setLogLevel('debug');
@@ -2133,7 +2319,10 @@
                     const totalCapacityKW = (baselineCapacityGW + newCapacityGW) * 1000000;
 
                     if (totalCapacityKW > 0) {
-                        const annualized_capex = techData.capex[tech] * totalCapacityKW * crf;
+                        // Use supply-curve-adjusted CAPEX for resource-constrained technologies
+                        const totalCapacityGW = (baselineCapacityGW + newCapacityGW);
+                        const effectiveCapex = getBlendedCapex(tech, totalCapacityGW);
+                        const annualized_capex = effectiveCapex * totalCapacityKW * crf;
                         const annual_fom = techData.fixed_om[tech] * totalCapacityKW;
                         const annual_generation_mwh = getAnnualSum(generation[tech]) * 1000;
                         const annual_vom = techData.variable_om[tech] * annual_generation_mwh;
@@ -2160,7 +2349,21 @@
                     totalAnnualCost += annualized_capex + annual_fom + annual_vom_ng;
                 }
 
-                for (const type of ['battery4hr', 'battery8hr', 'longduration']) {
+                // Calculate total storage power capacity to apportion discharge across types
+                const storageTypes = ['battery4hr', 'battery8hr', 'longduration'];
+                let totalStoragePowerKW = 0;
+                const storagePowerByType = {};
+                for (const type of storageTypes) {
+                    if (!enabledTechnologies[type]) continue;
+                    const total_gwh = (baselineStorage[type] || 0) + (capacity[type] || 0);
+                    const duration = type === 'longduration' ? 24 : parseInt(type.match(/\d+/)[0]);
+                    const powerKW = (total_gwh * 1000000) / duration;
+                    storagePowerByType[type] = powerKW;
+                    totalStoragePowerKW += powerKW;
+                }
+                const totalAnnualStorageDischargeMWh = getAnnualSum(generation.storage) * 1000;
+
+                for (const type of storageTypes) {
                     if (!enabledTechnologies[type]) continue;
                     const baseline_gwh = baselineStorage[type] || 0;
                     const new_gwh = capacity[type] || 0;
@@ -2178,7 +2381,9 @@
 
                         const annualized_capex = capex_per_kwh * total_kwh * crf;
                         const annual_fom = COST_DATA.fixed_om[type] * total_kw;
-                        const annual_discharge_mwh = getAnnualSum(generation.storage) * 1000;
+                        // Apportion total storage discharge to this type based on power capacity share
+                        const typeShare = totalStoragePowerKW > 0 ? (storagePowerByType[type] || 0) / totalStoragePowerKW : 0;
+                        const annual_discharge_mwh = totalAnnualStorageDischargeMWh * typeShare;
                         const annual_vom = COST_DATA.variable_om[type] * annual_discharge_mwh;
 
                         totalAnnualCost += annualized_capex + annual_fom + annual_vom;
@@ -2223,7 +2428,8 @@
             // --- REWRITTEN DISPATCH LOGIC ---
             function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProfile, potentialGen, baselineStorageGWh = {}, hydroCF, countryName, storageOverrideDisabled = false) {
                 const VRE_SOURCES = ['solar', 'wind', 'offshoreWind'];
-                const INFLEXIBLE_SOURCES = ['nuclear', 'geothermal', 'biomass', 'rng', 'hydrogen'];
+                const INFLEXIBLE_SOURCES = ['nuclear', 'geothermal', 'biomass'];
+                const FLEXIBLE_CLEAN_SOURCES = ['rng', 'hydrogen']; // Dispatched only when needed
                 const numHours = solarProfile.length;
 
                 let finalGeneration = {
@@ -2414,6 +2620,20 @@
                     }
                 }
 
+                // Dispatch flexible clean sources (RNG, Hydrogen) only when there is positive net load
+                for (let i = 0; i < numHours; i++) {
+                    if (netLoad[i] > 0.01) {
+                        for (const tech of FLEXIBLE_CLEAN_SOURCES) {
+                            const available = currentPotential[tech][i];
+                            const toDispatch = Math.min(available, netLoad[i]);
+                            if (toDispatch > 0.001) {
+                                finalGeneration[tech][i] = toDispatch;
+                                netLoad[i] -= toDispatch;
+                            }
+                        }
+                    }
+                }
+
                 const { gasGenDetails, hourlyMarginalPrice, thermalGeneration } = calculateThermalDispatchAndPrice(netLoad, inputs, currentPotential);
                 finalGeneration.naturalGas = thermalGeneration.naturalGas;
                 finalGeneration.coal = thermalGeneration.coal;
@@ -2537,6 +2757,15 @@
                         }
                     }
 
+                    // Coal dispatches before gas CT (peakers) in merit order:
+                    // CCGT ($35-80/MWh) -> Coal ($30/MWh) -> CT ($100-150/MWh)
+                    if (remainingLoad > 0.01 && currentPotential.coal[i] > 0) {
+                        const coalToDispatch = Math.min(remainingLoad, currentPotential.coal[i]);
+                        thermalGeneration.coal[i] += coalToDispatch;
+                        remainingLoad -= coalToDispatch;
+                        hourlyPrice = Math.max(hourlyPrice, COST_DATA.variable_om.coal);
+                    }
+
                     if (remainingLoad > 0.01 && ctCapacity > 0) {
                         const ctToDispatch = Math.min(remainingLoad, ctCapacity);
                         if (ctToDispatch > 0) {
@@ -2550,13 +2779,6 @@
                             gasGenDetails.ct.cost += ctToDispatch * 1000 * avgCost * days;
                         }
                     }
-
-                    if (remainingLoad > 0.01 && currentPotential.coal[i] > 0) {
-                        const coalToDispatch = Math.min(remainingLoad, currentPotential.coal[i]);
-                        thermalGeneration.coal[i] += coalToDispatch;
-                        remainingLoad -= coalToDispatch;
-                        hourlyPrice = Math.max(hourlyPrice, COST_DATA.variable_om.coal);
-                    }
                     hourlyMarginalPrice[i] = hourlyPrice;
                 }
                 return { gasGenDetails, hourlyMarginalPrice, thermalGeneration };
@@ -2567,6 +2789,11 @@
                 const storageCapacityGWh = {};
                 const storagePowerGW = {};
                 let totalStorageEnergyGWh = 0;
+                // Separate short-term and long-duration capacity for independent dispatch
+                let shortTermEnergyGWh = 0;
+                let shortTermPowerGW = 0;
+                let longDurationEnergyGWh = 0;
+                let longDurationPowerGW = 0;
 
                 storageTypes.forEach(type => {
                     if (enabledTechnologies[type]) {
@@ -2575,6 +2802,13 @@
                         totalStorageEnergyGWh += capacity;
                         const duration = type === 'longduration' ? 24 : parseInt(type.match(/\d+/)[0]);
                         storagePowerGW[type] = capacity / duration;
+                        if (type === 'longduration') {
+                            longDurationEnergyGWh = capacity;
+                            longDurationPowerGW = capacity / 24;
+                        } else {
+                            shortTermEnergyGWh += capacity;
+                            shortTermPowerGW += capacity / duration;
+                        }
                     } else {
                         storageCapacityGWh[type] = 0;
                         storagePowerGW[type] = 0;
@@ -2590,88 +2824,73 @@
                 let netLoad = [...initialNetLoad];
                 let hourlyCharge = Array(numHours).fill(0);
                 let hourlyDischarge = Array(numHours).fill(0);
-                let totalChargedGWh = 0;
 
                 const storageEfficiency = 0.85;
                 const DISPATCH_INCREMENT = 0.1;
                 const PROFIT_THRESHOLD = 20;
 
-                for (let dayStart = 0; dayStart < numHours; dayStart += 24) {
-
-                    let dayPotential = {};
-                    for (let k in currentPotential) {
-                        if (Array.isArray(currentPotential[k])) dayPotential[k] = currentPotential[k].slice(dayStart, dayStart + 24);
-                    }
-
-                    let dayNetLoad = netLoad.slice(dayStart, dayStart + 24);
+                // Helper: run daily arbitrage dispatch for a given energy/power budget.
+                // Paired arbitrage: each cycle charges at a low-price hour and discharges at a high-price hour.
+                // Energy headroom tracks how many more cycles can fit (capacity - cycled energy).
+                // initialSoC represents pre-existing stored energy (for long-duration carryover).
+                function dispatchDailyArbitrage(dayNetLoad, dayPotential, energyBudgetGWh, powerBudgetGW, initialSoC) {
                     let dayCharge = Array(24).fill(0);
                     let dayDischarge = Array(24).fill(0);
-
-                    let dayTotalCharged = 0;
+                    // For paired arbitrage, track total net energy cycled (not running SoC)
+                    // Each cycle uses `dispatchAmount` of capacity (charge in, discharge out)
+                    let totalCycledEnergy = 0;
+                    let daySoC = initialSoC || 0; // only meaningful for long-duration carryover
 
                     while (true) {
                         const { hourlyMarginalPrice } = calculateThermalDispatchAndPrice(dayNetLoad, inputs, dayPotential);
 
                         let maxPrice = -Infinity, minPrice = Infinity;
-                        let maxPriceHour = -1, minPriceHour = -1;
 
-                        // Find max and min prices
                         for (let i = 0; i < 24; i++) {
-                            if (hourlyMarginalPrice[i] > maxPrice) { maxPrice = hourlyMarginalPrice[i]; }
-                            if (hourlyMarginalPrice[i] < minPrice) { minPrice = hourlyMarginalPrice[i]; }
+                            if (hourlyMarginalPrice[i] > maxPrice) maxPrice = hourlyMarginalPrice[i];
+                            if (hourlyMarginalPrice[i] < minPrice) minPrice = hourlyMarginalPrice[i];
                         }
 
-                        // Find all hours with maximum price, then pick the one with least existing discharge
-                        // This spreads discharging across multiple high-price hours
+                        // Find best discharge hour (highest price, least existing discharge)
+                        let maxPriceHour = -1;
                         const maxPriceHours = [];
                         for (let i = 0; i < 24; i++) {
-                            if (Math.abs(hourlyMarginalPrice[i] - maxPrice) < 0.01) {
-                                maxPriceHours.push(i);
-                            }
+                            if (Math.abs(hourlyMarginalPrice[i] - maxPrice) < 0.01) maxPriceHours.push(i);
                         }
-
                         if (maxPriceHours.length > 0) {
                             maxPriceHour = maxPriceHours[0];
-                            let minExistingDischarge = dayDischarge[maxPriceHours[0]];
+                            let minExisting = dayDischarge[maxPriceHours[0]];
                             for (let j = 1; j < maxPriceHours.length; j++) {
-                                const hour = maxPriceHours[j];
-                                if (dayDischarge[hour] < minExistingDischarge) {
-                                    minExistingDischarge = dayDischarge[hour];
-                                    maxPriceHour = hour;
+                                if (dayDischarge[maxPriceHours[j]] < minExisting) {
+                                    minExisting = dayDischarge[maxPriceHours[j]];
+                                    maxPriceHour = maxPriceHours[j];
                                 }
                             }
                         }
 
-                        // Find all hours with minimum price, then pick the one with least existing charge
-                        // This spreads charging across multiple low-price hours instead of concentrating it
+                        // Find best charge hour (lowest price, least existing charge)
+                        let minPriceHour = -1;
                         const minPriceHours = [];
                         for (let i = 0; i < 24; i++) {
-                            if (Math.abs(hourlyMarginalPrice[i] - minPrice) < 0.01) {
-                                minPriceHours.push(i);
-                            }
+                            if (Math.abs(hourlyMarginalPrice[i] - minPrice) < 0.01) minPriceHours.push(i);
                         }
-
                         if (minPriceHours.length > 0) {
-                            // Pick the hour with the least existing charge to spread charging out
                             minPriceHour = minPriceHours[0];
-                            let minExistingCharge = dayCharge[minPriceHours[0]];
+                            let minExisting = dayCharge[minPriceHours[0]];
                             for (let j = 1; j < minPriceHours.length; j++) {
-                                const hour = minPriceHours[j];
-                                if (dayCharge[hour] < minExistingCharge) {
-                                    minExistingCharge = dayCharge[hour];
-                                    minPriceHour = hour;
+                                if (dayCharge[minPriceHours[j]] < minExisting) {
+                                    minExisting = dayCharge[minPriceHours[j]];
+                                    minPriceHour = minPriceHours[j];
                                 }
                             }
                         }
 
                         if ((maxPrice * storageEfficiency) - minPrice <= PROFIT_THRESHOLD || maxPriceHour === -1 || minPriceHour === -1) break;
 
-                        let availableCharge = 0, availableDischarge = 0;
-                        storageTypes.forEach(t => { availableCharge += storagePowerGW[t]; availableDischarge += storagePowerGW[t]; });
-
-                        const chargeHeadroom = availableCharge - dayCharge[minPriceHour];
-                        const dischargeHeadroom = availableDischarge - dayDischarge[maxPriceHour];
-                        const energyHeadroom = totalStorageEnergyGWh - dayTotalCharged;
+                        const chargeHeadroom = powerBudgetGW - dayCharge[minPriceHour];
+                        const dischargeHeadroom = powerBudgetGW - dayDischarge[maxPriceHour];
+                        // Energy headroom: how much more can be cycled through this storage
+                        const energyHeadroom = energyBudgetGWh - totalCycledEnergy;
 
                         const dispatchAmount = Math.min(DISPATCH_INCREMENT, chargeHeadroom, dischargeHeadroom, energyHeadroom);
                         if (dispatchAmount < 0.01) break;
@@ -2679,16 +2898,99 @@
                         const chargeAmount = dispatchAmount / storageEfficiency;
                         dayCharge[minPriceHour] += chargeAmount;
                         dayDischarge[maxPriceHour] += dispatchAmount;
-                        dayTotalCharged += chargeAmount;
+                        totalCycledEnergy += dispatchAmount; // Track energy cycled through storage
 
                         dayNetLoad[minPriceHour] += chargeAmount;
                         dayNetLoad[maxPriceHour] -= dispatchAmount;
                     }
 
-                    for (let i = 0; i < 24; i++) {
-                        hourlyCharge[dayStart + i] = dayCharge[i];
-                        hourlyDischarge[dayStart + i] = dayDischarge[i];
-                        netLoad[dayStart + i] = dayNetLoad[i];
+                    // finalSoC: for long-duration storage, SoC doesn't change from paired arbitrage
+                    // (each charge is matched by discharge). Actual SoC changes come from banking/releasing.
+                    return { dayCharge, dayDischarge, finalSoC: daySoC, totalCycledEnergy };
+                }
+
+                // Pass 1: Short-term battery dispatch (per-day, no carryover)
+                if (shortTermEnergyGWh > 0) {
+                    for (let dayStart = 0; dayStart < numHours; dayStart += 24) {
+                        let dayPotential = {};
+                        for (let k in currentPotential) {
+                            if (Array.isArray(currentPotential[k])) dayPotential[k] = currentPotential[k].slice(dayStart, dayStart + 24);
+                        }
+                        let dayNetLoad = netLoad.slice(dayStart, dayStart + 24);
+
+                        const result = dispatchDailyArbitrage(dayNetLoad, dayPotential, shortTermEnergyGWh, shortTermPowerGW, 0);
+
+                        for (let i = 0; i < 24; i++) {
+                            hourlyCharge[dayStart + i] += result.dayCharge[i];
+                            hourlyDischarge[dayStart + i] += result.dayDischarge[i];
+                            netLoad[dayStart + i] = dayNetLoad[i];
+                        }
+                    }
+                }
+
+                // Pass 2: Long-duration storage dispatch (with inter-month SoC carryover)
+                // Long-duration storage can bank energy across months:
+                // - Charge from excess renewables in high-production months
+                // - Discharge stored energy in deficit months
+                if (longDurationEnergyGWh > 0) {
+                    let longDurationSoC = 0; // Carries over between months (GWh stored)
+
+                    for (let dayStart = 0; dayStart < numHours; dayStart += 24) {
+                        let dayPotential = {};
+                        for (let k in currentPotential) {
+                            if (Array.isArray(currentPotential[k])) dayPotential[k] = currentPotential[k].slice(dayStart, dayStart + 24);
+                        }
+                        let dayNetLoad = netLoad.slice(dayStart, dayStart + 24);
+
+                        // Step 2a: Intra-day arbitrage (paired charge/discharge)
+                        const result = dispatchDailyArbitrage(dayNetLoad, dayPotential, longDurationEnergyGWh, longDurationPowerGW, longDurationSoC);
+
+                        for (let i = 0; i < 24; i++) {
+                            hourlyCharge[dayStart + i] += result.dayCharge[i];
+                            hourlyDischarge[dayStart + i] += result.dayDischarge[i];
+                        }
+
+                        // Step 2b: Bank excess energy (charge when net load is negative/low)
+                        for (let i = 0; i < 24; i++) {
+                            if (dayNetLoad[i] < -0.01 && longDurationSoC < longDurationEnergyGWh) {
+                                const excess = -dayNetLoad[i]; // available excess generation
+                                const powerLimit = longDurationPowerGW - result.dayCharge[i]; // remaining power headroom
+                                const energyLimit = longDurationEnergyGWh - longDurationSoC;
+                                const bankAmount = Math.min(excess * storageEfficiency, powerLimit * storageEfficiency, energyLimit);
+                                if (bankAmount > 0.01) {
+                                    const grossCharge = bankAmount / storageEfficiency;
+                                    hourlyCharge[dayStart + i] += grossCharge;
+                                    dayNetLoad[i] += grossCharge;
+                                    longDurationSoC += bankAmount;
+                                }
+                            }
+                        }
+
+                        // Step 2c: Release stored energy to cover deficit (discharge from banked SoC)
+                        // Sort hours by net load (highest deficit first) for priority dispatch
+                        const deficitHours = [];
+                        for (let i = 0; i < 24; i++) {
+                            if (dayNetLoad[i] > 0.01) deficitHours.push({ hour: i, deficit: dayNetLoad[i] });
+                        }
+                        deficitHours.sort((a, b) => b.deficit - a.deficit);
+
+                        for (const { hour } of deficitHours) {
+                            if (longDurationSoC < 0.01) break;
+                            const powerLimit = longDurationPowerGW - result.dayDischarge[hour];
+                            const releaseAmount = Math.min(dayNetLoad[hour], powerLimit, longDurationSoC);
+                            if (releaseAmount > 0.01) {
+                                hourlyDischarge[dayStart + hour] += releaseAmount;
+                                dayNetLoad[hour] -= releaseAmount;
+                                longDurationSoC -= releaseAmount;
+                            }
+                        }
+
+                        // Apply self-discharge (1% per month)
+                        longDurationSoC *= 0.99;
+
+                        for (let i = 0; i < 24; i++) {
+                            netLoad[dayStart + i] = dayNetLoad[i];
+                        }
                     }
                 }
 
@@ -3317,7 +3619,7 @@
 
             // --- HELPER: Calculate minimum demand based on inflexible baseload ---
             function calculateMinimumDemand() {
-                const INFLEXIBLE_SOURCES = ['nuclear', 'geothermal', 'biomass', 'rng', 'hydrogen'];
+                const INFLEXIBLE_SOURCES = ['nuclear', 'geothermal', 'biomass'];
                 const currentValues = {};
                 for (const key in sliders) {
                     currentValues[key] = parseFloat(sliders[key].value);
@@ -4364,8 +4666,8 @@
                     wind: [0, 80],            // GW
                     offshoreWind: [0, 50],    // GW
                     nuclear: [0, 30],         // GW
-                    geothermal: [0, 20],      // GW
-                    biomass: [0, 20],         // GW
+                    geothermal: [0, 5],       // GW (limited by resource availability)
+                    biomass: [0, 3],          // GW (limited by sustainable feedstock)
                     rng: [0, 20],             // GW
                     hydrogen: [0, 20],        // GW
                     battery4hr: [0, 100],     // GWh
@@ -4376,8 +4678,35 @@
                 RESERVE_MARGIN_TARGET: 0.20,  // 20% reserve margin (Flexible capacity > 120% of Peak)
                 MAX_CURTAILMENT_RATE: 0.20,   // 20% (matches UI checkbox)
                 CO2_TOLERANCE: 0.02,          // 2% tolerance for CO2 constraint (relaxed from 1%)
-                MIN_DISPATCHABLE_CAPACITY: 10 // GW - minimum firm capacity (relaxed from 15)
+                MIN_DISPATCHABLE_CAPACITY: 10, // GW - minimum firm capacity (relaxed from 15)
+                // VRE Effective Load Carrying Capability (ELCC) for reserve margin
+                // Based on CAISO resource adequacy values at moderate penetration levels
+                ELCC: {
+                    solar: 0.15,         // 15% capacity credit (decreases with penetration)
+                    wind: 0.25,          // 25% capacity credit
+                    offshoreWind: 0.35   // 35% capacity credit (more consistent output)
+                }
             };
+
+            // ===== SEEDED PRNG (Mulberry32) =====
+            // Deterministic pseudo-random number generator for reproducible optimization results.
+            // Same seed always produces the same sequence of random numbers.
+            function mulberry32(seed) {
+                let state = seed | 0;
+                return function() {
+                    state = (state + 0x6D2B79F5) | 0;
+                    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+                    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+                    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+                };
+            }
+
+            // Global seeded RNG instance - initialized before each optimization run
+            let seededRandom = mulberry32(42); // default seed
+
+            function initializeRNG(seed) {
+                seededRandom = mulberry32(seed);
+            }
 
             // ===== HELPER FUNCTIONS =====
 
@@ -4419,9 +4748,8 @@
                     return 0; // Arrays and objects return 0
                 };
 
-                // User-defined Flexible Resources:
-                // RNG, Hydrogen, Hydro, Natural Gas, Storage
-                // EXCLUDED: Solar, Wind, Offshore Wind, Nuclear, Geothermal, Coal, Biomass
+                // Flexible Resources: RNG, Hydrogen, Hydro, Natural Gas, Storage
+                // VRE (solar, wind, offshore wind) excluded from reserve margin
 
                 const flexibleCapacity =
                     // NEW flexible generation
@@ -4605,7 +4933,7 @@
                     }
 
                     const tech = allowedTechs[
-                        Math.floor(Math.random() * allowedTechs.length)
+                        Math.floor(seededRandom() * allowedTechs.length)
                     ];
 
                     // Scaling factor for perturbation
@@ -4615,7 +4943,7 @@
                     if (tech.includes('battery') || tech === 'longduration') scale = 2.0;
 
                     // Random perturbation ±2 GW (scaled)
-                    const delta = (Math.random() - 0.5) * 4.0 * scale;
+                    const delta = (seededRandom() - 0.5) * 4.0 * scale;
                     perturbed[tech] = Math.max(0, (perturbed[tech] || 0) + delta);
                 }
 
@@ -4920,7 +5248,10 @@
                         continue;
                     }
 
-                    const capex = COST_DATA.capex[tech];
+                    // Use marginal CAPEX (cost of next GW) for supply-curve technologies
+                    const currentDeploymentGW = (currentSolution[tech] || 0) +
+                        ((optimizationContext && optimizationContext.baselineCapacity) ? (optimizationContext.baselineCapacity[tech] || 0) : 0);
+                    const capex = getMarginalCapex(tech, currentDeploymentGW);
                     const fixedOM = COST_DATA.fixed_om[tech];
                     const variableOM = COST_DATA.variable_om[tech];
                     const lifetime = COST_DATA.lifetime[tech];
@@ -5128,13 +5459,13 @@
 
                 // 3. MINIMAL RANDOM EXPLORATION
                 const allowedTechs = techs.filter(t => t !== 'dac' || (window.optimizerOptions && window.optimizerOptions.allowDAC));
-                const randomTech = allowedTechs[Math.floor(Math.random() * allowedTechs.length)];
+                const randomTech = allowedTechs[Math.floor(seededRandom() * allowedTechs.length)];
 
                 if (randomTech) {
                     const cRand = { ...currentSolution };
                     const randStep = getTechStep(randomTech);
                     // Neutral bias (0.5) to avoid drift
-                    cRand[randomTech] = Math.max(0, (cRand[randomTech] || 0) + (Math.random() - 0.5) * randStep);
+                    cRand[randomTech] = Math.max(0, (cRand[randomTech] || 0) + (seededRandom() - 0.5) * randStep);
                     candidates.push(enforceCapacityBounds(cRand));
                 }
 
@@ -5155,33 +5486,44 @@
                 const rho = 0.5;     // Contraction coefficient
                 const sigma = 0.5;   // Shrink coefficient
 
-                // Only optimize over technologies with non-zero capacity
+                // Include active technologies + promising inactive ones for exploration
                 const activeTechs = OPTIMIZATION_CONFIG.TECHNOLOGIES.filter(tech =>
                     (initialSolution[tech] || 0) > 0.01
                 );
+                // Also include up to 3 inactive technologies (sorted by lowest LCOE) for exploration
+                const inactiveTechs = OPTIMIZATION_CONFIG.TECHNOLOGIES.filter(tech =>
+                    (initialSolution[tech] || 0) <= 0.01 && tech !== 'dac'
+                );
+                const explorationTechs = inactiveTechs.slice(0, 3);
+                const allTechs = [...activeTechs, ...explorationTechs];
 
-                if (activeTechs.length === 0) {
+                if (allTechs.length === 0) {
                     return initialSolution;
                 }
 
-                console.log(`Nelder-Mead refinement starting with ${activeTechs.length} active technologies`);
+                console.log(`Nelder-Mead refinement starting with ${activeTechs.length} active + ${explorationTechs.length} exploratory technologies`);
 
                 // Initialize simplex (N+1 points for N-dimensional space)
-                // We create a local 'box' around the solution to find gradients in all directions
                 const simplex = [];
                 simplex.push({ solution: { ...initialSolution }, cost: null });
 
                 // Create N additional points by perturbing each dimension
-                // We alternate between perturbing UP and DOWN to avoid bias
-                for (let i = 0; i < activeTechs.length; i++) {
+                for (let i = 0; i < allTechs.length; i++) {
                     const point = { ...initialSolution };
-                    const tech = activeTechs[i];
-                    // Smaller perturbation for batteries
+                    const tech = allTechs[i];
                     const isStorage = tech.includes('battery') || tech === 'longduration';
-                    const perturbation = (i % 2 === 0 ? 1.0 : -1.0) * (isStorage ? 2.0 : 0.5);
+                    const isExploration = explorationTechs.includes(tech);
 
-                    point[tech] = Math.max(0, point[tech] + perturbation);
-                    simplex.push({ solution: point, cost: null });
+                    let perturbation;
+                    if (isExploration) {
+                        // For inactive techs, introduce a small positive amount to test if it helps
+                        perturbation = isStorage ? 5.0 : 1.0;
+                    } else {
+                        perturbation = (i % 2 === 0 ? 1.0 : -1.0) * (isStorage ? 2.0 : 0.5);
+                    }
+
+                    point[tech] = Math.max(0, (point[tech] || 0) + perturbation);
+                    simplex.push({ solution: enforceCapacityBounds(point), cost: null });
                 }
 
                 // Evaluate all points in simplex
@@ -5220,7 +5562,7 @@
 
                     // Calculate centroid (excluding worst point)
                     const centroid = {};
-                    for (const tech of activeTechs) {
+                    for (const tech of allTechs) {
                         centroid[tech] = 0;
                         for (let i = 0; i < simplex.length - 1; i++) {
                             centroid[tech] += (simplex[i].solution[tech] || 0);
@@ -5230,7 +5572,7 @@
 
                     // REFLECTION
                     const reflected = {};
-                    for (const tech of activeTechs) {
+                    for (const tech of allTechs) {
                         reflected[tech] = centroid[tech] + alpha * (centroid[tech] - (worst.solution[tech] || 0));
                     }
                     const reflectedBounded = enforceCapacityBounds(reflected);
@@ -5250,7 +5592,7 @@
                     // EXPANSION
                     if (reflectedCost < best.cost) {
                         const expanded = {};
-                        for (const tech of activeTechs) {
+                        for (const tech of allTechs) {
                             expanded[tech] = centroid[tech] + gamma * (reflectedBounded[tech] - centroid[tech]);
                         }
                         const expandedBounded = enforceCapacityBounds(expanded);
@@ -5275,7 +5617,7 @@
 
                     // CONTRACTION
                     const contracted = {};
-                    for (const tech of activeTechs) {
+                    for (const tech of allTechs) {
                         contracted[tech] = centroid[tech] + rho * ((worst.solution[tech] || 0) - centroid[tech]);
                     }
                     const contractedBounded = enforceCapacityBounds(contracted);
@@ -5294,7 +5636,7 @@
                     // SHRINK
                     for (let i = 1; i < simplex.length; i++) {
                         const shrunk = {};
-                        for (const tech of activeTechs) {
+                        for (const tech of allTechs) {
                             shrunk[tech] = (best.solution[tech] || 0) + sigma * ((simplex[i].solution[tech] || 0) - (best.solution[tech] || 0));
                         }
                         const shrunkBounded = enforceCapacityBounds(shrunk);
@@ -5342,6 +5684,10 @@
 
                 // Clear solution cache for this optimization run
                 clearSolutionCache();
+
+                // Initialize seeded PRNG for reproducible results
+                const rngSeed = options.seed !== undefined ? options.seed : 42;
+                initializeRNG(rngSeed);
 
                 // Initialize solution with smart starting point (not zero)
                 // Calculate what we need to meet CO2 target
@@ -5553,10 +5899,25 @@
 
                             // PANIC MODE: If we are failing reserve margin for 20 iters, force add dispatchable
                             if (currentMargin < OPTIMIZATION_CONFIG.RESERVE_MARGIN_TARGET && noImprovementCount > 20) {
-                                // Force add 5 GW of battery/hydrogen randomly to break deadlock
-                                const flex = ['battery4hr', 'longduration', 'hydrogen', 'geothermal'];
-                                const pick = flex[Math.floor(Math.random() * flex.length)];
-                                currentSolution[pick] = (currentSolution[pick] || 0) + 5.0;
+                                // Force add flexible capacity to break deadlock
+                                // Pick the technology with lowest cost per GW of reserve margin contribution
+                                const flexOptions = [
+                                    { tech: 'battery4hr', costPerGW: COST_DATA.capex.battery4hr * 4 * 1000, addGWh: 20 },  // 20 GWh = 5 GW power
+                                    { tech: 'longduration', costPerGW: COST_DATA.capex.longduration * 24 * 1000, addGWh: 120 }, // 120 GWh = 5 GW power
+                                    { tech: 'hydrogen', costPerGW: COST_DATA.capex.hydrogen * 1000, addGW: 5 },
+                                    { tech: 'geothermal', costPerGW: COST_DATA.capex.geothermal * 1000, addGW: 5 }
+                                ];
+                                // Sort by cost per GW of reserve margin and pick cheapest that isn't at bounds
+                                flexOptions.sort((a, b) => a.costPerGW - b.costPerGW);
+                                for (const opt of flexOptions) {
+                                    const currentVal = currentSolution[opt.tech] || 0;
+                                    const maxBound = OPTIMIZATION_CONFIG.BOUNDS[opt.tech][1];
+                                    const addAmount = opt.addGWh || opt.addGW || 5;
+                                    if (currentVal + addAmount <= maxBound) {
+                                        currentSolution[opt.tech] = currentVal + addAmount;
+                                        break;
+                                    }
+                                }
                                 noImprovementCount = 0; // Reset counter so we don't exit early
                             }
                         }
@@ -5690,6 +6051,77 @@
             }
 
 
+            // ===== MULTI-START OPTIMIZATION WRAPPER =====
+            /**
+             * Runs the optimizer multiple times with different seeds and returns the best result.
+             * This explores different regions of the solution space to avoid local minima.
+             * @param {number} targetCO2 - Target CO2 in kg/year
+             * @param {object} options - Same options as optimizeCapacityExpansion, plus:
+             *   - numStarts: number of optimization runs (default 3)
+             */
+            async function multiStartOptimization(targetCO2, options = {}) {
+                const numStarts = options.numStarts || 3;
+                const seeds = [42, 137, 2024]; // deterministic seed set
+                let bestResult = null;
+
+                const originalProgressCallback = options.progressCallback;
+
+                for (let run = 0; run < numStarts; run++) {
+                    // Wrap progress callback to show run number and scale progress
+                    const runProgressCallback = originalProgressCallback ? (iteration, bestCost, currentCO2, context) => {
+                        // Add run info to context
+                        const augmentedContext = {
+                            ...context,
+                            multiStartRun: run + 1,
+                            multiStartTotal: numStarts
+                        };
+                        originalProgressCallback(iteration, bestCost, currentCO2, augmentedContext);
+                    } : null;
+
+                    const runOptions = {
+                        ...options,
+                        seed: seeds[run],
+                        progressCallback: runProgressCallback
+                    };
+
+                    console.log(`\n--- Multi-start run ${run + 1}/${numStarts} (seed=${seeds[run]}) ---`);
+                    const result = await optimizeCapacityExpansion(targetCO2, runOptions);
+
+                    if (result.success) {
+                        if (!bestResult || result.cost < bestResult.cost) {
+                            bestResult = result;
+                            console.log(`  New best: $${(result.cost / 1e9).toFixed(2)}B (run ${run + 1})`);
+                        } else {
+                            console.log(`  Result: $${(result.cost / 1e9).toFixed(2)}B (not better than $${(bestResult.cost / 1e9).toFixed(2)}B)`);
+                        }
+                    } else {
+                        console.log(`  Run ${run + 1} failed to find feasible solution`);
+                    }
+                }
+
+                if (bestResult) {
+                    // Update globals with the best result
+                    const finalEval = evaluateSolutionFull(bestResult.solution, targetCO2);
+                    window.lastOptimizationCO2 = finalEval.annualCO2;
+                    window.lastOptimizationCurtailment = finalEval.metrics.curtailmentRate;
+                    window.lastOptimizationCost = finalEval.systemCost;
+
+                    if (originalProgressCallback) {
+                        originalProgressCallback('DONE', bestResult.cost, bestResult.co2, null);
+                    }
+                    return bestResult;
+                }
+
+                // All runs failed
+                return {
+                    success: false,
+                    message: "No feasible solution found across all optimization runs. Try: (1) Relax target, (2) Enable DAC, (3) Check if target is achievable.",
+                    targetCO2: targetCO2,
+                    iterations: 0
+                };
+            }
+
+
             // ============================================
             // COST EDITOR LOGIC
             // ============================================
@@ -5706,6 +6138,8 @@
                     editor.classList.toggle('hidden');
                     if (!editor.classList.contains('hidden')) {
                         renderCostInputs();
+                        initializeSupplyCurves();
+                        initializeCapacityBounds();
                     }
                 });
 
@@ -5851,6 +6285,112 @@
                         'dac': 'Direct Air Capture'
                     };
                     return map[tech] || tech;
+                }
+
+                // Initialize supply curve inputs
+                function initializeSupplyCurves() {
+                    // Geothermal supply curve (3 multipliers)
+                    const geoMult1 = document.getElementById('geo-mult-1');
+                    const geoMult2 = document.getElementById('geo-mult-2');
+                    const geoMult3 = document.getElementById('geo-mult-3');
+
+                    if (geoMult1 && geoMult2 && geoMult3 && SUPPLY_CURVES.geothermal) {
+                        geoMult1.value = SUPPLY_CURVES.geothermal[0].multiplier;
+                        geoMult2.value = SUPPLY_CURVES.geothermal[1].multiplier;
+                        geoMult3.value = SUPPLY_CURVES.geothermal[2].multiplier;
+
+                        geoMult1.addEventListener('change', (e) => {
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val) && val >= 0.5 && val <= 3.0) {
+                                SUPPLY_CURVES.geothermal[0].multiplier = val;
+                                console.log('Updated geothermal 0-2 GW multiplier:', val);
+                                e.target.classList.remove('border-red-500');
+                            } else {
+                                e.target.classList.add('border-red-500');
+                            }
+                        });
+
+                        geoMult2.addEventListener('change', (e) => {
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val) && val >= 0.5 && val <= 3.0) {
+                                SUPPLY_CURVES.geothermal[1].multiplier = val;
+                                console.log('Updated geothermal 2-4 GW multiplier:', val);
+                                e.target.classList.remove('border-red-500');
+                            } else {
+                                e.target.classList.add('border-red-500');
+                            }
+                        });
+
+                        geoMult3.addEventListener('change', (e) => {
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val) && val >= 0.5 && val <= 3.0) {
+                                SUPPLY_CURVES.geothermal[2].multiplier = val;
+                                console.log('Updated geothermal 4-5 GW multiplier:', val);
+                                e.target.classList.remove('border-red-500');
+                            } else {
+                                e.target.classList.add('border-red-500');
+                            }
+                        });
+                    }
+
+                    // Biomass supply curve (2 multipliers)
+                    const bioMult1 = document.getElementById('bio-mult-1');
+                    const bioMult2 = document.getElementById('bio-mult-2');
+
+                    if (bioMult1 && bioMult2 && SUPPLY_CURVES.biomass) {
+                        bioMult1.value = SUPPLY_CURVES.biomass[0].multiplier;
+                        bioMult2.value = SUPPLY_CURVES.biomass[1].multiplier;
+
+                        bioMult1.addEventListener('change', (e) => {
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val) && val >= 0.5 && val <= 3.0) {
+                                SUPPLY_CURVES.biomass[0].multiplier = val;
+                                console.log('Updated biomass 0-1.5 GW multiplier:', val);
+                                e.target.classList.remove('border-red-500');
+                            } else {
+                                e.target.classList.add('border-red-500');
+                            }
+                        });
+
+                        bioMult2.addEventListener('change', (e) => {
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val) && val >= 0.5 && val <= 3.0) {
+                                SUPPLY_CURVES.biomass[1].multiplier = val;
+                                console.log('Updated biomass 1.5-3 GW multiplier:', val);
+                                e.target.classList.remove('border-red-500');
+                            } else {
+                                e.target.classList.add('border-red-500');
+                            }
+                        });
+                    }
+                }
+
+                // Initialize capacity bounds inputs
+                function initializeCapacityBounds() {
+                    const boundTechs = [
+                        'solar', 'wind', 'offshoreWind', 'nuclear',
+                        'geothermal', 'biomass', 'rng', 'hydrogen',
+                        'battery4hr', 'battery8hr', 'longduration', 'dac'
+                    ];
+
+                    boundTechs.forEach(tech => {
+                        const input = document.getElementById(`bound-${tech}`);
+                        if (input && OPTIMIZATION_CONFIG.BOUNDS[tech]) {
+                            // BOUNDS is [min, max] array - we want the max value
+                            input.value = OPTIMIZATION_CONFIG.BOUNDS[tech][1];
+
+                            input.addEventListener('change', (e) => {
+                                const val = parseFloat(e.target.value);
+                                if (!isNaN(val) && val >= 0) {
+                                    OPTIMIZATION_CONFIG.BOUNDS[tech][1] = val;
+                                    console.log(`Updated ${tech} max bound:`, val);
+                                    e.target.classList.remove('border-red-500');
+                                } else {
+                                    e.target.classList.add('border-red-500');
+                                }
+                            });
+                        }
+                    });
                 }
             }
 
@@ -6118,11 +6658,12 @@
                 }
 
                 try {
-                    const result = await optimizeCapacityExpansion(targetCO2Input, {
+                    const result = await multiStartOptimization(targetCO2Input, {
                         allowDAC,
                         respectCurtailment,
                         progressCallback: updateProgressUI,
-                        context: optimizationContext
+                        context: optimizationContext,
+                        numStarts: 3
                     });
 
                     if (result.success) {
@@ -6213,6 +6754,14 @@
                     progress = 90;
                 }
 
+                // Scale progress for multi-start runs
+                if (context && context.multiStartRun && context.multiStartTotal > 1) {
+                    const runFraction = 1 / context.multiStartTotal;
+                    const runOffset = (context.multiStartRun - 1) * runFraction;
+                    progress = (runOffset + (progress / 100) * runFraction) * 100;
+                    phaseName = `Run ${context.multiStartRun}/${context.multiStartTotal}: ${phaseName}`;
+                }
+
                 // Update progress bar (gradient color stays constant, width changes)
                 const clampedProgress = Math.min(99, Math.max(0, progress));
                 progressBar.style.width = `${clampedProgress}%`;
@@ -6265,7 +6814,13 @@
                         incrementalFixedOM += COST_DATA.fixed_om[tech] * newCapacityKW;
                     } else {
                         // Generation: cost is per kW of capacity
-                        incrementalCAPEX += COST_DATA.capex[tech] * newCapacityKW * crf;
+                        // For supply-curve technologies, use blended CAPEX at total deployment level
+                        const baselineCapacityGW = (optimizationContext && optimizationContext.baselineCapacity)
+                            ? (optimizationContext.baselineCapacity[tech] || 0) : 0;
+                        const totalCapacityGW = baselineCapacityGW + newCapacityGW;
+                        const effectiveCapex = getBlendedCapex(tech, totalCapacityGW);
+
+                        incrementalCAPEX += effectiveCapex * newCapacityKW * crf;
                         incrementalFixedOM += COST_DATA.fixed_om[tech] * newCapacityKW;
                     }
                 }
