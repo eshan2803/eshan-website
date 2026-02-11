@@ -178,10 +178,11 @@
                             <a href="#time-model" class="toc-link">2. Time Resolution & Demand Model</a>
                             <a href="#cost-model" class="toc-link">3. Technology Cost Model</a>
                             <a href="#cost-data" class="toc-link sub">3.1 Cost Data</a>
-                            <a href="#crf" class="toc-link sub">3.2 Capital Recovery Factor</a>
-                            <a href="#annualized-costs" class="toc-link sub">3.3 Annualized Cost Formulas</a>
-                            <a href="#incentives" class="toc-link sub">3.4 Incentives</a>
-                            <a href="#total-system-cost" class="toc-link sub">3.5 Total System Cost</a>
+                            <a href="#supply-curves" class="toc-link sub">3.2 Supply Curves</a>
+                            <a href="#crf" class="toc-link sub">3.3 Capital Recovery Factor</a>
+                            <a href="#annualized-costs" class="toc-link sub">3.4 Annualized Cost Formulas</a>
+                            <a href="#incentives" class="toc-link sub">3.5 Incentives</a>
+                            <a href="#total-system-cost" class="toc-link sub">3.6 Total System Cost</a>
                             <a href="#dispatch" class="toc-link">4. Dispatch Simulation</a>
                             <a href="#emissions" class="toc-link sub">4.1 Emissions Calculation</a>
                         </div>
@@ -212,6 +213,19 @@
                 <p>
                     <strong>Key outputs:</strong> Recommended capacity additions (GW or GWh per technology), total system cost ($/year), achieved CO2 emissions, reserve margin, curtailment rate, and a detailed cost breakdown including abatement costs.
                 </p>
+
+                <div class="bg-green-50 rounded-xl p-6 my-8 border-2 border-green-300">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-3" style="margin-top:0; color:#047857;">Recent Updates (February 2026)</h4>
+                    <p style="margin-bottom:0.75rem;"><strong>1. Deterministic Multi-Start Optimization:</strong> The optimizer now uses a seeded PRNG (Mulberry32) for full reproducibility. By default, 3 runs with different seeds (42, 137, 2024) are executed, and the best result is selected. This addresses non-determinism caused by the multimodal solution space.</p>
+                    <p style="margin-bottom:0.75rem;"><strong>2. Supply Curves for Resource-Constrained Technologies:</strong> Geothermal (0-2 GW: 1.0×, 2-4 GW: 1.3×, 4-5 GW: 1.6×) and Biomass (0-1.5 GW: 1.0×, 1.5-3 GW: 1.4×) now have stepped cost curves reflecting resource scarcity. Marginal CAPEX guides selection; blended CAPEX calculates total cost.</p>
+                    <p style="margin-bottom:0.75rem;"><strong>3. Tightened Resource Bounds:</strong> Geothermal max reduced from 20 GW to 5 GW (hydrothermal + EGS resource limit). Biomass max reduced from 20 GW to 3 GW (sustainable feedstock constraint).</p>
+                    <p style="margin-bottom:0.75rem;"><strong>4. Updated Solar & Wind CAPEX:</strong> Solar reduced from $1,200/kW to <strong>$800/kW</strong> (2025-2026 utility-scale market prices). Wind reduced from $1,500/kW to <strong>$1,200/kW</strong>. This significantly improves VRE competitiveness (solar LCOE ~$42/MWh, wind ~$41/MWh).</p>
+                    <p style="margin-bottom:0.75rem;"><strong>5. RNG & Hydrogen Dispatch Fix:</strong> Moved from inflexible (24/7 must-run) to flexible dispatch. They now respond to net load, operating only when needed, improving system efficiency and correctly counting toward reserve margin.</p>
+                    <p style="margin-bottom:0.75rem;"><strong>6. Inter-Day Storage Carryover:</strong> Long-duration storage (24-hr) can now carry state-of-charge across days with 1% monthly self-discharge, enabling multi-day energy shifting. Short-term batteries (4-hr, 8-hr) remain day-independent.</p>
+                    <p style="margin-bottom:0.75rem;"><strong>7. Storage Dispatch by Type:</strong> Each storage type (4-hr, 8-hr, 24-hr) now dispatches independently with type-specific parameters, replacing the previous pooled dispatch model.</p>
+                    <p style="margin-bottom:0.75rem;"><strong>8. Nelder-Mead Exploration:</strong> Simplex refinement now includes "exploration points" for up to 3 inactive technologies, allowing discovery of cost-effective technologies missed by the greedy search phase.</p>
+                    <p style="margin-bottom:0;"><strong>9. Bug Fixes:</strong> Corrected storage variable O&M double-counting, fixed SoC tracking (gross vs net charge), and reordered thermal dispatch (CCGT → Coal → CT).</p>
+                </div>
 
                 <!-- 2. Time Resolution -->
                 <h3 id="time-model">2. Time Resolution & Demand Model</h3>
@@ -245,12 +259,12 @@
                         <tr><th>Technology</th><th>CAPEX</th><th>Fixed O&M</th><th>Variable O&M</th><th>Lifetime</th><th>Capacity Factor</th></tr>
                     </thead>
                     <tbody>
-                        <tr><td>Solar PV</td><td>$1,200/kW</td><td>$15/kW-yr</td><td>$0/MWh</td><td>30 yr</td><td>25%</td></tr>
-                        <tr><td>Onshore Wind</td><td>$1,500/kW</td><td>$35/kW-yr</td><td>$1/MWh</td><td>30 yr</td><td>35%</td></tr>
+                        <tr><td>Solar PV</td><td>$800/kW</td><td>$15/kW-yr</td><td>$0/MWh</td><td>30 yr</td><td>25%</td></tr>
+                        <tr><td>Onshore Wind</td><td>$1,200/kW</td><td>$35/kW-yr</td><td>$1/MWh</td><td>30 yr</td><td>35%</td></tr>
                         <tr><td>Offshore Wind</td><td>$5,000/kW</td><td>$100/kW-yr</td><td>$0/MWh</td><td>30 yr</td><td>50%</td></tr>
                         <tr><td>Nuclear</td><td>$7,242/kW</td><td>$140/kW-yr</td><td>$10/MWh</td><td>60 yr</td><td>90%</td></tr>
-                        <tr><td>Geothermal</td><td>$3,329/kW</td><td>$120/kW-yr</td><td>$5/MWh</td><td>30 yr</td><td>90%</td></tr>
-                        <tr><td>Biomass</td><td>$3,500/kW</td><td>$100/kW-yr</td><td>$10/MWh</td><td>25 yr</td><td>85%</td></tr>
+                        <tr><td>Geothermal</td><td>$3,329/kW*</td><td>$120/kW-yr</td><td>$5/MWh</td><td>30 yr</td><td>90%</td></tr>
+                        <tr><td>Biomass</td><td>$3,500/kW*</td><td>$100/kW-yr</td><td>$10/MWh</td><td>25 yr</td><td>85%</td></tr>
                         <tr><td>RNG (Biogas)</td><td>$3,000/kW</td><td>$95/kW-yr</td><td>$50/MWh</td><td>25 yr</td><td>85%</td></tr>
                         <tr><td>Hydrogen</td><td>$3,500/kW</td><td>$90/kW-yr</td><td>$410/MWh</td><td>30 yr</td><td>20%</td></tr>
                         <tr><td>Gas CCGT</td><td>$1,300/kW</td><td>$20/kW-yr</td><td>$35&ndash;80/MWh</td><td>30 yr</td><td>55%</td></tr>
@@ -262,8 +276,51 @@
                     </tbody>
                 </table>
                 <p><em>Note: Storage CAPEX is in $/kWh of energy capacity. DAC costs are per annual ton of CO2 capture capacity.</em></p>
+                <p><em>* Geothermal and Biomass use supply curves: CAPEX increases with deployment. Base costs shown; see section 3.2 Supply Curves for details.</em></p>
 
-                <h4 id="crf">3.2 Capital Recovery Factor (CRF)</h4>
+                <h4 id="supply-curves">3.2 Supply Curves for Resource-Constrained Technologies</h4>
+                <p>
+                    Some technologies face increasing costs as deployment grows, reflecting resource scarcity and site quality degradation. The model implements <strong>supply curves</strong> for geothermal and biomass, where CAPEX increases in steps as cumulative capacity grows.
+                </p>
+
+                <h5>Geothermal Supply Curve</h5>
+                <table class="parameter-table">
+                    <thead><tr><th>Capacity Range</th><th>Cost Multiplier</th><th>Effective CAPEX</th><th>Marginal LCOE</th></tr></thead>
+                    <tbody>
+                        <tr><td>0-2 GW</td><td>1.0×</td><td>$3,329/kW</td><td>~$49/MWh</td></tr>
+                        <tr><td>2-4 GW</td><td>1.3×</td><td>$4,328/kW</td><td>~$64/MWh</td></tr>
+                        <tr><td>4-5 GW</td><td>1.6×</td><td>$5,326/kW</td><td>~$78/MWh</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    The first 2 GW represents the best hydrothermal resources (The Geysers, Salton Sea). The 2-4 GW band captures good sites requiring deeper drilling and higher reservoir development costs. Beyond 4 GW, only marginal sites and enhanced geothermal systems (EGS) remain feasible, significantly increasing costs.
+                </p>
+
+                <h5>Biomass Supply Curve</h5>
+                <table class="parameter-table">
+                    <thead><tr><th>Capacity Range</th><th>Cost Multiplier</th><th>Effective CAPEX</th><th>Marginal LCOE</th></tr></thead>
+                    <tbody>
+                        <tr><td>0-1.5 GW</td><td>1.0×</td><td>$3,500/kW</td><td>~$54/MWh</td></tr>
+                        <tr><td>1.5-3 GW</td><td>1.4×</td><td>$4,900/kW</td><td>~$75/MWh</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    The first 1.5 GW uses cheapest feedstocks: waste residues, agricultural waste, and forest thinnings with minimal transport costs. Beyond 1.5 GW, dedicated energy crops are required with longer transport distances, increasing both feedstock and logistics costs.
+                </p>
+
+                <h5>How Supply Curves Work</h5>
+                <p>
+                    The optimizer uses two CAPEX values:
+                </p>
+                <ul>
+                    <li><strong>Marginal CAPEX:</strong> Used in LCOE calculations to guide technology selection. This is the cost of the <em>next</em> GW at the current deployment level. For example, if 3 GW of geothermal is already deployed, the marginal CAPEX for the 4th GW is $4,328/kW (1.3× multiplier).</li>
+                    <li><strong>Blended CAPEX:</strong> Used in total system cost calculations. This is the capacity-weighted average cost across all deployment bands. For example, if 3 GW is deployed, blended CAPEX = (2 GW × $3,329 + 1 GW × $4,328) / 3 GW = $3,662/kW.</li>
+                </ul>
+                <p>
+                    This dual approach ensures the optimizer sees accurate marginal economics (guiding incremental decisions) while calculating correct total costs (reflecting what was actually paid for all deployed capacity).
+                </p>
+
+                <h4 id="crf">3.3 Capital Recovery Factor (CRF)</h4>
                 <p>
                     Capital costs are annualized using the <strong>Capital Recovery Factor</strong>, which converts a lump-sum investment into equal annual payments over the asset's lifetime at a given discount rate:
                 </p>
@@ -278,7 +335,7 @@
                     CRF = 0.07 &times; 1.07<sup>30</sup> / (1.07<sup>30</sup> &minus; 1) &asymp; 0.0806, meaning ~8.06% of capital cost is paid annually.
                 </p>
 
-                <h4 id="annualized-costs">3.3 Annualized Cost Formulas</h4>
+                <h4 id="annualized-costs">3.4 Annualized Cost Formulas</h4>
 
                 <h5>Generation Technologies (Solar, Wind, Nuclear, etc.)</h5>
                 <div class="formula-block">
@@ -318,7 +375,7 @@
                     Annual Variable O&M = Annual Capacity &times; Variable O&M ($/ton)
                 </div>
 
-                <h4 id="incentives">3.4 Incentives</h4>
+                <h4 id="incentives">3.5 Incentives</h4>
                 <p>
                     Government incentives reduce technology costs:
                 </p>
@@ -330,7 +387,7 @@
                     <li><strong>Export Price:</strong> Curtailed energy can be "exported" at a given price (can be negative). Revenue = <code>Curtailment (GWh) &times; 1000 &times; Export Price ($/MWh)</code>.</li>
                 </ul>
 
-                <h4 id="total-system-cost">3.5 Total System Cost</h4>
+                <h4 id="total-system-cost">3.6 Total System Cost</h4>
                 <div class="formula-block">
                     Total System Cost ($/yr) = <br>
                     &nbsp;&nbsp;&sum; Generation Tech Costs (CAPEX + Fixed O&M + Var O&M &minus; PTC)<br>
@@ -354,9 +411,9 @@
                     <li><strong>Must-run baseload:</strong> Nuclear, geothermal, and biomass run at their capacity factor regardless of demand. Hydro runs at its country-specific capacity factor.</li>
                     <li><strong>Variable Renewable Energy (VRE):</strong> Solar and wind generation is computed as <code>Capacity (GW) &times; CF Profile[hour]</code>. The CF profile varies by hour and month, capturing diurnal and seasonal patterns.</li>
                     <li><strong>Net Load calculation:</strong> <code>Net Load = Demand &minus; Must-run &minus; VRE</code>. If net load is negative, there is excess generation.</li>
-                    <li><strong>Storage dispatch:</strong> Storage operates via economic arbitrage. It charges during hours of excess generation (low prices) and discharges during high net-load hours (high prices). The algorithm sorts hours by net load, identifies cheap charging hours and expensive discharging hours, and dispatches optimally subject to energy capacity and power constraints. Round-trip efficiency is 85%.</li>
-                    <li><strong>Thermal dispatch:</strong> Remaining net load (after storage) is met by fossil fuels in merit order: Natural Gas CCGT (cheapest) &rarr; Natural Gas CT &rarr; Coal (most expensive). Each plant ramps between a minimum and maximum output, with the marginal cost increasing linearly as output increases.</li>
-                    <li><strong>RNG and Hydrogen:</strong> These clean dispatchable sources are dispatched before fossil fuels to reduce emissions, operating as flexible generation.</li>
+                    <li><strong>Storage dispatch:</strong> Storage operates via economic arbitrage. Short-term batteries (4-hr, 8-hr) charge/discharge within each day. Long-duration storage (24-hr) can carry state-of-charge across days with 1% monthly self-discharge, enabling multi-day energy shifting. All storage has 85% round-trip efficiency. The algorithm sorts hours by net load, identifying arbitrage opportunities (charge during excess generation, discharge during high net load) while respecting energy and power constraints.</li>
+                    <li><strong>Flexible clean dispatch:</strong> RNG (biogas) and Hydrogen are dispatched only when net load is positive, operating as flexible zero-carbon resources. Unlike the old inflexible dispatch (24/7 must-run), they now respond to system needs.</li>
+                    <li><strong>Thermal dispatch:</strong> Remaining net load (after storage and flexible clean) is met by fossil fuels in merit order: Natural Gas CCGT (cheapest) &rarr; Coal &rarr; Natural Gas CT (most expensive peakers). Each plant ramps between a minimum and maximum output, with the marginal cost increasing linearly as output increases.</li>
                     <li><strong>Curtailment:</strong> If total generation exceeds demand after all dispatch, the excess is curtailed. <code>Curtailment Rate = Curtailed Energy / (Total Generation + Curtailment)</code>.</li>
                 </ol>
 
@@ -390,7 +447,23 @@
                 <!-- 5. Optimization Algorithm -->
                 <h3 id="algorithm">5. Optimization Algorithm</h3>
                 <p>
-                    The optimizer uses a <strong>three-phase approach</strong>: (1) a heuristic initial guess, (2) an iterative neighbor-search main loop guided by system-value adjusted LCOE, and (3) a Nelder-Mead simplex refinement. This hybrid approach balances exploration (finding good regions of the solution space) with exploitation (fine-tuning the best solution found).
+                    The optimizer uses a <strong>multi-start deterministic search</strong> consisting of three phases: (1) a heuristic initial guess, (2) an iterative neighbor-search main loop guided by system-value adjusted LCOE, and (3) a Nelder-Mead simplex refinement. This hybrid approach balances exploration (finding good regions of the solution space) with exploitation (fine-tuning the best solution found).
+                </p>
+
+                <h5>Multi-Start Approach</h5>
+                <p>
+                    By default, the optimizer runs <strong>3 independent optimization runs</strong> with different random seeds (42, 137, 2024), then selects the lowest-cost feasible solution. This multi-start approach addresses the fact that capacity expansion planning has a <strong>multimodal fitness landscape</strong>—many local minima with similar costs but different technology mixes. Running multiple trajectories significantly improves the chance of finding the global optimum (or a near-optimal solution).
+                </p>
+                <p>
+                    All randomness is controlled by a <strong>seeded pseudo-random number generator (Mulberry32)</strong>, ensuring that:
+                </p>
+                <ul>
+                    <li>The same seed produces <strong>identical results</strong> every time (fully reproducible)</li>
+                    <li>Different seeds explore different solution trajectories</li>
+                    <li>No dependence on browser-specific <code>Math.random()</code> implementation</li>
+                </ul>
+                <p>
+                    Randomness is used in five locations: perturbation technology selection, perturbation magnitude, random exploration candidate tech, random exploration step size, and panic mode technology selection (if reserve margin fails repeatedly).
                 </p>
 
                 <h4 id="initial-guess">5.1 Initial Guess Heuristic</h4>
@@ -504,12 +577,19 @@
 
                 <h4 id="nelder-mead">5.5 Nelder-Mead Local Refinement</h4>
                 <p>
-                    After the main loop converges, the best solution is refined using the <strong>Nelder-Mead simplex algorithm</strong>. This derivative-free optimization method works in the space of "active" technologies (those with non-zero capacity in the best solution).
+                    After the main loop converges, the best solution is refined using the <strong>Nelder-Mead simplex algorithm</strong>. This derivative-free optimization method works in the space of "active" technologies (those with non-zero capacity in the best solution), plus a limited set of inactive technologies for exploration.
                 </p>
 
                 <h5>Simplex Initialization</h5>
                 <p>
-                    For N active technologies, a simplex of N+1 points is created. The first point is the current best solution. The remaining N points are created by perturbing each technology dimension: &plusmn;0.5 GW for generation, &plusmn;2.0 GWh for storage.
+                    For N active technologies plus up to 3 inactive "exploration" technologies, a simplex of (N+M)+1 points is created. The first point is the current best solution. The remaining points are created by:
+                </p>
+                <ul>
+                    <li><strong>Active tech points:</strong> Perturb each active technology dimension by &plusmn;0.5 GW (generation) or &plusmn;2.0 GWh (storage)</li>
+                    <li><strong>Exploration points:</strong> Introduce small positive amounts of inactive technologies (1 GW for generation, 5 GWh for storage), allowing Nelder-Mead to discover cost-effective technologies that the greedy search phase missed</li>
+                </ul>
+                <p>
+                    This enhancement addresses a limitation of the original algorithm: Nelder-Mead could only refine technologies already in the solution, never discovering new ones. By including exploration points, the refinement phase can now find and add previously unused technologies if they improve the objective.
                 </p>
 
                 <h5>Simplex Operations</h5>
@@ -558,30 +638,21 @@
 
                 <h5>What Counts as Flexible Capacity</h5>
                 <table class="parameter-table">
-                    <thead><tr><th>Flexible (counted)</th><th>Not Flexible (excluded)</th></tr></thead>
+                    <thead><tr><th>Resource Type</th><th>Capacity Credit</th><th>Notes</th></tr></thead>
                     <tbody>
-                        <tr>
-                            <td>
-                                Natural Gas (all types)<br>
-                                RNG (Biogas)<br>
-                                Hydrogen<br>
-                                Hydro<br>
-                                Battery power capacity (GWh / Duration)
-                            </td>
-                            <td>
-                                Solar (intermittent)<br>
-                                Wind (intermittent)<br>
-                                Offshore Wind (intermittent)<br>
-                                Nuclear (inflexible baseload)<br>
-                                Geothermal (inflexible baseload)<br>
-                                Biomass (inflexible baseload)<br>
-                                Coal (inflexible baseload)
-                            </td>
-                        </tr>
+                        <tr><td colspan="3"><strong>Fully Flexible (100% capacity credit)</strong></td></tr>
+                        <tr><td>Natural Gas (all types)</td><td>100%</td><td>Fully dispatchable</td></tr>
+                        <tr><td>RNG (Biogas)</td><td>100%</td><td>Flexible dispatch (responds to net load)</td></tr>
+                        <tr><td>Hydrogen</td><td>100%</td><td>Flexible dispatch (responds to net load)</td></tr>
+                        <tr><td>Hydro</td><td>100%</td><td>Fully dispatchable</td></tr>
+                        <tr><td>Battery Storage</td><td>Power capacity (GWh ÷ duration)</td><td>4-hr: GWh/4; 8-hr: GWh/8; 24-hr: GWh/24</td></tr>
+                        <tr><td colspan="3"><strong>Not Counted (Intermittent or Inflexible)</strong></td></tr>
+                        <tr><td>Solar, Wind, Offshore Wind</td><td>0%</td><td>Intermittent generation (VRE)</td></tr>
+                        <tr><td>Nuclear, Geothermal, Biomass, Coal</td><td>0%</td><td>Inflexible baseload (24/7 operation)</td></tr>
                     </tbody>
                 </table>
                 <p>
-                    <em>Note:</em> Battery storage contributes its <strong>power capacity</strong> (energy / duration), not its energy capacity. A 100 GWh, 4-hour battery provides 25 GW of flexible power capacity.
+                    <em>Example:</em> A 100 GWh, 4-hour battery provides 25 GW of flexible power capacity toward the reserve margin.
                 </p>
 
                 <!-- 8. Capacity Bounds -->
@@ -596,8 +667,8 @@
                         <tr><td>Onshore Wind</td><td>0</td><td>80</td><td>GW</td></tr>
                         <tr><td>Offshore Wind</td><td>0</td><td>50</td><td>GW</td></tr>
                         <tr><td>Nuclear</td><td>0</td><td>30</td><td>GW</td></tr>
-                        <tr><td>Geothermal</td><td>0</td><td>20</td><td>GW</td></tr>
-                        <tr><td>Biomass</td><td>0</td><td>20</td><td>GW</td></tr>
+                        <tr><td>Geothermal</td><td>0</td><td>5</td><td>GW</td></tr>
+                        <tr><td>Biomass</td><td>0</td><td>3</td><td>GW</td></tr>
                         <tr><td>RNG</td><td>0</td><td>20</td><td>GW</td></tr>
                         <tr><td>Hydrogen</td><td>0</td><td>20</td><td>GW</td></tr>
                         <tr><td>Battery (4-hr)</td><td>0</td><td>100</td><td>GWh</td></tr>
