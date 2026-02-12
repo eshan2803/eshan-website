@@ -1009,7 +1009,7 @@
                         borderColor: 'rgba(127, 29, 29, 0.8)',
                         backgroundColor: 'rgba(127, 29, 29, 0.1)',
                         borderWidth: 2,
-                        fill: '-1',
+                        fill: '+1',
                         pointRadius: 0,
                         tension: 0.3,
                     },
@@ -1113,6 +1113,36 @@
             if (binIdx >= 0) bins[binIdx]++;
         });
 
+        // Create color gradient for histogram bars based on headroom value
+        const binColors = [];
+        const binBorderColors = [];
+        for (let i = 0; i < numBins; i++) {
+            const binCenter = histMin + (i + 0.5) * binSize;
+            // Color scale: red (<0) -> orange (0-10k) -> yellow (10k-20k) -> green (>20k)
+            let color;
+            if (binCenter < 0) {
+                color = 'rgba(239, 68, 68, 0.7)'; // Red
+            } else if (binCenter < 10000) {
+                color = 'rgba(251, 146, 60, 0.7)'; // Orange
+            } else if (binCenter < 20000) {
+                color = 'rgba(250, 204, 21, 0.7)'; // Yellow
+            } else {
+                color = 'rgba(34, 197, 94, 0.7)'; // Green
+            }
+            binColors.push(color);
+
+            // Border colors (slightly darker)
+            if (binCenter < 0) {
+                binBorderColors.push('#ef4444');
+            } else if (binCenter < 10000) {
+                binBorderColors.push('#fb923c');
+            } else if (binCenter < 20000) {
+                binBorderColors.push('#facc15');
+            } else {
+                binBorderColors.push('#22c55e');
+            }
+        }
+
         const histCtx = document.getElementById('histogramChart').getContext('2d');
         const histogramChart = new Chart(histCtx, {
             type: 'bar',
@@ -1121,8 +1151,8 @@
                 datasets: [{
                     label: 'Number of Days',
                     data: bins,
-                    backgroundColor: 'rgba(96, 165, 250, 0.7)',
-                    borderColor: '#60a5fa',
+                    backgroundColor: binColors,
+                    borderColor: binBorderColors,
                     borderWidth: 1,
                 }]
             },
