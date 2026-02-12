@@ -181,7 +181,7 @@
             margin-bottom: 16px;
         }
 
-        .stats-row {
+        .statistical-charts-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 16px;
@@ -312,7 +312,6 @@
             .date-display { text-align: left; }
             .main { padding: 12px; }
             .analysis-row { grid-template-columns: 1fr; }
-            .stats-row { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -425,20 +424,22 @@
             </div>
         </div>
 
-        <!-- Statistical Analysis Charts -->
-        <div class="stats-row">
+        <!-- Statistical Analysis Charts (All Days) -->
+        <div class="statistical-charts-row">
+            <!-- Confidence Interval Chart -->
             <div class="chart-container">
-                <h3>Effective Headroom Profile with Confidence Intervals (All Days: 2020-2025)</h3>
-                <div class="chart-note">Shows 5th, 25th, 50th (median), 75th, and 95th percentile effective headroom across all 2,192 days for each hour</div>
+                <h3>Effective Headroom Profile (All Days: 2020-2025)</h3>
+                <div class="chart-note">Percentiles of effective headroom across all 2,192 days showing confidence intervals</div>
                 <div class="chart-wrapper">
                     <canvas id="confidenceChart"></canvas>
                 </div>
             </div>
 
+            <!-- Histogram Chart -->
             <div class="chart-container">
-                <h3>Minimum Effective Headroom Distribution (All Days: 2020-2025)</h3>
-                <div class="chart-note">Histogram showing density/frequency of minimum daily effective headroom values across 2,192 days</div>
-                <div class="chart-wrapper short">
+                <h3>Minimum Effective Headroom Distribution</h3>
+                <div class="chart-note">Frequency distribution of daily minimum effective headroom values (GW)</div>
+                <div class="chart-wrapper">
                     <canvas id="histogramChart"></canvas>
                 </div>
             </div>
@@ -476,40 +477,23 @@
             if (!monthData) continue;
             const demand = demandData[dateStr];
             const total = monthData.Total || [];
+            for (let h = 0; h < 24; h++) {
+                const head = (total[h] || 0) - (demand[h] || 0);
+                minHeadroom = Math.min(minHeadroom, head);
+                maxHeadroom = Math.max(maxHeadroom, head);
+            }
+
+            // Compute scatter plot bounds (min headroom point for each day)
             const demArr = demand.map(v => v || 0);
-
-            // Calculate reserves for each hour (time-of-day weighted)
-            const reserves = new Array(24);
-            for (let h = 0; h < 24; h++) {
-                let reservePct;
-                if (h >= 16 && h <= 21) {
-                    reservePct = 0.084;
-                } else if ((h >= 6 && h <= 9) || (h >= 21 && h <= 23)) {
-                    reservePct = 0.077;
-                } else {
-                    reservePct = 0.07;
-                }
-                reserves[h] = Math.max(3500, demArr[h] * reservePct);
-            }
-
-            for (let h = 0; h < 24; h++) {
-                const head = (total[h] || 0) - (demArr[h] || 0);
-                const effHead = head - reserves[h];
-                minHeadroom = Math.min(minHeadroom, effHead);
-                maxHeadroom = Math.max(maxHeadroom, effHead);
-            }
-
-            // Compute scatter plot bounds using effective headroom (min effective headroom point for each day)
             const headArr = total.map((a, i) => a - demArr[i]);
-            const effHeadArr = headArr.map((h, i) => h - reserves[i]);
-            const minEffH = Math.min(...effHeadArr);
-            const minEffHIdx = effHeadArr.indexOf(minEffH);
-            const availAtMinH = total[minEffHIdx];
+            const minH = Math.min(...headArr);
+            const minHIdx = headArr.indexOf(minH);
+            const availAtMinH = total[minHIdx];
 
             minScatterAvail = Math.min(minScatterAvail, availAtMinH);
             maxScatterAvail = Math.max(maxScatterAvail, availAtMinH);
-            minScatterHead = Math.min(minScatterHead, minEffH);
-            maxScatterHead = Math.max(maxScatterHead, minEffH);
+            minScatterHead = Math.min(minScatterHead, minH);
+            maxScatterHead = Math.max(maxScatterHead, minH);
         }
 
         // Round limits for nice chart ranges
@@ -936,10 +920,9 @@
             }
         });
 
-        // ─── Statistical Analysis Charts ──────────────────────────────────
-
-        // Collect effective headroom data for all hours across all days
-        const hourlyEffHeadroom = Array.from({length: 24}, () => []);
+        // ─── Statistical Analysis (All Days) ─────────────────────────────
+        // Collect all effective headroom values for percentile calculation
+        const allEffHeadroomByHour = Array.from({length: 24}, () => []);
         const allMinEffHeadroom = [];
 
         for (let i = 0; i <= 2191; i++) {
@@ -963,7 +946,7 @@
                 for (let h = 0; h < 24; h++) totAvail[h] += hourly[h];
             }
 
-            // Calculate reserves and effective headroom
+            // Calculate effective headroom (headroom - reserves)
             const reserves = new Array(24);
             for (let h = 0; h < 24; h++) {
                 let reservePct;
@@ -980,45 +963,40 @@
             const hr = totAvail.map((a, idx) => a - demArr[idx]);
             const effHr = hr.map((h, idx) => h - reserves[idx]);
 
-            // Store effective headroom for each hour
+            // Store by hour for percentile calculation
             for (let h = 0; h < 24; h++) {
-                hourlyEffHeadroom[h].push(effHr[h]);
+                allEffHeadroomByHour[h].push(effHr[h]);
             }
 
-            // Store minimum effective headroom for this day
+            // Store minimum for histogram
             allMinEffHeadroom.push(Math.min(...effHr));
         }
 
-        // Calculate percentiles for each hour
+        // Percentile calculation function
         function percentile(arr, p) {
-            if (arr.length === 0) return 0;
             const sorted = [...arr].sort((a, b) => a - b);
             const index = (p / 100) * (sorted.length - 1);
             const lower = Math.floor(index);
             const upper = Math.ceil(index);
-            const weight = index % 1;
+            const weight = index - lower;
             return sorted[lower] * (1 - weight) + sorted[upper] * weight;
         }
 
-        const p5 = [];
-        const p25 = [];
-        const p50 = [];
-        const p75 = [];
-        const p95 = [];
-
+        // Calculate percentiles for each hour
+        const p5 = [], p25 = [], p50 = [], p75 = [], p95 = [];
         for (let h = 0; h < 24; h++) {
-            p5.push(Math.round(percentile(hourlyEffHeadroom[h], 5)));
-            p25.push(Math.round(percentile(hourlyEffHeadroom[h], 25)));
-            p50.push(Math.round(percentile(hourlyEffHeadroom[h], 50)));
-            p75.push(Math.round(percentile(hourlyEffHeadroom[h], 75)));
-            p95.push(Math.round(percentile(hourlyEffHeadroom[h], 95)));
+            p5.push(Math.round(percentile(allEffHeadroomByHour[h], 5)));
+            p25.push(Math.round(percentile(allEffHeadroomByHour[h], 25)));
+            p50.push(Math.round(percentile(allEffHeadroomByHour[h], 50)));
+            p75.push(Math.round(percentile(allEffHeadroomByHour[h], 75)));
+            p95.push(Math.round(percentile(allEffHeadroomByHour[h], 95)));
         }
 
         // Calculate y-axis bounds for confidence chart
         const confMinY = Math.floor(Math.min(...p5) / 5000) * 5000;
         const confMaxY = Math.ceil(Math.max(...p95) / 5000) * 5000;
 
-        // Create confidence interval chart
+        // Confidence Interval Chart
         const confCtx = document.getElementById('confidenceChart').getContext('2d');
         const confidenceChart = new Chart(confCtx, {
             type: 'line',
@@ -1026,20 +1004,20 @@
                 labels: HOUR_LABELS,
                 datasets: [
                     {
-                        label: '95th Percentile',
-                        data: p95,
-                        borderColor: 'rgba(34, 197, 94, 0.9)',
-                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        label: '5th Percentile',
+                        data: p5,
+                        borderColor: 'rgba(127, 29, 29, 0.8)',
+                        backgroundColor: 'rgba(127, 29, 29, 0.1)',
                         borderWidth: 2,
                         fill: '+1',
                         pointRadius: 0,
                         tension: 0.3,
                     },
                     {
-                        label: '75th Percentile',
-                        data: p75,
-                        borderColor: 'rgba(59, 130, 246, 0.8)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                        label: '25th Percentile',
+                        data: p25,
+                        borderColor: 'rgba(251, 146, 60, 0.8)',
+                        backgroundColor: 'rgba(251, 146, 60, 0.15)',
                         borderWidth: 2,
                         fill: '+1',
                         pointRadius: 0,
@@ -1048,39 +1026,38 @@
                     {
                         label: 'Median (50th)',
                         data: p50,
-                        borderColor: 'rgba(251, 191, 36, 1)',
-                        backgroundColor: 'transparent',
-                        borderWidth: 3,
+                        borderColor: 'rgba(250, 204, 21, 0.9)',
+                        backgroundColor: 'rgba(250, 204, 21, 0.2)',
+                        borderWidth: 2.5,
                         fill: false,
                         pointRadius: 0,
                         tension: 0.3,
                     },
                     {
-                        label: '25th Percentile',
-                        data: p25,
-                        borderColor: 'rgba(239, 68, 68, 0.8)',
-                        backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                        label: '75th Percentile',
+                        data: p75,
+                        borderColor: 'rgba(96, 165, 250, 0.8)',
+                        backgroundColor: 'rgba(96, 165, 250, 0.15)',
                         borderWidth: 2,
-                        fill: '+1',
+                        fill: '-1',
                         pointRadius: 0,
                         tension: 0.3,
                     },
                     {
-                        label: '5th Percentile',
-                        data: p5,
-                        borderColor: 'rgba(220, 38, 38, 0.9)',
-                        backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                        label: '95th Percentile',
+                        data: p95,
+                        borderColor: 'rgba(34, 197, 94, 0.8)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.15)',
                         borderWidth: 2,
-                        fill: 'origin',
+                        fill: '-1',
                         pointRadius: 0,
                         tension: 0.3,
-                    }
+                    },
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
                 plugins: {
                     legend: {
                         position: 'top',
@@ -1100,15 +1077,13 @@
                         borderWidth: 1,
                         callbacks: {
                             label: function(ctx) {
-                                const val = ctx.parsed.y;
-                                const sign = val >= 0 ? '+' : '';
-                                return `${ctx.dataset.label}: ${sign}${val.toLocaleString()} MW`;
+                                return `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()} MW`;
                             }
                         }
                     }
                 },
                 scales: {
-                    x: commonScaleOpts,
+                    x: { ...commonScaleOpts },
                     y: {
                         ...commonScaleOpts,
                         title: { display: true, text: 'Effective Headroom (MW)', color: '#888' },
@@ -1119,26 +1094,52 @@
             }
         });
 
-        // Create histogram for minimum effective headroom distribution
-        const minEffSorted = [...allMinEffHeadroom].sort((a, b) => a - b);
-        const histMin = Math.floor(minEffSorted[0] / 1000) * 1000;
-        const histMax = Math.ceil(minEffSorted[minEffSorted.length - 1] / 1000) * 1000;
-        const binSize = 1000; // 1000 MW bins
+        // Histogram of minimum effective headroom
+        const histMin = Math.floor(Math.min(...allMinEffHeadroom) / 1000) * 1000;
+        const histMax = Math.ceil(Math.max(...allMinEffHeadroom) / 1000) * 1000;
+        const binSize = 2000; // 2 GW bins
         const numBins = Math.ceil((histMax - histMin) / binSize);
-
-        const histBins = new Array(numBins).fill(0);
-        const histLabels = [];
+        const bins = Array(numBins).fill(0);
+        const binLabels = [];
 
         for (let i = 0; i < numBins; i++) {
             const binStart = histMin + i * binSize;
             const binEnd = binStart + binSize;
-            histLabels.push(`${(binStart/1000).toFixed(1)} to ${(binEnd/1000).toFixed(1)}`);
+            binLabels.push(`${(binStart/1000).toFixed(0)} to ${(binEnd/1000).toFixed(0)}`);
         }
 
-        for (const val of allMinEffHeadroom) {
-            const binIndex = Math.min(Math.floor((val - histMin) / binSize), numBins - 1);
-            if (binIndex >= 0 && binIndex < numBins) {
-                histBins[binIndex]++;
+        allMinEffHeadroom.forEach(val => {
+            const binIdx = Math.min(Math.floor((val - histMin) / binSize), numBins - 1);
+            if (binIdx >= 0) bins[binIdx]++;
+        });
+
+        // Create color gradient for histogram bars based on headroom value
+        const binColors = [];
+        const binBorderColors = [];
+        for (let i = 0; i < numBins; i++) {
+            const binCenter = histMin + (i + 0.5) * binSize;
+            // Color scale: red (<0) -> orange (0-10k) -> yellow (10k-20k) -> green (>20k)
+            let color;
+            if (binCenter < 0) {
+                color = 'rgba(239, 68, 68, 0.7)'; // Red
+            } else if (binCenter < 10000) {
+                color = 'rgba(251, 146, 60, 0.7)'; // Orange
+            } else if (binCenter < 20000) {
+                color = 'rgba(250, 204, 21, 0.7)'; // Yellow
+            } else {
+                color = 'rgba(34, 197, 94, 0.7)'; // Green
+            }
+            binColors.push(color);
+
+            // Border colors (slightly darker)
+            if (binCenter < 0) {
+                binBorderColors.push('#ef4444');
+            } else if (binCenter < 10000) {
+                binBorderColors.push('#fb923c');
+            } else if (binCenter < 20000) {
+                binBorderColors.push('#facc15');
+            } else {
+                binBorderColors.push('#22c55e');
             }
         }
 
@@ -1146,22 +1147,12 @@
         const histogramChart = new Chart(histCtx, {
             type: 'bar',
             data: {
-                labels: histLabels,
+                labels: binLabels,
                 datasets: [{
                     label: 'Number of Days',
-                    data: histBins,
-                    backgroundColor: histBins.map((_, i) => {
-                        const binStart = histMin + i * binSize;
-                        if (binStart < 0) return 'rgba(239, 68, 68, 0.7)';
-                        if (binStart < 5000) return 'rgba(251, 191, 36, 0.7)';
-                        return 'rgba(34, 197, 94, 0.7)';
-                    }),
-                    borderColor: histBins.map((_, i) => {
-                        const binStart = histMin + i * binSize;
-                        if (binStart < 0) return '#ef4444';
-                        if (binStart < 5000) return '#fbbf24';
-                        return '#22c55e';
-                    }),
+                    data: bins,
+                    backgroundColor: binColors,
+                    borderColor: binBorderColors,
                     borderWidth: 1,
                 }]
             },
@@ -1178,13 +1169,10 @@
                         borderWidth: 1,
                         callbacks: {
                             title: function(items) {
-                                if (!items.length) return '';
-                                return `Min Effective Headroom: ${items[0].label} GW`;
+                                return `${items[0].label} GW`;
                             },
                             label: function(ctx) {
-                                const val = ctx.parsed.y;
-                                const pct = ((val / allMinEffHeadroom.length) * 100).toFixed(1);
-                                return `${val} days (${pct}%)`;
+                                return `Days: ${ctx.parsed.y}`;
                             }
                         }
                     }
@@ -1197,7 +1185,10 @@
                     y: {
                         ...commonScaleOpts,
                         title: { display: true, text: 'Number of Days', color: '#888' },
-                        beginAtZero: true,
+                        ticks: {
+                            ...commonScaleOpts.ticks,
+                            precision: 0,
+                        }
                     }
                 }
             }
