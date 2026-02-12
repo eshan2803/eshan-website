@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Dispatch Test | Dr. Eshan Singh</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata@2.2.5/dist/chartjs-plugin-dragdata.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fcfcfc;
+            color: #1f2937;
+        }
+        .font-lora {
+            font-family: 'Lora', serif;
+        }
+        .glass-card {
+            background-color: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 1rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+        }
+        .mesh-gradient-container {
+            position: relative;
+            z-index: 1;
+        }
+        .mesh-gradient-1 {
+            background-image: radial-gradient(at 40% 20%, hsla(28,100%,74%,1) 0px, transparent 50%),
+                              radial-gradient(at 80% 20%, hsla(189,100%,56%,1) 0px, transparent 50%),
+                              radial-gradient(at 0% 50%, hsla(355,100%,93%,1) 0px, transparent 50%),
+                              radial-gradient(at 80% 50%, hsla(340,100%,76%,1) 0px, transparent 50%),
+                              radial-gradient(at 0% 100%, hsla(22,100%,77%,1) 0px, transparent 50%),
+                              radial-gradient(at 80% 100%, hsla(242,100%,70%,1) 0px, transparent 50%);
+            background-size: 100% 100%;
+            filter: blur(25px) saturate(1.2);
+            opacity: 0.15;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: -1;
+            animation: pulse-bg 15s infinite alternate;
+        }
+        @keyframes pulse-bg {
+            0% { opacity: 0.15; }
+            100% { opacity: 0.25; }
+        }
+        /* Cloud animation */
+        @keyframes cloud-sweep {
+            0% {
+                transform: translateY(-150vh) scale(0.5);
+                opacity: 0;
+            }
+            30% {
+                transform: translateY(20vh) scale(1.5);
+                opacity: 0.95;
+            }
+            70% {
+                transform: translateY(20vh) scale(1.5);
+                opacity: 0.95;
+            }
+            100% {
+                transform: translateY(-150vh) scale(0.5);
+                opacity: 0;
+            }
+        }
+        .cloud-element {
+            position: absolute;
+            font-size: 200px;
+            animation: cloud-sweep 3.5s ease-in-out;
+            pointer-events: none;
+            filter: drop-shadow(0 0 30px rgba(128, 128, 128, 0.6));
+            z-index: 2;
+        }
+        @keyframes darken-sky {
+            0%, 100% {
+                opacity: 0;
+            }
+            30%, 70% {
+                opacity: 0.5;
+            }
+        }
+        .cloud-darken-overlay {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(100, 100, 120, 0.6) 0%, rgba(50, 50, 70, 0.4) 100%);
+            animation: darken-sky 3.5s ease-in-out;
+            pointer-events: none;
+            z-index: 1;
+        }
+        /* Demand spike animation */
+        @keyframes lightning-drop {
+            0% {
+                transform: translateY(-100vh) scale(0.3) rotate(0deg);
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+            }
+            70% {
+                transform: translateY(40vh) scale(1.5) rotate(10deg);
+            }
+            85% {
+                transform: translateY(50vh) scale(1.3) rotate(-5deg);
+            }
+            100% {
+                transform: translateY(45vh) scale(1.4) rotate(0deg);
+                opacity: 0;
+            }
+        }
+        @keyframes flash-effect {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 0.3; }
+        }
+        .lightning-element {
+            position: absolute;
+            font-size: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: lightning-drop 2s ease-out;
+            pointer-events: none;
+            filter: drop-shadow(0 0 20px rgba(255, 193, 7, 0.8));
+        }
+        .flash-overlay {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(255, 193, 7, 0.4) 0%, transparent 70%);
+            animation: flash-effect 0.5s ease-out;
+            pointer-events: none;
+        }
+        /* Tutorial styles */
+        .tutorial-active .mesh-gradient-1 {
+            animation: none !important;
+        }
+        #tutorial-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 9998;
+            display: none;
+        }
+        #tutorial-popover {
+            position: fixed;
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            z-index: 9999;
+            width: 320px;
+            max-width: 90vw;
+            display: none;
+            transition: top 0.3s ease-in-out, left 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+        .tutorial-highlight-active {
+            position: relative;
+            z-index: 9999;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.7),
+                        0 0 20px 10px rgba(59, 130, 246, 0.4),
+                        0 0 0 9999px rgba(0, 0, 0, 0.6);
+            transition: box-shadow 0.3s ease-in-out;
+        }
+        .tutorial-highlight-active.rounded-full {
+            border-radius: 9999px;
+        }
+        .tutorial-highlight-active.rounded-lg {
+            border-radius: 1rem;
+        }
+        /* Ensure tutorial highlights work on specific elements */
+        #tutorial-step-game-speed.tutorial-highlight-active {
+            position: relative;
+            z-index: 9999 !important;
+        }
+        #openSchedulerBtn.tutorial-highlight-active {
+            position: relative;
+            z-index: 9999 !important;
+        }
+        /* Rainbow Border Animation for navigation links */
+        @keyframes rainbow-border {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+        .rainbow-glow {
+            position: relative;
+            background: linear-gradient(90deg, #ff0080, #ff8000, #ffff00, #80ff00, #00ff80, #0080ff, #8000ff, #ff0080);
+            background-size: 200% 200%;
+            animation: rainbow-border 2s linear infinite;
+            padding: 2px;
+            border-radius: 9999px;
+        }
+        .rainbow-glow .button-content {
+            background: #f3f4f6;
+            border-radius: 9999px;
+            padding: 0.5rem 1rem;
+            display: block;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        .rainbow-glow:hover .button-content {
+            background: #e5e7eb;
+        }
+        .form-input {
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 0.5rem;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 9999px;
+            outline: none;
+            border: 1px solid #e5e7eb;
+            transition: background .2s;
+        }
+        .form-input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 1.25rem;
+            height: 1.25rem;
+            background: #2563eb;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-input::-moz-range-thumb {
+            width: 1.25rem;
+            height: 1.25rem;
+            background: #2563eb;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="mesh-gradient-container">
+        <div class="mesh-gradient-1"></div>
+
+        <header class="p-8">
+            <div class="container mx-auto flex justify-between items-center">
+                <div class="flex flex-col">
+                    <a href="/index.html" class="font-lora text-2xl font-semibold">Dr. Eshan Singh</a>
+                </div>
+                <nav class="flex items-center space-x-2">
+                    <a href="/energy.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
+                    <a href="/transport-model/index.html" class="rainbow-glow">
+                        <span class="button-content">Transport Model</span>
+                    </a>
+                    <a href="/grid-planner/index.html" class="rainbow-glow">
+                         <span class="button-content">Grid Planner</span>
+                    </a>
+                    <a href="/grid-operator/index.html" class="rainbow-glow">
+                         <span class="button-content">Grid Operator</span>
+                    </a>
+                    <a href="https://www.eshansingh.xyz/transmission/index.html" class="rainbow-glow">
+                        <span class="button-content">CA Grid Map</span>
+                    </a>
+                    <a href="/musings.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Musings</a>
+                </nav>
+            </div>
+        </header>
+
+        <div class="container mx-auto p-4 md:p-8 pt-0">
+            <!-- Title Section -->
+            <section id="tutorial-step-1" class="text-center mb-8">
+                <h1 class="font-lora text-5xl md:text-6xl font-medium leading-tight text-gray-900">Test Your Renewable Future</h1>
+                <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+                    Put your grid plan to the test! Dispatch your resources in real-time to match demand exactly. Your renewable capacity is based on your Grid Planner settings.
+                </p>
+                <div class="flex justify-center gap-4 mb-3">
+                    <button id="documentationBtn" class="px-6 py-2.5 text-base font-medium text-blue-600 bg-blue-50 rounded-full hover:bg-blue-100 transition-colors shadow-sm">
+                        📖 View Documentation
+                    </button>
+                    <button id="showTutorialBtn" class="px-6 py-2.5 text-base font-medium text-green-600 bg-green-50 rounded-full hover:bg-green-100 transition-colors shadow-sm">
+                        🛠️ Show Tutorial
+                    </button>
+                    <button id="leaderboardBtn" class="px-6 py-2.5 text-base font-medium text-purple-600 bg-purple-50 rounded-full hover:bg-purple-100 transition-colors shadow-sm">
+                        🏆 Leaderboard
+                    </button>
+                </div>
+                <p class="text-sm text-gray-600">
+                    Send your queries at <a href="mailto:hello@eshansingh.xyz" class="text-blue-600 hover:text-blue-700 underline">hello@eshansingh.xyz</a>
+                </p>
+            </section>
+
+            <!-- Two Column Layout -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                <!-- LEFT COLUMN: Charts -->
+                <div class="space-y-6">
+                    <!-- Generation Chart -->
+                    <section id="tutorial-step-2" class="glass-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-lora text-xl font-semibold text-gray-800">Demand & Generation</h3>
+                            <div class="flex items-center space-x-2">
+                                <div id="current-load-profile-text" class="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded-full">Summer</div>
+                                <button id="editProfileButton" class="p-2 rounded-full hover:bg-gray-200" title="Edit load profile">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                                        <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <div id="load-presets" class="hidden flex gap-1 flex-wrap">
+                                    <button id="preset-load-spring-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Spring Typical</button>
+                                    <button id="preset-load-spring-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Spring High</button>
+                                    <button id="preset-load-summer-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Summer Typical</button>
+                                    <button id="preset-load-summer-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Summer High</button>
+                                    <button id="preset-load-fall-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Fall Typical</button>
+                                    <button id="preset-load-fall-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Fall High</button>
+                                    <button id="preset-load-winter-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Winter Typical</button>
+                                    <button id="preset-load-winter-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Winter High</button>
+                                </div>
+                                <button id="revertEditButton" class="hidden p-2 rounded-full hover:bg-gray-200" title="Revert changes">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <button id="confirmEditButton" class="hidden p-2 rounded-full hover:bg-gray-200" title="Confirm changes">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="relative h-[500px]">
+                            <canvas id="gridChart"></canvas>
+                        </div>
+                    </section>
+
+                    <!-- Game Controls -->
+                    <section id="tutorial-step-3" class="glass-card">
+                        <!-- Game Speed Control -->
+                        <div id="tutorial-step-game-speed" class="mb-4 px-3 py-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <div class="flex justify-between items-center mb-2">
+                                <label for="gameSpeedSlider" class="text-sm font-medium text-gray-700">⏱️ Game Speed</label>
+                                <div class="text-sm font-semibold text-gray-800">
+                                    <span id="gameSpeedTime">1.0</span>s/tick
+                                </div>
+                            </div>
+                            <input type="range" id="gameSpeedSlider" class="form-input" min="0" max="5" value="2" step="1">
+                            <div class="flex justify-between text-gray-500 mt-1">
+                                <span class="text-2xl">🐇</span>
+                                <span class="text-2xl">🐢</span>
+                            </div>
+                        </div>
+
+                        <!-- Scheduler Button (Pre-Game Only) -->
+                        <div id="schedulerButtonContainer" class="mb-3">
+                            <button
+                                id="openSchedulerBtn"
+                                class="w-full px-6 py-3 text-lg font-medium text-white bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 rounded-full transition-colors shadow-md"
+                            >
+                                📅 Open Scheduler
+                            </button>
+                        </div>
+
+                        <!-- Start/Pause Game Button -->
+                        <div class="mb-3">
+                            <button
+                                id="startButton"
+                                class="w-full px-6 py-3 text-lg font-medium text-white bg-blue-600 rounded-full hover:bg-blue-700 transition-colors shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            >
+                                Start The Day
+                            </button>
+                        </div>
+
+                        <!-- Show Schedule Button (shown when game is paused/ended) -->
+                        <div id="showScheduleButtonContainer" class="mb-3 hidden">
+                            <button
+                                id="showScheduleBtn"
+                                class="w-full px-6 py-3 text-lg font-medium text-white bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 rounded-full transition-colors shadow-md"
+                            >
+                                📋 Show Schedule
+                            </button>
+                        </div>
+
+                        <!-- Resume/Restart Buttons (shown when paused) -->
+                        <div id="pauseButtons" class="mb-3 hidden flex gap-3">
+                            <button id="resumeButton" class="flex-1 px-6 py-3 text-lg font-medium text-white bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 rounded-full transition-colors shadow-md">
+                                Resume
+                            </button>
+                            <button id="restartButton" class="flex-1 px-6 py-3 text-lg font-medium text-white bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 rounded-full transition-colors shadow-md">
+                                Restart
+                            </button>
+                        </div>
+
+                        <!-- New Game / Retry Buttons (shown when game ends with schedule) -->
+                        <div id="endGameButtons" class="mb-3 hidden flex gap-3">
+                            <button id="newGameButton" class="flex-1 px-6 py-3 text-lg font-medium text-white bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 rounded-full transition-colors shadow-md">
+                                🆕 New Game
+                            </button>
+                            <button id="retryWithScheduleButton" class="flex-1 px-6 py-3 text-lg font-medium text-white bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 rounded-full transition-colors shadow-md">
+                                🔄 Retry with Schedule
+                            </button>
+                        </div>
+
+                        <!-- Next Scheduled Event Ticker (shown during gameplay if schedule active) -->
+                        <div id="nextEventTicker" class="mb-3 hidden">
+                            <div class="px-4 py-2 bg-purple-50 border border-purple-200 rounded-lg">
+                                <div class="text-xs text-purple-600 font-medium mb-1">⏰ Next Scheduled Event</div>
+                                <div id="nextEventText" class="text-sm font-semibold text-purple-800">--</div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Dial Gauges -->
+                    <section id="tutorial-step-gauges" class="glass-card" style="padding: 1rem;">
+                        <h3 class="font-lora text-xl font-semibold text-gray-800 mb-2">Live Gauges</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Delta Gauge -->
+                            <div class="text-center">
+                                <div class="text-sm text-gray-600 mb-2">Delta (Supply - Demand)</div>
+                                <svg id="deltaGauge" width="220" height="150" viewBox="0 0 220 150" class="mx-auto">
+                                    <!-- Gauge background arc (thin) -->
+                                    <path d="M 40 120 A 70 70 0 0 1 180 120" fill="none" stroke="#e5e7eb" stroke-width="8" stroke-linecap="butt"/>
+                                    <!-- Red zone (left) -->
+                                    <path d="M 40 120 A 70 70 0 0 1 53.4 78.9" fill="none" stroke="#ef4444" stroke-width="8" stroke-linecap="butt"/>
+                                    <!-- Yellow zone (left-center) -->
+                                    <path d="M 53.4 78.9 A 70 70 0 0 1 88.4 53.5" fill="none" stroke="#f59e0b" stroke-width="8" stroke-linecap="butt"/>
+                                    <!-- Green zone (center) -->
+                                    <path d="M 88.4 53.5 A 70 70 0 0 1 131.6 53.5" fill="none" stroke="#10b981" stroke-width="8" stroke-linecap="butt"/>
+                                    <!-- Yellow zone (right-center) -->
+                                    <path d="M 131.6 53.5 A 70 70 0 0 1 166.6 78.9" fill="none" stroke="#f59e0b" stroke-width="8" stroke-linecap="butt"/>
+                                    <!-- Red zone (right) -->
+                                    <path d="M 166.6 78.9 A 70 70 0 0 1 180 120" fill="none" stroke="#ef4444" stroke-width="8" stroke-linecap="butt"/>
+
+                                    <!-- Scale labels -->
+                                    <text x="30" y="135" font-size="11" fill="#6b7280" text-anchor="middle">-2000</text>
+                                    <text x="110" y="25" font-size="11" fill="#6b7280" text-anchor="middle">0</text>
+                                    <text x="190" y="135" font-size="11" fill="#6b7280" text-anchor="middle">+2000</text>
+
+                                    <!-- Center point -->
+                                    <circle cx="110" cy="120" r="6" fill="#374151"/>
+                                    <!-- Needle -->
+                                    <line id="deltaNeedle" x1="110" y1="120" x2="110" y2="55" stroke="#1f2937" stroke-width="3" stroke-linecap="round"/>
+                                    <!-- Needle cap -->
+                                    <circle cx="110" cy="120" r="4" fill="#1f2937"/>
+                                </svg>
+                                <div class="text-lg font-bold text-gray-800 mt-1"><span id="deltaGaugeValue">0</span> MW</div>
+                            </div>
+
+                            <!-- Frequency Gauge -->
+                            <div class="text-center">
+                                <div class="text-sm text-gray-600 mb-2">Grid Frequency</div>
+                                <svg id="frequencyGauge" width="220" height="150" viewBox="0 0 220 150" class="mx-auto">
+                                    <!-- Gauge background arc (thin) -->
+                                    <path d="M 40 120 A 70 70 0 0 1 180 120" fill="none" stroke="#e5e7eb" stroke-width="8" stroke-linecap="butt"/>
+                                    <!-- Red zone (left) -->
+                                    <path d="M 40 120 A 70 70 0 0 1 53.4 78.9" fill="none" stroke="#ef4444" stroke-width="8" stroke-linecap="butt"/>
+                                    <!-- Yellow zone (left-center) -->
+                                    <path d="M 53.4 78.9 A 70 70 0 0 1 88.4 53.5" fill="none" stroke="#f59e0b" stroke-width="8" stroke-linecap="butt"/>
+                                    <!-- Green zone (center) -->
+                                    <path d="M 88.4 53.5 A 70 70 0 0 1 131.6 53.5" fill="none" stroke="#10b981" stroke-width="8" stroke-linecap="butt"/>
+                                    <!-- Yellow zone (right-center) -->
+                                    <path d="M 131.6 53.5 A 70 70 0 0 1 166.6 78.9" fill="none" stroke="#f59e0b" stroke-width="8" stroke-linecap="butt"/>
+                                    <!-- Red zone (right) -->
+                                    <path d="M 166.6 78.9 A 70 70 0 0 1 180 120" fill="none" stroke="#ef4444" stroke-width="8" stroke-linecap="butt"/>
+
+                                    <!-- Scale labels -->
+                                    <text x="30" y="135" font-size="11" fill="#6b7280" text-anchor="middle">59</text>
+                                    <text x="110" y="25" font-size="11" fill="#6b7280" text-anchor="middle">60</text>
+                                    <text x="190" y="135" font-size="11" fill="#6b7280" text-anchor="middle">61</text>
+
+                                    <!-- Center point -->
+                                    <circle cx="110" cy="120" r="6" fill="#374151"/>
+                                    <!-- Needle -->
+                                    <line id="frequencyNeedle" x1="110" y1="120" x2="110" y2="55" stroke="#1f2937" stroke-width="3" stroke-linecap="round"/>
+                                    <!-- Needle cap -->
+                                    <circle cx="110" cy="120" r="4" fill="#1f2937"/>
+                                </svg>
+                                <div class="text-lg font-bold text-gray-800 mt-1"><span id="frequencyGaugeValue">60.00</span> Hz</div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Capacity Factor Chart -->
+                    <section class="glass-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-lora text-xl font-semibold text-gray-800">Hourly Capacity Factors</h3>
+                            <div class="flex items-center space-x-2">
+                                <div id="current-cf-profile-text" class="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded-full"></div>
+                                <button id="edit-cf-btn" class="p-2 rounded-full hover:bg-gray-200" title="Edit capacity factor profiles">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                                        <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <div id="cf-presets" class="hidden flex gap-1 flex-wrap">
+                                    <button id="preset-cf-spring-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Spring Typical</button>
+                                    <button id="preset-cf-spring-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Spring High</button>
+                                    <button id="preset-cf-summer-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Summer Typical</button>
+                                    <button id="preset-cf-summer-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Summer High</button>
+                                    <button id="preset-cf-fall-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Fall Typical</button>
+                                    <button id="preset-cf-fall-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Fall High</button>
+                                    <button id="preset-cf-winter-typical" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Winter Typical</button>
+                                    <button id="preset-cf-winter-high" class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">Winter High</button>
+                                </div>
+                                <button id="revert-cf-btn" class="hidden p-2 rounded-full hover:bg-gray-200" title="Revert changes">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <button id="confirm-cf-btn" class="hidden p-2 rounded-full hover:bg-gray-200" title="Confirm changes">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="relative h-64">
+                            <canvas id="capacityFactorChart"></canvas>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- RIGHT COLUMN: Controls and Metrics -->
+                <div class="space-y-6">
+                    <!-- Four Supply Levers -->
+                    <section id="tutorial-step-4" class="glass-card">
+                        <h3 class="font-lora text-xl font-semibold text-gray-800 mb-4">Flexible Generation</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- CCGT Unit Dispatch (First row, left) -->
+                            <div class="p-4 bg-blue-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="text-sm font-medium text-blue-700">⚡ CCGT Units (500 MW each)</label>
+                                    <div class="flex items-center gap-1">
+                                        <span id="ccgtOutputDisplay" class="text-sm font-semibold text-blue-600">0 MW</span>
+                                    </div>
+                                </div>
+
+                                <!-- Unit commitment controls -->
+                                <div class="flex items-center gap-2 mb-2">
+                                    <button id="ccgtCommitBtn" class="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:bg-gray-400" disabled>
+                                        + Commit Unit
+                                    </button>
+                                    <button id="ccgtShutdownBtn" class="px-3 py-1 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-400" disabled>
+                                        - Shutdown Unit
+                                    </button>
+                                </div>
+
+                                <!-- Unit status display -->
+                                <div class="text-xs text-gray-700 mb-2">
+                                    <div>Online: <span id="ccgtOnlineCount" class="font-semibold">0</span> units (<span id="ccgtOnlineMW">0</span> MW)</div>
+                                    <div class="flex justify-between">
+                                        <span>Starting: <span id="ccgtStartingCount" class="font-semibold">0</span> units</span>
+                                        <span id="ccgtNextOnline" class="text-blue-600 font-medium"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Power output slider (for online units) -->
+                                <div class="mb-1">
+                                    <input type="range" id="ccgtPowerSlider" class="form-input" min="0" max="0" value="0" step="1" disabled>
+                                </div>
+
+                                <div class="text-xs text-gray-500">
+                                    <div>500 MW/unit • 30 units max</div>
+                                    <div class="text-blue-600 font-medium">Startup: 75 min</div>
+                                    <div class="text-blue-600 font-medium">Min Load: 50%</div>
+                                    <div class="text-gray-600 font-medium">Cost: $32+$1/500MW</div>
+                                </div>
+                            </div>
+
+                            <!-- CT Unit Dispatch (First row, right) -->
+                            <div class="p-4 bg-orange-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="text-sm font-medium text-orange-700">🔥 CT Peakers (200 MW each)</label>
+                                    <div class="flex items-center gap-1">
+                                        <span id="ctOutputDisplay" class="text-sm font-semibold text-orange-600">0 MW</span>
+                                    </div>
+                                </div>
+
+                                <!-- Unit commitment controls -->
+                                <div class="flex items-center gap-2 mb-2">
+                                    <button id="ctCommitBtn" class="px-3 py-1 text-xs font-medium text-white bg-orange-600 rounded hover:bg-orange-700 disabled:bg-gray-400" disabled>
+                                        + Commit Unit
+                                    </button>
+                                    <button id="ctShutdownBtn" class="px-3 py-1 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-400" disabled>
+                                        - Shutdown Unit
+                                    </button>
+                                </div>
+
+                                <!-- Unit status display -->
+                                <div class="text-xs text-gray-700 mb-2">
+                                    <div>Online: <span id="ctOnlineCount" class="font-semibold">0</span> units (<span id="ctOnlineMW">0</span> MW)</div>
+                                    <div class="flex justify-between">
+                                        <span>Starting: <span id="ctStartingCount" class="font-semibold">0</span> units</span>
+                                        <span id="ctNextOnline" class="text-orange-600 font-medium"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Power output slider (for online units) -->
+                                <div class="mb-1">
+                                    <input type="range" id="ctPowerSlider" class="form-input" min="0" max="0" value="0" step="1" disabled>
+                                </div>
+
+                                <div class="text-xs text-gray-500">
+                                    <div>200 MW/unit • 50 units max</div>
+                                    <div class="text-orange-600 font-medium">Startup: 15 min</div>
+                                    <div class="text-orange-600 font-medium">Min Load: 0%</div>
+                                    <div class="text-gray-600 font-medium">Cost: $50+$2/200MW</div>
+                                </div>
+                            </div>
+
+                            <!-- Battery Slider (Second row, left) -->
+                            <div class="p-4 bg-green-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label for="batterySlider" class="text-sm font-medium text-green-700">🔋 Battery</label>
+                                    <div class="flex items-center gap-1">
+                                        <input type="number" id="batteryInput" class="w-20 px-2 py-1 text-sm font-semibold text-green-600 bg-white border border-green-300 rounded text-right" min="-13000" max="13000" value="0" disabled>
+                                        <span class="text-sm text-green-600">MW</span>
+                                    </div>
+                                </div>
+                                <input type="range" id="batterySlider" class="form-input" min="-13000" max="13000" value="0" step="1" disabled>
+                                <div class="text-xs text-gray-500 mt-2">
+                                    <div>Max: ±<span id="batteryPowerDisplay">13,000</span> MW</div>
+                                    <div>Capacity: <span id="batteryCapacityDisplay">52,000</span> MWh</div>
+                                    <div class="text-green-600 font-medium">Ramp: Instant ⚡</div>
+                                    <div class="text-gray-600 font-medium">Op Cost: $6/MWh</div>
+                                </div>
+                            </div>
+
+                            <!-- Hydro Slider (Second row, right) -->
+                            <div class="p-4 bg-cyan-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label for="hydroSlider" class="text-sm font-medium text-cyan-700">💧 Hydro</label>
+                                    <div class="flex items-center gap-1">
+                                        <input type="number" id="hydroInput" class="w-20 px-2 py-1 text-sm font-semibold text-cyan-600 bg-white border border-cyan-300 rounded text-right" min="0" max="6000" value="0" disabled>
+                                        <span class="text-sm text-cyan-600">MW</span>
+                                    </div>
+                                </div>
+                                <input type="range" id="hydroSlider" class="form-input" min="0" max="6000" value="0" step="1" disabled>
+                                <div class="text-xs text-gray-500 mt-2">
+                                    <div id="hydroMaxDisplay">Max: 4,000 MW</div>
+                                    <div class="text-cyan-600 font-medium">Ramp: Full capacity/hr</div>
+                                    <div class="text-gray-600 font-medium">Op Cost: $2/MWh</div>
+                                </div>
+                                <div class="mt-2">
+                                    <select id="hydroCondition" class="px-2 py-1 text-xs font-medium text-cyan-700 bg-white border border-cyan-300 rounded focus:outline-none focus:ring-1 focus:ring-cyan-500">
+                                        <option value="wet">Wet</option>
+                                        <option value="normal" selected>Normal</option>
+                                        <option value="dry">Dry</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Solar Curtailment Slider (Third row, left) -->
+                            <div class="p-4 bg-amber-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label for="solarCurtailmentSlider" class="text-sm font-medium text-amber-700">☀️ Solar Curtailment</label>
+                                    <div class="flex items-center gap-1">
+                                        <input type="number" id="solarCurtailmentInput" class="w-20 px-2 py-1 text-sm font-semibold text-amber-600 bg-white border border-amber-300 rounded text-right" min="0" max="0" value="0" disabled>
+                                        <span class="text-sm text-amber-600">MW</span>
+                                    </div>
+                                </div>
+                                <input type="range" id="solarCurtailmentSlider" class="form-input" min="0" max="0" value="0" step="1" disabled>
+                                <div class="text-xs text-gray-500 mt-2">
+                                    <div id="solarCurtailmentMaxDisplay">Max: 0 MW (at 12:00 AM)</div>
+                                    <div class="text-amber-600 font-medium">Ramp: Instant ⚡</div>
+                                    <div class="text-gray-600 font-medium">Op Cost: $20/MWh</div>
+                                </div>
+                            </div>
+
+                            <!-- Wind Curtailment Slider (Third row, right) -->
+                            <div class="p-4 bg-emerald-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label for="windCurtailmentSlider" class="text-sm font-medium text-emerald-700">🌬️ Wind Curtailment</label>
+                                    <div class="flex items-center gap-1">
+                                        <input type="number" id="windCurtailmentInput" class="w-20 px-2 py-1 text-sm font-semibold text-emerald-600 bg-white border border-emerald-300 rounded text-right" min="0" max="0" value="0" disabled>
+                                        <span class="text-sm text-emerald-600">MW</span>
+                                    </div>
+                                </div>
+                                <input type="range" id="windCurtailmentSlider" class="form-input" min="0" max="0" value="0" step="1" disabled>
+                                <div class="text-xs text-gray-500 mt-2">
+                                    <div id="windCurtailmentMaxDisplay">Max: 0 MW (at 12:00 AM)</div>
+                                    <div class="text-emerald-600 font-medium">Ramp: Instant ⚡</div>
+                                    <div class="text-gray-600 font-medium">Op Cost: $20/MWh</div>
+                                </div>
+                            </div>
+
+                            <!-- RNG Unit Dispatch (Fourth row, left) -->
+                            <div class="p-4 bg-lime-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="text-sm font-medium text-lime-700">🌱 RNG (100 MW each)</label>
+                                    <div class="flex items-center gap-1">
+                                        <span id="rngOutputDisplay" class="text-sm font-semibold text-lime-600">0 MW</span>
+                                    </div>
+                                </div>
+
+                                <!-- Unit commitment controls -->
+                                <div class="flex items-center gap-2 mb-2">
+                                    <button id="rngCommitBtn" class="px-3 py-1 text-xs font-medium text-white bg-lime-600 rounded hover:bg-lime-700 disabled:bg-gray-400" disabled>
+                                        + Commit Unit
+                                    </button>
+                                    <button id="rngShutdownBtn" class="px-3 py-1 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-400" disabled>
+                                        - Shutdown Unit
+                                    </button>
+                                </div>
+
+                                <!-- Unit status display -->
+                                <div class="text-xs text-gray-700 mb-2">
+                                    <div>Online: <span id="rngOnlineCount" class="font-semibold">0</span> units (<span id="rngOnlineMW">0</span> MW)</div>
+                                    <div class="flex justify-between">
+                                        <span>Starting: <span id="rngStartingCount" class="font-semibold">0</span> units</span>
+                                        <span id="rngNextOnline" class="text-lime-600 font-medium"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Power output slider (for online units) -->
+                                <div class="mb-1">
+                                    <input type="range" id="rngPowerSlider" class="form-input" min="0" max="0" value="0" step="1" disabled>
+                                </div>
+
+                                <div class="text-xs text-gray-500">
+                                    <div>100 MW/unit • <span id="rngMaxUnits">20</span> units max</div>
+                                    <div class="text-lime-600 font-medium">Startup: 30 min</div>
+                                    <div class="text-lime-600 font-medium">Min Load: 30%</div>
+                                    <div class="text-gray-600 font-medium">Cost: $255+$3/100MW</div>
+                                </div>
+                            </div>
+
+                            <!-- Hydrogen Unit Dispatch (Fourth row, right) -->
+                            <div class="p-4 bg-indigo-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="text-sm font-medium text-indigo-700">⚗️ Hydrogen (150 MW each)</label>
+                                    <div class="flex items-center gap-1">
+                                        <span id="hydrogenOutputDisplay" class="text-sm font-semibold text-indigo-600">0 MW</span>
+                                    </div>
+                                </div>
+
+                                <!-- Unit commitment controls -->
+                                <div class="flex items-center gap-2 mb-2">
+                                    <button id="hydrogenCommitBtn" class="px-3 py-1 text-xs font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700 disabled:bg-gray-400" disabled>
+                                        + Commit Unit
+                                    </button>
+                                    <button id="hydrogenShutdownBtn" class="px-3 py-1 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-400" disabled>
+                                        - Shutdown Unit
+                                    </button>
+                                </div>
+
+                                <!-- Unit status display -->
+                                <div class="text-xs text-gray-700 mb-2">
+                                    <div>Online: <span id="hydrogenOnlineCount" class="font-semibold">0</span> units (<span id="hydrogenOnlineMW">0</span> MW)</div>
+                                    <div class="flex justify-between">
+                                        <span>Starting: <span id="hydrogenStartingCount" class="font-semibold">0</span> units</span>
+                                        <span id="hydrogenNextOnline" class="text-indigo-600 font-medium"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Power output slider (for online units) -->
+                                <div class="mb-1">
+                                    <input type="range" id="hydrogenPowerSlider" class="form-input" min="0" max="0" value="0" step="1" disabled>
+                                </div>
+
+                                <div class="text-xs text-gray-500">
+                                    <div>150 MW/unit • <span id="hydrogenMaxUnits">15</span> units max</div>
+                                    <div class="text-indigo-600 font-medium">Startup: 45 min</div>
+                                    <div class="text-indigo-600 font-medium">Min Load: 20%</div>
+                                    <div class="text-gray-600 font-medium">Cost: $<span id="hydrogenCostDisplay">540</span>+$5/150MW</div>
+                                </div>
+                                <div class="mt-2">
+                                    <select id="hydrogenFuelCost" class="px-2 py-1 text-xs font-medium text-indigo-700 bg-white border border-indigo-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                        <option value="3">3 $/kg H₂</option>
+                                        <option value="4">4 $/kg H₂</option>
+                                        <option value="5">5 $/kg H₂</option>
+                                        <option value="6" selected>6 $/kg H₂</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Game Info -->
+                    <section id="tutorial-step-5" class="glass-card">
+                        <h3 class="font-lora text-xl font-semibold text-gray-800 mb-4">Game Metrics</h3>
+
+                        <!-- Contextual Tips Banner -->
+                        <div id="tipsBanner" class="mb-4 px-4 py-2 rounded-lg text-center text-sm font-medium transition-all duration-300 bg-blue-50 text-blue-800 border border-blue-200">
+                            💡 Match the Net Demand with Generation at 12:00 AM to start the game.
+                        </div>
+
+                        <!-- Live Time Display -->
+                        <div class="mb-4 text-center">
+                            <div class="text-sm text-gray-600">Current Time</div>
+                            <div class="text-3xl font-bold text-blue-600"><span id="currentTimeValue">12:00 AM</span></div>
+                        </div>
+
+                        <!-- Live Status Banner -->
+                        <div id="statusBanner" class="mb-4 px-4 py-3 rounded-lg text-center font-semibold text-lg transition-all duration-300 bg-blue-100 text-blue-800">
+                            ⚙️ Grid Unstable: Match Net Demand with Resources
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <div class="text-sm text-gray-600">Net Demand</div>
+                                <div class="text-2xl font-bold text-gray-800"><span id="demandValue">--</span> MW</div>
+                                <div id="nextDemandPreview" class="text-xs mt-1 font-medium hidden">
+                                    Next: <span id="nextDemandValue">--</span> MW <span id="nextDemandChange" class="font-semibold">--</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600">Your Total Supply</div>
+                                <div class="text-2xl font-bold text-blue-600"><span id="totalSupplyValue">0</span> MW</div>
+                            </div>
+                            <div class="col-span-2 text-center">
+                                <div class="text-sm text-gray-600">Delta (Supply - Net Demand)</div>
+                                <div class="text-2xl font-bold text-gray-800"><span id="deltaValue">--</span> MW</div>
+                            </div>
+                            <div class="col-span-2">
+                                <div class="text-sm text-gray-600 mb-2">Battery State of Charge</div>
+                                <div class="relative w-full h-12 bg-gray-200 rounded-lg overflow-hidden border-2 border-gray-300">
+                                    <div id="batterySOC" class="absolute left-0 top-0 h-full bg-gradient-to-r from-yellow-500 to-yellow-300 transition-all duration-300" style="width: 20%"></div>
+                                    <div class="absolute inset-0 flex items-center justify-center">
+                                        <span id="batterySOCText" class="text-sm font-bold text-gray-700 z-10">20%</span>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                    <span>0%</span>
+                                    <span>Capacity: <span id="batteryCapacityDisplaySOC">52,000</span> MWh</span>
+                                    <span>100%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600">Emergency Alerts</div>
+                                <div class="text-2xl font-bold text-yellow-600"><span id="emergencyCount">0</span></div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600">Blackouts</div>
+                                <div class="text-2xl font-bold text-red-600"><span id="blackoutCount">0</span></div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600">Current Interval Cost</div>
+                                <div class="text-2xl font-bold text-orange-600">$<span id="currentCostValue">0</span></div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600">Total Cost (24hr)</div>
+                                <div class="text-2xl font-bold text-red-600">$<span id="totalCostValue">0</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Live Delta Chart -->
+                        <div class="mt-4">
+                            <h4 class="text-sm font-semibold text-gray-700 mb-2">Running Delta (MW)</h4>
+                            <div class="relative h-32">
+                                <canvas id="deltaHistoryChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Scheduled Events Indicator (shown during gameplay if schedule is active) -->
+                        <div id="activeScheduleIndicator" class="mt-4 hidden">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="text-sm font-semibold text-gray-700">📅 Active Schedule</h4>
+                                <span id="scheduledEventsCount" class="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full font-semibold">0 events</span>
+                            </div>
+                            <div id="upcomingEventsList" class="space-y-1 max-h-32 overflow-y-auto text-xs">
+                                <!-- Upcoming events will be inserted here -->
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+            </div>
+
+            <!-- Renewable Mix Info - Full Width -->
+            <section class="glass-card mt-6">
+                <h3 class="font-lora text-xl font-semibold text-gray-800 mb-4">Your Installed Capacity Mix</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-2 text-sm">
+                    <div class="p-2 bg-amber-50 rounded-lg">
+                        <div class="font-semibold text-amber-700">☀️ Solar</div>
+                        <div class="text-gray-600"><span id="solarCapacity">--</span> MW</div>
+                    </div>
+                    <div class="p-2 bg-emerald-50 rounded-lg">
+                        <div class="font-semibold text-emerald-700">💨 Wind</div>
+                        <div class="text-gray-600"><span id="windCapacity">--</span> MW</div>
+                    </div>
+                    <div class="p-2 bg-teal-50 rounded-lg">
+                        <div class="font-semibold text-teal-700">🌊 Offshore Wind</div>
+                        <div class="text-gray-600"><span id="offshoreWindCapacity">--</span> MW</div>
+                    </div>
+                    <div class="p-2 bg-purple-50 rounded-lg">
+                        <div class="font-semibold text-purple-700">⚛️ Nuclear</div>
+                        <div class="text-gray-600"><span id="nuclearCapacity">--</span> MW</div>
+                    </div>
+                    <div class="p-2 bg-red-50 rounded-lg">
+                        <div class="font-semibold text-red-700">🌋 Geothermal</div>
+                        <div class="text-gray-600"><span id="geothermalCapacity">--</span> MW</div>
+                    </div>
+                    <div class="p-2 bg-orange-50 rounded-lg">
+                        <div class="font-semibold text-orange-700">🌾 Biomass</div>
+                        <div class="text-gray-600"><span id="biomassCapacity">--</span> MW</div>
+                    </div>
+                    <div class="p-2 bg-lime-50 rounded-lg">
+                        <div class="font-semibold text-lime-700">🌱 RNG</div>
+                        <div class="text-gray-600"><span id="rngCapacity">--</span> MW</div>
+                    </div>
+                    <div class="p-2 bg-indigo-50 rounded-lg">
+                        <div class="font-semibold text-indigo-700">⚗️ Hydrogen</div>
+                        <div class="text-gray-600"><span id="hydrogenCapacity">--</span> MW</div>
+                    </div>
+                    <div class="p-2 bg-green-50 rounded-lg">
+                        <div class="font-semibold text-green-700">🔋 Battery</div>
+                        <div class="text-gray-600"><span id="batteryCapacity">--</span> MWh</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Copyright Footer -->
+            <footer class="container mx-auto p-4 mt-12 text-center border-t border-gray-200">
+                <p class="text-sm text-gray-600">
+                    © 2025 <a href="https://eshansingh.xyz" class="font-medium text-gray-800 hover:text-blue-600">Dr. Eshan Singh</a>. All rights reserved.
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                    For licensing inquiries: <a href="mailto:hello@eshansingh.xyz" class="text-blue-600 hover:text-blue-700 underline">hello@eshansingh.xyz</a>
+                </p>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Animation Overlay Container -->
+    <div id="animation-overlay" class="fixed inset-0 pointer-events-none" style="z-index: 9999; display: none;">
+        <!-- Cloud animation container -->
+        <div id="cloud-animation" class="absolute inset-0 hidden"></div>
+
+        <!-- Demand spike animation container -->
+        <div id="demand-spike-animation" class="absolute inset-0 hidden"></div>
+    </div>
+
+    <!-- Tutorial Overlay -->
+    <div id="tutorial-overlay"></div>
+    <div id="tutorial-popover">
+        <h3 id="tutorial-title" class="text-xl font-lora font-bold mb-2 text-gray-800"></h3>
+        <p id="tutorial-text" class="text-gray-600 mb-4" style="white-space: pre-line;"></p>
+        <div class="flex justify-between items-center">
+            <button id="tutorial-skip" class="text-sm text-gray-500 hover:text-gray-800">Skip Tour</button>
+            <div>
+                <button id="tutorial-prev" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 mr-2">Prev</button>
+                <button id="tutorial-next" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Username Modal -->
+    <div id="usernameModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full mx-4">
+            <h2 class="text-3xl font-bold text-gray-800 mb-4 text-center">🎮 Welcome to Grid Operator!</h2>
+            <p class="text-gray-600 mb-6 text-center">Enter your username to compete on the global leaderboard</p>
+            <input
+                type="text"
+                id="usernameInput"
+                placeholder="Enter your username"
+                maxlength="20"
+                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-lg mb-4"
+            />
+            <button
+                id="submitUsernameBtn"
+                class="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-md"
+            >
+                Start Playing
+            </button>
+            <p class="text-xs text-gray-500 mt-4 text-center">
+                Perfect games (0 alerts, 0 blackouts) qualify for the leaderboard!
+            </p>
+        </div>
+    </div>
+
+    <!-- Leaderboard Modal -->
+    <div id="leaderboardModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-gray-800">🏆 Global Leaderboard</h2>
+                <button id="closeLeaderboardBtn" class="text-gray-500 hover:text-gray-700 text-3xl font-bold">&times;</button>
+            </div>
+
+            <p class="text-gray-600 mb-4 text-center">
+                Top 10 Players with Perfect Games (0 Alerts, 0 Blackouts)
+            </p>
+
+            <div id="leaderboardLoading" class="text-center py-8 text-gray-500">
+                Loading leaderboard...
+            </div>
+
+            <div id="leaderboardContent" class="hidden">
+                <div id="leaderboardList" class="space-y-2">
+                    <!-- Leaderboard entries will be inserted here -->
+                </div>
+
+                <div id="leaderboardEmpty" class="text-center py-12 text-gray-400 hidden">
+                    <div class="text-6xl mb-4">🎯</div>
+                    <p class="text-lg">No perfect games yet!</p>
+                    <p class="text-sm mt-2">Be the first to achieve 0 alerts and 0 blackouts!</p>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-gray-200">
+                <p class="text-xs text-gray-500 text-center">
+                    Current Player: <span id="currentUsername" class="font-semibold text-blue-600">Guest</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scheduler Modal -->
+    <div id="schedulerModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-2xl w-[95vw] h-[90vh] flex flex-col">
+            <!-- Header -->
+            <div class="flex justify-between items-center p-6 border-b border-gray-200">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-800">📅 Unit Commitment Scheduler</h2>
+                    <p class="text-sm text-gray-600 mt-1">Plan your resource dispatch for the entire 24-hour period</p>
+                </div>
+                <div class="flex gap-3">
+                    <button id="showSchedulerTutorialBtn" class="px-4 py-2 text-sm font-medium text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
+                        💡 Tutorial
+                    </button>
+                    <button id="clearScheduleBtn" class="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
+                        🗑️ Clear All
+                    </button>
+                    <button id="applyScheduleBtn" class="px-6 py-2 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 rounded-lg transition-colors shadow-md">
+                        ✓ Apply Schedule
+                    </button>
+                    <button id="closeSchedulerBtn" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                        ✕ Close
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="flex-1 overflow-hidden flex">
+                <!-- Left: Chart Area -->
+                <div class="flex-1 p-6 overflow-y-auto">
+                    <div class="mb-4 flex items-start justify-between">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-2">Timeline - Click to Schedule Events</h3>
+                            <p class="text-sm text-gray-500">Click on any time point to add a scheduled resource change</p>
+                        </div>
+                        <!-- Battery Icon Overlay -->
+                        <div id="batteryIconOverlay" class="ml-4">
+                            <div style="min-width: 60px;">
+                                <div style="text-align: center; font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 3px;">End of Day</div>
+                                <!-- Battery Icon -->
+                                <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 3px;">
+                                    <div style="width: 22px; height: 32px; border: 2px solid #374151; border-radius: 2px; position: relative; background: #f3f4f6;">
+                                        <!-- Battery Terminal -->
+                                        <div style="position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 9px; height: 3px; background: #374151; border-radius: 2px 2px 0 0;"></div>
+                                        <!-- Battery Fill -->
+                                        <div class="battery-fill" style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, #22c55e, #4ade80); border-radius: 1px; transition: height 0.3s ease, background 0.3s ease; height: 20%;"></div>
+                                    </div>
+                                </div>
+                                <!-- SOC Text -->
+                                <div class="battery-soc-text" style="text-align: center; font-size: 13px; font-weight: bold; color: #1f2937;">20%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4" style="height: 500px;">
+                        <canvas id="schedulerChart"></canvas>
+                    </div>
+
+                    <!-- Scheduled Events List -->
+                    <div class="mt-6">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-3">📋 Scheduled Events</h3>
+                        <div id="scheduledEventsList" class="space-y-2 max-h-[200px] overflow-y-auto">
+                            <p class="text-sm text-gray-400 italic">No events scheduled yet. Click on the timeline to add events.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Resource Selection Panel (Always Visible) -->
+                <div id="resourceSelectionPanel" class="w-80 border-l border-gray-200 p-6 overflow-y-auto bg-gray-50">
+                    <div class="mb-4">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-2">Schedule Resources</h3>
+                        <div class="p-3 bg-blue-100 rounded-lg border border-blue-300">
+                            <p class="text-sm text-gray-700 font-medium">Selected Time:</p>
+                            <p class="text-lg font-bold text-blue-700"><span id="selectedTime">Click on timeline</span></p>
+                            <div class="mt-2 pt-2 border-t border-blue-200">
+                                <p class="text-xs text-gray-600">Total Scheduled Generation:</p>
+                                <p class="text-base font-bold text-green-700"><span id="totalScheduledMW">--</span> MW</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resource Type Selection -->
+                    <div class="space-y-4">
+                        <!-- CCGT -->
+                        <div class="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <label class="block text-sm font-medium text-blue-700 mb-2">⚡ CCGT Units (500 MW each)</label>
+                            <div class="flex gap-2">
+                                <button class="resource-action-btn flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700" data-action="commit_ccgt">
+                                    + Commit 1 Unit
+                                </button>
+                                <button class="resource-action-btn flex-1 px-3 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700" data-action="shutdown_ccgt">
+                                    - Shutdown 1 Unit
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2">⏱️ Startup: 75 min (instant @ 12:00 AM)</p>
+                        </div>
+
+                        <!-- CT -->
+                        <div class="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                            <label class="block text-sm font-medium text-orange-700 mb-2">🔥 CT Peakers (200 MW each)</label>
+                            <div class="flex gap-2">
+                                <button class="resource-action-btn flex-1 px-3 py-2 text-sm bg-orange-600 text-white rounded hover:bg-orange-700" data-action="commit_ct">
+                                    + Commit 1 Unit
+                                </button>
+                                <button class="resource-action-btn flex-1 px-3 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700" data-action="shutdown_ct">
+                                    - Shutdown 1 Unit
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2">⏱️ Startup: 15 min (instant @ 12:00 AM)</p>
+                        </div>
+
+                        <!-- Battery -->
+                        <div class="p-3 bg-green-50 rounded-lg border border-green-200">
+                            <label class="block text-sm font-medium text-green-700 mb-2">🔋 Battery</label>
+                            <button class="resource-action-btn w-full px-3 py-2 text-xs bg-green-600 text-white rounded hover:bg-green-700 mb-2" data-action="set_battery">
+                                Set MW Level
+                            </button>
+                            <input type="number" id="batteryMW" min="-13000" max="13000" step="100" value="0" class="w-full px-2 py-1 text-sm border rounded">
+                            <p class="text-xs text-gray-500 mt-1">⚡ Instant response</p>
+                        </div>
+
+                        <!-- Hydro -->
+                        <div class="p-3 bg-cyan-50 rounded-lg border border-cyan-200">
+                            <label class="block text-sm font-medium text-cyan-700 mb-2">💧 Hydro</label>
+                            <button class="resource-action-btn w-full px-3 py-2 text-xs bg-cyan-600 text-white rounded hover:bg-cyan-700 mb-2" data-action="set_hydro">
+                                Set MW Level
+                            </button>
+                            <input type="number" id="hydroMW" min="0" max="6000" step="100" value="0" class="w-full px-2 py-1 text-sm border rounded">
+                            <p class="text-xs text-gray-500 mt-1">⚡ Fast ramp</p>
+                        </div>
+
+                        <!-- RNG -->
+                        <div class="p-3 bg-lime-50 rounded-lg border border-lime-200">
+                            <label class="block text-sm font-medium text-lime-700 mb-2">🌱 RNG (100 MW each)</label>
+                            <div class="flex gap-2">
+                                <button class="resource-action-btn flex-1 px-3 py-2 text-sm bg-lime-600 text-white rounded hover:bg-lime-700" data-action="commit_rng">
+                                    + Commit 1 Unit
+                                </button>
+                                <button class="resource-action-btn flex-1 px-3 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700" data-action="shutdown_rng">
+                                    - Shutdown 1 Unit
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2">⏱️ Startup: 30 min (instant @ 12:00 AM)</p>
+                        </div>
+
+                        <!-- Hydrogen -->
+                        <div class="p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                            <label class="block text-sm font-medium text-indigo-700 mb-2">⚗️ Hydrogen (150 MW each)</label>
+                            <div class="flex gap-2">
+                                <button class="resource-action-btn flex-1 px-3 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700" data-action="commit_hydrogen">
+                                    + Commit 1 Unit
+                                </button>
+                                <button class="resource-action-btn flex-1 px-3 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700" data-action="shutdown_hydrogen">
+                                    - Shutdown 1 Unit
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2">⏱️ Startup: 45 min (instant @ 12:00 AM)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

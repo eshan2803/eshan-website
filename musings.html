@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Musings | Dr. Eshan Singh</title>
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="custom.css" />
+    
+    <style>
+        html { scroll-behavior: smooth; }
+        body {
+            background-color: #fcfcfc;
+            font-family: 'Inter', sans-serif;
+            cursor: none;
+        }
+        .font-lora { font-family: 'Lora', serif; }
+
+        /* Magnetic Cursor */
+        .cursor {
+            position: fixed; width: 30px; height: 30px; border: 2px solid #333;
+            border-radius: 50%; left: 0; top: 0; pointer-events: none;
+            transform: translate(-50%, -50%); transition: width 0.2s, height 0.2s, border-width 0.2s, background-color 0.2s;
+            z-index: 99999;
+        }
+        
+        /* Rainbow Border Animation */
+        @keyframes rainbow-border {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+        
+        .rainbow-glow {
+            position: relative;
+            background: linear-gradient(90deg, #ff0080, #ff8000, #ffff00, #80ff00, #00ff80, #0080ff, #8000ff, #ff0080);
+            background-size: 200% 200%;
+            animation: rainbow-border 2s linear infinite;
+            padding: 2px;
+            border-radius: 9999px;
+        }
+        
+        .rainbow-glow .button-content {
+            background: #f3f4f6;
+            border-radius: 9999px;
+            padding: 0.5rem 1rem;
+            display: block;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        
+        .rainbow-glow:hover .button-content {
+            background: #e5e7eb;
+        }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-800">
+    <header class="p-8">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="index.html" class="font-lora text-2xl font-semibold">Dr. Eshan Singh</a>
+            <nav class="flex items-center space-x-2">
+                <a href="energy.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
+                <a href="/transport-model/index.html" class="rainbow-glow">
+                    <span class="button-content">Transport Model</span>
+                </a>
+                <a href="/grid-planner/index.html" class="rainbow-glow">
+                    <span class="button-content">Grid Planner</span>
+                </a>
+                <a href="grid-operator/index.html" class="rainbow-glow">
+                     <span class="button-content">Grid Operator</span>
+                </a>
+                <a href="https://www.eshansingh.xyz/transmission/index.html" class="rainbow-glow">
+                    <span class="button-content">CA Grid Map</span>
+                </a>
+                <a href="musings.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Musings</a>
+            </nav>
+        </div>
+    </header>
+    <main class="h-screen flex items-center justify-center text-center -mt-20">
+        <h1 class="kinetic-headline font-lora text-6xl md:text-8xl font-medium leading-tight">
+             Coming Soon
+        </h1>
+        <div class="scroll-down-arrow"><span class="arrow"></span></div>
+    </main>
+<script src="custom.js"></script>
+</body>
+</html>

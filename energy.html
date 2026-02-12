@@ -1,134 +1,458 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Energy Decarbonization | Eshan Singh</title>
-  <link rel="icon" type="image/png" href="assets/fevicon.png">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energy Decarbonization | Dr. Eshan Singh</title>
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="custom.css" />
+
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: #fcfcfc;
+            /* Comet-like off-white */
+            font-family: 'Inter', sans-serif;
+            cursor: none;
+            /* Hide default cursor */
+        }
+
+        .font-lora {
+            font-family: 'Lora', serif;
+        }
+
+        /* Magnetic Cursor */
+        .cursor {
+            position: fixed;
+            width: 30px;
+            height: 30px;
+            border: 2px solid #333;
+            border-radius: 50%;
+            left: 0;
+            top: 0;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            transition: width 0.2s, height 0.2s, border-width 0.2s, background-color 0.2s;
+            z-index: 9999;
+        }
+
+        .cursor.hovered {
+            width: 50px;
+            height: 50px;
+            border-width: 3px;
+            background-color: rgba(0, 166, 126, 0.1);
+            border-color: #00A67E;
+        }
+
+        /* Mesh Gradients */
+        .mesh-gradient-1 {
+            background-image: radial-gradient(at 40% 20%, hsla(28, 100%, 74%, 1) 0px, transparent 50%),
+                radial-gradient(at 80% 20%, hsla(189, 100%, 56%, 1) 0px, transparent 50%),
+                radial-gradient(at 0% 50%, hsla(355, 100%, 93%, 1) 0px, transparent 50%),
+                radial-gradient(at 80% 50%, hsla(340, 100%, 76%, 1) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, hsla(22, 100%, 77%, 1) 0px, transparent 50%),
+                radial-gradient(at 80% 100%, hsla(242, 100%, 70%, 1) 0px, transparent 50%);
+            background-size: 100% 100%;
+            filter: blur(15px) saturate(1.2);
+            opacity: 0.15;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -1;
+        }
+
+        /* Rainbow Border Animation */
+        @keyframes rainbow-border {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            100% {
+                background-position: 200% 50%;
+            }
+        }
+
+        .rainbow-glow {
+            position: relative;
+            background: linear-gradient(90deg, #ff0080, #ff8000, #ffff00, #80ff00, #00ff80, #0080ff, #8000ff, #ff0080);
+            background-size: 200% 200%;
+            animation: rainbow-border 2s linear infinite;
+            padding: 2px;
+            border-radius: 9999px;
+        }
+
+        .rainbow-glow .button-content {
+            background: #f3f4f6;
+            border-radius: 9999px;
+            padding: 0.5rem 1rem;
+            display: block;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+
+        .rainbow-glow:hover .button-content {
+            background: #e5e7eb;
+        }
+
+        /* Full-screen Folds */
+        .fold {
+            min-height: 100vh;
+            /* Hero fold is full height */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 1.5rem;
+        }
+
+        section.fold {
+            min-height: auto;
+            /* Content folds are sized by content */
+            padding: 6rem 1.5rem;
+            /* Adjust padding to control spacing */
+        }
+
+        /* Glassmorphism & 3D Hover Cards */
+        .glass-card {
+            background-color: rgba(255, 255, 255, 0.45);
+            /* Slightly more opaque */
+            backdrop-filter: blur(16px);
+            /* Enhanced frosted glass effect */
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 1rem;
+            /* 16px */
+            transition: all 0.3s ease;
+            transform-style: preserve-3d;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .glass-card:hover {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            transform: perspective(1000px) rotateX(var(--rotateX)) rotateY(var(--rotateY)) scale3d(1.05, 1.05, 1.05);
+        }
+
+        /* Kinetic Typography */
+        .kinetic-headline .word {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s, transform 0.5s;
+            transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+    </style>
 </head>
-<body>
-<header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem;">
-  <div>
-    <h1>Dr. Eshan Singh</h1>
-  </div>
-  <div class="header-animation">
-    <lottie-player 
-      src="assets/wind-turbine.json"
-      background="transparent"
-      speed="1"
-      style="width: 150px; height: 150px;"
-      loop autoplay>
-    </lottie-player>
-  </div>
-</header>
 
-  <nav>
-    <a href="index.html">Home</a>
-    <a href="energy.html">Energy Decarbonization</a>
-    <a href="personal.html">Personal Musings</a>
-    <a href="contact.html">Contact</a>
-  </nav>
+<body class="antialiased">
 
-  <main class="container">
-    <section>
-      <h2>Energy Decarbonization Articles</h2>
-      <p>Explore my writings and thought leadership on energy transition, climate innovation, and sustainability strategies.</p>
+    <!-- Magnetic Cursor -->
+    <div class="cursor hidden md:block"></div>
 
-      <div class="card-grid">
-        
-      <div class="card">
-        <h3>Commodity Transport Model</h3>
-        <p>Calculate the energy, carbon footprint and cost of transporting commodities across the globe.</p>
-        <a class="button" href="transport-model.html">Launch Model</a>
-      </div>
-        
-        <div class="card">
-          <h3>Entropy and Information</h3>
-          <p>Understanding the fundamental link between entropy and how information shapes our universe.</p>
-          <a class="button" href="https://www.linkedin.com/pulse/entropy-information-eshan-singh/" target="_blank">Read More</a>
+    <!-- Three.js Canvas Container -->
+    <div id="bg-canvas" class="fixed top-0 left-0 -z-10"></div>
+
+    <header class="p-8">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="index.html" class="font-lora text-2xl font-semibold">Dr. Eshan Singh</a>
+            <nav class="flex items-center space-x-2">
+                <a href="energy.html"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
+                <a href="/transport-model/index.html" class="rainbow-glow">
+                    <span class="button-content">Transport Model</span>
+                </a>
+                <a href="/grid-planner/index.html" class="rainbow-glow">
+                    <span class="button-content">Grid Planner</span>
+                </a>
+                <a href="grid-operator/index.html" class="rainbow-glow">
+                    <span class="button-content">Grid Operator</span>
+                </a>
+                <a href="https://www.eshansingh.xyz/transmission/index.html" class="rainbow-glow">
+                    <span class="button-content">CA Grid Map</span>
+                </a>
+                <a href="musings.html"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Musings</a>
+            </nav>
         </div>
+    </header>
 
-        <div class="card">
-          <h3>Some Thoughts on DAC</h3>
-          <p>Exploring the potential, challenges, and realities of Direct Air Capture technologies.</p>
-          <a class="button" href="https://www.linkedin.com/pulse/more-dac-eshan-singh-z84ac/" target="_blank">Read More</a>
+    <main class="fold">
+        <div class="container mx-auto grid md:grid-cols-2 gap-12 items-center">
+            <div class="text-left">
+                <h1 class="kinetic-headline font-lora text-5xl md:text-7xl font-medium leading-tight">
+                    Energy Decarbonization Articles
+                </h1>
+                <p class="mt-4 text-lg text-gray-600 max-w-xl">Explore my writings and thought leadership on energy
+                    transition, climate innovation, and sustainability strategies.</p>
+            </div>
+            <div class="flex justify-center items-center">
+                <lottie-player src="assets/wind-turbine.json" background="transparent" speed="1"
+                    style="width: 100%; max-width: 400px; height: auto;" loop autoplay>
+                </lottie-player>
+            </div>
         </div>
+        <div class="scroll-down-arrow"><span class="arrow"></span></div>
+    </main>
 
-        <div class="card">
-          <h3>Hydrogen, Nuclear and the Clean Energy Quest</h3>
-          <p>A critical look at how hydrogen and nuclear can shape the path toward sustainable energy.</p>
-          <a class="button" href="https://www.linkedin.com/pulse/hydrogen-nuclear-clean-energy-quest-eshan-singh-3b9ge/" target="_blank">Read More</a>
-        </div>
+    <section class="fold relative overflow-hidden will-change-transform">
+        <div class="mesh-gradient-1"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 
-        <div class="card">
-          <h3>Will We Make It?</h3>
-          <p>Reflections on climate urgency and whether humanity will meet the challenge of decarbonization.</p>
-          <a class="button" href="https://www.linkedin.com/pulse/we-make-eshan-singh-tdpfc/" target="_blank">Read More</a>
-        </div>
+                <div class="glass-card">
+                    <h3 class="text-xl font-lora font-semibold mb-2">California Energy 2025: A Year in Review</h3>
+                    <p class="text-gray-700 flex-grow">Interactive data visualization of California's energy grid in
+                        2025. Explore 365 days of load, solar, wind, and battery operations.</p>
+                    <a href="2025recap.html"
+                        class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Explore
+                        Data</a>
+                </div>
 
-        <div class="card">
-          <h3>The Pear Paradox</h3>
-          <p>How can we leverage carbon offsets to actually help the planet? Rethinking carbon strategy.</p>
-          <a class="button" href="https://www.linkedin.com/pulse/pear-paradox-how-can-we-leverage-carbon-offsets-actually-eshan-singh-gacdc/" target="_blank">Read More</a>
-        </div>
+                <div class="glass-card">
+                    <h3 class="text-xl font-lora font-semibold mb-2">California Grid Utilization Explorer (2020-2025)</h3>
+                    <p class="text-gray-700 flex-grow">Interactive analysis of California's grid capacity versus demand over 2,192 days. Explore available capacity by resource type, reserve margins, and system headroom.</p>
+                    <a href="GridUtilization/"
+                        class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Explore
+                        Tool</a>
+                </div>
 
-        <div class="card">
-          <h3>Time for Negative-Emission Vehicles</h3>
-          <p>Imagining a future where vehicles don't just emit less — but actually clean the atmosphere.</p>
-          <a class="button" href="https://www.linkedin.com/pulse/time-negative-emissions-vehicles-eshan-singh-yuwuc/" target="_blank">Read More</a>
+                <div class="glass-card">
+                    <h3 class="text-xl font-lora font-semibold mb-2">Entropy and Information</h3>
+                    <p class="text-gray-700 flex-grow">Understanding the fundamental link between entropy and how
+                        information shapes our universe.</p>
+                    <a href="https://www.linkedin.com/pulse/entropy-information-eshan-singh/" target="_blank"
+                        class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Read
+                        More</a>
+                </div>
+
+                <div class="glass-card">
+                    <h3 class="text-xl font-lora font-semibold mb-2">Some Thoughts on DAC</h3>
+                    <p class="text-gray-700 flex-grow">Exploring the potential, challenges, and realities of Direct Air
+                        Capture technologies.</p>
+                    <a href="https://www.linkedin.com/pulse/more-dac-eshan-singh-z84ac/" target="_blank"
+                        class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Read
+                        More</a>
+                </div>
+
+                <div class="glass-card">
+                    <h3 class="text-xl font-lora font-semibold mb-2">Hydrogen, Nuclear and the Clean Energy Quest</h3>
+                    <p class="text-gray-700 flex-grow">A critical look at how hydrogen and nuclear can shape the path
+                        toward sustainable energy.</p>
+                    <a href="https://www.linkedin.com/pulse/hydrogen-nuclear-clean-energy-quest-eshan-singh-3b9ge/"
+                        target="_blank"
+                        class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Read
+                        More</a>
+                </div>
+
+                <div class="glass-card">
+                    <h3 class="text-xl font-lora font-semibold mb-2">Will We Make It?</h3>
+                    <p class="text-gray-700 flex-grow">Reflections on climate urgency and whether humanity will meet the
+                        challenge of decarbonization.</p>
+                    <a href="https://www.linkedin.com/pulse/we-make-eshan-singh-tdpfc/" target="_blank"
+                        class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Read
+                        More</a>
+                </div>
+
+                <div class="glass-card">
+                    <h3 class="text-xl font-lora font-semibold mb-2">The Pear Paradox</h3>
+                    <p class="text-gray-700 flex-grow">How can we leverage carbon offsets to actually help the planet?
+                        Rethinking carbon strategy.</p>
+                    <a href="https://www.linkedin.com/pulse/pear-paradox-how-can-we-leverage-carbon-offsets-actually-eshan-singh-gacdc/"
+                        target="_blank"
+                        class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Read
+                        More</a>
+                </div>
+
+                <div class="glass-card">
+                    <h3 class="text-xl font-lora font-semibold mb-2">Time for Negative-Emission Vehicles</h3>
+                    <p class="text-gray-700 flex-grow">Imagining a future where vehicles don't just emit less — but
+                        actually clean the atmosphere.</p>
+                    <a href="https://www.linkedin.com/pulse/time-negative-emissions-vehicles-eshan-singh-yuwuc/"
+                        target="_blank"
+                        class="mt-4 inline-block bg-gray-800 text-white font-semibold py-2 px-4 rounded-full hover:bg-gray-700 transition-colors self-start">Read
+                        More</a>
+                </div>
+
+            </div>
         </div>
-      </div>
     </section>
-  </main>
 
-  <footer>
-    <p>&copy; 2025 Eshan & Associates LLC. All rights reserved.</p>
-    <div class="social-links">
-      <a href="https://www.linkedin.com/in/eshan-singh-188b1554/" target="_blank">
-        <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn">
-      </a>
-      <a href="mailto:hello@eshansingh.xyz">
-        <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/732/732200.png" alt="Email">
-      </a>
-      <a href="https://scholar.google.com/citations?user=VhYa_v4AAAAJ&hl=en" target="_blank">
-        <img class="social-icon" src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" alt="Google Scholar">
-      </a>
-    </div>
-  </footer>
-  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
-  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-  <script>AOS.init();</script>
-<script>
-  // Apply fade-in on page load
-  document.body.classList.add('fade-in');
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <footer class="w-full text-center py-5 border-t border-gray-200/80">
+        <div class="flex items-center justify-center space-x-4">
+            <p class="text-sm text-gray-500">&copy; 2025 Eshan & Associates LLC. All rights reserved.</p>
+            <a href="https://www.linkedin.com/in/eshan-singh-188b1554/" target="_blank" rel="noopener noreferrer"
+                class="cursor-pointer">
+                <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn"
+                    class="h-5 w-5 hover:opacity-75 transition-opacity">
+            </a>
+        </div>
+    </footer>
 
-  // Add fade-out on link click
-  document.querySelectorAll('a[href]').forEach(link => {
-    const href = link.getAttribute('href');
-    if (!href.startsWith('#') && !href.startsWith('mailto:') && !href.startsWith('http')) {
-      link.addEventListener('click', function(e) {
-        e.preventDefault();
-        document.body.classList.remove('fade-in');
-        document.body.classList.add('fade-out');
-        setTimeout(() => {
-          window.location = href;
-        }, 300);
-      });
-    }
-  });
-</script>
-<script>
-  window.addEventListener("scroll", function () {
-    const nav = document.querySelector("nav");
-    if (window.scrollY > 20) {
-      nav.classList.add("scrolled");
-    } else {
-      nav.classList.remove("scrolled");
-    }
-  });
-</script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- MAGNETIC CURSOR ---
+            const cursor = document.querySelector('.cursor');
+            if (window.matchMedia("(pointer: fine)").matches) { // Check for fine pointer device
+                document.addEventListener('mousemove', e => {
+                    cursor.setAttribute('style', `top: ${e.clientY}px; left: ${e.clientX}px;`);
+                });
+                document.querySelectorAll('a, button').forEach(target => {
+                    target.addEventListener('mouseenter', () => cursor.classList.add('hovered'));
+                    target.addEventListener('mouseleave', () => cursor.classList.remove('hovered'));
+                });
+            }
 
+            // --- WEBGL BACKGROUND --- 
+            const canvasContainer = document.getElementById('bg-canvas');
+            if (canvasContainer) {
+                let scene, camera, renderer, wavesGroup, clock;
+                const mouse = new THREE.Vector2();
+
+                function initThree() {
+                    scene = new THREE.Scene();
+                    clock = new THREE.Clock();
+                    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                    canvasContainer.appendChild(renderer.domElement);
+
+                    camera.position.z = 5;
+
+                    wavesGroup = new THREE.Group();
+                    scene.add(wavesGroup);
+
+                    const planeSize = 25;
+                    const planeSegments = 60;
+                    const numWaves = 4;
+                    const waveColors = [0x00A67E, 0x4a90e2, 0x333333, 0x8af5d4];
+
+                    for (let i = 0; i < numWaves; i++) {
+                        const geometry = new THREE.PlaneGeometry(planeSize, planeSize, planeSegments, planeSegments);
+                        const material = new THREE.MeshBasicMaterial({
+                            color: waveColors[i % waveColors.length],
+                            wireframe: true,
+                            transparent: true,
+                            opacity: 0.08 + (i * 0.02)
+                        });
+                        const plane = new THREE.Mesh(geometry, material);
+                        plane.position.z = (i * -0.8);
+                        plane.rotation.x = -Math.PI / 2.4;
+                        plane.userData.tOffset = i * 0.8;
+                        wavesGroup.add(plane);
+                    }
+
+                    window.addEventListener('resize', onWindowResize, false);
+                    document.addEventListener('mousemove', onMouseMove, false);
+                    animate();
+                }
+
+                function onMouseMove(event) {
+                    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                }
+
+                function animate() {
+                    requestAnimationFrame(animate);
+                    const t = clock.getElapsedTime();
+
+                    wavesGroup.children.forEach(plane => {
+                        const positions = plane.geometry.attributes.position;
+                        const tOffset = plane.userData.tOffset;
+                        for (let i = 0; i < positions.count; i++) {
+                            const x = positions.getX(i);
+                            const z = positions.getZ(i);
+                            const y = 0.1 * Math.sin(x * 0.4 + t + tOffset) + 0.05 * Math.cos(z * 0.5 + t * 0.7 + tOffset);
+                            positions.setY(i, y);
+                        }
+                        positions.needsUpdate = true;
+                    });
+
+                    // Scroll-based camera movement
+                    camera.position.z = 5 - (window.scrollY * 0.005);
+
+                    // Parallax effect
+                    wavesGroup.rotation.y = mouse.x * 0.05;
+                    wavesGroup.rotation.x = -Math.PI / 2.4 + (mouse.y * 0.05);
+
+                    renderer.render(scene, camera);
+                }
+
+                function onWindowResize() {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                }
+
+                initThree();
+            }
+
+            // --- PSEUDO-3D HOVER CARDS ---
+            document.querySelectorAll('.glass-card').forEach(card => {
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const width = rect.width;
+                    const height = rect.height;
+
+                    const rotateX = (y / height - 0.5) * -15; // Max rotation
+                    const rotateY = (x / width - 0.5) * 15;  // Max rotation
+
+                    card.style.setProperty('--rotateX', `${rotateX}deg`);
+                    card.style.setProperty('--rotateY', `${rotateY}deg`);
+                });
+
+                card.addEventListener('mouseleave', () => {
+                    card.style.setProperty('--rotateX', '0deg');
+                    card.style.setProperty('--rotateY', '0deg');
+                    // Reset transform to avoid a jump on re-entry
+                    card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+                });
+            });
+
+            // --- KINETIC TYPOGRAPHY ---
+            const headline = document.querySelector('.kinetic-headline');
+            const text = headline.innerHTML.replace(/<em class="font-lora italic">/g, '<em>').replace(/<\/em>/g, '</em>'); // Keep em tags
+            const words = text.trim().split(/\s+(?![^<]*>)/); // Split by space but not inside tags
+
+            headline.innerHTML = words.map(word => {
+                // Wrap words in spans, but preserve em tags
+                if (word.startsWith('<em>')) {
+                    return `<em><span class="word">${word.replace(/<\/?em>/g, '')}</span></em>`;
+                }
+                return `<span class="word">${word}</span>`;
+            }).join(' ');
+
+            headline.querySelectorAll('.word').forEach((span, index) => {
+                setTimeout(() => {
+                    span.style.opacity = '1';
+                    span.style.transform = 'translateY(0)';
+                }, 150 + (100 * index));
+            });
+        });
+    </script>
+    <script src="custom.js"></script>
 </body>
+
 </html>

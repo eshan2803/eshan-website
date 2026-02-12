@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>California Grid Utilization Explorer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f1117;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a1d2e 0%, #0f1117 100%);
+            border-bottom: 1px solid #2a2d3e;
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .header .subtitle {
+            font-size: 13px;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        .date-display {
+            text-align: right;
+        }
+
+        .date-display .current-date {
+            font-size: 28px;
+            font-weight: 700;
+            color: #60a5fa;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .date-display .date-info {
+            font-size: 12px;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: #0f1117;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.3s;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-overlay .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #2a2d3e;
+            border-top-color: #60a5fa;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .loading-overlay p {
+            margin-top: 16px;
+            color: #888;
+            font-size: 14px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .main {
+            padding: 20px 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: #1a1d2e;
+            border: 1px solid #2a2d3e;
+            border-radius: 8px;
+            padding: 14px 16px;
+        }
+
+        .stat-card .label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+
+        .stat-card .value {
+            font-size: 22px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .stat-card .unit {
+            font-size: 12px;
+            font-weight: 400;
+            color: #888;
+            margin-left: 2px;
+        }
+
+        .stat-card .sub {
+            font-size: 11px;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        .chart-container {
+            background: #1a1d2e;
+            border: 1px solid #2a2d3e;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+            position: relative;
+        }
+
+        .chart-container h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #ccc;
+            margin-bottom: 6px;
+        }
+
+        .chart-note {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 320px;
+        }
+
+        .chart-wrapper.short {
+            height: 200px;
+        }
+
+        .chart-wrapper.medium {
+            height: 260px;
+        }
+
+        .chart-wrapper.tall {
+            height: 400px;
+        }
+
+        .analysis-row {
+            display: grid;
+            grid-template-columns: 500px 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .slider-section {
+            background: #1a1d2e;
+            border: 1px solid #2a2d3e;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .slider-row label {
+            font-size: 13px;
+            color: #888;
+            white-space: nowrap;
+        }
+
+        .slider-row input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            background: #2a2d3e;
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .slider-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #60a5fa;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(96, 165, 250, 0.4);
+        }
+
+        .slider-row input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: #60a5fa;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 8px rgba(96, 165, 250, 0.4);
+        }
+
+        .playback-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            align-items: center;
+        }
+
+        .playback-controls button {
+            background: #2a2d3e;
+            border: 1px solid #3a3d4e;
+            color: #e0e0e0;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .playback-controls button:hover {
+            background: #3a3d4e;
+        }
+
+        .playback-controls button.active {
+            background: #60a5fa;
+            border-color: #60a5fa;
+            color: #000;
+        }
+
+        .playback-controls .speed-label {
+            font-size: 12px;
+            color: #888;
+            margin-left: 12px;
+        }
+
+        .year-ticks {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0 0;
+            font-size: 11px;
+            color: #666;
+        }
+
+        .hydro-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .hydro-wet { background: #164e63; color: #67e8f9; }
+        .hydro-above { background: #1e3a5f; color: #93c5fd; }
+        .hydro-below { background: #422006; color: #fbbf24; }
+        .hydro-dry { background: #451a03; color: #fb923c; }
+        .hydro-critical { background: #450a0a; color: #fca5a5; }
+
+        .no-data-msg {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: #666;
+        }
+
+        @media (max-width: 900px) {
+            .stats-row { grid-template-columns: repeat(3, 1fr); }
+            .header { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .date-display { text-align: left; }
+            .main { padding: 12px; }
+            .analysis-row { grid-template-columns: 1fr; }
+            .stats-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <p>Loading demand & capacity data...</p>
+    </div>
+
+    <div class="header">
+        <div>
+            <h1>California Grid Utilization Explorer</h1>
+            <div class="subtitle">CAISO actual demand vs available generation capacity, 2020 &ndash; 2025</div>
+        </div>
+        <div class="date-display">
+            <div class="current-date" id="currentDate">2020-01-01</div>
+            <div class="date-info" id="dateInfo">Wednesday &middot; January 2020</div>
+        </div>
+    </div>
+
+    <div class="main">
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="label">Peak Demand</div>
+                <div class="value" id="statPeakDemand">--<span class="unit">MW</span></div>
+                <div class="sub" id="statPeakDemandHour">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Peak Available</div>
+                <div class="value" id="statPeakAvail">--<span class="unit">MW</span></div>
+                <div class="sub" id="statPeakAvailHour">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Min Effective Margin</div>
+                <div class="value" id="statMinHeadroom">--<span class="unit">MW</span></div>
+                <div class="sub" id="statMinHeadroomHour">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Avg Utilization</div>
+                <div class="value" id="statUtilization">--<span class="unit">%</span></div>
+                <div class="sub">demand / available</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Hydro Year</div>
+                <div class="value" id="statHydroYear">--</div>
+                <div class="sub" id="statHydroSub">--</div>
+            </div>
+        </div>
+
+        <!-- Capacity & Demand Chart -->
+        <div class="chart-container">
+            <h3>Hourly Available Capacity & Demand</h3>
+            <div class="chart-wrapper">
+                <canvas id="capacityChart"></canvas>
+                <div class="no-data-msg" id="noDataMsg" style="display:none;">No demand data for this date</div>
+            </div>
+        </div>
+
+        <!-- Headroom Chart -->
+        <div class="chart-container">
+            <h3>Headroom Analysis: Required Reserves & Effective Margin</h3>
+            <div class="chart-note">Reserves based on CAISO methodology: Peak hours (4-9 PM) require 8.4% of demand, shoulder hours 7.7%, off-peak 7.0%, minimum 3,500 MW</div>
+            <div class="chart-wrapper short">
+                <canvas id="headroomChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Analysis Row: Average Capacity + Scatter Plot -->
+        <div class="analysis-row">
+            <!-- Average Daily Capacity by Resource -->
+            <div class="chart-container">
+                <h3>Average Daily Capacity by Resource</h3>
+                <div class="chart-wrapper tall">
+                    <canvas id="avgCapacityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Accumulating Scatter Plot -->
+            <div class="chart-container">
+                <h3>Grid Stress Analysis: Minimum Effective Margin vs Available Capacity (Accumulating)</h3>
+                <div class="chart-wrapper tall">
+                    <canvas id="scatterChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slider -->
+        <div class="slider-section">
+            <div class="slider-row">
+                <label>Date:</label>
+                <input type="range" id="dateSlider" min="0" max="2191" value="0" step="1">
+            </div>
+            <div class="year-ticks">
+                <span>2020</span><span>2021</span><span>2022</span><span>2023</span><span>2024</span><span>2025</span>
+            </div>
+            <div class="playback-controls">
+                <button id="btnPrev" title="Previous day">&larr; Prev</button>
+                <button id="btnPlay" title="Play/Pause">&#9654; Play</button>
+                <button id="btnNext" title="Next day">Next &rarr;</button>
+                <button id="btnReset" title="Reset scatter plot">Reset Scatter</button>
+                <label for="datePicker" style="margin-left: 16px; font-size: 12px; color: #888;">Jump to:</label>
+                <input type="date" id="datePicker" min="2020-01-01" max="2025-12-31" value="2020-01-01"
+                       style="background: #2a2d3e; border: 1px solid #3a3d4e; color: #e0e0e0; padding: 6px 10px; border-radius: 6px; font-size: 13px; cursor: pointer;">
+                <span class="speed-label">Speed:</span>
+                <button class="speed-btn" data-speed="500">1x</button>
+                <button class="speed-btn active" data-speed="200">2x</button>
+                <button class="speed-btn" data-speed="80">5x</button>
+                <button class="speed-btn" data-speed="30">10x</button>
+            </div>
+        </div>
+
+        <!-- Statistical Analysis Charts -->
+        <div class="stats-row">
+            <div class="chart-container">
+                <h3>Effective Headroom Profile with Confidence Intervals (All Days: 2020-2025)</h3>
+                <div class="chart-note">Shows 5th, 25th, 50th (median), 75th, and 95th percentile effective headroom across all 2,192 days for each hour</div>
+                <div class="chart-wrapper">
+                    <canvas id="confidenceChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3>Minimum Effective Headroom Distribution (All Days: 2020-2025)</h3>
+                <div class="chart-note">Histogram showing density/frequency of minimum daily effective headroom values across 2,192 days</div>
+                <div class="chart-wrapper short">
+                    <canvas id="histogramChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (async function() {
+        // ─── Data Loading ────────────────────────────────────────────────
+        const [demandData, capacityData] = await Promise.all([
+            fetch('demand_forecast.json').then(r => r.json()),
+            fetch('available_capacity.json').then(r => r.json())
+        ]);
+
+        // ─── Compute Global Y-Axis Limits ────────────────────────────────
+        let maxCapacity = 0;
+        let minHeadroom = 0;
+        let maxHeadroom = 0;
+        let minScatterAvail = Infinity;
+        let maxScatterAvail = 0;
+        let minScatterHead = Infinity;
+        let maxScatterHead = -Infinity;
+
+        for (const year in capacityData) {
+            for (const month in capacityData[year]) {
+                const monthData = capacityData[year][month];
+                const totalArr = monthData.Total || [];
+                maxCapacity = Math.max(maxCapacity, ...totalArr);
+            }
+        }
+
+        for (const dateStr in demandData) {
+            const [y, m, d] = dateStr.split('-');
+            const monthData = capacityData[y] && capacityData[y][m];
+            if (!monthData) continue;
+            const demand = demandData[dateStr];
+            const total = monthData.Total || [];
+            const demArr = demand.map(v => v || 0);
+
+            // Calculate reserves for each hour (time-of-day weighted)
+            const reserves = new Array(24);
+            for (let h = 0; h < 24; h++) {
+                let reservePct;
+                if (h >= 16 && h <= 21) {
+                    reservePct = 0.084;
+                } else if ((h >= 6 && h <= 9) || (h >= 21 && h <= 23)) {
+                    reservePct = 0.077;
+                } else {
+                    reservePct = 0.07;
+                }
+                reserves[h] = Math.max(3500, demArr[h] * reservePct);
+            }
+
+            for (let h = 0; h < 24; h++) {
+                const head = (total[h] || 0) - (demArr[h] || 0);
+                const effHead = head - reserves[h];
+                minHeadroom = Math.min(minHeadroom, effHead);
+                maxHeadroom = Math.max(maxHeadroom, effHead);
+            }
+
+            // Compute scatter plot bounds using effective headroom (min effective headroom point for each day)
+            const headArr = total.map((a, i) => a - demArr[i]);
+            const effHeadArr = headArr.map((h, i) => h - reserves[i]);
+            const minEffH = Math.min(...effHeadArr);
+            const minEffHIdx = effHeadArr.indexOf(minEffH);
+            const availAtMinH = total[minEffHIdx];
+
+            minScatterAvail = Math.min(minScatterAvail, availAtMinH);
+            maxScatterAvail = Math.max(maxScatterAvail, availAtMinH);
+            minScatterHead = Math.min(minScatterHead, minEffH);
+            maxScatterHead = Math.max(maxScatterHead, minEffH);
+        }
+
+        // Round limits for nice chart ranges
+        maxCapacity = Math.ceil(maxCapacity / 5000) * 5000;
+        minHeadroom = Math.floor(minHeadroom / 5000) * 5000;
+        maxHeadroom = Math.ceil(maxHeadroom / 5000) * 5000;
+        minScatterAvail = Math.floor(minScatterAvail / 5000) * 5000;
+        maxScatterAvail = Math.ceil(maxScatterAvail / 5000) * 5000;
+        minScatterHead = Math.floor(minScatterHead / 5000) * 5000;
+        maxScatterHead = Math.ceil(maxScatterHead / 5000) * 5000;
+
+        document.getElementById('loadingOverlay').classList.add('hidden');
+
+        // ─── Date Helpers ────────────────────────────────────────────────
+        const START = new Date(2020, 0, 1);
+        const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        const MONTHS = ['January','February','March','April','May','June',
+                        'July','August','September','October','November','December'];
+
+        function indexToDate(i) {
+            const d = new Date(START);
+            d.setDate(d.getDate() + i);
+            return d;
+        }
+
+        function dateToStr(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        function dateStrToIndex(dateStr) {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            const targetDate = new Date(y, m - 1, d);
+            const diffTime = targetDate - START;
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            return Math.max(0, Math.min(2191, diffDays));
+        }
+
+        // ─── Hydro Year Info ─────────────────────────────────────────────
+        const HYDRO_INFO = {
+            '2020': { type: 'Dry', cls: 'hydro-dry', detail: 'Sacramento: Dry / San Joaquin: Dry' },
+            '2021': { type: 'Critical', cls: 'hydro-critical', detail: 'Sacramento: Critical / San Joaquin: Critical' },
+            '2022': { type: 'Critical', cls: 'hydro-critical', detail: 'Sacramento: Critical / San Joaquin: Critical' },
+            '2023': { type: 'Wet', cls: 'hydro-wet', detail: 'Sacramento: Wet / San Joaquin: Wet' },
+            '2024': { type: 'Above Normal', cls: 'hydro-above', detail: 'Sacramento: Above Normal / San Joaquin: Above Normal' },
+            '2025': { type: 'Above Normal', cls: 'hydro-above', detail: 'Sacramento: Above Normal / San Joaquin: Below Normal' },
+        };
+
+        // ─── Resource Colors ─────────────────────────────────────────────
+        const RESOURCE_COLORS = {
+            'Solar':           { bg: 'rgba(250, 204, 21, 0.8)',  border: '#facc15' },
+            'Wind':            { bg: 'rgba(56, 189, 248, 0.8)',  border: '#38bdf8' },
+            'Hydro':           { bg: 'rgba(59, 130, 246, 0.8)',  border: '#3b82f6' },
+            'Nuclear':         { bg: 'rgba(192, 132, 252, 0.8)', border: '#c084fc' },
+            'Natural Gas':     { bg: 'rgba(251, 146, 60, 0.7)',  border: '#fb923c' },
+            'Geothermal':      { bg: 'rgba(52, 211, 153, 0.8)',  border: '#34d399' },
+            'Biomass':         { bg: 'rgba(134, 239, 172, 0.7)', border: '#86efac' },
+            'Battery Storage': { bg: 'rgba(148, 163, 184, 0.5)', border: '#94a3b8' },
+            'Other Thermal':   { bg: 'rgba(107, 114, 128, 0.6)', border: '#6b7280' },
+        };
+
+        const STACK_ORDER = [
+            'Nuclear', 'Geothermal', 'Biomass', 'Other Thermal',
+            'Natural Gas', 'Hydro', 'Wind', 'Solar', 'Battery Storage'
+        ];
+
+        const HOUR_LABELS = Array.from({length: 24}, (_, i) => {
+            const h = i % 12 || 12;
+            const ampm = i < 12 ? 'a' : 'p';
+            return `${h}${ampm}`;
+        });
+
+        // ─── Chart Setup ─────────────────────────────────────────────────
+        const commonScaleOpts = {
+            grid: { color: 'rgba(255,255,255,0.06)' },
+            ticks: { color: '#888', font: { size: 11 } },
+        };
+
+        // Capacity chart
+        const capCtx = document.getElementById('capacityChart').getContext('2d');
+        const capDatasets = [];
+
+        for (const res of STACK_ORDER) {
+            if (res === 'Battery Storage') continue;
+            const c = RESOURCE_COLORS[res];
+            capDatasets.push({
+                label: res,
+                data: new Array(24).fill(0),
+                backgroundColor: c.bg,
+                borderColor: c.border,
+                borderWidth: 1,
+                stack: 'capacity',
+                order: 2,
+            });
+        }
+
+        capDatasets.push({
+            label: 'Demand',
+            data: new Array(24).fill(0),
+            type: 'line',
+            borderColor: '#ef4444',
+            borderWidth: 3,
+            pointRadius: 3,
+            pointBackgroundColor: '#ef4444',
+            fill: false,
+            tension: 0.3,
+            order: 1,
+        });
+
+        const capacityChart = new Chart(capCtx, {
+            type: 'bar',
+            data: { labels: HOUR_LABELS, datasets: capDatasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#ccc',
+                            font: { size: 11 },
+                            usePointStyle: true,
+                            pointStyleWidth: 16,
+                            padding: 12,
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1a1d2e',
+                        titleColor: '#fff',
+                        bodyColor: '#ccc',
+                        borderColor: '#3a3d4e',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(ctx) {
+                                const val = ctx.parsed.y;
+                                if (val === 0 && ctx.dataset.label !== 'Demand') return null;
+                                return `${ctx.dataset.label}: ${val.toLocaleString()} MW`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { ...commonScaleOpts, stacked: true },
+                    y: {
+                        ...commonScaleOpts,
+                        stacked: true,
+                        title: { display: true, text: 'MW', color: '#888' },
+                        min: 0,
+                        max: maxCapacity,
+                    }
+                }
+            }
+        });
+
+        // Headroom chart with reserves
+        const headCtx = document.getElementById('headroomChart').getContext('2d');
+        const headroomChart = new Chart(headCtx, {
+            type: 'bar',
+            data: {
+                labels: HOUR_LABELS,
+                datasets: [
+                    {
+                        label: 'Required Reserves',
+                        data: new Array(24).fill(0),
+                        backgroundColor: 'rgba(251, 191, 36, 0.6)',
+                        borderColor: '#fbbf24',
+                        borderWidth: 1,
+                        stack: 'headroom',
+                    },
+                    {
+                        label: 'Effective Headroom',
+                        data: new Array(24).fill(0),
+                        backgroundColor: new Array(24).fill('rgba(34, 197, 94, 0.6)'),
+                        borderColor: new Array(24).fill('#22c55e'),
+                        borderWidth: 1,
+                        stack: 'headroom',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#ccc',
+                            font: { size: 11 },
+                            usePointStyle: true,
+                            pointStyleWidth: 16,
+                            padding: 12,
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1a1d2e',
+                        titleColor: '#fff',
+                        bodyColor: '#ccc',
+                        borderColor: '#3a3d4e',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(ctx) {
+                                const val = ctx.parsed.y;
+                                if (ctx.datasetIndex === 0) {
+                                    return `Required Reserves: ${val.toLocaleString()} MW`;
+                                } else {
+                                    const sign = val >= 0 ? '+' : '';
+                                    return `Effective Headroom: ${sign}${val.toLocaleString()} MW`;
+                                }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { ...commonScaleOpts, stacked: true },
+                    y: {
+                        ...commonScaleOpts,
+                        stacked: true,
+                        title: { display: true, text: 'MW', color: '#888' },
+                        min: minHeadroom,
+                        max: maxHeadroom,
+                    }
+                }
+            }
+        });
+
+        // Average capacity chart
+        const avgCtx = document.getElementById('avgCapacityChart').getContext('2d');
+        const avgDatasets = [];
+        for (const res of STACK_ORDER) {
+            if (res === 'Battery Storage') continue;
+            const c = RESOURCE_COLORS[res];
+            avgDatasets.push({
+                label: res,
+                data: [0],
+                backgroundColor: c.bg,
+                borderColor: c.border,
+                borderWidth: 1,
+            });
+        }
+
+        const avgCapacityChart = new Chart(avgCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Avg Daily'],
+                datasets: avgDatasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'left',
+                        align: 'start',
+                        labels: {
+                            color: '#ccc',
+                            font: { size: 11 },
+                            usePointStyle: true,
+                            pointStyleWidth: 12,
+                            padding: 8,
+                            boxWidth: 12,
+                            boxHeight: 12,
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1a1d2e',
+                        titleColor: '#fff',
+                        bodyColor: '#ccc',
+                        borderColor: '#3a3d4e',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(ctx) {
+                                return `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()} MW`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ...commonScaleOpts,
+                        stacked: true,
+                        display: false
+                    },
+                    y: {
+                        ...commonScaleOpts,
+                        stacked: true,
+                        title: { display: true, text: 'MW', color: '#888' },
+                        min: 0,
+                        max: maxCapacity,
+                    },
+                }
+            }
+        });
+
+        // Scatter plot - precompute all points
+        const scatterCtx = document.getElementById('scatterChart').getContext('2d');
+        const allScatterPoints = [];
+
+        // Precompute scatter points for all 2192 days
+        for (let i = 0; i <= 2191; i++) {
+            const d = indexToDate(i);
+            const ds = dateToStr(d);
+            const y = String(d.getFullYear());
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+
+            const capM = capacityData[y] && capacityData[y][m];
+            const dem = demandData[ds];
+            const hasDem = dem && dem.some(v => v !== null);
+
+            if (!hasDem || !capM) {
+                allScatterPoints.push(null);
+                continue;
+            }
+
+            const demArr = dem.map(v => v || 0);
+            let totAvail = new Array(24).fill(0);
+
+            for (const res of STACK_ORDER) {
+                if (res === 'Battery Storage') continue;
+                const hourly = capM[res] || new Array(24).fill(0);
+                for (let h = 0; h < 24; h++) totAvail[h] += hourly[h];
+            }
+
+            // Calculate reserves and effective headroom
+            const reserves = new Array(24);
+            for (let h = 0; h < 24; h++) {
+                let reservePct;
+                if (h >= 16 && h <= 21) {
+                    reservePct = 0.084;
+                } else if ((h >= 6 && h <= 9) || (h >= 21 && h <= 23)) {
+                    reservePct = 0.077;
+                } else {
+                    reservePct = 0.07;
+                }
+                reserves[h] = Math.max(3500, demArr[h] * reservePct);
+            }
+
+            const hr = totAvail.map((a, idx) => Math.round(a - demArr[idx]));
+            const effHr = hr.map((h, idx) => Math.round(h - reserves[idx]));
+            const minH = Math.min(...effHr);
+            const minHHr = effHr.indexOf(minH);
+            const availAtMin = totAvail[minHHr];
+
+            const t = i / 2191;
+            const r = Math.round(59 + t * (239 - 59));
+            const g = Math.round(130 + t * (68 - 130));
+            const b = Math.round(246 + t * (68 - 246));
+            const color = `rgb(${r}, ${g}, ${b})`;
+
+            allScatterPoints.push({
+                x: Math.round(availAtMin),
+                y: minH,
+                date: ds,
+                color: color
+            });
+        }
+
+        const scatterChart = new Chart(scatterCtx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Days',
+                    data: [],
+                    backgroundColor: [],
+                    borderColor: [],
+                    borderWidth: 0.5,
+                    pointRadius: 2.5,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const clickedPoint = scatterChart.data.datasets[0].data[index];
+                        if (clickedPoint && clickedPoint.date) {
+                            const targetIndex = dateStrToIndex(clickedPoint.date);
+                            slider.value = targetIndex;
+                            updateCharts(targetIndex);
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1a1d2e',
+                        titleColor: '#fff',
+                        bodyColor: '#ccc',
+                        borderColor: '#3a3d4e',
+                        borderWidth: 1,
+                        callbacks: {
+                            title: function(items) {
+                                if (!items.length) return '';
+                                const pt = items[0].raw;
+                                return pt.date || '';
+                            },
+                            label: function(ctx) {
+                                const pt = ctx.raw;
+                                return [
+                                    `Effective Margin: ${pt.y >= 0 ? '+' : ''}${pt.y.toLocaleString()} MW`,
+                                    `Available: ${pt.x.toLocaleString()} MW`
+                                ];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ...commonScaleOpts,
+                        title: { display: true, text: 'Available Capacity at Min Effective Margin Hour (MW)', color: '#888', font: { size: 11 } },
+                        min: minScatterAvail,
+                        max: maxScatterAvail,
+                    },
+                    y: {
+                        ...commonScaleOpts,
+                        title: { display: true, text: 'Minimum Effective Margin (MW)', color: '#888', font: { size: 11 } },
+                        min: minScatterHead,
+                        max: maxScatterHead,
+                    }
+                }
+            }
+        });
+
+        // ─── Statistical Analysis Charts ──────────────────────────────────
+
+        // Collect effective headroom data for all hours across all days
+        const hourlyEffHeadroom = Array.from({length: 24}, () => []);
+        const allMinEffHeadroom = [];
+
+        for (let i = 0; i <= 2191; i++) {
+            const d = indexToDate(i);
+            const ds = dateToStr(d);
+            const y = String(d.getFullYear());
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+
+            const capM = capacityData[y] && capacityData[y][m];
+            const dem = demandData[ds];
+            const hasDem = dem && dem.some(v => v !== null);
+
+            if (!hasDem || !capM) continue;
+
+            const demArr = dem.map(v => v || 0);
+            let totAvail = new Array(24).fill(0);
+
+            for (const res of STACK_ORDER) {
+                if (res === 'Battery Storage') continue;
+                const hourly = capM[res] || new Array(24).fill(0);
+                for (let h = 0; h < 24; h++) totAvail[h] += hourly[h];
+            }
+
+            // Calculate reserves and effective headroom
+            const reserves = new Array(24);
+            for (let h = 0; h < 24; h++) {
+                let reservePct;
+                if (h >= 16 && h <= 21) {
+                    reservePct = 0.084;
+                } else if ((h >= 6 && h <= 9) || (h >= 21 && h <= 23)) {
+                    reservePct = 0.077;
+                } else {
+                    reservePct = 0.07;
+                }
+                reserves[h] = Math.max(3500, demArr[h] * reservePct);
+            }
+
+            const hr = totAvail.map((a, idx) => a - demArr[idx]);
+            const effHr = hr.map((h, idx) => h - reserves[idx]);
+
+            // Store effective headroom for each hour
+            for (let h = 0; h < 24; h++) {
+                hourlyEffHeadroom[h].push(effHr[h]);
+            }
+
+            // Store minimum effective headroom for this day
+            allMinEffHeadroom.push(Math.min(...effHr));
+        }
+
+        // Calculate percentiles for each hour
+        function percentile(arr, p) {
+            if (arr.length === 0) return 0;
+            const sorted = [...arr].sort((a, b) => a - b);
+            const index = (p / 100) * (sorted.length - 1);
+            const lower = Math.floor(index);
+            const upper = Math.ceil(index);
+            const weight = index % 1;
+            return sorted[lower] * (1 - weight) + sorted[upper] * weight;
+        }
+
+        const p5 = [];
+        const p25 = [];
+        const p50 = [];
+        const p75 = [];
+        const p95 = [];
+
+        for (let h = 0; h < 24; h++) {
+            p5.push(Math.round(percentile(hourlyEffHeadroom[h], 5)));
+            p25.push(Math.round(percentile(hourlyEffHeadroom[h], 25)));
+            p50.push(Math.round(percentile(hourlyEffHeadroom[h], 50)));
+            p75.push(Math.round(percentile(hourlyEffHeadroom[h], 75)));
+            p95.push(Math.round(percentile(hourlyEffHeadroom[h], 95)));
+        }
+
+        // Calculate y-axis bounds for confidence chart
+        const confMinY = Math.floor(Math.min(...p5) / 5000) * 5000;
+        const confMaxY = Math.ceil(Math.max(...p95) / 5000) * 5000;
+
+        // Create confidence interval chart
+        const confCtx = document.getElementById('confidenceChart').getContext('2d');
+        const confidenceChart = new Chart(confCtx, {
+            type: 'line',
+            data: {
+                labels: HOUR_LABELS,
+                datasets: [
+                    {
+                        label: '95th Percentile',
+                        data: p95,
+                        borderColor: 'rgba(34, 197, 94, 0.9)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        borderWidth: 2,
+                        fill: '+1',
+                        pointRadius: 0,
+                        tension: 0.3,
+                    },
+                    {
+                        label: '75th Percentile',
+                        data: p75,
+                        borderColor: 'rgba(59, 130, 246, 0.8)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                        borderWidth: 2,
+                        fill: '+1',
+                        pointRadius: 0,
+                        tension: 0.3,
+                    },
+                    {
+                        label: 'Median (50th)',
+                        data: p50,
+                        borderColor: 'rgba(251, 191, 36, 1)',
+                        backgroundColor: 'transparent',
+                        borderWidth: 3,
+                        fill: false,
+                        pointRadius: 0,
+                        tension: 0.3,
+                    },
+                    {
+                        label: '25th Percentile',
+                        data: p25,
+                        borderColor: 'rgba(239, 68, 68, 0.8)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                        borderWidth: 2,
+                        fill: '+1',
+                        pointRadius: 0,
+                        tension: 0.3,
+                    },
+                    {
+                        label: '5th Percentile',
+                        data: p5,
+                        borderColor: 'rgba(220, 38, 38, 0.9)',
+                        backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                        borderWidth: 2,
+                        fill: 'origin',
+                        pointRadius: 0,
+                        tension: 0.3,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#ccc',
+                            font: { size: 11 },
+                            usePointStyle: true,
+                            pointStyleWidth: 16,
+                            padding: 12,
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1a1d2e',
+                        titleColor: '#fff',
+                        bodyColor: '#ccc',
+                        borderColor: '#3a3d4e',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(ctx) {
+                                const val = ctx.parsed.y;
+                                const sign = val >= 0 ? '+' : '';
+                                return `${ctx.dataset.label}: ${sign}${val.toLocaleString()} MW`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: commonScaleOpts,
+                    y: {
+                        ...commonScaleOpts,
+                        title: { display: true, text: 'Effective Headroom (MW)', color: '#888' },
+                        min: confMinY,
+                        max: confMaxY,
+                    }
+                }
+            }
+        });
+
+        // Create histogram for minimum effective headroom distribution
+        const minEffSorted = [...allMinEffHeadroom].sort((a, b) => a - b);
+        const histMin = Math.floor(minEffSorted[0] / 1000) * 1000;
+        const histMax = Math.ceil(minEffSorted[minEffSorted.length - 1] / 1000) * 1000;
+        const binSize = 1000; // 1000 MW bins
+        const numBins = Math.ceil((histMax - histMin) / binSize);
+
+        const histBins = new Array(numBins).fill(0);
+        const histLabels = [];
+
+        for (let i = 0; i < numBins; i++) {
+            const binStart = histMin + i * binSize;
+            const binEnd = binStart + binSize;
+            histLabels.push(`${(binStart/1000).toFixed(1)} to ${(binEnd/1000).toFixed(1)}`);
+        }
+
+        for (const val of allMinEffHeadroom) {
+            const binIndex = Math.min(Math.floor((val - histMin) / binSize), numBins - 1);
+            if (binIndex >= 0 && binIndex < numBins) {
+                histBins[binIndex]++;
+            }
+        }
+
+        const histCtx = document.getElementById('histogramChart').getContext('2d');
+        const histogramChart = new Chart(histCtx, {
+            type: 'bar',
+            data: {
+                labels: histLabels,
+                datasets: [{
+                    label: 'Number of Days',
+                    data: histBins,
+                    backgroundColor: histBins.map((_, i) => {
+                        const binStart = histMin + i * binSize;
+                        if (binStart < 0) return 'rgba(239, 68, 68, 0.7)';
+                        if (binStart < 5000) return 'rgba(251, 191, 36, 0.7)';
+                        return 'rgba(34, 197, 94, 0.7)';
+                    }),
+                    borderColor: histBins.map((_, i) => {
+                        const binStart = histMin + i * binSize;
+                        if (binStart < 0) return '#ef4444';
+                        if (binStart < 5000) return '#fbbf24';
+                        return '#22c55e';
+                    }),
+                    borderWidth: 1,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1a1d2e',
+                        titleColor: '#fff',
+                        bodyColor: '#ccc',
+                        borderColor: '#3a3d4e',
+                        borderWidth: 1,
+                        callbacks: {
+                            title: function(items) {
+                                if (!items.length) return '';
+                                return `Min Effective Headroom: ${items[0].label} GW`;
+                            },
+                            label: function(ctx) {
+                                const val = ctx.parsed.y;
+                                const pct = ((val / allMinEffHeadroom.length) * 100).toFixed(1);
+                                return `${val} days (${pct}%)`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ...commonScaleOpts,
+                        title: { display: true, text: 'Minimum Effective Headroom (GW)', color: '#888', font: { size: 11 } },
+                    },
+                    y: {
+                        ...commonScaleOpts,
+                        title: { display: true, text: 'Number of Days', color: '#888' },
+                        beginAtZero: true,
+                    }
+                }
+            }
+        });
+
+        // ─── Update Function ─────────────────────────────────────────────
+        let isFirstUpdate = true;
+        function updateCharts(sliderIndex) {
+            const date = indexToDate(sliderIndex);
+            const dateStr = dateToStr(date);
+            const year = String(date.getFullYear());
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+
+            // Update date display and date picker
+            document.getElementById('currentDate').textContent = dateStr;
+            document.getElementById('dateInfo').textContent =
+                `${DAYS[date.getDay()]} \u00b7 ${MONTHS[date.getMonth()]} ${year}`;
+            document.getElementById('datePicker').value = dateStr;
+
+            const capMonth = capacityData[year] && capacityData[year][month];
+            const demand = demandData[dateStr];
+
+            const hasDemand = demand && demand.some(v => v !== null);
+            document.getElementById('noDataMsg').style.display = hasDemand ? 'none' : 'flex';
+
+            const demandArr = hasDemand ? demand.map(v => v || 0) : new Array(24).fill(0);
+            let totalAvail = new Array(24).fill(0);
+
+            // Update capacity chart datasets
+            let dsIdx = 0;
+            for (const res of STACK_ORDER) {
+                if (res === 'Battery Storage') continue;
+                const hourly = capMonth ? capMonth[res] : new Array(24).fill(0);
+                capacityChart.data.datasets[dsIdx].data = hourly;
+                for (let h = 0; h < 24; h++) totalAvail[h] += hourly[h];
+                dsIdx++;
+            }
+
+            capacityChart.data.datasets[dsIdx].data = demandArr;
+            capacityChart.update(isFirstUpdate ? 'resize' : 'none');
+
+            // Calculate reserves by hour (time-of-day weighted)
+            const reserves = new Array(24);
+            for (let h = 0; h < 24; h++) {
+                let reservePct;
+                if (h >= 16 && h <= 21) {
+                    // Peak evening ramp (4-9 PM): 8.4%
+                    reservePct = 0.084;
+                } else if ((h >= 6 && h <= 9) || (h >= 21 && h <= 23)) {
+                    // Shoulder hours (6-9 AM, 9-11 PM): 7.7%
+                    reservePct = 0.077;
+                } else {
+                    // Off-peak: 7%
+                    reservePct = 0.07;
+                }
+                reserves[h] = Math.round(Math.max(3500, demandArr[h] * reservePct));
+            }
+
+            // Update headroom chart with stacked reserves + effective headroom
+            const headroom = totalAvail.map((a, i) => Math.round(a - demandArr[i]));
+            const effectiveHeadroom = headroom.map((h, i) => h - reserves[i]);
+
+            headroomChart.data.datasets[0].data = reserves;
+            headroomChart.data.datasets[1].data = effectiveHeadroom;
+            headroomChart.data.datasets[1].backgroundColor = effectiveHeadroom.map(v =>
+                v >= 0 ? 'rgba(34, 197, 94, 0.6)' : 'rgba(239, 68, 68, 0.6)');
+            headroomChart.data.datasets[1].borderColor = effectiveHeadroom.map(v =>
+                v >= 0 ? '#22c55e' : '#ef4444');
+            headroomChart.update(isFirstUpdate ? 'resize' : 'none');
+
+            // Update average capacity chart
+            dsIdx = 0;
+            for (const res of STACK_ORDER) {
+                if (res === 'Battery Storage') continue;
+                const hourly = capMonth ? capMonth[res] : new Array(24).fill(0);
+                const avg = hourly.reduce((s, v) => s + v, 0) / 24;
+                avgCapacityChart.data.datasets[dsIdx].data = [Math.round(avg)];
+                dsIdx++;
+            }
+            avgCapacityChart.update(isFirstUpdate ? 'resize' : 'none');
+
+            // Update stats (use effective headroom after reserves)
+            const peakDemand = Math.max(...demandArr);
+            const peakDemandHr = demandArr.indexOf(peakDemand);
+            const peakAvail = Math.max(...totalAvail);
+            const peakAvailHr = totalAvail.indexOf(peakAvail);
+            const minEffHead = Math.min(...effectiveHeadroom);
+            const minEffHeadHr = effectiveHeadroom.indexOf(minEffHead);
+            const avgUtil = totalAvail.reduce((s, v, i) => s + (v > 0 ? demandArr[i] / v : 0), 0) / 24 * 100;
+
+            document.getElementById('statPeakDemand').innerHTML =
+                `${peakDemand.toLocaleString()}<span class="unit">MW</span>`;
+            document.getElementById('statPeakDemandHour').textContent =
+                hasDemand ? `Hour ${peakDemandHr} (${HOUR_LABELS[peakDemandHr]})` : '--';
+
+            document.getElementById('statPeakAvail').innerHTML =
+                `${Math.round(peakAvail).toLocaleString()}<span class="unit">MW</span>`;
+            document.getElementById('statPeakAvailHour').textContent =
+                `Hour ${peakAvailHr} (${HOUR_LABELS[peakAvailHr]})`;
+
+            document.getElementById('statMinHeadroom').innerHTML =
+                `${minEffHead >= 0 ? '+' : ''}${minEffHead.toLocaleString()}<span class="unit">MW</span>`;
+            document.getElementById('statMinHeadroomHour').textContent =
+                hasDemand ? `Hour ${minEffHeadHr} (${HOUR_LABELS[minEffHeadHr]})` : '--';
+            document.getElementById('statMinHeadroom').style.color =
+                minEffHead >= 0 ? '#22c55e' : '#ef4444';
+
+            document.getElementById('statUtilization').innerHTML =
+                hasDemand ? `${avgUtil.toFixed(1)}<span class="unit">%</span>` : `--<span class="unit">%</span>`;
+
+            const hydro = HYDRO_INFO[year] || { type: '--', cls: '', detail: '' };
+            document.getElementById('statHydroYear').innerHTML =
+                `<span class="hydro-badge ${hydro.cls}">${hydro.type}</span>`;
+            document.getElementById('statHydroSub').textContent = hydro.detail;
+
+            // Update scatter plot (bidirectional) - show points from 0 to sliderIndex
+            const visiblePoints = allScatterPoints.slice(0, sliderIndex + 1).filter(p => p !== null);
+            scatterChart.data.datasets[0].data = visiblePoints;
+            scatterChart.data.datasets[0].backgroundColor = visiblePoints.map(p => p.color);
+            scatterChart.data.datasets[0].borderColor = visiblePoints.map(p => p.color);
+            scatterChart.update(isFirstUpdate ? 'resize' : 'none');
+
+            // After first update, use 'none' mode for better performance
+            if (isFirstUpdate) isFirstUpdate = false;
+        }
+
+        // ─── Slider & Controls ───────────────────────────────────────────
+        const slider = document.getElementById('dateSlider');
+        slider.addEventListener('input', () => updateCharts(parseInt(slider.value)));
+
+        document.getElementById('datePicker').addEventListener('change', (e) => {
+            const index = dateStrToIndex(e.target.value);
+            slider.value = index;
+            updateCharts(index);
+        });
+
+        document.getElementById('btnPrev').addEventListener('click', () => {
+            slider.value = Math.max(0, parseInt(slider.value) - 1);
+            updateCharts(parseInt(slider.value));
+        });
+
+        document.getElementById('btnNext').addEventListener('click', () => {
+            slider.value = Math.min(2191, parseInt(slider.value) + 1);
+            updateCharts(parseInt(slider.value));
+        });
+
+        document.getElementById('btnReset').addEventListener('click', () => {
+            slider.value = 0;
+            updateCharts(0);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                slider.value = Math.max(0, parseInt(slider.value) - 1);
+                updateCharts(parseInt(slider.value));
+            } else if (e.key === 'ArrowRight') {
+                slider.value = Math.min(2191, parseInt(slider.value) + 1);
+                updateCharts(parseInt(slider.value));
+            } else if (e.key === ' ') {
+                e.preventDefault();
+                togglePlay();
+            }
+        });
+
+        // Playback
+        let playInterval = null;
+        let playSpeed = 200;
+
+        function togglePlay() {
+            const btn = document.getElementById('btnPlay');
+            if (playInterval) {
+                clearInterval(playInterval);
+                playInterval = null;
+                btn.innerHTML = '&#9654; Play';
+                btn.classList.remove('active');
+            } else {
+                btn.innerHTML = '&#9646;&#9646; Pause';
+                btn.classList.add('active');
+                playInterval = setInterval(() => {
+                    let val = parseInt(slider.value) + 1;
+                    if (val > 2191) val = 0;
+                    slider.value = val;
+                    updateCharts(val);
+                }, playSpeed);
+            }
+        }
+
+        document.getElementById('btnPlay').addEventListener('click', togglePlay);
+
+        document.querySelectorAll('.speed-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                playSpeed = parseInt(btn.dataset.speed);
+                if (playInterval) {
+                    clearInterval(playInterval);
+                    playInterval = setInterval(() => {
+                        let val = parseInt(slider.value) + 1;
+                        if (val > 2191) val = 0;
+                        slider.value = val;
+                        updateCharts(val);
+                    }, playSpeed);
+                }
+            });
+        });
+
+        // Initial render - use setTimeout to ensure charts are fully initialized
+        setTimeout(() => updateCharts(0), 100);
+    })();
+    </script>
+</body>
+</html>
