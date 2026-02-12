@@ -392,23 +392,6 @@
             </div>
         </div>
 
-        <!-- Statistical Analysis Charts -->
-        <div class="chart-container">
-            <h3>Effective Headroom Profile with Confidence Intervals (All Days: 2020-2025)</h3>
-            <div class="chart-note">Shows 5th, 25th, 50th (median), 75th, and 95th percentile effective headroom across all 2,192 days for each hour</div>
-            <div class="chart-wrapper">
-                <canvas id="confidenceChart"></canvas>
-            </div>
-        </div>
-
-        <div class="chart-container">
-            <h3>Minimum Effective Headroom Distribution (All Days: 2020-2025)</h3>
-            <div class="chart-note">Histogram showing density/frequency of minimum daily effective headroom values across 2,192 days</div>
-            <div class="chart-wrapper short">
-                <canvas id="histogramChart"></canvas>
-            </div>
-        </div>
-
         <!-- Slider -->
         <div class="slider-section">
             <div class="slider-row">
@@ -431,6 +414,23 @@
                 <button class="speed-btn active" data-speed="200">2x</button>
                 <button class="speed-btn" data-speed="80">5x</button>
                 <button class="speed-btn" data-speed="30">10x</button>
+            </div>
+        </div>
+
+        <!-- Statistical Analysis Charts -->
+        <div class="chart-container">
+            <h3>Effective Headroom Profile with Confidence Intervals (All Days: 2020-2025)</h3>
+            <div class="chart-note">Shows 5th, 25th, 50th (median), 75th, and 95th percentile effective headroom across all 2,192 days for each hour</div>
+            <div class="chart-wrapper">
+                <canvas id="confidenceChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h3>Minimum Effective Headroom Distribution (All Days: 2020-2025)</h3>
+            <div class="chart-note">Histogram showing density/frequency of minimum daily effective headroom values across 2,192 days</div>
+            <div class="chart-wrapper short">
+                <canvas id="histogramChart"></canvas>
             </div>
         </div>
     </div>
@@ -1004,6 +1004,10 @@
             p95.push(Math.round(percentile(hourlyEffHeadroom[h], 95)));
         }
 
+        // Calculate y-axis bounds for confidence chart
+        const confMinY = Math.floor(Math.min(...p5) / 5000) * 5000;
+        const confMaxY = Math.ceil(Math.max(...p95) / 5000) * 5000;
+
         // Create confidence interval chart
         const confCtx = document.getElementById('confidenceChart').getContext('2d');
         const confidenceChart = new Chart(confCtx, {
@@ -1098,8 +1102,8 @@
                     y: {
                         ...commonScaleOpts,
                         title: { display: true, text: 'Effective Headroom (MW)', color: '#888' },
-                        min: minScatterHead,
-                        max: maxScatterHead,
+                        min: confMinY,
+                        max: confMaxY,
                     }
                 }
             }
