@@ -181,6 +181,13 @@
             margin-bottom: 16px;
         }
 
+        .stats-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
         .slider-section {
             background: #1a1d2e;
             border: 1px solid #2a2d3e;
@@ -305,6 +312,7 @@
             .date-display { text-align: left; }
             .main { padding: 12px; }
             .analysis-row { grid-template-columns: 1fr; }
+            .stats-row { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -418,19 +426,21 @@
         </div>
 
         <!-- Statistical Analysis Charts -->
-        <div class="chart-container">
-            <h3>Effective Headroom Profile with Confidence Intervals (All Days: 2020-2025)</h3>
-            <div class="chart-note">Shows 5th, 25th, 50th (median), 75th, and 95th percentile effective headroom across all 2,192 days for each hour</div>
-            <div class="chart-wrapper">
-                <canvas id="confidenceChart"></canvas>
+        <div class="stats-row">
+            <div class="chart-container">
+                <h3>Effective Headroom Profile with Confidence Intervals (All Days: 2020-2025)</h3>
+                <div class="chart-note">Shows 5th, 25th, 50th (median), 75th, and 95th percentile effective headroom across all 2,192 days for each hour</div>
+                <div class="chart-wrapper">
+                    <canvas id="confidenceChart"></canvas>
+                </div>
             </div>
-        </div>
 
-        <div class="chart-container">
-            <h3>Minimum Effective Headroom Distribution (All Days: 2020-2025)</h3>
-            <div class="chart-note">Histogram showing density/frequency of minimum daily effective headroom values across 2,192 days</div>
-            <div class="chart-wrapper short">
-                <canvas id="histogramChart"></canvas>
+            <div class="chart-container">
+                <h3>Minimum Effective Headroom Distribution (All Days: 2020-2025)</h3>
+                <div class="chart-note">Histogram showing density/frequency of minimum daily effective headroom values across 2,192 days</div>
+                <div class="chart-wrapper short">
+                    <canvas id="histogramChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -1122,7 +1132,7 @@
         for (let i = 0; i < numBins; i++) {
             const binStart = histMin + i * binSize;
             const binEnd = binStart + binSize;
-            histLabels.push(`${(binStart/1000).toFixed(0)} to ${(binEnd/1000).toFixed(0)}k`);
+            histLabels.push(`${(binStart/1000).toFixed(1)} to ${(binEnd/1000).toFixed(1)}`);
         }
 
         for (const val of allMinEffHeadroom) {
@@ -1169,7 +1179,7 @@
                         callbacks: {
                             title: function(items) {
                                 if (!items.length) return '';
-                                return `Min Effective Headroom: ${items[0].label} MW`;
+                                return `Min Effective Headroom: ${items[0].label} GW`;
                             },
                             label: function(ctx) {
                                 const val = ctx.parsed.y;
@@ -1182,7 +1192,7 @@
                 scales: {
                     x: {
                         ...commonScaleOpts,
-                        title: { display: true, text: 'Minimum Effective Headroom (MW)', color: '#888', font: { size: 11 } },
+                        title: { display: true, text: 'Minimum Effective Headroom (GW)', color: '#888', font: { size: 11 } },
                     },
                     y: {
                         ...commonScaleOpts,
