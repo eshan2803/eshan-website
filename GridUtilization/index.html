@@ -380,6 +380,16 @@
             </div>
         </div>
 
+        <!-- Price Chart -->
+        <div class="chart-container">
+            <h3>Hourly CAISO-Averaged LMP Breakdown</h3>
+            <div class="chart-note">Components: Marginal Energy Cost (MEC), Congestion (MCC), Losses (MCL), GHG Adder (Average of NP15, SP15, ZP26)</div>
+            <div class="chart-wrapper short">
+                <canvas id="priceChart"></canvas>
+                <div class="no-data-msg" id="noPriceDataMsg" style="display:none;">No price data for this date</div>
+            </div>
+        </div>
+
         <!-- Analysis Row: Average Capacity + Scatter Plot -->
         <div class="analysis-row">
             <!-- Average Daily Capacity by Resource -->
@@ -449,9 +459,10 @@
     <script>
     (async function() {
         // ─── Data Loading ────────────────────────────────────────────────
-        const [demandData, capacityData] = await Promise.all([
+        const [demandData, capacityData, priceData] = await Promise.all([
             fetch('demand_forecast.json').then(r => r.json()),
-            fetch('available_capacity.json').then(r => r.json())
+            fetch('available_capacity.json').then(r => r.json()),
+            fetch('caiso_prices.json').then(r => r.json()).catch(() => ({}))
         ]);
 
         // ─── Compute Global Y-Axis Limits ────────────────────────────────
@@ -550,7 +561,10 @@
             'Wind':            { bg: 'rgba(56, 189, 248, 0.8)',  border: '#38bdf8' },
             'Hydro':           { bg: 'rgba(59, 130, 246, 0.8)',  border: '#3b82f6' },
             'Nuclear':         { bg: 'rgba(192, 132, 252, 0.8)', border: '#c084fc' },
-            'Natural Gas':     { bg: 'rgba(251, 146, 60, 0.7)',  border: '#fb923c' },
+            'Gas CCGT':        { bg: 'rgba(251, 146, 60, 0.8)',  border: '#fb923c' },
+            'Gas Peaker':      { bg: 'rgba(234, 88, 12, 0.7)',   border: '#ea580c' },
+            'Gas Steam':       { bg: 'rgba(180, 83, 9, 0.6)',    border: '#b45309' },
+            'Gas ICE':         { bg: 'rgba(146, 64, 14, 0.5)',   border: '#92400e' },
             'Geothermal':      { bg: 'rgba(52, 211, 153, 0.8)',  border: '#34d399' },
             'Biomass':         { bg: 'rgba(134, 239, 172, 0.7)', border: '#86efac' },
             'Battery Storage': { bg: 'rgba(148, 163, 184, 0.5)', border: '#94a3b8' },
@@ -559,7 +573,8 @@
 
         const STACK_ORDER = [
             'Nuclear', 'Geothermal', 'Biomass', 'Other Thermal',
-            'Natural Gas', 'Hydro', 'Wind', 'Solar', 'Battery Storage'
+            'Gas ICE', 'Gas Steam', 'Gas Peaker', 'Gas CCGT',
+            'Hydro', 'Wind', 'Solar', 'Battery Storage'
         ];
 
         const HOUR_LABELS = Array.from({length: 24}, (_, i) => {
@@ -567,6 +582,32 @@
             const ampm = i < 12 ? 'a' : 'p';
             return `${h}${ampm}`;
         });
+
+        // ─── Resource Toggling ───────────────────────────────────────────
+        const hiddenResources = new Set();
+
+        function computeReserves(demArr) {
+            const reserves = new Array(24);
+            for (let h = 0; h < 24; h++) {
+                let reservePct;
+                if (h >= 16 && h <= 21) reservePct = 0.084;
+                else if ((h >= 6 && h <= 9) || (h >= 21 && h <= 23)) reservePct = 0.077;
+                else reservePct = 0.07;
+                reserves[h] = Math.max(3500, demArr[h] * reservePct);
+            }
+            return reserves;
+        }
+
+        function getVisibleTotalAvail(capMonth) {
+            const totAvail = new Array(24).fill(0);
+            if (!capMonth) return totAvail;
+            for (const res of STACK_ORDER) {
+                if (res === 'Battery Storage' || hiddenResources.has(res)) continue;
+                const hourly = capMonth[res] || new Array(24).fill(0);
+                for (let h = 0; h < 24; h++) totAvail[h] += hourly[h];
+            }
+            return totAvail;
+        }
 
         // ─── Chart Setup ─────────────────────────────────────────────────
         const commonScaleOpts = {
@@ -615,6 +656,24 @@
                 plugins: {
                     legend: {
                         position: 'top',
+                        onClick: (e, legendItem, legend) => {
+                            const index = legendItem.datasetIndex;
+                            const ci = legend.chart;
+                            const meta = ci.getDatasetMeta(index);
+                            meta.hidden = meta.hidden === null ? !ci.data.datasets[index].hidden : null;
+
+                            const label = ci.data.datasets[index].label;
+                            if (label !== 'Demand') {
+                                if (meta.hidden) {
+                                    hiddenResources.add(label);
+                                } else {
+                                    hiddenResources.delete(label);
+                                }
+                                recomputeScatterPoints();
+                                recomputeStatisticalCharts();
+                            }
+                            updateCharts(parseInt(document.getElementById('dateSlider').value));
+                        },
                         labels: {
                             color: '#ccc',
                             font: { size: 11 },
@@ -646,6 +705,102 @@
                         title: { display: true, text: 'MW', color: '#888' },
                         min: 0,
                         max: maxCapacity,
+                    }
+                }
+            }
+        });
+
+        // Price Breakdown Chart
+        const priceCtx = document.getElementById('priceChart').getContext('2d');
+        const priceChart = new Chart(priceCtx, {
+            type: 'bar',
+            data: {
+                labels: HOUR_LABELS,
+                datasets: [
+                    {
+                        label: 'MEC',
+                        data: new Array(24).fill(0),
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: '#3b82f6',
+                        borderWidth: 1,
+                        stack: 'p',
+                        order: 2
+                    },
+                    {
+                        label: 'MCC (Congestion)',
+                        data: new Array(24).fill(0),
+                        backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                        borderColor: '#ef4444',
+                        borderWidth: 1,
+                        stack: 'p',
+                        order: 2
+                    },
+                    {
+                        label: 'MCL (Losses)',
+                        data: new Array(24).fill(0),
+                        backgroundColor: 'rgba(249, 115, 22, 0.7)',
+                        borderColor: '#f97316',
+                        borderWidth: 1,
+                        stack: 'p',
+                        order: 2
+                    },
+                    {
+                        label: 'GHG Adder',
+                        data: new Array(24).fill(0),
+                        backgroundColor: 'rgba(34, 197, 94, 0.7)',
+                        borderColor: '#22c55e',
+                        borderWidth: 1,
+                        stack: 'p',
+                        order: 2
+                    },
+                    {
+                        label: 'Total LMP',
+                        data: new Array(24).fill(0),
+                        type: 'line',
+                        borderColor: '#fff',
+                        borderWidth: 2,
+                        pointRadius: 2,
+                        pointBackgroundColor: '#fff',
+                        fill: false,
+                        tension: 0.2,
+                        order: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#ccc',
+                            font: { size: 11 },
+                            usePointStyle: true,
+                            pointStyleWidth: 16,
+                            padding: 12,
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1a1d2e',
+                        titleColor: '#fff',
+                        bodyColor: '#ccc',
+                        borderColor: '#3a3d4e',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(ctx) {
+                                return `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { ...commonScaleOpts, stacked: true },
+                    y: {
+                        ...commonScaleOpts,
+                        stacked: true,
+                        title: { display: true, text: '$/MWh', color: '#888' }
                     }
                 }
             }
@@ -715,8 +870,6 @@
                         ...commonScaleOpts,
                         stacked: true,
                         title: { display: true, text: 'MW', color: '#888' },
-                        min: minHeadroom,
-                        max: maxHeadroom,
                     }
                 }
             }
@@ -734,6 +887,8 @@
                 backgroundColor: c.bg,
                 borderColor: c.border,
                 borderWidth: 1,
+                barPercentage: 0.5,
+                categoryPercentage: 0.5,
             });
         }
 
@@ -754,10 +909,10 @@
                             color: '#ccc',
                             font: { size: 11 },
                             usePointStyle: true,
-                            pointStyleWidth: 12,
-                            padding: 8,
-                            boxWidth: 12,
-                            boxHeight: 12,
+                            pointStyle: 'circle',
+                            padding: 10,
+                            boxWidth: 8,
+                            boxHeight: 8,
                         }
                     },
                     tooltip: {
@@ -773,11 +928,16 @@
                         }
                     }
                 },
+                layout: {
+                    padding: { left: 10 }
+                },
                 scales: {
                     x: {
                         ...commonScaleOpts,
                         stacked: true,
-                        display: false
+                        display: false,
+                        categoryPercentage: 0.4,
+                        barPercentage: 0.6,
                     },
                     y: {
                         ...commonScaleOpts,
@@ -790,67 +950,67 @@
             }
         });
 
-        // Scatter plot - precompute all points
+        // Scatter plot - computed dynamically to respect resource toggling
         const scatterCtx = document.getElementById('scatterChart').getContext('2d');
-        const allScatterPoints = [];
+        let allScatterPoints = [];
+        let scatterChartReady = false;
 
-        // Precompute scatter points for all 2192 days
-        for (let i = 0; i <= 2191; i++) {
-            const d = indexToDate(i);
-            const ds = dateToStr(d);
-            const y = String(d.getFullYear());
-            const m = String(d.getMonth() + 1).padStart(2, '0');
+        function recomputeScatterPoints() {
+            allScatterPoints = [];
+            for (let i = 0; i <= 2191; i++) {
+                const d = indexToDate(i);
+                const ds = dateToStr(d);
+                const y = String(d.getFullYear());
+                const m = String(d.getMonth() + 1).padStart(2, '0');
 
-            const capM = capacityData[y] && capacityData[y][m];
-            const dem = demandData[ds];
-            const hasDem = dem && dem.some(v => v !== null);
+                const capM = capacityData[y] && capacityData[y][m];
+                const dem = demandData[ds];
+                const hasDem = dem && dem.some(v => v !== null);
 
-            if (!hasDem || !capM) {
-                allScatterPoints.push(null);
-                continue;
-            }
-
-            const demArr = dem.map(v => v || 0);
-            let totAvail = new Array(24).fill(0);
-
-            for (const res of STACK_ORDER) {
-                if (res === 'Battery Storage') continue;
-                const hourly = capM[res] || new Array(24).fill(0);
-                for (let h = 0; h < 24; h++) totAvail[h] += hourly[h];
-            }
-
-            // Calculate reserves and effective headroom
-            const reserves = new Array(24);
-            for (let h = 0; h < 24; h++) {
-                let reservePct;
-                if (h >= 16 && h <= 21) {
-                    reservePct = 0.084;
-                } else if ((h >= 6 && h <= 9) || (h >= 21 && h <= 23)) {
-                    reservePct = 0.077;
-                } else {
-                    reservePct = 0.07;
+                if (!hasDem || !capM) {
+                    allScatterPoints.push(null);
+                    continue;
                 }
-                reserves[h] = Math.max(3500, demArr[h] * reservePct);
+
+                const demArr = dem.map(v => v || 0);
+                const totAvail = getVisibleTotalAvail(capM);
+                const reserves = computeReserves(demArr);
+
+                const hr = totAvail.map((a, idx) => Math.round(a - demArr[idx]));
+                const effHr = hr.map((h, idx) => Math.round(h - reserves[idx]));
+                const minH = Math.min(...effHr);
+                const minHHr = effHr.indexOf(minH);
+                const availAtMin = totAvail[minHHr];
+
+                const t = i / 2191;
+                const r = Math.round(59 + t * (239 - 59));
+                const g = Math.round(130 + t * (68 - 130));
+                const b = Math.round(246 + t * (68 - 246));
+                const color = `rgb(${r}, ${g}, ${b})`;
+
+                allScatterPoints.push({
+                    x: Math.round(availAtMin),
+                    y: minH,
+                    date: ds,
+                    color: color
+                });
             }
 
-            const hr = totAvail.map((a, idx) => Math.round(a - demArr[idx]));
-            const effHr = hr.map((h, idx) => Math.round(h - reserves[idx]));
-            const minH = Math.min(...effHr);
-            const minHHr = effHr.indexOf(minH);
-            const availAtMin = totAvail[minHHr];
-
-            const t = i / 2191;
-            const r = Math.round(59 + t * (239 - 59));
-            const g = Math.round(130 + t * (68 - 130));
-            const b = Math.round(246 + t * (68 - 246));
-            const color = `rgb(${r}, ${g}, ${b})`;
-
-            allScatterPoints.push({
-                x: Math.round(availAtMin),
-                y: minH,
-                date: ds,
-                color: color
-            });
+            // Update scatter axis bounds
+            let sMinAvail = Infinity, sMaxAvail = 0, sMinHead = Infinity, sMaxHead = -Infinity;
+            for (const pt of allScatterPoints) {
+                if (!pt) continue;
+                sMinAvail = Math.min(sMinAvail, pt.x);
+                sMaxAvail = Math.max(sMaxAvail, pt.x);
+                sMinHead = Math.min(sMinHead, pt.y);
+                sMaxHead = Math.max(sMaxHead, pt.y);
+            }
+            if (scatterChartReady) {
+                scatterChart.options.scales.x.min = Math.floor(sMinAvail / 5000) * 5000;
+                scatterChart.options.scales.x.max = Math.ceil(sMaxAvail / 5000) * 5000;
+                scatterChart.options.scales.y.min = Math.floor(sMinHead / 5000) * 5000;
+                scatterChart.options.scales.y.max = Math.ceil(sMaxHead / 5000) * 5000;
+            }
         }
 
         const scatterChart = new Chart(scatterCtx, {
@@ -919,59 +1079,10 @@
                 }
             }
         });
+        scatterChartReady = true;
+        recomputeScatterPoints();
 
         // ─── Statistical Analysis (All Days) ─────────────────────────────
-        // Collect all effective headroom values for percentile calculation
-        const allEffHeadroomByHour = Array.from({length: 24}, () => []);
-        const allMinEffHeadroom = [];
-
-        for (let i = 0; i <= 2191; i++) {
-            const d = indexToDate(i);
-            const ds = dateToStr(d);
-            const y = String(d.getFullYear());
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-
-            const capM = capacityData[y] && capacityData[y][m];
-            const dem = demandData[ds];
-            const hasDem = dem && dem.some(v => v !== null);
-
-            if (!hasDem || !capM) continue;
-
-            const demArr = dem.map(v => v || 0);
-            let totAvail = new Array(24).fill(0);
-
-            for (const res of STACK_ORDER) {
-                if (res === 'Battery Storage') continue;
-                const hourly = capM[res] || new Array(24).fill(0);
-                for (let h = 0; h < 24; h++) totAvail[h] += hourly[h];
-            }
-
-            // Calculate effective headroom (headroom - reserves)
-            const reserves = new Array(24);
-            for (let h = 0; h < 24; h++) {
-                let reservePct;
-                if (h >= 16 && h <= 21) {
-                    reservePct = 0.084;
-                } else if ((h >= 6 && h <= 9) || (h >= 21 && h <= 23)) {
-                    reservePct = 0.077;
-                } else {
-                    reservePct = 0.07;
-                }
-                reserves[h] = Math.max(3500, demArr[h] * reservePct);
-            }
-
-            const hr = totAvail.map((a, idx) => a - demArr[idx]);
-            const effHr = hr.map((h, idx) => h - reserves[idx]);
-
-            // Store by hour for percentile calculation
-            for (let h = 0; h < 24; h++) {
-                allEffHeadroomByHour[h].push(effHr[h]);
-            }
-
-            // Store minimum for histogram
-            allMinEffHeadroom.push(Math.min(...effHr));
-        }
-
         // Percentile calculation function
         function percentile(arr, p) {
             const sorted = [...arr].sort((a, b) => a - b);
@@ -982,17 +1093,43 @@
             return sorted[lower] * (1 - weight) + sorted[upper] * weight;
         }
 
-        // Calculate percentiles for each hour
-        const p5 = [], p25 = [], p50 = [], p75 = [], p95 = [];
-        for (let h = 0; h < 24; h++) {
-            p5.push(Math.round(percentile(allEffHeadroomByHour[h], 5)));
-            p25.push(Math.round(percentile(allEffHeadroomByHour[h], 25)));
-            p50.push(Math.round(percentile(allEffHeadroomByHour[h], 50)));
-            p75.push(Math.round(percentile(allEffHeadroomByHour[h], 75)));
-            p95.push(Math.round(percentile(allEffHeadroomByHour[h], 95)));
+        // Compute statistical data respecting hiddenResources
+        function computeStatisticalData() {
+            const effByHour = Array.from({length: 24}, () => []);
+            const minEffArr = [];
+
+            for (let i = 0; i <= 2191; i++) {
+                const d = indexToDate(i);
+                const ds = dateToStr(d);
+                const y = String(d.getFullYear());
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+
+                const capM = capacityData[y] && capacityData[y][m];
+                const dem = demandData[ds];
+                const hasDem = dem && dem.some(v => v !== null);
+                if (!hasDem || !capM) continue;
+
+                const demArr = dem.map(v => v || 0);
+                const totAvail = getVisibleTotalAvail(capM);
+                const reserves = computeReserves(demArr);
+                const effHr = totAvail.map((a, idx) => a - demArr[idx] - reserves[idx]);
+
+                for (let h = 0; h < 24; h++) effByHour[h].push(effHr[h]);
+                minEffArr.push(Math.min(...effHr));
+            }
+            return { effByHour, minEffArr };
         }
 
-        // Calculate y-axis bounds for confidence chart
+        // Initial computation
+        const initStats = computeStatisticalData();
+        const p5 = [], p25 = [], p50 = [], p75 = [], p95 = [];
+        for (let h = 0; h < 24; h++) {
+            p5.push(Math.round(percentile(initStats.effByHour[h], 5)));
+            p25.push(Math.round(percentile(initStats.effByHour[h], 25)));
+            p50.push(Math.round(percentile(initStats.effByHour[h], 50)));
+            p75.push(Math.round(percentile(initStats.effByHour[h], 75)));
+            p95.push(Math.round(percentile(initStats.effByHour[h], 95)));
+        }
         const confMinY = Math.floor(Math.min(...p5) / 5000) * 5000;
         const confMaxY = Math.ceil(Math.max(...p95) / 5000) * 5000;
 
@@ -1095,8 +1232,8 @@
         });
 
         // Histogram of minimum effective headroom
-        const histMin = Math.floor(Math.min(...allMinEffHeadroom) / 1000) * 1000;
-        const histMax = Math.ceil(Math.max(...allMinEffHeadroom) / 1000) * 1000;
+        const histMin = Math.floor(Math.min(...initStats.minEffArr) / 1000) * 1000;
+        const histMax = Math.ceil(Math.max(...initStats.minEffArr) / 1000) * 1000;
         const binSize = 2000; // 2 GW bins
         const numBins = Math.ceil((histMax - histMin) / binSize);
         const bins = Array(numBins).fill(0);
@@ -1108,7 +1245,7 @@
             binLabels.push(`${(binStart/1000).toFixed(0)} to ${(binEnd/1000).toFixed(0)}`);
         }
 
-        allMinEffHeadroom.forEach(val => {
+        initStats.minEffArr.forEach(val => {
             const binIdx = Math.min(Math.floor((val - histMin) / binSize), numBins - 1);
             if (binIdx >= 0) bins[binIdx]++;
         });
@@ -1194,6 +1331,69 @@
             }
         });
 
+        // ─── Recompute Statistical Charts on Resource Toggle ──────────────
+        function recomputeStatisticalCharts() {
+            const stats = computeStatisticalData();
+
+            // Update confidence chart
+            const np5 = [], np25 = [], np50 = [], np75 = [], np95 = [];
+            for (let h = 0; h < 24; h++) {
+                if (stats.effByHour[h].length === 0) {
+                    np5.push(0); np25.push(0); np50.push(0); np75.push(0); np95.push(0);
+                    continue;
+                }
+                np5.push(Math.round(percentile(stats.effByHour[h], 5)));
+                np25.push(Math.round(percentile(stats.effByHour[h], 25)));
+                np50.push(Math.round(percentile(stats.effByHour[h], 50)));
+                np75.push(Math.round(percentile(stats.effByHour[h], 75)));
+                np95.push(Math.round(percentile(stats.effByHour[h], 95)));
+            }
+            confidenceChart.data.datasets[0].data = np5;
+            confidenceChart.data.datasets[1].data = np25;
+            confidenceChart.data.datasets[2].data = np50;
+            confidenceChart.data.datasets[3].data = np75;
+            confidenceChart.data.datasets[4].data = np95;
+            confidenceChart.options.scales.y.min = Math.floor(Math.min(...np5) / 5000) * 5000;
+            confidenceChart.options.scales.y.max = Math.ceil(Math.max(...np95) / 5000) * 5000;
+            confidenceChart.update();
+
+            // Update histogram
+            if (stats.minEffArr.length === 0) return;
+            const hMin = Math.floor(Math.min(...stats.minEffArr) / 1000) * 1000;
+            const hMax = Math.ceil(Math.max(...stats.minEffArr) / 1000) * 1000;
+            const hBinSize = 2000;
+            const hNumBins = Math.ceil((hMax - hMin) / hBinSize);
+            const hBins = Array(hNumBins).fill(0);
+            const hLabels = [];
+            const hColors = [];
+            const hBorders = [];
+
+            for (let i = 0; i < hNumBins; i++) {
+                const binStart = hMin + i * hBinSize;
+                const binEnd = binStart + hBinSize;
+                hLabels.push(`${(binStart/1000).toFixed(0)} to ${(binEnd/1000).toFixed(0)}`);
+                const binCenter = hMin + (i + 0.5) * hBinSize;
+                if (binCenter < 0) {
+                    hColors.push('rgba(239, 68, 68, 0.7)'); hBorders.push('#ef4444');
+                } else if (binCenter < 10000) {
+                    hColors.push('rgba(251, 146, 60, 0.7)'); hBorders.push('#fb923c');
+                } else if (binCenter < 20000) {
+                    hColors.push('rgba(250, 204, 21, 0.7)'); hBorders.push('#facc15');
+                } else {
+                    hColors.push('rgba(34, 197, 94, 0.7)'); hBorders.push('#22c55e');
+                }
+            }
+            stats.minEffArr.forEach(val => {
+                const binIdx = Math.min(Math.floor((val - hMin) / hBinSize), hNumBins - 1);
+                if (binIdx >= 0) hBins[binIdx]++;
+            });
+            histogramChart.data.labels = hLabels;
+            histogramChart.data.datasets[0].data = hBins;
+            histogramChart.data.datasets[0].backgroundColor = hColors;
+            histogramChart.data.datasets[0].borderColor = hBorders;
+            histogramChart.update();
+        }
+
         // ─── Update Function ─────────────────────────────────────────────
         let isFirstUpdate = true;
         function updateCharts(sliderIndex) {
@@ -1221,31 +1421,44 @@
             let dsIdx = 0;
             for (const res of STACK_ORDER) {
                 if (res === 'Battery Storage') continue;
-                const hourly = capMonth ? capMonth[res] : new Array(24).fill(0);
+                const hourly = (capMonth && capMonth[res]) || new Array(24).fill(0);
                 capacityChart.data.datasets[dsIdx].data = hourly;
-                for (let h = 0; h < 24; h++) totalAvail[h] += hourly[h];
+                if (!hiddenResources.has(res)) {
+                    for (let h = 0; h < 24; h++) totalAvail[h] += hourly[h];
+                }
                 dsIdx++;
             }
 
             capacityChart.data.datasets[dsIdx].data = demandArr;
             capacityChart.update(isFirstUpdate ? 'resize' : 'none');
 
-            // Calculate reserves by hour (time-of-day weighted)
-            const reserves = new Array(24);
-            for (let h = 0; h < 24; h++) {
-                let reservePct;
-                if (h >= 16 && h <= 21) {
-                    // Peak evening ramp (4-9 PM): 8.4%
-                    reservePct = 0.084;
-                } else if ((h >= 6 && h <= 9) || (h >= 21 && h <= 23)) {
-                    // Shoulder hours (6-9 AM, 9-11 PM): 7.7%
-                    reservePct = 0.077;
-                } else {
-                    // Off-peak: 7%
-                    reservePct = 0.07;
+            // Update Price Chart
+            const pData = priceData[dateStr];
+            const hasPrice = pData && Object.keys(pData).length > 0;
+            document.getElementById('noPriceDataMsg').style.display = hasPrice ? 'none' : 'flex';
+
+            if (hasPrice) {
+                const mec = [], mcc = [], mcl = [], ghg = [], lmp = [];
+                for (let h = 1; h <= 24; h++) {
+                    const hData = pData[String(h)] || {};
+                    mec.push(hData.MEC || 0);
+                    mcc.push(hData.MCC || 0);
+                    mcl.push(hData.Loss || 0);
+                    ghg.push(hData.GHG || 0);
+                    lmp.push(hData.LMP || 0);
                 }
-                reserves[h] = Math.round(Math.max(3500, demandArr[h] * reservePct));
+                priceChart.data.datasets[0].data = mec;
+                priceChart.data.datasets[1].data = mcc;
+                priceChart.data.datasets[2].data = mcl;
+                priceChart.data.datasets[3].data = ghg;
+                priceChart.data.datasets[4].data = lmp;
+            } else {
+                priceChart.data.datasets.forEach(ds => ds.data = new Array(24).fill(0));
             }
+            priceChart.update(isFirstUpdate ? 'resize' : 'none');
+
+            // Calculate reserves by hour (time-of-day weighted)
+            const reserves = computeReserves(demandArr).map(v => Math.round(v));
 
             // Update headroom chart with stacked reserves + effective headroom
             const headroom = totalAvail.map((a, i) => Math.round(a - demandArr[i]));
@@ -1263,8 +1476,8 @@
             dsIdx = 0;
             for (const res of STACK_ORDER) {
                 if (res === 'Battery Storage') continue;
-                const hourly = capMonth ? capMonth[res] : new Array(24).fill(0);
-                const avg = hourly.reduce((s, v) => s + v, 0) / 24;
+                const hourly = (capMonth && capMonth[res]) || new Array(24).fill(0);
+                const avg = hiddenResources.has(res) ? 0 : hourly.reduce((s, v) => s + v, 0) / 24;
                 avgCapacityChart.data.datasets[dsIdx].data = [Math.round(avg)];
                 dsIdx++;
             }

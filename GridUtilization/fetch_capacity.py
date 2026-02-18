@@ -48,9 +48,19 @@ def fetch_ca_capacity_for_period(period, offset=0, page_size=5000):
     return all_records
 
 
+NG_TECHNOLOGY_MAP = {
+    "Natural Gas Fired Combined Cycle": "Natural Gas - CCGT",
+    "Natural Gas Fired Combustion Turbine": "Natural Gas - Peaker",
+    "Natural Gas Steam Turbine": "Natural Gas - Steam",
+    "Natural Gas Internal Combustion Engine": "Natural Gas - ICE",
+    "Other Natural Gas": "Natural Gas - ICE",
+}
+
+
 def aggregate_by_resource(records):
     """
     Aggregate nameplate capacity (MW) by energy source description.
+    Natural Gas generators are sub-categorized by technology field.
     Returns dict of {resource_type: total_mw}.
     """
     capacity = {}
@@ -63,6 +73,12 @@ def aggregate_by_resource(records):
             mw = float(mw)
         except (ValueError, TypeError):
             continue
+
+        # Sub-categorize Natural Gas by technology
+        if resource == "Natural Gas":
+            tech = rec.get("technology", "")
+            resource = NG_TECHNOLOGY_MAP.get(tech, "Natural Gas - ICE")
+
         capacity[resource] = capacity.get(resource, 0) + mw
 
     # Round values

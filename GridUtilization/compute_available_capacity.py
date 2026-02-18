@@ -96,8 +96,11 @@ HYDRO_CF = {
 NUCLEAR_CF = 0.92
 # Geothermal: Baseload, ~90% availability
 GEOTHERMAL_CF = 0.90
-# Natural Gas: Dispatchable, available at ~90% of nameplate (maintenance/outages)
-NATURAL_GAS_CF = 0.90
+# Natural Gas subcategories:
+GAS_CCGT_CF = 0.90      # Combined cycle: efficient, baseload/intermediate
+GAS_PEAKER_CF = 0.90    # Combustion turbine: peakers, available when needed
+GAS_STEAM_CF = 0.85     # Steam turbine: older units, more maintenance
+GAS_ICE_CF = 0.85       # ICE + Other: small, older units
 # Biomass/biogas: Baseload-ish, ~80% availability
 BIOMASS_CF = 0.80
 # Battery storage: Not a generation source; represents discharge availability
@@ -114,7 +117,10 @@ RESOURCE_MAP = {
     "Water": "Hydro",
     "Nuclear": "Nuclear",
     "Geothermal": "Geothermal",
-    "Natural Gas": "Natural Gas",
+    "Natural Gas - CCGT": "Gas CCGT",
+    "Natural Gas - Peaker": "Gas Peaker",
+    "Natural Gas - Steam": "Gas Steam",
+    "Natural Gas - ICE": "Gas ICE",
     "Electricity used for energy storage": "Battery Storage",
     # Biomass category
     "Wood Waste Solids": "Biomass",
@@ -139,7 +145,10 @@ RESOURCE_MAP = {
 CATEGORY_CF = {
     "Nuclear": NUCLEAR_CF,
     "Geothermal": GEOTHERMAL_CF,
-    "Natural Gas": NATURAL_GAS_CF,
+    "Gas CCGT": GAS_CCGT_CF,
+    "Gas Peaker": GAS_PEAKER_CF,
+    "Gas Steam": GAS_STEAM_CF,
+    "Gas ICE": GAS_ICE_CF,
     "Biomass": BIOMASS_CF,
     "Battery Storage": BATTERY_CF,
     "Other Thermal": OTHER_THERMAL_CF,
@@ -147,7 +156,8 @@ CATEGORY_CF = {
 
 # Categories in display order
 CATEGORIES = [
-    "Solar", "Wind", "Hydro", "Nuclear", "Natural Gas",
+    "Solar", "Wind", "Hydro", "Nuclear",
+    "Gas CCGT", "Gas Peaker", "Gas Steam", "Gas ICE",
     "Geothermal", "Biomass", "Battery Storage", "Other Thermal"
 ]
 
@@ -223,10 +233,14 @@ def main():
         cap = installed[year_str]
 
         print(f"\n--- {year_str} ---")
+        gas_total = sum(cap.get(g, 0) for g in ['Gas CCGT', 'Gas Peaker', 'Gas Steam', 'Gas ICE'])
         print(f"  Installed: Solar={cap.get('Solar',0):,.0f} MW, "
               f"Wind={cap.get('Wind',0):,.0f} MW, "
               f"Hydro={cap.get('Hydro',0):,.0f} MW, "
-              f"Gas={cap.get('Natural Gas',0):,.0f} MW, "
+              f"Gas={gas_total:,.0f} MW (CCGT={cap.get('Gas CCGT',0):,.0f}, "
+              f"Peaker={cap.get('Gas Peaker',0):,.0f}, "
+              f"Steam={cap.get('Gas Steam',0):,.0f}, "
+              f"ICE={cap.get('Gas ICE',0):,.0f}), "
               f"Nuclear={cap.get('Nuclear',0):,.0f} MW")
 
         hydro_type = {
@@ -283,7 +297,10 @@ def main():
     print("  2025: Above Normal (Sacramento) / Below Normal (San Joaquin)")
     print(f"Nuclear: {NUCLEAR_CF*100:.0f}% constant (Diablo Canyon baseload)")
     print(f"Geothermal: {GEOTHERMAL_CF*100:.0f}% constant (baseload)")
-    print(f"Natural Gas: {NATURAL_GAS_CF*100:.0f}% availability (dispatchable)")
+    print(f"Gas CCGT: {GAS_CCGT_CF*100:.0f}% availability (combined cycle)")
+    print(f"Gas Peaker: {GAS_PEAKER_CF*100:.0f}% availability (combustion turbine)")
+    print(f"Gas Steam: {GAS_STEAM_CF*100:.0f}% availability (steam turbine)")
+    print(f"Gas ICE: {GAS_ICE_CF*100:.0f}% availability (reciprocating engine + other)")
     print(f"Biomass: {BIOMASS_CF*100:.0f}% constant")
     print(f"Battery Storage: Excluded from generation (load-shifting resource)")
     print(f"Other Thermal: {OTHER_THERMAL_CF*100:.0f}% availability")
