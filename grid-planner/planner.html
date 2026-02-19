@@ -3096,6 +3096,13 @@
                     }
                 }
 
+                // Apply enabledTechnologies filter - zero out disabled generation sources
+                for (const tech in enabledTechnologies) {
+                    if (!enabledTechnologies[tech] && activePotentialGeneration[tech]) {
+                        activePotentialGeneration[tech] = Array(288).fill(0);  // 12 months × 24 hours
+                    }
+                }
+
                 // Verification logging for baseline VRE generation with monthly CF scaling
                 if (activePotentialGeneration.solar && activePotentialGeneration.solar.length === 288) {
                     const janSolarPeak = Math.max(...activePotentialGeneration.solar.slice(0, 24));
