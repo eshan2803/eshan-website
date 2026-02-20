@@ -3,7 +3,7 @@ Scatter plot: Total LMP vs Net Load.
 Net Load = Demand - (Solar + Wind + Hydro + Nuclear + Geothermal + Biomass + Other Thermal)
 i.e., the residual load that gas generators must serve.
 
-Uses hourly data for all dates with LMP data (2022-11-07 onwards).
+Uses hourly data for all dates with LMP data (2020-01-01 onwards).
 Saves output as lmp_vs_netload.png.
 """
 
@@ -12,6 +12,7 @@ import os
 from datetime import datetime
 
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 import numpy as np
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -36,7 +37,7 @@ hours = []
 price_dates = sorted(price_data.keys())
 print(f"Price data spans {price_dates[0]} to {price_dates[-1]} ({len(price_dates)} days)")
 
-start_ref = datetime(2022, 11, 7)
+start_ref = datetime(2020, 1, 1)
 
 for date_str in price_dates:
     dt = datetime.strptime(date_str, "%Y-%m-%d")
@@ -85,13 +86,23 @@ fig, ax = plt.subplots(figsize=(14, 9))
 fig.patch.set_facecolor("#0f1117")
 ax.set_facecolor("#1a1d2e")
 
+# High-contrast colormap for dark background: night=blue, morning=cyan, midday=yellow, evening=red
+hour_cmap = LinearSegmentedColormap.from_list("hour_bright", [
+    (0.0,  "#3b82f6"),   # 0h  midnight - blue
+    (0.25, "#22d3ee"),   # 6h  dawn - cyan
+    (0.5,  "#facc15"),   # 12h noon - yellow
+    (0.75, "#ef4444"),   # 18h evening - red
+    (1.0,  "#3b82f6"),   # 24h back to midnight - blue
+])
+
 scatter = ax.scatter(
     net_loads / 1000,
     lmp_values,
     c=hours,
-    cmap="twilight_shifted",
-    s=3,
-    alpha=0.35,
+    cmap=hour_cmap,
+    vmin=0, vmax=23,
+    s=6,
+    alpha=0.5,
     edgecolors="none",
     rasterized=True,
 )
@@ -102,41 +113,14 @@ cbar.set_ticks([0, 4, 8, 12, 16, 20, 23])
 cbar.set_ticklabels(["12a", "4a", "8a", "12p", "4p", "8p", "11p"])
 cbar.ax.tick_params(colors="#888", labelsize=10)
 
-# Bin the data for median + IQR trend
-mask = np.isfinite(net_loads) & np.isfinite(lmp_values)
-nl_clean = net_loads[mask] / 1000
-lmp_clean = lmp_values[mask]
-
-bin_edges = np.linspace(nl_clean.min(), nl_clean.max(), 40)
-bin_centers = []
-bin_medians = []
-bin_p25 = []
-bin_p75 = []
-
-for i in range(len(bin_edges) - 1):
-    in_bin = (nl_clean >= bin_edges[i]) & (nl_clean < bin_edges[i + 1])
-    if in_bin.sum() > 10:
-        bin_centers.append((bin_edges[i] + bin_edges[i + 1]) / 2)
-        bin_medians.append(np.median(lmp_clean[in_bin]))
-        bin_p25.append(np.percentile(lmp_clean[in_bin], 25))
-        bin_p75.append(np.percentile(lmp_clean[in_bin], 75))
-
-bin_centers = np.array(bin_centers)
-bin_medians = np.array(bin_medians)
-bin_p25 = np.array(bin_p25)
-bin_p75 = np.array(bin_p75)
-
-ax.plot(bin_centers, bin_medians, color="#60a5fa", linewidth=2.5, label="Median LMP", zorder=5)
-ax.fill_between(bin_centers, bin_p25, bin_p75, color="#60a5fa", alpha=0.15, label="IQR (25th-75th)", zorder=4)
-
 # Styling
 ax.set_xlabel("Net Load (GW)\nDemand minus Solar, Wind, Hydro, Nuclear, Geothermal, Biomass, Other Thermal",
               color="#ccc", fontsize=12, labelpad=10)
 ax.set_ylabel("Total LMP ($/MWh)", color="#ccc", fontsize=12, labelpad=10)
-ax.set_title("Total LMP vs Net Load (Residual Gas Demand)\nCAISO Hourly Data: Nov 2022 - Dec 2025",
+ax.set_title("Total LMP vs Net Load (Residual Gas Demand)\nCAISO Hourly Data: Jan 2020 - Dec 2025",
              color="#fff", fontsize=15, fontweight="bold", pad=15)
 
-ax.set_ylim(top=500)
+ax.set_ylim(-50, 300)
 
 ax.tick_params(colors="#888", labelsize=10)
 ax.spines["top"].set_visible(False)
@@ -146,9 +130,6 @@ ax.spines["bottom"].set_color("#3a3d4e")
 ax.grid(True, color="#2a2d3e", linewidth=0.5, alpha=0.7)
 
 ax.axhline(y=0, color="#ef4444", linewidth=0.8, linestyle="--", alpha=0.6)
-
-ax.legend(loc="upper left", facecolor="#1a1d2e", edgecolor="#3a3d4e",
-          labelcolor="#ccc", fontsize=11)
 
 plt.tight_layout()
 
