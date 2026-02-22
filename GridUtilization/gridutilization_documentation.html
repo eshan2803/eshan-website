@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation — California Grid Utilization Explorer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f1117;
+            color: #d0d0d0;
+            min-height: 100vh;
+            line-height: 1.7;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a1d2e 0%, #0f1117 100%);
+            border-bottom: 1px solid #2a2d3e;
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .header .subtitle {
+            font-size: 13px;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        .header-links {
+            display: flex;
+            gap: 18px;
+        }
+
+        .header-links a {
+            color: #60a5fa;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 6px 14px;
+            border: 1px solid #2a2d3e;
+            border-radius: 6px;
+            transition: background 0.15s, border-color 0.15s;
+        }
+
+        .header-links a:hover {
+            background: #1a1d2e;
+            border-color: #60a5fa;
+        }
+
+        .header-links a.active {
+            background: rgba(96, 165, 250, 0.12);
+            border-color: #60a5fa;
+        }
+
+        .doc-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 30px 80px;
+        }
+
+        .doc-container h2 {
+            font-size: 26px;
+            font-weight: 700;
+            color: #fff;
+            margin-top: 48px;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #2a2d3e;
+        }
+
+        .doc-container h2:first-child {
+            margin-top: 0;
+        }
+
+        .doc-container h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e0e0e0;
+            margin-top: 32px;
+            margin-bottom: 10px;
+        }
+
+        .doc-container h4 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #c0c0c0;
+            margin-top: 24px;
+            margin-bottom: 8px;
+        }
+
+        .doc-container p {
+            margin-bottom: 12px;
+            color: #b0b0b0;
+        }
+
+        .doc-container ul, .doc-container ol {
+            margin-bottom: 12px;
+            padding-left: 24px;
+        }
+
+        .doc-container li {
+            margin-bottom: 6px;
+            color: #b0b0b0;
+        }
+
+        .doc-container strong {
+            color: #d8d8d8;
+        }
+
+        .doc-container code {
+            background: #1a1d2e;
+            color: #60a5fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+        }
+
+        .doc-container pre {
+            background: #141620;
+            border: 1px solid #2a2d3e;
+            border-radius: 8px;
+            padding: 16px 20px;
+            overflow-x: auto;
+            margin-bottom: 16px;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #c0c8d8;
+        }
+
+        .doc-container pre code {
+            background: none;
+            color: inherit;
+            padding: 0;
+            font-size: inherit;
+        }
+
+        .doc-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .doc-table th {
+            background: #1a1d2e;
+            color: #d0d0d0;
+            font-weight: 600;
+            text-align: left;
+            padding: 10px 14px;
+            border: 1px solid #2a2d3e;
+        }
+
+        .doc-table td {
+            background: #141620;
+            color: #b0b0b0;
+            padding: 10px 14px;
+            border: 1px solid #2a2d3e;
+            vertical-align: top;
+        }
+
+        .doc-table tr:hover td {
+            background: #181b28;
+        }
+
+        .callout {
+            background: #141620;
+            border-left: 3px solid #60a5fa;
+            padding: 14px 18px;
+            margin: 16px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .callout.warning {
+            border-left-color: #f59e0b;
+        }
+
+        .callout.insight {
+            border-left-color: #22c55e;
+        }
+
+        .callout p {
+            margin-bottom: 0;
+        }
+
+        .chart-explanation {
+            background: #141620;
+            border: 1px solid #2a2d3e;
+            border-radius: 10px;
+            padding: 20px 24px;
+            margin: 20px 0;
+        }
+
+        .chart-explanation .chart-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .chart-explanation .chart-desc {
+            color: #999;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
+        .formula-block {
+            background: #0e1019;
+            border: 1px solid #1e2130;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin: 10px 0;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 13px;
+            color: #a0b0c8;
+        }
+
+        .color-swatch {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            vertical-align: middle;
+            margin-right: 4px;
+        }
+
+        .toc {
+            background: #141620;
+            border: 1px solid #2a2d3e;
+            border-radius: 10px;
+            padding: 24px 28px;
+            margin-bottom: 32px;
+        }
+
+        .toc h3 {
+            margin-top: 0;
+            margin-bottom: 14px;
+            font-size: 16px;
+            color: #fff;
+        }
+
+        .toc ol {
+            padding-left: 20px;
+        }
+
+        .toc li {
+            margin-bottom: 4px;
+        }
+
+        .toc a {
+            color: #60a5fa;
+            text-decoration: none;
+        }
+
+        .toc a:hover {
+            text-decoration: underline;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #2a2d3e;
+            margin: 40px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>Documentation</h1>
+            <div class="subtitle">Methodology, Assumptions &amp; Calculations</div>
+        </div>
+        <div class="header-links">
+            <a href="index.html">Dashboard</a>
+            <a href="gridutilization_documentation.html" class="active">Documentation</a>
+        </div>
+    </div>
+
+    <div class="doc-container">
+
+        <!-- Table of Contents -->
+        <div class="toc">
+            <h3>Contents</h3>
+            <ol>
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#data-sources">Data Sources</a></li>
+                <li><a href="#core-calculations">Core Calculations</a></li>
+                <li><a href="#dc-profiles">Data Center Load Profiles</a></li>
+                <li><a href="#charts">Chart-by-Chart Guide</a>
+                    <ol style="margin-top:4px;">
+                        <li><a href="#chart-supply-demand">Supply vs Demand</a></li>
+                        <li><a href="#chart-headroom">Effective Headroom</a></li>
+                        <li><a href="#chart-lmp-scatter">LMP vs Net Load Scatter</a></li>
+                        <li><a href="#chart-dc-headroom">Headroom Impact (DC Profiles)</a></li>
+                        <li><a href="#chart-scorecard">Grid Utilization Scorecard</a></li>
+                        <li><a href="#chart-cost">Electricity Cost Comparison</a></li>
+                        <li><a href="#chart-stress">Stress Day Deep-Dive</a></li>
+                        <li><a href="#chart-surplus">Overgeneration Surplus Absorption</a></li>
+                        <li><a href="#chart-emissions">Marginal Emissions</a></li>
+                        <li><a href="#chart-optimized">Optimized Load Profile Calculator</a></li>
+                    </ol>
+                </li>
+                <li><a href="#custom-editor">Custom Profile Editor</a></li>
+                <li><a href="#assumptions">Assumptions &amp; Limitations</a></li>
+                <li><a href="#validation">Validation Reference Points</a></li>
+                <li><a href="#future-data">Future Data Sources</a></li>
+            </ol>
+        </div>
+
+        <!-- 1. Overview -->
+        <h2 id="overview">1. Overview</h2>
+
+        <p>This dashboard analyzes California (CAISO) grid conditions to evaluate how flexible data center load profiles affect grid utilization, reliability, cost, and emissions. The core thesis:</p>
+
+        <div class="callout insight">
+            <p>Data centers that shift load to follow solar generation ("<strong>camel</strong>" profiles) improve grid utilization, reduce electricity costs, absorb renewable surplus, and lower marginal emissions &mdash; compared to flat or night-heavy profiles.</p>
+        </div>
+
+        <p>Virginia passed a bill incorporating a grid utilization factor to encourage better use of existing capacity before building new infrastructure. Data center operators seeking faster interconnection can demonstrate they improve grid utilization through flexible load profiles. This dashboard quantifies that value proposition using real CAISO data.</p>
+
+        <hr>
+
+        <!-- 2. Data Sources -->
+        <h2 id="data-sources">2. Data Sources</h2>
+
+        <h3>2.1 Demand Forecast</h3>
+        <table class="doc-table">
+            <tr><th>Property</th><th>Details</th></tr>
+            <tr><td>Source</td><td>CAISO day-ahead demand forecast</td></tr>
+            <tr><td>File</td><td><code>demand_forecast.json</code></td></tr>
+            <tr><td>Format</td><td>Daily entries keyed by date (<code>"YYYY-MM-DD"</code>), each containing a 24-element array of hourly demand in MW</td></tr>
+            <tr><td>Coverage</td><td>Jan 1, 2020 &ndash; Dec 31, 2025 (2,192 days)</td></tr>
+            <tr><td>Missing data</td><td>Null values treated as 0 MW</td></tr>
+        </table>
+
+        <h3>2.2 Available Capacity</h3>
+        <table class="doc-table">
+            <tr><th>Property</th><th>Details</th></tr>
+            <tr><td>Source</td><td>Derived from CAISO resource adequacy filings and installed capacity data</td></tr>
+            <tr><td>File</td><td><code>available_capacity.json</code></td></tr>
+            <tr><td>Format</td><td>Nested by year &rarr; month &rarr; resource type &rarr; 24-hour array (MW)</td></tr>
+            <tr><td>Resource types</td><td>Nuclear, Geothermal, Biomass, Other Thermal, Gas CCGT, Gas Peaker, Gas Steam, Gas ICE, Hydro, Wind, Solar, Battery Storage</td></tr>
+        </table>
+
+        <div class="callout warning">
+            <p><strong>Key assumption:</strong> Monthly average hourly profiles &mdash; the same 24-hour profile is used for every day within a given month. This does NOT capture day-to-day weather variability. Solar profiles reflect monthly capacity factors (zero at night, peak at solar noon). Battery Storage is excluded from total available capacity (treated as load modifier, not supply).</p>
+        </div>
+
+        <h3>2.3 CAISO LMP Prices</h3>
+        <table class="doc-table">
+            <tr><th>Property</th><th>Details</th></tr>
+            <tr><td>Source</td><td>CAISO Day-Ahead Market, DLAP (Default Load Aggregation Point) nodes</td></tr>
+            <tr><td>File</td><td><code>caiso_prices.json</code></td></tr>
+            <tr><td>Weighting</td><td>Load-weighted across 3 utility zones: PG&amp;E (43.5%), SCE (43.5%), SDG&amp;E (13%)</td></tr>
+            <tr><td>Components</td><td><strong>LMP</strong> = MEC (Marginal Energy) + MCC (Congestion) + Loss + GHG</td></tr>
+            <tr><td>Coverage</td><td>~2,170 of 2,192 days have price data</td></tr>
+        </table>
+
+        <h3>2.4 CA Natural Gas Citygate Prices</h3>
+        <table class="doc-table">
+            <tr><th>Property</th><th>Details</th></tr>
+            <tr><td>Source</td><td>EIA (U.S. Energy Information Administration)</td></tr>
+            <tr><td>Resolution</td><td>Monthly ($/MCF)</td></tr>
+            <tr><td>Usage</td><td>Normalizing LMP and MEC to remove gas price variation, creating an implied heat-rate proxy</td></tr>
+            <tr><td>Coverage</td><td>Jan 2020 &ndash; Dec 2025</td></tr>
+        </table>
+
+        <hr>
+
+        <!-- 3. Core Calculations -->
+        <h2 id="core-calculations">3. Core Calculations</h2>
+
+        <h3>3.1 Reserve Requirements</h3>
+        <p>Reserves model California's operating reserve obligations. The requirement is the greater of a percentage of demand or a floor value:</p>
+        <div class="formula-block">reserve[h] = max(3,500 MW, demand[h] &times; reserve_percentage)</div>
+
+        <table class="doc-table">
+            <tr><th>Period</th><th>Hours</th><th>Reserve %</th></tr>
+            <tr><td>Peak</td><td>4&ndash;9 PM (h=16&ndash;21)</td><td>8.4%</td></tr>
+            <tr><td>Shoulder</td><td>6&ndash;9 AM, 9&ndash;11 PM (h=6&ndash;9, h=21&ndash;23)</td><td>7.7%</td></tr>
+            <tr><td>Off-peak</td><td>All other hours</td><td>7.0%</td></tr>
+        </table>
+
+        <div class="callout warning">
+            <p><strong>Simplification:</strong> Actual CAISO procurement uses Regulation Up/Down, Spinning Reserve, and Non-Spinning Reserve with different requirements. The 3,500 MW floor approximates California's typical minimum reserve margin.</p>
+        </div>
+
+        <h3>3.2 Effective Headroom</h3>
+        <p>The key reliability metric &mdash; how much spare capacity exists above demand and reserves:</p>
+        <div class="formula-block">headroom[h] = available_capacity[h] &minus; demand[h] &minus; reserve[h]</div>
+        <ul>
+            <li><strong>Positive headroom:</strong> Grid has spare capacity</li>
+            <li><strong>Zero/negative headroom:</strong> Capacity shortfall, potential reliability risk</li>
+            <li>When DC load is added: <code>headroom_dc[h] = available[h] - (demand[h] + dc_load[h]) - reserve_with_dc[h]</code></li>
+            <li>Reserves are recomputed with the added DC load since reserve % scales with demand</li>
+        </ul>
+
+        <h3>3.3 Net Load</h3>
+        <p>Demand minus non-gas generation &mdash; the residual load that gas plants must serve:</p>
+        <div class="formula-block">net_load[h] = demand[h] &minus; (solar + wind + hydro + nuclear + geothermal + biomass + other_thermal)[h]</div>
+        <p>Used in the LMP vs Net Load scatter chart to show how electricity prices respond to the gas fleet's workload.</p>
+
+        <hr>
+
+        <!-- 4. DC Profiles -->
+        <h2 id="dc-profiles">4. Data Center Load Profiles</h2>
+
+        <p>All profiles deliver the <strong>same total daily energy</strong> (avgMw &times; 24 MWh) for fair comparison. This is critical: no profile "cheats" by consuming less total energy.</p>
+
+        <h3>4.1 Flat</h3>
+        <div class="formula-block">flat[h] = avgMw &nbsp;&nbsp; for all h &isin; [0, 23]</div>
+        <p>Constant load at all hours. The simplest profile and the baseline for comparison.</p>
+
+        <h3>4.2 Camel (Solar-Following)</h3>
+        <div class="formula-block">raw[h] = max(0, avgMw &times; (1 + flex &times; SOLAR_NORM[month][h] / 0.3))</div>
+        <p>Where:</p>
+        <ul>
+            <li><code>SOLAR_NORM[month][h]</code> = <code>SOLAR_CF[month][h] - mean(SOLAR_CF[month])</code> (mean-centered solar shape)</li>
+            <li><code>flex</code> &isin; [0, 1.0] &mdash; controls how aggressively load follows solar</li>
+            <li>Division by 0.3 scales the solar shape to produce meaningful variation</li>
+            <li><code>max(0, ...)</code> ensures no negative load</li>
+        </ul>
+
+        <h3>4.3 Night-Heavy (Inverse Camel)</h3>
+        <div class="formula-block">raw[h] = max(0, avgMw &times; (1 &minus; flex &times; SOLAR_NORM[month][h] / 0.3))</div>
+        <p>The opposite of camel &mdash; shifts load away from solar hours into evening and night. Represents a traditional data center pattern that ramps up when electricity demand is highest.</p>
+
+        <h3>4.4 Energy Preservation</h3>
+        <p>After the <code>max(0, ...)</code> clipping, the total energy may not equal <code>avgMw &times; 24</code>. A post-clipping rescaling step corrects this:</p>
+        <pre><code>target = avgMw &times; 24
+actual_sum = sum(raw[0..23])
+scale = target / actual_sum
+profile[h] = raw[h] &times; scale</code></pre>
+        <p>This is particularly important for the night-heavy profile in summer months, where <code>max(0, ...)</code> clips solar-hour values to zero.</p>
+
+        <h3>4.5 Controls</h3>
+        <ul>
+            <li><strong>DC Size slider:</strong> 100&ndash;2,000 MW average load</li>
+            <li><strong>Flexibility slider:</strong> 0.0&ndash;1.0 (0 = flat regardless of type; 1.0 = maximum solar-following)</li>
+            <li><strong>Presets:</strong> Flat, Camel (Solar), Night-Heavy, Custom</li>
+        </ul>
+
+        <h3>4.6 Monthly Solar Shape</h3>
+        <p>The SOLAR_CF profiles (12 months &times; 24 hours) are derived from California solar capacity factor data:</p>
+        <ul>
+            <li>Winter (Dec&ndash;Jan): ~5 solar hours, low peak CF (~0.48)</li>
+            <li>Summer (Jun&ndash;Jul): ~8 solar hours, high peak CF (~1.0)</li>
+            <li>Profiles are symmetric around solar noon and zero at night</li>
+        </ul>
+
+        <hr>
+
+        <!-- 5. Chart-by-Chart Guide -->
+        <h2 id="charts">5. Chart-by-Chart Guide</h2>
+
+        <!-- Chart 1: Supply vs Demand -->
+        <div class="chart-explanation" id="chart-supply-demand">
+            <div class="chart-name">Supply vs Demand (Stacked Area)</div>
+            <div class="chart-desc">Top-level view of the grid for any given day</div>
+            <p><strong>What it shows:</strong> Stacked area chart of each generation resource's available capacity (24 hours) overlaid with a demand line.</p>
+            <p><strong>How to read it:</strong></p>
+            <ul>
+                <li>The colored stacked areas represent each resource type's contribution (solar, wind, gas, hydro, nuclear, etc.)</li>
+                <li>The white dashed line shows actual demand</li>
+                <li>The gap between the top of the stack and the demand line is the effective headroom (spare capacity)</li>
+                <li>Use the date slider at the top to explore any day from 2020&ndash;2025</li>
+            </ul>
+            <p><strong>Key insight:</strong> On sunny spring days with low demand, solar pushes total capacity far above demand &mdash; this is where overgeneration and negative prices occur.</p>
+        </div>
+
+        <!-- Chart 2: Headroom Confidence -->
+        <div class="chart-explanation" id="chart-headroom">
+            <div class="chart-name">Effective Headroom (Confidence Bands)</div>
+            <div class="chart-desc">Statistical view of reliability across all 2,192 days</div>
+            <p><strong>What it shows:</strong> For each hour of the day, the distribution of effective headroom across all days in the dataset.</p>
+            <p><strong>Bands:</strong></p>
+            <ul>
+                <li><strong>p5 &amp; p95:</strong> Outer bounds &mdash; 90% of days fall within these lines</li>
+                <li><strong>p25 &amp; p75:</strong> Inner shaded band &mdash; the middle 50% of days</li>
+                <li><strong>p50:</strong> The median headroom</li>
+            </ul>
+            <p><strong>Key insight:</strong> Headroom is tightest during evening peak hours (5&ndash;8 PM) when solar drops off but demand stays high. The p5 line dipping toward or below zero means 5% of days have dangerously low spare capacity at that hour.</p>
+        </div>
+
+        <!-- Chart 3: LMP Scatter -->
+        <div class="chart-explanation" id="chart-lmp-scatter">
+            <div class="chart-name">LMP vs Net Load Scatter</div>
+            <div class="chart-desc">How electricity prices respond to the gas fleet's workload</div>
+            <p><strong>What it shows:</strong> Each dot is one hour from the dataset. X-axis = net load (demand minus all non-gas generation), Y-axis = LMP (wholesale electricity price).</p>
+            <p><strong>Color:</strong> Time of day (yellow = daytime solar hours, blue/purple = night hours)</p>
+            <p><strong>Dot size:</strong> Scaled by CA natural gas citygate price &mdash; larger dots = more expensive gas months</p>
+            <p><strong>Key insight:</strong> When net load is negative (surplus), LMP drops to zero or negative &mdash; the grid is paying to offload excess generation. When net load is high, LMP rises sharply as expensive peaker plants come online. Gas price shifts the entire curve vertically.</p>
+        </div>
+
+        <!-- Chart 4: DC Headroom Impact -->
+        <div class="chart-explanation" id="chart-dc-headroom">
+            <div class="chart-name">Headroom Impact: DC Load Profiles</div>
+            <div class="chart-desc">How each DC profile shifts reliability margins</div>
+            <p><strong>What it shows:</strong> The baseline headroom percentile bands (shaded, from the chart above) with additional dashed lines showing the median headroom after adding each data center profile.</p>
+            <p><strong>Profile lines:</strong></p>
+            <ul>
+                <li><span class="color-swatch" style="background:#60a5fa;"></span> <strong>Blue dashed:</strong> Flat DC &mdash; uniform headroom reduction at all hours</li>
+                <li><span class="color-swatch" style="background:#22c55e;"></span> <strong>Green dashed:</strong> Camel DC &mdash; more impact during solar hours, less during evening peak</li>
+                <li><span class="color-swatch" style="background:#ef4444;"></span> <strong>Red dashed:</strong> Night-Heavy DC &mdash; worst impact during evening peak when headroom is already tightest</li>
+                <li><span class="color-swatch" style="background:#a855f7;"></span> <strong>Purple dashed:</strong> Custom DC (when active)</li>
+            </ul>
+            <p><strong>Key insight:</strong> The camel profile's line stays closest to the baseline during evening peak hours (4&ndash;9 PM) because it consumes less at those times, preserving reliability when it matters most.</p>
+        </div>
+
+        <!-- Chart 5: Scorecard -->
+        <div class="chart-explanation" id="chart-scorecard">
+            <div class="chart-name">Grid Utilization Scorecard</div>
+            <div class="chart-desc">Side-by-side comparison of key metrics</div>
+            <p><strong>What it shows:</strong> Color-coded stat cards comparing Baseline, Flat, Camel, Night-Heavy, and Custom profiles across three metrics:</p>
+            <table class="doc-table">
+                <tr><th>Metric</th><th>Formula</th><th>What it means</th></tr>
+                <tr>
+                    <td>Avg Utilization</td>
+                    <td><code>mean((demand + dc_load) / available)</code></td>
+                    <td>How efficiently grid capacity is used. Higher = better utilization of existing infrastructure.</td>
+                </tr>
+                <tr>
+                    <td>Min Headroom (p5)</td>
+                    <td>5th percentile of all hourly headroom values</td>
+                    <td>Worst-case reliability. The headroom level that only 5% of hours fall below.</td>
+                </tr>
+                <tr>
+                    <td>Stress Hours</td>
+                    <td>Count of hours where headroom &lt; 3,500 MW</td>
+                    <td>How often the grid is dangerously tight. Fewer = better.</td>
+                </tr>
+            </table>
+            <p><strong>Arrows:</strong> Green up-arrows indicate improvement vs baseline; red down-arrows indicate degradation.</p>
+            <p><strong>Key insight:</strong> The camel profile increases utilization (good) while adding fewer stress hours than the flat or night-heavy profiles.</p>
+        </div>
+
+        <!-- Chart 6: Cost Comparison -->
+        <div class="chart-explanation" id="chart-cost">
+            <div class="chart-name">Electricity Cost Comparison by Load Profile</div>
+            <div class="chart-desc">How each profile shifts grid headroom and affects wholesale prices</div>
+
+            <p><strong>Methodology: Empirical LMP-Headroom Model</strong></p>
+
+            <p>Unlike a simple weighted average that assumes prices don't change when load is added, this analysis uses an empirical relationship learned from 6 years of CAISO data to model how adding DC load <strong>shifts grid headroom</strong> and thereby <strong>affects LMP</strong>.</p>
+
+            <h4>Why Not Use Historical LMP Directly?</h4>
+            <p>A naive approach would compute: <code>cost = Σ(dc_load[h] × historical_LMP[h]) / Σ(dc_load[h])</code>. This produces misleading results because:</p>
+            <ul>
+                <li>Adding 500-2000 MW of load reduces headroom (available capacity minus demand minus reserves)</li>
+                <li>Lower headroom → generators move up the supply curve → higher wholesale prices</li>
+                <li>Using historical LMP assumes the DC doesn't affect prices (only valid for very small loads)</li>
+            </ul>
+            <p>Result: All DC profiles would show nearly identical costs (~$35/MWh), with no price signal for flexibility value.</p>
+
+            <h4>Building the LMP-Headroom Lookup Table</h4>
+            <p>We extracted the empirical relationship between effective headroom and LMP from ~52,080 hourly observations (2020-2025):</p>
+
+            <p><strong>Step 1: Define 6 headroom bins</strong> (based on scatter plot analysis)</p>
+            <table class="doc-table">
+                <tr><th>Bin</th><th>Headroom Range (GW)</th><th>Grid Condition</th></tr>
+                <tr><td>0</td><td>&lt; 0</td><td>Scarcity (load shedding risk)</td></tr>
+                <tr><td>1</td><td>0–5</td><td>Very Tight (peakers running)</td></tr>
+                <tr><td>2</td><td>5–10</td><td>Tight (high stress)</td></tr>
+                <tr><td>3</td><td>10–20</td><td>Moderate (normal operations)</td></tr>
+                <tr><td>4</td><td>20–30</td><td>Comfortable (baseload only)</td></tr>
+                <tr><td>5</td><td>≥ 30</td><td>Abundant (possible curtailment)</td></tr>
+            </table>
+
+            <p><strong>Step 2: Normalize LMP by gas price</strong></p>
+            <div class="formula-block">normalized_LMP = LMP / gas_price_CA_citygate</div>
+            <p>Removes gas price volatility (2020-2021: ~$2-3/MCF vs 2022: ~$7-9/MCF) to extract the structural relationship between headroom and pricing.</p>
+
+            <p><strong>Step 3: Build 24×6 lookup matrix</strong></p>
+            <p>For each hour-of-day (0-23) and headroom bin (0-5):</p>
+            <ol>
+                <li>Collect all historical observations that fall into that (hour, bin) combination</li>
+                <li>Filter outliers (normalized LMP &gt; 200 MCF<sup>-1</sup>)</li>
+                <li>Compute median normalized LMP for the bin</li>
+            </ol>
+            <div class="formula-block">lmpHeadroomLookup[hour][bin] = median(normalized_LMP_observations)</div>
+            <p>This captures:</p>
+            <ul>
+                <li><strong>Nonlinear response:</strong> As headroom → 0, prices spike exponentially</li>
+                <li><strong>Hour-of-day effects:</strong> Evening hours (8pm) have higher prices than midday at same headroom</li>
+                <li><strong>Stable pricing zones:</strong> 20-40 GW headroom shows consistently low prices</li>
+            </ul>
+
+            <h4>Applying the Model</h4>
+            <p>For each day with price data and each hour:</p>
+
+            <p><strong>Baseline (No DC):</strong></p>
+            <div class="formula-block">headroom_baseline = avail[h] - demand[h] - reserves[h]
+bin = get_headroom_bin(headroom_baseline)
+LMP_baseline = lmpHeadroomLookup[h][bin] × gas_price[month]</div>
+
+            <p><strong>With DC Profile:</strong></p>
+            <div class="formula-block">headroom_dc = avail[h] - (demand[h] + dc_load[h]) - reserves_dc[h]
+bin_dc = get_headroom_bin(headroom_dc)
+LMP_adjusted = lmpHeadroomLookup[h][bin_dc] × gas_price[month]
+cost[profile] = Σ(dc_load[h] × LMP_adjusted[h]) / Σ(dc_load[h])</div>
+
+            <p>Note: Reserves are recomputed with DC load since they scale with total demand.</p>
+
+            <h4>Chart Display</h4>
+            <p><strong>Bar chart:</strong> Single bar per profile showing adjusted LMP ($/MWh). No component breakdown (MEC/MCC/Loss/GHG) because the lookup table provides total LMP only.</p>
+
+            <p><strong>Baseline bar:</strong> Simple average LMP under historical grid conditions (no DC load). Provides reference for what grid prices were before any DC is added.</p>
+
+            <p><strong>Stat cards below:</strong> Show per-profile $/MWh, annual cost ($M/year), and savings <strong>vs Flat</strong> (not Baseline). Color borders match profile colors.</p>
+
+            <h4>Key Results</h4>
+            <table class="doc-table">
+                <tr><th>Profile</th><th>Typical Cost</th><th>Why?</th></tr>
+                <tr><td>Baseline</td><td>$38-42/MWh</td><td>Average grid LMP with no DC (reference point)</td></tr>
+                <tr><td>Flat</td><td>$40-45/MWh</td><td>Reduces headroom uniformly at all hours</td></tr>
+                <tr><td>Camel</td><td>$28-35/MWh</td><td>Loads during surplus hours (high headroom → low LMP)</td></tr>
+                <tr><td>Night-Heavy</td><td>$55-75/MWh</td><td>Loads during tight evening hours (low headroom → high LMP)</td></tr>
+            </table>
+
+            <div class="callout insight">
+                <p><strong>Economic justification for flexible load:</strong> A 500 MW solar-following DC saves $10-15M/year compared to flat profile, purely from avoiding high-LMP hours. At 5,000 MW, night-heavy profiles spike to $100-150/MWh as they push the grid into scarcity bins.</p>
+            </div>
+
+            <div class="callout warning">
+                <p><strong>Limitations:</strong></p>
+                <ul style="margin-bottom:0;">
+                    <li>Model is empirical, not a full dispatch simulation (no unit commitment, transmission constraints, or offer-based pricing)</li>
+                    <li>Lookup table provides total LMP only (no component breakdown available)</li>
+                    <li>Assumes bin-level granularity (6 bins) is sufficient to capture price curve</li>
+                    <li>Large DCs (5+ GW) may exceed the range of historical observations</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Chart 7: Stress Days -->
+        <div class="chart-explanation" id="chart-stress">
+            <div class="chart-name">Stress Day Deep-Dive (Heatmap)</div>
+            <div class="chart-desc">The 100 most-stressed days, hour by hour</div>
+            <p><strong>How it works:</strong></p>
+            <ol>
+                <li>For each of 2,192 days, compute the minimum hourly headroom (baseline)</li>
+                <li>Sort all days by minimum headroom (ascending &mdash; worst days first)</li>
+                <li>Take the 100 most-stressed days</li>
+                <li>Display a heatmap: rows = days, columns = 24 hours, color = headroom</li>
+            </ol>
+            <p><strong>Color scale:</strong></p>
+            <ul>
+                <li><span class="color-swatch" style="background:rgb(220,60,60);"></span> Red = negative or very low headroom (&lt;0 GW)</li>
+                <li><span class="color-swatch" style="background:rgb(220,220,0);"></span> Yellow = moderate headroom (~10 GW)</li>
+                <li><span class="color-swatch" style="background:rgb(34,197,94);"></span> Green = adequate headroom (~15&ndash;20 GW)</li>
+                <li><span class="color-swatch" style="background:rgb(96,165,250);"></span> Blue = ample headroom (&gt;20 GW)</li>
+            </ul>
+            <p><strong>Tabs:</strong> Switch between Baseline, +Flat DC, +Camel DC, +Night DC, and +Custom DC to see how each profile changes the heatmap pattern. Hover over any cell for exact headroom values.</p>
+            <p><strong>Summary cards:</strong> Show average minimum headroom, worst single hour, and stress hour count for the selected profile &mdash; all computed on the 100 stress days only.</p>
+        </div>
+
+        <!-- Chart 8: Surplus -->
+        <div class="chart-explanation" id="chart-surplus">
+            <div class="chart-name">Overgeneration Surplus Absorption</div>
+            <div class="chart-desc">How much excess renewable energy each profile absorbs</div>
+            <p><strong>What is surplus?</strong> Hours when all non-gas generation exceeds demand:</p>
+            <div class="formula-block">surplus[h] = max(0, non_gas_gen[h] &minus; demand[h])</div>
+            <p>Where non_gas_gen = Solar + Wind + Hydro + Nuclear + Geothermal + Biomass + Other Thermal.</p>
+            <p>When surplus &gt; 0, even with ALL gas plants shut off, the grid overproduces. This energy is typically curtailed (mostly solar).</p>
+            <p><strong>Chart:</strong> Monthly bar chart showing surplus (gray line) and how much each DC profile absorbs (colored bars). Values are annualized (divided by years of data).</p>
+            <p><strong>Absorption formula:</strong></p>
+            <div class="formula-block">absorbed[h] = min(dc_load[h], surplus[h])</div>
+            <p>Camel DCs absorb the most because they peak during solar hours &mdash; exactly when surplus is highest.</p>
+            <h4>Why include hydro in non-gas generation?</h4>
+            <ul>
+                <li>During spring snowmelt, environmental flow minimums make hydro largely inflexible</li>
+                <li>CAISO's worst overgeneration events coincide with high hydro + high solar</li>
+                <li>Without hydro, the model produces near-zero surplus, contradicting real CAISO data</li>
+                <li>Including hydro produces ~3.1 TWh/year surplus, close to CAISO's actual ~3.4 TWh curtailed in 2025</li>
+            </ul>
+            <div class="callout warning">
+                <p><strong>Limitations:</strong> Available capacity &ne; actual generation. CAISO's 2025 curtailment was ~92% transmission-constrained (3.12 of 3.4 TWh) &mdash; our model captures only oversupply-driven surplus. No imports/exports or battery dispatch are modeled.</p>
+            </div>
+        </div>
+
+        <!-- Chart 9: Emissions -->
+        <div class="chart-explanation" id="chart-emissions">
+            <div class="chart-name">Marginal Emissions by Load Profile</div>
+            <div class="chart-desc">CO&sup2; impact of each profile based on which gas plants are on the margin</div>
+            <p><strong>Methodology: Dispatch-Stack Proxy</strong></p>
+            <p>For each hour, we determine the marginal generator by walking the gas merit order:</p>
+            <ol>
+                <li>Compute gas residual: <code>gasResidual = max(0, demand - nonGasGen)</code></li>
+                <li>Walk merit order (cheapest first):
+                    <ul>
+                        <li>Gas CCGT capacity: if gasResidual fits &rarr; marginal rate = <strong>0.41 tCO&sup2;/MWh</strong></li>
+                        <li>Gas Steam &rarr; <strong>0.55 tCO&sup2;/MWh</strong></li>
+                        <li>Gas ICE &rarr; <strong>0.50 tCO&sup2;/MWh</strong></li>
+                        <li>Gas Peaker &rarr; <strong>0.63 tCO&sup2;/MWh</strong></li>
+                    </ul>
+                </li>
+                <li>If gasResidual = 0 (surplus): marginal rate = <strong>0 tCO&sup2;/MWh</strong> &mdash; adding load avoids RE curtailment rather than causing gas combustion</li>
+            </ol>
+            <table class="doc-table">
+                <tr><th>Gas Type</th><th>Heat Rate (MMBtu/MWh)</th><th>CO&sup2; Rate (tCO&sup2;/MWh)</th></tr>
+                <tr><td>CCGT</td><td>7.0</td><td>0.41</td></tr>
+                <tr><td>Steam</td><td>9.5</td><td>0.55</td></tr>
+                <tr><td>ICE</td><td>8.5</td><td>0.50</td></tr>
+                <tr><td>Peaker</td><td>10.8</td><td>0.63</td></tr>
+            </table>
+            <p>Rates derived from standard heat rates &times; EPA emission factor for natural gas (53.06 kg CO&sup2;/MMBtu).</p>
+            <p><strong>Chart (dual axis):</strong></p>
+            <ul>
+                <li><strong>Left axis (solid lines):</strong> Average hourly CO&sup2; emissions (tCO&sup2;/hr) for each DC profile &mdash; shows WHERE each profile's emissions come from across the day</li>
+                <li><strong>Right axis (dashed gray):</strong> Grid marginal emission rate (tCO&sup2;/MWh) &mdash; the "emissions duck curve" showing that midday solar hours have near-zero marginal emissions</li>
+            </ul>
+            <div class="callout insight">
+                <p><strong>Key insight:</strong> During solar hours, marginal emissions are near zero because the next MW of load displaces RE curtailment rather than causing additional gas combustion. Camel DCs consume most energy during these low-emission hours, making them the cleanest option per MWh consumed.</p>
+            </div>
+            <p><strong>Stat cards:</strong> Show per-profile weighted average emission rate (tCO&sup2;/MWh), annual CO&sup2; (ktCO&sup2;/yr), and savings vs Flat.</p>
+        </div>
+
+        <!-- Chart 10: Optimized Load Profile -->
+        <div class="chart-explanation" id="chart-optimized">
+            <div class="chart-name">Optimized Load Profile Calculator</div>
+            <div class="chart-desc">Computes the optimal hourly DC load allocation that minimizes electricity cost while meeting daily energy requirements</div>
+
+            <p><strong>Purpose:</strong> While preset profiles (Flat, Camel, Night-Heavy) demonstrate general patterns, this calculator finds the <em>theoretically best</em> load allocation across all 24 hours for each day, given real grid conditions and empirical LMP-headroom relationships.</p>
+
+            <h4>Methodology: Iterative Greedy Optimization with Constraints</h4>
+
+            <p>For a data center of size <code>avgMw</code>, the optimizer allocates <code>avgMw × 24 MWh/day</code> of energy across 24 hours to minimize cost:</p>
+
+            <ol>
+                <li><strong>Initialization:</strong> Set <code>optLoad[h] = 0</code> for all hours (h = 0..23)</li>
+                <li><strong>Increment sizing:</strong>
+                    <ul>
+                        <li>avgMw ≤ 1,000 MW → 50 MW increments</li>
+                        <li>avgMw ≤ 2,500 MW → 100 MW increments</li>
+                        <li>avgMw > 2,500 MW → 200 MW increments</li>
+                    </ul>
+                    <p>Larger increments for bigger DCs reduce computation time while maintaining accuracy.</p>
+                </li>
+                <li><strong>Iterative allocation:</strong> Repeat until <code>sum(optLoad) ≈ avgMw × 24</code>:
+                    <ol style="margin-top:8px;">
+                        <li>For each hour <code>h</code>:
+                            <ul>
+                                <li>Skip if <code>optLoad[h] + INCREMENT_MW > 3 × avgMw</code> (hourly capacity constraint)</li>
+                                <li>Compute test demand: <code>testDemand[h] = demand[h] + optLoad[h] + INCREMENT_MW</code></li>
+                                <li>Compute test reserves: <code>testReserves = max(0.06 × max(testDemand), 3500)</code></li>
+                                <li>Compute headroom: <code>headroom = available[h] - testDemand[h] - testReserves[h]</code></li>
+                                <li>Lookup marginal LMP from empirical 24×6 lookup table: <code>LMP[h][bin(headroom)]</code></li>
+                                <li>Compute marginal cost: <code>cost = INCREMENT_MW × LMP</code></li>
+                            </ul>
+                        </li>
+                        <li>Find hour <code>h*</code> with <strong>lowest marginal cost</strong></li>
+                        <li>Allocate: <code>optLoad[h*] += INCREMENT_MW</code></li>
+                    </ol>
+                </li>
+                <li><strong>Rescaling:</strong> After allocation, rescale to exactly match target:
+                    <div class="formula-block">scale = (avgMw × 24) / sum(optLoad)
+optLoad[h] = optLoad[h] × scale  for all h</div>
+                </li>
+                <li><strong>Cost computation:</strong> For each day's optimized profile, recompute actual cost using the adjusted headroom-based LMP (same method as other profiles)</li>
+            </ol>
+
+            <div class="callout warning">
+                <p><strong>Hourly capacity constraint:</strong> No single hour can exceed <strong>3× avgMw</strong>. This prevents unrealistic concentration (e.g., allocating all 24h of energy to a single hour). For a 4,500 MW DC, max hourly load = 13,500 MW.</p>
+            </div>
+
+            <h4>Why Greedy Works</h4>
+            <p>The greedy approach (always choosing the lowest-cost hour for the next increment) is near-optimal because:</p>
+            <ul>
+                <li>The marginal LMP curve is <strong>convex</strong> in headroom — adding load to tight hours raises LMP more than adding to loose hours</li>
+                <li>By repeatedly choosing the cheapest hour, the optimizer naturally spreads load to multiple low-cost hours rather than overloading a single hour</li>
+                <li>The iterative approach accounts for <strong>feedback effects</strong>: as we add load to an hour, its headroom decreases and LMP rises, making other hours more attractive</li>
+            </ul>
+
+            <h4>Results Display</h4>
+            <p><strong>Chart:</strong> Dual-bar chart showing:</p>
+            <ul>
+                <li><strong>Gray bars:</strong> Average optimized profile across all 2,170+ days (reference)</li>
+                <li><strong>Purple bars:</strong> Optimized profile for the currently selected date (synced with date scrubber)</li>
+            </ul>
+            <p>The chart's y-axis is <strong>fixed</strong> across all dates (set to 1.2× the maximum hourly load across all optimized days) to make day-to-day variation visible.</p>
+
+            <div class="callout insight">
+                <p><strong>Missing data warning:</strong> If a date is missing demand, capacity, or price data (~22 of 2,192 days), the purple bars show the average profile and a warning appears. This ensures consistent visualization.</p>
+            </div>
+
+            <p><strong>Scorecard:</strong> Four cost comparison cards:</p>
+            <ul>
+                <li><strong>Baseline (Flat 500 MW):</strong> Flat profile at 500 MW (reference grid condition from main analyses)</li>
+                <li><strong>Flat:</strong> Flat profile at the selected DC size</li>
+                <li><strong>Camel (Solar-Following):</strong> Preset camel profile at selected DC size and flex ratio</li>
+                <li><strong>⚡ Optimized:</strong> The theoretically best allocation</li>
+            </ul>
+            <p>Each card shows:</p>
+            <ul>
+                <li>Average cost ($/MWh)</li>
+                <li>Annual cost ($M/yr at selected DC size)</li>
+                <li>Cost difference vs Optimized (should be ≥ 0 for all other profiles, since Optimized is minimum)</li>
+            </ul>
+
+            <h4>Key Insights</h4>
+            <div class="callout insight">
+                <ul>
+                    <li><strong>Camel ≈ Optimized:</strong> The preset Camel profile typically comes within 2-5% of the optimized cost, validating that solar-following is near-optimal</li>
+                    <li><strong>Hourly variation:</strong> Optimized profiles vary significantly day-to-day based on actual grid conditions (solar output, demand peaks, headroom), unlike preset profiles which use fixed monthly shapes</li>
+                    <li><strong>Marginal value of flexibility:</strong> The savings (Flat cost - Optimized cost) quantify the economic value of perfect flexibility</li>
+                </ul>
+            </div>
+
+            <h4>Performance</h4>
+            <p>Typical computation times (client-side JavaScript):</p>
+            <table class="doc-table">
+                <tr><th>DC Size</th><th>Increments per Day</th><th>Total Iterations</th><th>Time</th></tr>
+                <tr><td>500 MW</td><td>240</td><td>~520k</td><td>3-5 sec</td></tr>
+                <tr><td>2,000 MW</td><td>480</td><td>~1.0M</td><td>8-12 sec</td></tr>
+                <tr><td>5,000 MW</td><td>600</td><td>~1.3M</td><td>15-20 sec</td></tr>
+            </table>
+            <p>Computation is opt-in (triggered by "Calculate" button) to avoid slowing down the main dashboard.</p>
+
+        </div>
+
+        <hr>
+
+        <!-- 6. Custom Profile Editor -->
+        <h2 id="custom-editor">6. Custom Profile Editor</h2>
+
+        <p>Click the <strong>"Custom"</strong> preset button to open the interactive profile editor. This adds a 4th profile alongside Flat, Camel, and Night-Heavy, allowing direct comparison of any arbitrary load shape against the presets.</p>
+
+        <h3>How it works</h3>
+        <ul>
+            <li><strong>Click and drag</strong> on the 24-bar canvas to set the load at each hour</li>
+            <li>When you release the mouse, the profile is <strong>auto-normalized</strong> so total daily energy equals avgMw &times; 24 MWh &mdash; matching all other profiles</li>
+            <li>The purple <span class="color-swatch" style="background:#a855f7;"></span> custom profile appears in all analyses simultaneously</li>
+        </ul>
+
+        <h3>Data model</h3>
+        <div class="formula-block">customMultipliers[24] &mdash; relative weights, sum = 24
+actual_load[h] = avgMw &times; customMultipliers[h]</div>
+        <p>Since <code>sum(customMultipliers) = 24</code>, total daily energy is always <code>avgMw &times; 24 MWh</code>.</p>
+
+        <h3>Normalization</h3>
+        <p>After each draw stroke (mouseup):</p>
+        <div class="formula-block">scale = 24 / sum(customMultipliers)
+customMultipliers[h] = customMultipliers[h] &times; scale &nbsp;&nbsp; for all h</div>
+        <p>This ensures energy preservation regardless of the shape you draw. The "Reset to Flat" button restores all multipliers to 1.0.</p>
+
+        <hr>
+
+        <!-- 7. Assumptions & Limitations -->
+        <h2 id="assumptions">7. Assumptions &amp; Limitations</h2>
+
+        <table class="doc-table">
+            <tr><th>#</th><th>Assumption</th><th>Impact</th></tr>
+            <tr><td>1</td><td>Monthly average capacity profiles applied to all days</td><td>Overestimates surplus on cloudy days, underestimates on clear days</td></tr>
+            <tr><td>2</td><td>No battery/storage dispatch modeled</td><td>Underestimates real-world surplus absorption</td></tr>
+            <tr><td>3</td><td>No import/export flows</td><td>CAISO exports surplus to neighbors; our model assumes autarky</td></tr>
+            <tr><td>4</td><td>Simplified reserve model (%-of-demand + floor)</td><td>Approximation of CAISO's actual procurement</td></tr>
+            <tr><td>5</td><td>DLAP load-weighted LMP (PG&amp;E 43.5%, SCE 43.5%, SDG&amp;E 13%)</td><td>Smooths out locational price extremes</td></tr>
+            <tr><td>6</td><td>DC is price-taker (no market impact)</td><td>Reasonable up to ~500 MW; large DCs would affect prices</td></tr>
+            <tr><td>7</td><td>Solar CF profiles are fixed monthly averages</td><td>No cloud/weather variability captured</td></tr>
+            <tr><td>8</td><td>Analysis is CAISO-specific</td><td>Virginia/PJM would need different data, different generation mix</td></tr>
+            <tr><td>9</td><td>Time period: 2020&ndash;2025</td><td>Includes COVID demand anomaly (2020), Texas freeze (Feb 2021), summer heat events</td></tr>
+            <tr><td>10</td><td>Hydro treated as inflexible in surplus calculation</td><td>Partially justified by spring snowmelt; overstates surplus in dry months</td></tr>
+            <tr><td>11</td><td>Simplified gas merit order for emissions</td><td>Real CAISO dispatch uses offer-based optimization, not a fixed stack</td></tr>
+            <tr><td>12</td><td>No imported emissions modeled</td><td>CAISO imports significant energy from neighboring regions</td></tr>
+            <tr><td>13</td><td>Static emission rates per gas type</td><td>Real rates vary with plant efficiency curves and ambient conditions</td></tr>
+        </table>
+
+        <hr>
+
+        <!-- 8. Validation -->
+        <h2 id="validation">8. Validation Reference Points</h2>
+
+        <table class="doc-table">
+            <tr><th>Metric</th><th>Our Model</th><th>Real-World Reference</th><th>Notes</th></tr>
+            <tr><td>Annual surplus</td><td>~3.1 TWh/yr</td><td>CAISO curtailed ~3.4 TWh (2025)</td><td>Close match, but different mechanism mix</td></tr>
+            <tr><td>Peak demand</td><td>~45&ndash;52 GW</td><td>CAISO record: 52.1 GW (Sep 2022)</td><td>Data captures this</td></tr>
+            <tr><td>Min headroom</td><td>Can go negative</td><td>CAISO issues Flex Alerts when tight</td><td>Model captures stress periods</td></tr>
+            <tr><td>LMP range</td><td>-$100 to $1,000+/MWh</td><td>CAISO prices have gone negative and spiked &gt;$1,000</td><td>Verified for specific dates</td></tr>
+        </table>
+
+        <h3>Verification Checklist</h3>
+        <p>To verify any specific calculation from the dashboard:</p>
+        <ol>
+            <li><strong>Pick a known date</strong> (e.g., 2023-08-15, a summer peak day)</li>
+            <li><strong>Check demand:</strong> <code>demandData["2023-08-15"]</code> &rarr; 24-element array</li>
+            <li><strong>Check capacity:</strong> <code>capacityData["2023"]["08"]</code> &rarr; resource arrays</li>
+            <li><strong>Compute headroom by hand:</strong> <code>sum(all resources except Battery)[h] - demand[h] - max(3500, demand[h] &times; 0.084)</code></li>
+            <li><strong>Check LMP:</strong> <code>priceData["2023-08-15"]["14"]</code> &rarr; {LMP, MEC, MCC, Loss, GHG}</li>
+            <li><strong>Compute DC cost:</strong> <code>dc_load[h] &times; LMP[h]</code> for several hours, compare to displayed average</li>
+        </ol>
+        <p>The dashboard pre-computes these across all 2,192 days. Any individual data point can be verified against the raw JSON files.</p>
+
+        <hr>
+
+        <!-- 9. Future Data Sources -->
+        <h2 id="future-data">9. Future Data Sources (Not Yet Integrated)</h2>
+
+        <table class="doc-table">
+            <tr><th>Source</th><th>What It Provides</th><th>Why It Matters</th></tr>
+            <tr><td>EIA Hourly Generation (EIA-930)</td><td>Actual hourly generation by fuel type</td><td>Replaces capacity-based proxy with real generation data</td></tr>
+            <tr><td>CAISO Curtailment Data</td><td>Actual hourly curtailment by resource</td><td>Ground truth for surplus/curtailment analysis</td></tr>
+            <tr><td>WattTime MOER</td><td>Marginal Operating Emissions Rate</td><td>Real marginal emission rates by grid region and hour</td></tr>
+            <tr><td>PJM Data (Virginia)</td><td>PJM hourly prices, generation, capacity</td><td>Enables analysis for Virginia data centers (where the utilization bill passed)</td></tr>
+        </table>
+
+    </div>
+</body>
+</html>
