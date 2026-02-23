@@ -242,47 +242,66 @@ def match_to_substations(node_data, geojson_path):
     
     print(f"Saved updated substations to {output_path}")
 
-def fetch_caiso_dam_prices():
+def fetch_caiso_dam_prices(target_date=None):
     """
     Fetch Day-Ahead Market (DAM) LMP prices for all nodes from CAISO OASIS API.
-    Returns a DataFrame with all LMP components.
+    Returns the path to the temporary ZIP file.
+    If target_date is provided (datetime object), fetches for that date.
+    Otherwise fetches for today (PST).
     """
     pst = pytz.timezone('US/Pacific')
-    now = datetime.datetime.now(pst)
+    if target_date is None:
+        now = datetime.datetime.now(pst)
+    else:
+        # Ensure target_date is treated as PST
+        if target_date.tzinfo is None:
+            now = pst.localize(target_date)
+        else:
+            now = target_date.astimezone(pst)
     
-    # Query window: Current operating day (today in PST)
+    date_str = now.strftime('%Y%m%d')
+    
+    # --- Check for existing archive ---
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    archive_dir = os.path.join(os.path.dirname(script_dir), "archive")
+    
+    if os.path.exists(archive_dir):
+        existing_files = [f for f in os.listdir(archive_dir) if f.startswith(f"caiso_dam_{date_str}")]
+        if existing_files:
+            print(f"Archive file for {date_str} already exists: {existing_files[0]}. Skipping download.")
+            # Return the path to the existing archive so it can be processed if needed
+            # (or we could just return the first one found)
+            return os.path.join(archive_dir, existing_files[0])
+
+    # Query window: Target operating day
     # OASIS expects format: YYYYMMDDTHH:MM-HHMM (timezone offset)
-    # For Pacific time, offset is -0800 (PST) or -0700 (PDT)
-    # Use the actual PST offset from the current time
-    offset = now.strftime('%z')  # Returns '-0800' for PST or '-0700' for PDT
-    start_date_str = now.strftime('%Y%m%d') + 'T00:00' + offset
-    end_date_str = now.strftime('%Y%m%d') + 'T23:59' + offset
+    offset = now.strftime('%z')
+    start_dt_str = now.strftime('%Y%m%d') + 'T00:00' + offset
+    end_dt_str = now.strftime('%Y%m%d') + 'T23:59' + offset
 
     print(f"Fetching CAISO Day-Ahead LMP for {now.strftime('%Y-%m-%d')} (PST)...")
-    print(f"Query time range: {start_date_str} to {end_date_str}")
+    print(f"Query time range: {start_dt_str} to {end_dt_str}")
 
     # OASIS API URL - PRC_LMP with DAM market, CSV format
     base_url = "https://oasis.caiso.com/oasisapi/SingleZip"
     params = {
         "queryname": "PRC_LMP",
-        "startdatetime": start_date_str,
-        "enddatetime": end_date_str,
+        "startdatetime": start_dt_str,
+        "enddatetime": end_dt_str,
         "market_run_id": "DAM",
-        "version": "12", # Use v12 for components
+        "version": "12",
         "grp_type": "ALL",
-        "resultformat": "6"  # CSV format
+        "resultformat": "6"
     }
 
     try:
         print(f"Requesting API: {base_url}")
-        print(f"Params: {params}")
-        response = requests.get(base_url, params=params, timeout=180) # Increased timeout for large file
+        response = requests.get(base_url, params=params, timeout=180)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         print(f"Error downloading data from API: {e}")
         return None
 
-    # Check if response is XML error
     if b"<?xml" in response.content[:100]:
         print("Received XML response (likely error or maintenance):")
         print(response.content[:1000].decode('utf-8', errors='ignore'))
@@ -296,21 +315,19 @@ def fetch_caiso_dam_prices():
                 return None
             
             print(f"Successfully downloaded ZIP with {len(csv_files)} CSV files.")
-            # We can reuse the process_local_zip logic by saving this to a temp file
-            # or by refactoring process_local_zip to accept a ZipFile object.
-            # For simplicity let's save to a temp ID
-            temp_zip = f"temp_caiso_{now.strftime('%Y%m%d')}.zip"
+            
+            temp_zip = f"temp_caiso_{date_str}.zip"
             with open(temp_zip, 'wb') as f:
                 f.write(response.content)
             print(f"Saved API response to temporary file: {temp_zip}")
 
             # --- Archive Logic ---
             try:
-                archive_dir = "archive"
                 if not os.path.exists(archive_dir):
                     os.makedirs(archive_dir)
                 
-                archive_name = f"caiso_dam_{now.strftime('%Y%m%d_%H%M')}.zip"
+                # Use simplified name to avoid duplicates with different timestamps
+                archive_name = f"caiso_dam_{date_str}.zip"
                 archive_path = os.path.join(archive_dir, archive_name)
                 
                 with open(archive_path, 'wb') as f:
@@ -318,14 +335,12 @@ def fetch_caiso_dam_prices():
                 print(f"Archived data to: {archive_path}")
             except Exception as archive_err:
                 print(f"Warning: Failed to archive data: {archive_err}")
-            # ---------------------
 
             return temp_zip
 
     except Exception as e:
         print(f"Error parsing ZIP/CSV from API: {e}")
         return None
-    return None
 
 if __name__ == "__main__":
     # Check if a zip file was passed as argument (manual override)
@@ -338,12 +353,27 @@ if __name__ == "__main__":
         print(f"Using provided local zip: {local_zip}")
         process_local_zip(local_zip, "substations.geojson")
     else:
-        print("No command-line argument passed. Attempting automatic API fetch for today's data...")
-        api_zip = fetch_caiso_dam_prices()
+        # First, ensure we have all dates for Jan 2026 archived
+        pst = pytz.timezone('US/Pacific')
+        today = datetime.datetime.now(pst).date()
+        
+        print("Checking for missing Jan 2026 data...")
+        start_date = datetime.date(2026, 1, 1)
+        # End date is today or Jan 26, whichever is earlier for this specific check
+        end_date = min(today, datetime.date(2026, 1, 26))
+        
+        current = start_date
+        while current <= end_date:
+            target_dt = datetime.datetime.combine(current, datetime.time(0, 0))
+            # fetch_caiso_dam_prices now handles the check for existing archive internally
+            fetch_caiso_dam_prices(target_dt)
+            current += datetime.timedelta(days=1)
+        
+        print("\nAttempting automatic API fetch for today's data and updating GeoJSON...")
+        api_zip = fetch_caiso_dam_prices() # Fetches today by default
         if api_zip:
             process_local_zip(api_zip, "substations.geojson")
-            # Optional: Clean up temp file
-            # os.remove(api_zip)
         else:
             print("API fetch failed. Exiting with error.")
             sys.exit(1)
+

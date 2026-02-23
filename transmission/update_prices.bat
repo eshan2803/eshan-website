@@ -1,56 +1,65 @@
 @echo off
-REM Navigate to the project directory
-cd /d "C:\Users\eshan\OneDrive\Desktop\eshan-website\eshan-website-simbooni_13112025\transmission"
+REM Navigate to the directory where this batch file is located
+cd /d "%~dp0"
 
 echo ===========================================
 echo CAISO LMP Daily Auto-Update
 echo Date: %date% %time%
 echo ===========================================
 
-REM Run the python script to fetch prices (API v12) and update GeoJSON
+REM --- 1. Fetch and generate prices ---
+echo.
+echo [PYTHON] Fetching prices and updating GeoJSON...
 python fetch_caiso_prices.py
+set PYERR=%ERRORLEVEL%
 
-REM Check if python script succeeded
-if %ERRORLEVEL% NEQ 0 (
+if %PYERR% NEQ 0 (
     echo.
     echo [ERROR] Failed to fetch prices.
-    pause
-    exit /b 1
+    goto :done
 )
 
 echo.
 echo [SUCCESS] Prices updated.
 
-REM Sync with remote: fetch latest and reset HEAD to match remote.
-REM This avoids pull/rebase conflicts from other dirty files in the repo.
-REM Only the price file will be committed; all other working tree changes are untouched.
-echo Syncing with remote...
+REM --- 2. Sync with remote and push ---
+REM Use fetch + reset to avoid pull/rebase conflicts from other dirty files in the repo.
+echo.
+echo [GIT] Fetching latest from remote...
 git fetch origin simbooni
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Fetch failed.
-    pause
-    exit /b 1
+set FETCHERR=%ERRORLEVEL%
+
+if %FETCHERR% NEQ 0 (
+    echo [ERROR] Git fetch failed.
+    goto :done
 )
 
+REM Reset HEAD to match remote (keeps working tree untouched)
 git reset origin/simbooni
 
-echo Committing changes to git...
-git add substations_with_prices.geojson
+echo [GIT] Committing changes...
+git add -f substations_with_prices.geojson
 git commit -m "Auto-update LMP prices for %date%"
+set COMMITERR=%ERRORLEVEL%
 
-if %ERRORLEVEL% NEQ 0 (
+if %COMMITERR% NEQ 0 (
     echo [WARNING] Nothing new to commit.
-    exit /b 0
+    goto :done
 )
 
-echo Pushing to GitHub...
+echo [GIT] Pushing to GitHub...
 git push origin simbooni
+set PUSHERR=%ERRORLEVEL%
 
-if %ERRORLEVEL% NEQ 0 (
+if %PUSHERR% NEQ 0 (
     echo [ERROR] Push failed.
-    pause
-    exit /b 1
+    goto :done
 )
 
 echo.
 echo [DONE] Data is live.
+
+:done
+echo.
+echo Press any key to close this window...
+pause >nul
