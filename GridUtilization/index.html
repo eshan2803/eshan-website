@@ -1480,7 +1480,7 @@
 
             <p><strong>Stress Day Analysis:</strong> While average cost provides an important metric, tail-risk scenarios matter for grid reliability assessment. The stress day heatmap below identifies the 100 days (out of 2,192) with the lowest minimum effective headroom, representing the grid's most challenging operating conditions. These include extreme heat waves (September 2020, August 2022), equipment outages (January 2024 Diablo Canyon refueling coinciding with low hydro), and regional supply disruptions (February 2021 Texas freeze). For each of these critical days, the heatmap visualizes hourly headroom under different DC profiles, color-coded from red (emergency conditions &lt;2,000 MW) to blue (comfortable margins &gt;15,000 MW).</p>
 
-            <p>Try increasing the DC load to a higher MW to see the Stress impact better. The visual pattern is striking: flat profiles add uniform stress across all hours, frequently pushing evening hours (columns 18-21) into deep red territory. Camel profiles show blue-green (improved headroom) during midday columns (9-15) and yellow-orange (modest stress) during evenings—the added load is visible but doesn't trigger emergency conditions as frequently. Night-heavy profiles produce the inverse pattern with severe red clustering in evening columns, demonstrating exactly why this strategy fails during stress events. This heatmap provides grid operators with a visual tool to assess interconnection impacts: profiles that maintain non-red cells during critical hours pose lower reliability risk. More importantly looking at the heatmap also gives us a hint at what data center load is feasible in the existing grid even with flexibility enabled. </p>
+            <p>Try increasing the DC load to a higher MW to see the Stress impact better. You can also check the 'Relative to Baseline' checkbox to see incremental stress added to the grid with each profile. All profile add grid stress, but some do it already stressed hours, which is critical. The visual pattern is striking: flat profiles add uniform stress across all hours, frequently pushing evening hours (columns 18-21) into deep red territory. Camel profiles show blue-green (improved headroom) during midday columns (9-15) and yellow-orange (modest stress) during evenings—the added load is visible but doesn't trigger emergency conditions as frequently. Night-heavy profiles produce the inverse pattern with severe red clustering in evening columns, demonstrating exactly why this strategy fails during stress events. This heatmap provides grid operators with a visual tool to assess interconnection impacts: profiles that maintain non-red cells during critical hours pose lower reliability risk. More importantly looking at the heatmap also gives us a hint at what data center load is feasible in the existing grid even with flexibility enabled. </p>
         </div>
 
         <!-- Phase 2 Analysis 4: Stress Day Deep-Dive -->
@@ -3717,25 +3717,36 @@
             return `rgb(${r},${g},${b})`;
         }
 
-        // Diverging color scale for relative mode (delta from baseline)
-        // Blue = improved headroom (delta > 0), White = no change, Red = reduced headroom (delta < 0)
-        function relativeDeltaColor(deltaMw) {
-            // Scale: -10000 MW (very bad) → 0 (neutral) → +2000 MW (unlikely improvement)
-            const clampedDelta = Math.max(-10000, Math.min(2000, deltaMw));
+        // Criticality color scale for relative mode
+        // Shows how concerning the final headroom level is with DC added
+        // Red = critical stress (< 3.5 GW), Yellow/White = moderate (3.5-10 GW), Blue = comfortable (> 15 GW)
+        function criticalityColor(headroomMw) {
             let r, g, b;
 
-            if (clampedDelta < 0) {
-                // Negative delta (reduced headroom) → white to red
-                const t = Math.abs(clampedDelta) / 10000;  // 0 at zero, 1 at -10000
-                r = Math.round(255);
-                g = Math.round(255 * (1 - t * 0.8));  // 255 → 51 (less green)
-                b = Math.round(255 * (1 - t * 0.8));  // 255 → 51 (less blue)
+            if (headroomMw < 3500) {
+                // Critical: < 3.5 GW → deep red to orange
+                const t = Math.max(0, Math.min(1, headroomMw / 3500));  // 0 at 0 MW, 1 at 3500 MW
+                r = 220;
+                g = Math.round(40 + 140 * t);  // 40 → 180
+                b = Math.round(40 + 40 * t);   // 40 → 80
+            } else if (headroomMw < 10000) {
+                // Moderate: 3.5-10 GW → orange to yellow to white
+                const t = (headroomMw - 3500) / 6500;  // 0 at 3500, 1 at 10000
+                r = Math.round(220 + 35 * t);  // 220 → 255
+                g = Math.round(180 + 75 * t);  // 180 → 255
+                b = Math.round(80 + 175 * t);  // 80 → 255
+            } else if (headroomMw < 15000) {
+                // Comfortable: 10-15 GW → white to light blue
+                const t = (headroomMw - 10000) / 5000;  // 0 at 10000, 1 at 15000
+                r = Math.round(255 - 100 * t);  // 255 → 155
+                g = Math.round(255 - 50 * t);   // 255 → 205
+                b = 255;
             } else {
-                // Positive delta (improved headroom) → white to blue
-                const t = clampedDelta / 2000;  // 0 at zero, 1 at +2000
-                r = Math.round(255 * (1 - t * 0.75));  // 255 → 64
-                g = Math.round(255 * (1 - t * 0.4));   // 255 → 153
-                b = Math.round(255);
+                // Very comfortable: > 15 GW → light blue to deep blue
+                const t = Math.min(1, (headroomMw - 15000) / 10000);  // 0 at 15000, 1 at 25000
+                r = Math.round(155 - 91 * t);  // 155 → 64
+                g = Math.round(205 - 52 * t);  // 205 → 153
+                b = 255;
             }
 
             return `rgb(${r},${g},${b})`;
@@ -3773,15 +3784,13 @@
             // Draw cells
             for (let r = 0; r < ROWS; r++) {
                 const headrooms = days[r].headroom[profile];
-                const baselineHeadrooms = days[r].headroom.baseline;
 
                 for (let c = 0; c < 24; c++) {
                     if (stressRelativeMode && profile !== 'baseline') {
-                        // Relative mode: show delta from baseline
-                        const delta = headrooms[c] - baselineHeadrooms[c];
-                        ctx.fillStyle = relativeDeltaColor(delta);
+                        // Criticality mode: show how concerning the final headroom level is
+                        ctx.fillStyle = criticalityColor(headrooms[c]);
                     } else {
-                        // Absolute mode: show actual headroom
+                        // Absolute mode: show actual headroom with full scale
                         ctx.fillStyle = headroomColor(headrooms[c]);
                     }
                     ctx.fillRect(HEAT_LEFT + c * HEAT_CELL_W, HEAT_TOP + r * HEAT_CELL_H, HEAT_CELL_W - 1, HEAT_CELL_H - 1);
@@ -3801,19 +3810,30 @@
             const lh = ROWS * HEAT_CELL_H;
 
             if (stressRelativeMode && profile !== 'baseline') {
-                // Relative mode legend: blue (improved) → white → red (reduced)
+                // Criticality mode legend: blue (comfortable) → white (moderate) → red (critical)
                 for (let py = 0; py < lh; py++) {
-                    const delta = 2000 - 12000 * (py / lh);  // +2000 at top → -10000 at bottom
-                    ctx.fillStyle = relativeDeltaColor(delta);
+                    const mw = 25000 - 25000 * (py / lh);  // 25000 at top → 0 at bottom
+                    ctx.fillStyle = criticalityColor(mw);
                     ctx.fillRect(lx, ly + py, 12, 1);
                 }
                 ctx.fillStyle = '#888';
                 ctx.font = '9px -apple-system, BlinkMacSystemFont, sans-serif';
                 ctx.textAlign = 'left';
-                ctx.fillText('+2 GW', lx + 16, ly + 8);
-                ctx.fillText('0 GW', lx + 16, ly + lh * 0.17 + 4);
-                ctx.fillText('-5 GW', lx + 16, ly + lh * 0.58 + 4);
-                ctx.fillText('-10 GW', lx + 16, ly + lh);
+                ctx.fillText('25 GW', lx + 16, ly + 8);
+                ctx.fillStyle = '#60a5fa';
+                ctx.fillText('Comfortable', lx + 16, ly + 20);
+                ctx.fillStyle = '#888';
+                ctx.fillText('10 GW', lx + 16, ly + lh * 0.4 + 4);
+                ctx.fillStyle = '#e8e8e8';
+                ctx.fillText('Moderate', lx + 16, ly + lh * 0.4 + 16);
+                ctx.fillStyle = '#888';
+                ctx.fillText('3.5 GW', lx + 16, ly + lh * 0.66 + 4);
+                ctx.fillStyle = '#ef8844';
+                ctx.fillText('Stressed', lx + 16, ly + lh * 0.66 + 16);
+                ctx.fillStyle = '#888';
+                ctx.fillText('0 GW', lx + 16, ly + lh - 8);
+                ctx.fillStyle = '#dc2626';
+                ctx.fillText('Critical', lx + 16, ly + lh);
             } else {
                 // Absolute mode legend: red → yellow → blue
                 for (let py = 0; py < lh; py++) {
@@ -3875,7 +3895,23 @@
                 heatmapTip.style.top = (e.clientY - 30) + 'px';
 
                 if (stressRelativeMode && stressProfile !== 'baseline') {
-                    heatmapTip.innerHTML = `<b>${d.date}</b> \u2022 ${HOUR_LABELS[col]}<br>Δ Headroom: ${delta >= 0 ? '+' : ''}${(delta / 1000).toFixed(1)} GW (${delta >= 0 ? '+' : ''}${Math.round(delta)} MW)<br><span style="color:#888;font-size:10px;">Baseline: ${(baseMw / 1000).toFixed(1)} GW | With DC: ${(mw / 1000).toFixed(1)} GW</span>`;
+                    // Criticality mode: show final headroom level and criticality status
+                    let criticality = '';
+                    let critColor = '';
+                    if (mw < 3500) {
+                        criticality = 'CRITICAL';
+                        critColor = '#dc2626';
+                    } else if (mw < 10000) {
+                        criticality = 'Stressed';
+                        critColor = '#ef8844';
+                    } else if (mw < 15000) {
+                        criticality = 'Moderate';
+                        critColor = '#e8e8e8';
+                    } else {
+                        criticality = 'Comfortable';
+                        critColor = '#60a5fa';
+                    }
+                    heatmapTip.innerHTML = `<b>${d.date}</b> \u2022 ${HOUR_LABELS[col]}<br>Headroom with DC: <span style="color:${critColor};font-weight:600;">${(mw / 1000).toFixed(1)} GW (${criticality})</span><br><span style="color:#888;font-size:10px;">Baseline: ${(baseMw / 1000).toFixed(1)} GW | Change: ${delta >= 0 ? '+' : ''}${(delta / 1000).toFixed(1)} GW</span>`;
                 } else {
                     heatmapTip.innerHTML = `<b>${d.date}</b> \u2022 ${HOUR_LABELS[col]}<br>Headroom: ${(mw / 1000).toFixed(1)} GW (${Math.round(mw)} MW)`;
                 }
