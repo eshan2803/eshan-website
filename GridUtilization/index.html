@@ -557,6 +557,40 @@
             border: 1px solid #2a2d3e;
             border-radius: 10px;
             margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .dc-controls.sticky {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 95;
+            width: calc(100% - 60px);
+            max-width: 1340px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            animation: slideDown 0.3s ease;
+        }
+
+        .custom-editor-container.sticky {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 95;
+            width: calc(100% - 60px);
+            max-width: 1340px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            margin-bottom: 0;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         .dc-slider-group {
@@ -1109,7 +1143,7 @@
                 Grid Headroom and Data Center Load Flexibility:<br>A California Case Study (2020–2025)
             </h1>
             <div class="article-abstract">
-                <p><strong>Abstract:</strong> California's electricity grid faces increasing stress from high renewable penetration, creating periods of both surplus (solar hours) and scarcity (evening peaks). This study analyzes 2,192 days of CAISO grid data to quantify <em>effective headroom</em> — the margin between available generation capacity and demand after accounting for required operating reserves. We demonstrate that flexible data center load profiles that follow solar generation patterns ("camel profiles") improve grid utilization by 3-5%, reduce electricity costs by 15-35%, absorb renewable surplus that would otherwise be curtailed, and lower marginal CO₂ emissions by concentrating consumption during low-carbon hours. Using an empirical LMP-headroom model derived from six years of market data, we show that optimized load allocation can achieve near-theoretical cost minimums while maintaining grid reliability. These findings support policy frameworks, such as Virginia's grid utilization factor, that incentivize flexible loads to improve system efficiency before building new infrastructure.</p>
+                <p><strong>Abstract:</strong> California's electricity grid faces increasing stress from high renewable penetration, creating periods of both surplus (solar hours) and scarcity (evening peaks). This study analyzes 2,192 days of CAISO grid data to quantify <em>effective headroom</em> — the margin between available generation capacity and demand after accounting for required operating reserves. We demonstrate that flexible data center load profiles that follow solar generation patterns ("camel profiles") improve grid utilization by 3-5%, reduce electricity costs by 15-35%, absorb renewable surplus that would otherwise be curtailed, and lower marginal CO₂ emissions by concentrating consumption during low-carbon hours. Using an empirical LMP-headroom model derived from six years of market data, we show that optimized load allocation can achieve near-theoretical cost minimums while maintaining grid reliability. These findings improve upon the proposed policy frameworks, such as Virginia's grid utilization factor, that incentivize flexible loads to improve system efficiency before building new infrastructure. A data center as an asset to the grid might be little farfetched (there is a reason they're called Large "Load"). The best we can aim for is for these large loads to not stress the grid. </p>
             </div>
         </div>
 
@@ -1117,13 +1151,13 @@
         <div class="article-section">
             <h2 class="section-title">1. Introduction: The Grid Reliability Challenge</h2>
             <div class="article-text">
-                <p>Modern electricity grids must maintain a continuous balance between generation supply and consumer demand while preserving adequate operating margins for system stability. In California, this challenge has intensified due to rapid renewable energy deployment—solar capacity has grown from 7 GW in 2015 to over 16 GW in 2024—creating new operational patterns characterized by midday surplus and evening scarcity. The California Independent System Operator (CAISO) manages this complexity through day-ahead forecasting, real-time dispatch, and mandatory reserve requirements.</p>
+                <p>The State of Virginia enacted a first‑in‑the‑nation requirement for its major utilities — Dominion Energy (Phase II) and Appalachian Power (Phase I) — to measure, report, and improve electric grid utilization. While the requirement is a step forward, I believe we can do better, especially in States rich in variable renewable resources. The requirement defines utilization as the ratio of Effective Load and Rated Capacity. In an ideal scenario, new large loads will improve this ratio, resulting in a flat load across the day. In my opinion, what we need to base our grid utilization factor on isnt the rated capacity, but Hourly Available Capacity. For states like California seeing >20 GW utility solar generation frequently, the denominator changes hourly, and so should the grid-utilization. A flexible load trying to maximize the grid-utilization factor for Virginia may make things worse for the California. My solution to this problem was to come up with the Available Capacity (rather than Rated Capacity). We can glean into historical data from 2020 to 2025 to understand how large loads need to manage their operations to maximize grid utilization, while minimizing the grid-stress. </p>
 
                 <p>This analysis examines <strong>effective headroom</strong>, defined as available generation capacity minus demand minus required reserves, as the fundamental metric of grid stress. Unlike simple supply-demand comparisons, effective headroom accounts for the operational margins that CAISO must maintain to handle equipment failures, forecast errors, and sudden demand spikes. When effective headroom falls below 3,500 MW—CAISO's minimum spinning reserve requirement—the grid enters a stressed state requiring emergency protocols.</p>
 
-                <p><strong>Data Sources:</strong> Our analysis integrates three primary datasets spanning January 1, 2020 through December 31, 2025 (2,192 days): (1) <em>CAISO day-ahead demand forecasts</em> providing hourly load projections with 24-hour granularity; (2) <em>Available generation capacity by resource type</em> derived from CAISO resource adequacy filings, representing theoretical maximum output from nuclear, thermal, hydro, wind, solar, and battery resources; (3) <em>Locational Marginal Prices (LMP)</em> from CAISO's day-ahead market, load-weighted across three utility zones (PG&E 43.5%, SCE 43.5%, SDG&E 13%) to create a system-wide price signal. Additionally, we incorporate California natural gas citygate prices from EIA and actual generation data from EIA-930 for validation.</p>
+                <p><strong>Data Sources:</strong> Our analysis integrates three primary datasets spanning January 1, 2020 through December 31, 2025 (2,192 days): (1) <em>CAISO day-ahead demand forecasts</em> providing hourly load projections with 24-hour granularity; (2) <em>Available generation capacity by resource type</em> derived from CAISO resource adequacy filings, representing theoretical maximum output from nuclear, thermal, hydro, wind, solar, and battery resources; (3) <em>Locational Marginal Prices (LMP)</em> from CAISO's real-time market, load-weighted across three utility zones (PG&E 43.5%, SCE 43.5%, SDG&E 13%) to create a system-wide price signal. Additionally, we incorporate California natural gas citygate prices from EIA and actual generation data from EIA-930 for validation.</p>
 
-                <p><strong>Key Assumption:</strong> The capacity data uses <em>monthly average hourly profiles</em>—the same 24-hour generation pattern applies to all days within a calendar month. This approach captures seasonal trends (solar output peaks in June, hydro in April-May during snowmelt) but does not reflect day-to-day weather variability. A cloudy day and a clear day in the same month show identical solar profiles in our model, potentially overestimating available capacity on below-average days and underestimating it on exceptional days. We validate this limitation by comparing against EIA-930 actual generation data in Section 5.</p>
+                <p><strong>Key Assumption:</strong> The capacity data uses <em>monthly average hourly profiles</em>—the same 24-hour generation pattern applies to all days within a calendar month. This approach captures seasonal trends (solar output peaks in June, hydro in April-May during snowmelt) but does not reflect day-to-day weather variability. A cloudy day and a clear day in the same month show identical solar profiles in our model, potentially overestimating available capacity on below-average days and underestimating it on exceptional days. We validate this limitation by comparing against EIA-930 actual generation data in Section 5. Moreover, the hydro capacity is based on historical Hydro data (dry, wet, critical or normal hydro year) over the seasonal variations. Similarly wind resource capacity factors are derived from CAISO's own wind generation data, normalized for capacity. </p>
 
                 <p>The following interactive charts allow exploration of daily grid conditions across this six-year period. Use the date scrubber to examine specific events: February 2021 (Texas freeze causing regional supply stress), September 2022 (extreme heat wave), and typical seasonal patterns. The playback controls enable rapid scanning through multiple years to identify systemic trends.</p>
             </div>
@@ -1142,7 +1176,7 @@
                 <div class="sub" id="statPeakAvailHour">--</div>
             </div>
             <div class="stat-card">
-                <div class="label">Min Effective Margin</div>
+                <div class="label">Min Effective Headroom</div>
                 <div class="value" id="statMinHeadroom">--<span class="unit">MW</span></div>
                 <div class="sub" id="statMinHeadroomHour">--</div>
             </div>
@@ -1162,7 +1196,7 @@
         <div class="slider-section">
             <div class="slider-row">
                 <label>Date:</label>
-                <input type="range" id="dateSlider" min="0" max="2191" value="0" step="1">
+                <input type="range" id="dateSlider" min="0" max="2191" value="2191" step="1">
             </div>
             <div class="year-ticks">
                 <span>2020</span><span>2021</span><span>2022</span><span>2023</span><span>2024</span><span>2025</span>
@@ -1176,7 +1210,7 @@
                 <div class="controls-divider"></div>
                 <button id="btnReset" title="Reset scatter plot">Reset Scatter</button>
                 <div class="controls-divider"></div>
-                <input type="date" id="datePicker" class="date-picker-inline" min="2020-01-01" max="2025-12-31" value="2020-01-01" title="Jump to date">
+                <input type="date" id="datePicker" class="date-picker-inline" min="2020-01-01" max="2025-12-31" value="2025-12-31" title="Jump to date">
                 <div class="controls-divider"></div>
                 <span class="speed-label">Speed:</span>
                 <button class="speed-btn active" data-speed="500">1x</button>
@@ -1196,7 +1230,7 @@
 
                 <p><strong>Extreme Events:</strong> The dataset captures several notable stress events: September 4-6, 2022 experienced sustained effective headroom below 2,000 MW during a Western U.S. heat wave, triggering rotating outages; February 14-16, 2021 showed unusual stress from the Texas freeze cascading into broader regional supply shortages; August 14-17, 2020 marked California's first rolling blackouts since 2001 due to inadequate resource adequacy planning. These events appear as outliers in the scatter plot, demonstrating that grid stress correlates with extreme weather, equipment outages, and regional demand spikes.</p>
 
-                <p>The charts below enable detailed examination of these patterns. The first chart shows the hourly balance between available generation capacity (stacked by resource type) and system demand. Notice how solar (yellow) creates a pronounced midday peak in available capacity, while demand (red line) peaks later in the day. The second chart decomposes effective headroom into its components: available capacity, demand, and required reserves (shaded area). The gap between capacity and the top of the reserves area represents our key metric—effective headroom. When this gap narrows or turns negative, the grid enters emergency operating procedures.</p>
+                <p>The charts below enable detailed examination of these patterns. The first chart shows the hourly balance between available generation capacity (stacked by resource type) and system demand. Notice how solar (yellow) creates a pronounced midday peak in available capacity, while demand (red line) peaks later in the day. The second chart subtracts the demand from hourly available capacity to calculate the Headroom. From this, a reserve margin can be further removed to get the Effective Headroom. When the effective headroom narrows or turns negative, the grid enters emergency operating procedures.</p>
             </div>
         </div>
 
@@ -1211,7 +1245,7 @@
 
         <!-- Headroom Chart -->
         <div class="chart-container">
-            <h3>Headroom Analysis: Required Reserves & Effective Margin</h3>
+            <h3>Headroom Analysis: Required Reserves & Effective Headroom</h3>
             <div class="chart-note">Reserves based on CAISO methodology: Peak hours (4-9 PM) require 8.4% of demand, shoulder hours 7.7%, off-peak 7.0%, minimum 3,500 MW</div>
             <div class="chart-wrapper short">
                 <canvas id="headroomChart"></canvas>
@@ -1231,42 +1265,13 @@
         <div class="article-text" style="margin: 24px 0;">
             <p><strong>EIA-930 Actual Generation Validation:</strong> The third chart displays actual hourly generation by fuel type from the U.S. Energy Information Administration's EIA-930 dataset, which reports real-time grid operations. This provides ground truth validation of our capacity-based model. Key observations: (1) Actual solar generation closely tracks our monthly capacity profiles during clear-sky days but shows significant reduction during cloudy periods—validating our assumption's limitation; (2) Natural gas generation (orange) exhibits high flexibility, ramping from 8,000 MW at solar noon to 22,000 MW during evening peaks, confirming its role as the marginal resource; (3) The gap between total generation and demand (red line) represents net imports/exports—California typically imports 5,000-8,000 MW during evening hours from Pacific Northwest hydro and Southwest coal plants.</p>
 
-            <p><strong>Price Signal Relationship:</strong> The following LMP (Locational Marginal Price) chart demonstrates how wholesale electricity prices respond to grid stress. LMP consists of four components: Marginal Energy Cost (MEC, blue)—the cost of the last MW dispatched, typically set by natural gas plants; Congestion (MCC, red)—transmission bottleneck penalties; Losses (MCL, orange)—electrical resistance costs; and GHG Adder (green)—California's cap-and-trade carbon price embedded in generator bids. During tight headroom hours, MEC spikes as expensive peaker plants enter the dispatch stack, while congestion increases as the grid pushes power through constrained transmission corridors. This price elasticity creates the economic foundation for demand response programs and flexible load scheduling.</p>
-        </div>
-
-        <!-- Price Chart -->
-        <div class="chart-container">
-            <h3>Hourly CAISO-Averaged LMP Breakdown</h3>
-            <div class="chart-note">Components: Marginal Energy Cost (MEC), Congestion (MCC), Losses (MCL), GHG Adder (Average of NP15, SP15, ZP26)</div>
-            <div class="chart-wrapper short">
-                <canvas id="priceChart"></canvas>
-                <div class="no-data-msg" id="noPriceDataMsg" style="display:none;">No price data for this date</div>
-            </div>
+            <p><strong>Statistical Patterns Across 2,192 Days:</strong> To understand systemic trends beyond individual days, we aggregate the entire six-year dataset in several views. The following charts quantify reliability margins, price dynamics, and economic signals that motivate flexible data center loads.</p>
         </div>
 
         <div class="article-text" style="margin: 24px 0;">
-            <p><strong>Statistical Patterns Across 2,192 Days:</strong> To understand systemic trends beyond individual days, we aggregate the entire six-year dataset in several views. The scatter plot (below right) accumulates all 2,192 daily observations, plotting minimum effective headroom against peak available capacity for each day. This reveals a clear correlation: days with higher total capacity tend to maintain greater minimum headroom, but the relationship is not deterministic—days with identical available capacity can exhibit headroom differences of 10,000+ MW due to demand variability and reserve requirements. The color gradient (from blue to red) shows temporal progression, revealing that recent years (2023-2025) cluster toward higher capacity as California added renewable resources, yet minimum headroom has not proportionally improved due to evening demand growth and solar intermittency.</p>
+            <p><strong>Headroom Variability and Grid Risk:</strong> The confidence interval chart (below left) aggregates all 2,192 days to show percentile distributions of effective headroom at each hour of day. The median (p50, dark blue line) represents typical conditions: 15,000-20,000 MW headroom during morning hours, declining to 8,000-12,000 MW during evening peaks. Critically, the p5 line (bottom edge of blue band) reveals worst-case scenarios—approximately 5% of days experience headroom below 3,000 MW during evening hours, triggering emergency operating procedures. The p95 line (top edge) shows best-case days with 30,000+ MW headroom, typically spring weekends with high hydro output and low demand. An importance thing to note is that you actually dont want to consume every last bit of capacity left on the grid, because a significant fraction of natural gas capacity is either inefficient or flexible or both. You would not want all your peaker plants to be running at all times, significantly increasing both the cost and emissions. In order to check the headroom without such resources, simply click on the legend corresponding to that generator type (for eg. Gas Peaker) and all charts in this analysis will change accordingly.</p>
 
-            <p>The average capacity chart (below left) shows the mean daily generation availability by resource type across all days. Solar contributes 6,000-8,000 MW during midday peaks, wind provides 2,000-4,000 MW with high variability, and natural gas comprises the largest flexible capacity at 25,000-30,000 MW. Nuclear (Diablo Canyon, 2,200 MW) and geothermal (2,700 MW) provide constant baseload. Hydro shows seasonal variation from 4,000 MW (dry months) to 8,000 MW (snowmelt). This resource mix determines the grid's ability to respond to demand patterns—the sunset gap between solar decline and evening peak must be filled entirely by dispatchable thermal and hydro resources.</p>
-        </div>
-
-        <!-- Analysis Row: Average Capacity + Scatter Plot -->
-        <div class="analysis-row">
-            <!-- Average Daily Capacity by Resource -->
-            <div class="chart-container">
-                <h3>Average Daily Capacity by Resource</h3>
-                <div class="chart-wrapper tall">
-                    <canvas id="avgCapacityChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Accumulating Scatter Plot -->
-            <div class="chart-container">
-                <h3>Grid Stress Analysis: Minimum Effective Margin vs Available Capacity (Accumulating)</h3>
-                <div class="chart-wrapper tall">
-                    <canvas id="scatterChart"></canvas>
-                </div>
-            </div>
+            <p>The histogram (below right) quantifies this risk distribution: 147 days (6.7% of dataset) experienced minimum daily headroom below 5,000 MW, and 22 days (1.0%) fell below 2,000 MW—true emergency conditions requiring demand reduction or emergency imports. The distribution shows a long left tail toward negative values, indicating that while average conditions provide adequate margin, tail risk remains significant. Notably, the modal bin (most frequent outcome) centers around 8,000-10,000 MW minimum headroom, suggesting this as the typical "design condition" for grid operations.</p>
         </div>
 
         <!-- Statistical Analysis Charts (All Days) -->
@@ -1291,13 +1296,23 @@
         </div>
 
         <div class="article-text" style="margin: 24px 0;">
-            <p><strong>Headroom Variability and Grid Risk:</strong> The confidence interval chart (above left) aggregates all 2,192 days to show percentile distributions of effective headroom at each hour of day. The median (p50, dark blue line) represents typical conditions: 15,000-20,000 MW headroom during morning hours, declining to 8,000-12,000 MW during evening peaks. Critically, the p5 line (bottom edge of blue band) reveals worst-case scenarios—approximately 5% of days experience headroom below 3,000 MW during evening hours, triggering emergency operating procedures. The p95 line (top edge) shows best-case days with 30,000+ MW headroom, typically spring weekends with high hydro output and low demand.</p>
+            <p><strong>Price Signal Relationship:</strong> The following chart demonstrates how wholesale electricity prices respond to grid stress. LMP (Locational Marginal Price) consists of four components: Marginal Energy Cost (MEC, blue)—the cost of the last MW dispatched, typically set by natural gas plants; Congestion (MCC, red)—transmission bottleneck penalties; Losses (MCL, orange)—electrical resistance costs; and GHG Adder (green)—California's cap-and-trade carbon price embedded in generator bids. During tight headroom hours, MEC spikes as expensive peaker plants enter the dispatch stack, while congestion increases as the grid pushes power through constrained transmission corridors. This price elasticity creates the economic foundation for demand response programs and flexible load scheduling.</p>
+        </div>
 
-            <p>The histogram (above right) quantifies this risk distribution: 147 days (6.7% of dataset) experienced minimum daily headroom below 5,000 MW, and 22 days (1.0%) fell below 2,000 MW—true emergency conditions requiring demand reduction or emergency imports. The distribution shows a long left tail toward negative values, indicating that while average conditions provide adequate margin, tail risk remains significant. Notably, the modal bin (most frequent outcome) centers around 8,000-10,000 MW minimum headroom, suggesting this as the typical "design condition" for grid operations.</p>
+        <!-- Price Chart -->
+        <div class="chart-container">
+            <h3>Hourly CAISO-Averaged LMP Breakdown</h3>
+            <div class="chart-note">Components: Marginal Energy Cost (MEC), Congestion (MCC), Losses (MCL), GHG Adder (Average of NP15, SP15, ZP26)</div>
+            <div class="chart-wrapper short">
+                <canvas id="priceChart"></canvas>
+                <div class="no-data-msg" id="noPriceDataMsg" style="display:none;">No price data for this date</div>
+            </div>
+        </div>
 
-            <p><strong>The Price-Scarcity Relationship:</strong> The scatter plot below reveals the fundamental economic signal that motivates our analysis of flexible loads. Each point represents one hour from one day (52,080 total hourly observations spanning 2020-2025). The x-axis shows <em>net load</em>—demand minus renewable generation—which serves as a proxy for natural gas generation requirement. The y-axis shows wholesale electricity price (LMP). Point color indicates hour of day (blue = night, yellow = midday, red = evening), and point size scales with natural gas commodity price.</p>
+        <div class="article-text" style="margin: 24px 0;">
+            <p><strong>The Economic Signal for Flexible Loads:</strong> The following scatter plot reveals the fundamental economic relationship that motivates our analysis of flexible data center loads. Each point represents one hour from one day (52,080 total hourly observations spanning 2020-2025). The x-axis shows <em>net load</em>—demand minus renewable generation—which serves as a proxy for natural gas generation requirement. The y-axis shows wholesale electricity price (LMP). Point color indicates hour of day (blue = night, yellow = midday, red = evening), and point size scales with natural gas commodity price.</p>
 
-            <p>Three clusters emerge: (1) <strong>Low net load, low LMP (bottom-left):</strong> Midday hours (yellow) when solar displaces gas, LMP falls to $15-35/MWh; (2) <strong>Moderate net load, moderate LMP (center):</strong> Morning/evening shoulder hours with LMP $35-70/MWh; (3) <strong>High net load, high LMP (top-right):</strong> Evening peak hours (red) when expensive peaker plants run, LMP spikes to $75-250/MWh. Outliers above $400/MWh correspond to emergency scarcity events. This strong positive correlation between gas requirement and price creates the economic opportunity for load flexibility—shifting consumption from evening (expensive) to midday (cheap) yields substantial cost savings while improving grid utilization.</p>
+            <p>Three clusters emerge: (1) <strong>Low net load, low LMP (bottom-left):</strong> Midday hours (yellow) when solar displaces gas, LMP falls to $15-35/MWh; (2) <strong>Moderate net load, moderate LMP (center):</strong> Morning/evening shoulder hours with LMP $35-70/MWh; (3) <strong>High net load, high LMP (top-right):</strong> Evening peak hours (red) when expensive peaker plants run, LMP spikes to $75-250/MWh. Outliers above $400/MWh correspond to emergency scarcity events. This strong positive correlation between gas requirement and price creates the economic opportunity for load flexibility—shifting consumption from evening (expensive) to midday (cheap) yields substantial cost savings while improving grid utilization. The data points are sized according to Natural Gas prices. It is interesting to note that the peak LMP are not the hours with highest gas prices, but hours with least effective headroom available. </p>
         </div>
 
         <!-- LMP vs Net Load Scatter -->
@@ -1327,24 +1342,47 @@
             </div>
         </div>
 
+        <div class="article-text" style="margin: 24px 0;">
+            <p><strong>Daily Aggregation View:</strong> The price-scarcity chart (below right) quantifies the relationship at the daily level, showing how minimum effective headroom correlates negatively with normalized LMP (electricity price divided by gas price). Days with headroom below 5,000 MW (5 GW) show normalized LMP ranging from 40-150 MCF⁻¹, indicating that expensive peaker plants are setting marginal prices. Conversely, days with abundant headroom above 15,000 MW exhibit normalized LMP clustering around 10-30 MCF⁻¹, reflecting efficient baseload and renewable generation. This chart demonstrates that by avoiding operations during low-headroom (high-price) days and concentrating during high-headroom (low-price) days, operators can achieve substantial cost savings while simultaneously improving grid reliability.</p>
+
+            <p>The average capacity chart (below left) provides context, showing mean daily generation availability by resource type across all hours. Solar's 6,000-8,000 MW midday contribution creates abundant headroom during those hours, while the evening gap between solar decline and peak demand creates the scarcity that drives price spikes. The color gradient in the price-scarcity chart (blue to red) shows temporal progression across 2020-2025, revealing that price volatility has actually not increased inspite of growing renewable capacity — a consequence of coincident increase in energ storage capacity during the same period in my opinion.</p>
+        </div>
+
+        <!-- Analysis Row: Average Capacity + Scatter Plot -->
+        <div class="analysis-row">
+            <!-- Average Daily Capacity by Resource -->
+            <div class="chart-container">
+                <h3>Average Daily Capacity by Resource</h3>
+                <div class="chart-wrapper tall">
+                    <canvas id="avgCapacityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Accumulating Scatter Plot -->
+            <div class="chart-container">
+                <h3>Price-Scarcity Relationship</h3>
+                <div class="chart-note">Each point represents one day, showing the relationship between grid stress (minimum daily headroom) and electricity prices (daily average LMP normalized by gas price). Click any point to jump to that date.</div>
+                <div class="chart-wrapper tall">
+                    <canvas id="scatterChart"></canvas>
+                </div>
+            </div>
+        </div>
+
         <!-- Section 3: Data Center Load Flexibility as a Solution -->
         <div class="article-section">
-            <h2 class="section-title">3. Data Center Load Flexibility as a Solution</h2>
+            <h2 class="section-title">3. Data Center Load Flexibility</h2>
             <div class="article-text">
-                <p>The preceding analysis reveals California's grid challenge: abundant renewable capacity during midday creates surplus that must be curtailed or exported, while evening peak demand stress the grid's thermal fleet. Data centers represent an ideal load resource to address this mismatch. Unlike traditional base-load operations (e.g., aluminum smelting) that require continuous power, modern data centers utilize distributed computing infrastructure with workload management systems that can time-shift non-latency-sensitive tasks—machine learning training, batch analytics, video rendering, blockchain mining—to periods of low electricity cost and high renewable availability.</p>
+                <p>The preceding analysis reveals California's grid challenge: abundant renewable capacity during midday creates surplus that must be curtailed or exported, while evening peak demand stress the grid's thermal fleet. Moreover, we now understand what ideal flexible large load profiles should look like to align with the available headroom. The hope is that data centers can operate flexible requiring fewer additional capacity resources on the grid (thereby minimizing the new energy infrastrucutre cost). Also in utilizing the existing capacity, the existing costs can be divided over larger kWh resulting in smaller non-energy (capacity, distribution, transmission costs), helping other customers. We now also understand how capacity scarcity drives the LMP to extremely high values. Lets put these knowledge to understand what would be the impact of various data center load profiles on the grid and LMP. Lastly, lets try to optimize a fully flexible data centers to see how it would operate.</p>
 
-                <p><strong>Load Profile Taxonomy:</strong> We model four distinct operating strategies: (1) <em>Flat profile</em>—constant load 24/7, representing traditional data center operations; (2) <em>Camel profile (solar-following)</em>—increased load during solar hours (8 AM-6 PM), reduced overnight, creating a two-humped "camel" shape that follows California's solar generation curve; (3) <em>Night-heavy profile</em>—inverse of camel, loading overnight when wholesale prices are moderate but solar is unavailable, potentially representing operations optimizing for cheap baseload power; (4) <em>Custom profile</em>—user-defined arbitrary load shapes for scenario exploration; (5) <em>Optimized profile</em>—algorithmically determined allocation that minimizes cost while meeting daily energy requirements.</p>
+                <p><strong>Load Profile Taxonomy:</strong> We model four distinct operating strategies and an optimization scenario: (1) <em>Flat profile</em>—constant load 24/7, representing traditional data center operations; (2) <em>Camel profile (solar-following)</em>—increased load during solar hours (8 AM-6 PM), reduced overnight, creating a two-humped "camel" shape that follows California's solar generation curve; (3) <em>Night-heavy profile</em>—inverse of camel, loading overnight when wholesale prices are moderate but solar is unavailable, potentially representing operations optimizing for cheap baseload power; (4) <em>Custom profile</em>—user-defined arbitrary load shapes for scenario exploration; (5) <em>Optimized profile</em>—algorithmically determined allocation that minimizes cost while meeting daily energy requirements.</p>
 
                 <p><strong>Energy Preservation Constraint:</strong> All profiles maintain identical daily energy consumption—<code>avgMw × 24 MWh/day</code>—ensuring fair comparison. A flat 500 MW data center and a camel 500 MW data center both consume 12,000 MWh/day; the difference lies in <em>when</em> that energy is consumed, not <em>how much</em>. This constraint reflects operational reality: data centers must complete a fixed amount of computational work per day, but the temporal distribution of that work across 24 hours can be optimized based on grid conditions and electricity prices.</p>
 
-                <p><strong>Methodology Note:</strong> The camel and night-heavy profiles use monthly solar capacity factor profiles derived from our <code>available_capacity.json</code> data, mean-centered to preserve daily energy. The flex ratio (0 to 1.0) controls amplitude: 0.0 produces a flat profile, 1.0 produces maximum variation following the solar curve. For a 500 MW DC with flex=0.7, daytime hours reach ~800 MW while nighttime hours drop to ~300 MW, maintaining 500 MW average. This parameterization allows exploration of the flexibility-benefit relationship across different operational constraints.</p>
+                <p><strong>Methodology:</strong> The camel and night-heavy profiles use monthly solar capacity factor profiles derived from our <code>available_capacity.json</code> data, mean-centered to preserve daily energy. The flex ratio (0 to 1.0) controls amplitude: 0.0 produces a flat profile, 1.0 produces maximum variation following the solar curve. For a 500 MW DC with flex=0.7, daytime hours reach ~800 MW while nighttime hours drop to ~300 MW, maintaining 500 MW average. This parameterization allows exploration of the flexibility-benefit relationship across different operational constraints.</p>
 
                 <p>The interactive controls below enable manipulation of two key parameters: <em>DC size</em> (100-5,000 MW) and <em>flexibility ratio</em> (0.0-1.0). All subsequent charts update in real-time to show how these parameters affect grid headroom, utilization, cost, and emissions. The preset buttons ("Flat", "Camel", "Night-Heavy") provide quick comparison of canonical profiles, while the "Custom" button opens an interactive editor for arbitrary shapes.</p>
             </div>
 
-            <div class="article-insight">
-                <p><strong>Policy Context:</strong> Virginia's 2024 grid utilization bill requires data centers seeking expedited interconnection to demonstrate that their load profiles improve system utilization during high-demand periods. This analysis quantifies that value proposition using California data. A camel profile improves average grid utilization by 3-5 percentage points compared to flat load, reduces stress hours by 15-25%, and decreases minimum headroom risk—metrics that directly support faster interconnection approval under utilization-based frameworks.</p>
-            </div>
         </div>
 
         <!-- ─── Data Center Load Flexibility Analysis ─── -->
@@ -1442,19 +1480,25 @@
 
             <p><strong>Stress Day Analysis:</strong> While average cost provides an important metric, tail-risk scenarios matter for grid reliability assessment. The stress day heatmap below identifies the 100 days (out of 2,192) with the lowest minimum effective headroom, representing the grid's most challenging operating conditions. These include extreme heat waves (September 2020, August 2022), equipment outages (January 2024 Diablo Canyon refueling coinciding with low hydro), and regional supply disruptions (February 2021 Texas freeze). For each of these critical days, the heatmap visualizes hourly headroom under different DC profiles, color-coded from red (emergency conditions &lt;2,000 MW) to blue (comfortable margins &gt;15,000 MW).</p>
 
-            <p>The visual pattern is striking: flat profiles add uniform stress across all hours, frequently pushing evening hours (columns 18-21) into deep red territory. Camel profiles show blue-green (improved headroom) during midday columns (9-15) and yellow-orange (modest stress) during evenings—the added load is visible but doesn't trigger emergency conditions as frequently. Night-heavy profiles produce the inverse pattern with severe red clustering in evening columns, demonstrating exactly why this strategy fails during stress events. This heatmap provides grid operators with a visual tool to assess interconnection impacts: profiles that maintain non-red cells during critical hours pose lower reliability risk.</p>
+            <p>Try increasing the DC load to a higher MW to see the Stress impact better. The visual pattern is striking: flat profiles add uniform stress across all hours, frequently pushing evening hours (columns 18-21) into deep red territory. Camel profiles show blue-green (improved headroom) during midday columns (9-15) and yellow-orange (modest stress) during evenings—the added load is visible but doesn't trigger emergency conditions as frequently. Night-heavy profiles produce the inverse pattern with severe red clustering in evening columns, demonstrating exactly why this strategy fails during stress events. This heatmap provides grid operators with a visual tool to assess interconnection impacts: profiles that maintain non-red cells during critical hours pose lower reliability risk. More importantly looking at the heatmap also gives us a hint at what data center load is feasible in the existing grid even with flexibility enabled. </p>
         </div>
 
         <!-- Phase 2 Analysis 4: Stress Day Deep-Dive -->
         <div class="chart-container">
             <h3>Stress Day Deep-Dive</h3>
-            <div class="chart-note">Heatmap of the 100 most stressed days (lowest minimum headroom). Each row is a day, each column is an hour. Color = effective headroom with the selected DC profile added. Red = low headroom, blue = ample headroom.</div>
-            <div class="stress-tabs" id="stressTabs">
-                <button class="stress-tab" data-profile="baseline">Baseline</button>
-                <button class="stress-tab active" data-profile="flat">+ Flat DC</button>
-                <button class="stress-tab" data-profile="camel">+ Camel DC</button>
-                <button class="stress-tab" data-profile="night">+ Night-Heavy DC</button>
-                <button class="stress-tab" data-profile="custom">+ Custom DC</button>
+            <div class="chart-note">Heatmap of the 100 most stressed days (lowest minimum headroom). Each row is a day, each column is an hour. <strong>Absolute mode:</strong> Color = effective headroom (red = low, blue = ample). <strong>Relative mode:</strong> Color = change from baseline (red = reduced headroom with DC, blue = improved, white = neutral).</div>
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px;">
+                <div class="stress-tabs" id="stressTabs" style="flex: 1;">
+                    <button class="stress-tab" data-profile="baseline">Baseline</button>
+                    <button class="stress-tab active" data-profile="flat">+ Flat DC</button>
+                    <button class="stress-tab" data-profile="camel">+ Camel DC</button>
+                    <button class="stress-tab" data-profile="night">+ Night-Heavy DC</button>
+                    <button class="stress-tab" data-profile="custom">+ Custom DC</button>
+                </div>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #ccc; cursor: pointer; white-space: nowrap;">
+                    <input type="checkbox" id="stressRelativeMode" style="cursor: pointer;">
+                    <span>Relative to Baseline</span>
+                </label>
             </div>
             <div class="stress-heatmap-wrapper">
                 <canvas id="stressHeatmap" class="stress-heatmap-canvas"></canvas>
@@ -1468,19 +1512,13 @@
         <div class="article-section">
             <h2 class="section-title">5. Environmental Benefits: Curtailment Reduction and Marginal Emissions</h2>
             <div class="article-text">
-                <p>Beyond reliability and economic benefits, flexible data center loads offer environmental value through two mechanisms: (1) absorbing renewable surplus that would otherwise be curtailed, increasing effective renewable utilization; and (2) reducing marginal CO₂ emissions by concentrating consumption during low-carbon hours. These benefits align with California's climate goals—SB 100 mandates 100% clean electricity by 2045—and provide quantitative metrics for environmental impact assessment.</p>
+                <p>Beyond reliability and economic benefits, flexible data center loads may offer environmental value through two mechanisms: (1) absorbing renewable surplus that would otherwise be curtailed, increasing effective renewable utilization; and (2) reducing marginal CO₂ emissions by concentrating consumption during low-carbon hours. These benefits align with California's climate goals—SB 100 mandates 100% clean electricity by 2045—and provide quantitative metrics for environmental impact assessment.</p>
 
                 <p><strong>The Curtailment Problem:</strong> Renewable energy curtailment occurs when available clean generation exceeds instantaneous demand plus transmission export capability, forcing grid operators to command wind and solar facilities to reduce output despite free fuel and zero marginal cost. CAISO curtailed 2.4 TWh in 2023 (~5% of total renewable generation), primarily midday solar during spring months when hydro output is high (snowmelt), demand is moderate (mild weather), and transmission to neighboring states is congested. This curtailment represents <em>wasted</em> clean energy—electrons that could have displaced fossil fuel combustion but instead are thrown away due to temporal mismatch.</p>
 
                 <p>We model surplus hours as periods when non-gas generation (solar + wind + hydro + nuclear + geothermal + biomass) exceeds total demand, implying that even with all natural gas plants offline, the grid overproduces. This is a conservative proxy for actual curtailment—real curtailment includes economic curtailment (paying generators to shut down due to negative LMP) and operational curtailment (transmission constraints)—but our method identifies the theoretical maximum that flexible loads could absorb. Across 2020-2025, we identify 847 annual surplus hours (9.7% of the year), concentrated between 10 AM - 3 PM during March-May.</p>
 
-                <p><strong>Absorption Quantification:</strong> For each DC profile, we compute energy absorbed during surplus hours—load that consumes electricity that would have otherwise required curtailment or export at depressed prices. A flat 500 MW profile absorbs 423.5 GWh/year during surplus hours simply by operating uniformly. A camel 500 MW profile, loading more heavily during midday, absorbs 682.1 GWh/year—61% more despite identical total energy consumption. This additional 258.6 GWh/year of curtailment avoidance translates to higher effective renewable penetration and reduced need for storage or transmission upgrades to accommodate surplus.</p>
-
-                <p><strong>Marginal Emissions Framework:</strong> Not all MWh of electricity consumption have equal carbon intensity. The <em>marginal emission rate</em>—CO₂ per incremental MWh consumed—depends on which generator increases output to serve the added load. During midday surplus, the marginal rate is zero or near-zero because added load displaces renewable curtailment rather than requiring fossil fuel combustion. During evening peaks, the marginal rate is high (0.5-0.63 tCO₂/MWh) because inefficient gas peaker plants with heat rates of 10-11 MMBtu/MWh are marginal.</p>
-
-                <p>We estimate marginal emission rates using a dispatch-stack proxy: for each hour, we compute gas residual (demand minus non-gas generation) and determine which type of gas plant (CCGT, steam, ICE, peaker) is marginal based on California's gas fleet composition. CCGT plants (heat rate 7.0 MMBtu/MWh) emit 0.41 tCO₂/MWh, while peakers (10.8 MMBtu/MWh) emit 0.63 tCO₂/MWh. Hours with negative gas residual (surplus) receive zero marginal emissions. This simplified model captures first-order effects—camel profiles concentrate load during low-emission hours—though real-world dispatch includes imports, storage, and complex offer-based optimization that our proxy omits.</p>
-
-                <p>The following charts quantify these environmental benefits. The overgeneration surplus chart shows annual energy absorbed during surplus hours by each profile. The marginal emissions chart displays the "emissions duck curve"—hourly marginal CO₂ intensity—and calculates total emissions attributable to each DC profile based on its weighted consumption across hours.</p>
+                <p><strong>Absorption Quantification:</strong> For each DC profile, we compute energy absorbed during surplus hours—load that consumes electricity that would have otherwise required curtailment or export at depressed prices. A flat DC profile absorbs surplus energy simply by operating uniformly throughout the day. A camel DC profile, loading more heavily during midday solar hours, absorbs substantially more surplus energy despite identical total daily energy consumption. This additional curtailment avoidance translates to higher effective renewable penetration and reduced need for storage or transmission upgrades to accommodate surplus. The chart below quantifies these absorption patterns across all load profiles, showing how solar-following strategies can absorb 40-60% more surplus energy compared to flat profiles at the same average capacity.</p>
             </div>
         </div>
 
@@ -1494,6 +1532,12 @@
             <div class="curtail-stats-row" id="curtailStats">
                 <!-- Populated by JS -->
             </div>
+        </div>
+
+        <div class="article-text" style="margin: 24px 0;">
+                <p><strong>Marginal Emissions Framework:</strong> Not all MWh of electricity consumption have equal carbon intensity. The <em>marginal emission rate</em>—CO₂ per incremental MWh consumed—depends on which generator increases output to serve the added load. During midday surplus, the marginal rate is zero or near-zero because added load displaces renewable curtailment rather than requiring fossil fuel combustion. During evening peaks, the marginal rate is high (0.5-0.63 tCO₂/MWh) because inefficient gas peaker plants with heat rates of 10-11 MMBtu/MWh are marginal.</p>
+
+                <p>We estimate marginal emission rates using a dispatch-stack proxy: for each hour, we compute gas residual (demand minus non-gas generation) and determine which type of gas plant (CCGT, steam, ICE, peaker) is marginal based on California's gas fleet composition. CCGT plants (heat rate 7.0 MMBtu/MWh) emit 0.41 tCO₂/MWh, while peakers (10.8 MMBtu/MWh) emit 0.63 tCO₂/MWh. Hours with negative gas residual (surplus) receive zero marginal emissions. This simplified model captures first-order effects—camel profiles concentrate load during low-emission hours—though real-world dispatch includes imports, storage, and complex offer-based optimization that our proxy omits. The chart below displays the "emissions duck curve"—hourly marginal CO₂ intensity—and calculates total emissions attributable to each DC profile based on its weighted consumption across hours.</p>
         </div>
 
         <!-- Phase 3 Analysis 6: Marginal Emissions -->
@@ -1530,7 +1574,7 @@
 
                 <p><strong>Key Findings from Optimization:</strong> Across all DC sizes tested (100-5,000 MW), optimized profiles achieve costs 2-5% lower than camel profiles, validating that simple solar-following heuristics capture ~95-98% of available economic value. The remaining 2-5% requires day-specific adjustment based on weather patterns, equipment outages, and transmission constraints that camel profiles (using fixed monthly shapes) cannot anticipate. For practical implementation, this suggests that sophisticated real-time optimization systems offer modest incremental benefit over simple solar-following rules—most of the value comes from the basic principle of loading during renewable surplus hours, not from fine-tuning day-to-day variations.</p>
 
-                <p>The optimization calculator below is opt-in (triggered by "Calculate" button) to avoid performance lag on the main dashboard. Computation time ranges from 3-5 seconds (500 MW) to 15-20 seconds (5,000 MW) as the algorithm iterates through all days. Results display as dual-bar chart: gray bars show the average optimized profile across all days (reference benchmark), purple bars show the optimized allocation for the currently selected date (synced with date scrubber). Comparing purple bars across dates reveals how optimal strategies vary with grid conditions—cloudy days concentrate load differently than clear-sky days, heat waves require different allocation than mild weather, etc.</p>
+                <p>The optimization calculator below is opt-in (triggered by "Calculate" button) to avoid performance lag on the main dashboard. Computation time ranges from 3-5 seconds (500 MW) to 15-20 seconds (5,000 MW) as the algorithm iterates through all days. While the optimization is running, you may get a "Unresponsive Webpage" message. Please click on "Wait" as the calculating may be taking longer (happens for larger data center loads). Results display as dual-bar chart: gray bars show the average optimized profile across all days (reference benchmark), purple bars show the optimized allocation for the currently selected date (synced with date scrubber). Comparing purple bars across dates reveals how optimal strategies vary with grid conditions—cloudy days concentrate load differently than clear-sky days, heat waves require different allocation than mild weather, etc.</p>
             </div>
         </div>
 
@@ -1582,32 +1626,32 @@
         <div class="article-section" style="margin-bottom: 60px;">
             <h2 class="section-title">7. Conclusions and Policy Implications</h2>
             <div class="article-text">
-                <p>This analysis of 2,192 days of California grid operations (2020-2025) demonstrates that data center load flexibility offers measurable, quantifiable benefits across three dimensions: <strong>(1) Grid reliability</strong>—camel profiles improve average utilization by 3-5 percentage points and reduce stress hours by 15-25%; <strong>(2) Economic efficiency</strong>—electricity cost savings of 15-35% relative to flat operation, translating to $8-45M/year for a 1,000 MW facility; <strong>(3) Environmental impact</strong>—30-45% increase in renewable surplus absorption and 25-40% reduction in marginal CO₂ emissions. These benefits are not theoretical projections but empirically derived from actual market data and real grid operations.</p>
+                <p>This analysis of 2,192 days of California grid operations (2020-2025) demonstrates that data center load flexibility has the potential to reduce the stress from the added load. A load profile that is coincident with the sun offer the best compromize when it comes to load addition to the grid. Such a load profile would improve grid utilization while minimizing the negative impact on grid stress. It may result in electricity cost savings of 15-35% relative to flat operation, translating to $8-45M/year for a 1,000 MW facility; A more sun-aligned load profile obviously absorbs the renewable surplus reducing the marginal emissions. However depending on the data center size, the emission impact in non-solar hours is bound to be negative. The findings are not theoretical projections but empirically derived from actual market data and real grid operations.</p>
 
                 <p><strong>Key Technical Findings:</strong></p>
                 <ul style="margin-left: 24px; margin-bottom: 16px; color: #b8b8b8; line-height: 1.8;">
-                    <li>The empirical LMP-headroom model reveals strong nonlinear price-scarcity relationships: LMP increases 5-8× as effective headroom drops from abundant (&gt;30 GW) to scarce (&lt;5 GW), with hour-of-day effects captured through a 24×6 lookup table derived from 52,080 hourly market observations.</li>
+                    <li>The empirical LMP-headroom model reveals strong nonlinear price-scarcity relationships: LMP increases 5-8× as effective headroom drops from abundant (&gt;30 GW) to scarce (&lt;5 GW), with hour-of-day effects captured through a 24×6 lookup table derived from 52,080 hourly market observations. Moreover, an ideal maxxing out on Grid Utilization is not recommended, as it would entail operating inefficient gas generators at all times. Instead a novel grid utilization approach based on <strong>available</strong> capacity is encouraged. Such approach is prudent for regions with significant variable renewable resource. </li>
                     <li>Simple solar-following heuristics (camel profiles) capture 95-98% of the theoretical cost minimum achieved by sophisticated day-specific optimization, suggesting that basic load-shifting rules deliver most available value without requiring complex forecasting or real-time optimization infrastructure.</li>
                     <li>Monthly-average capacity profiles (our modeling approach) capture seasonal trends but miss day-to-day variability; comparison against EIA-930 actual generation data shows ±2-4 GW deviations on individual days, implying our headroom estimates are accurate within ±10% for typical conditions but may understate stress during extreme weather.</li>
                     <li>The stress day heatmap analysis demonstrates that flexible profiles avoid exacerbating grid emergencies: 100 worst-case days show 40-60% fewer hours with critical headroom (&lt;2,000 MW) under camel versus flat loading, directly supporting reliability-based interconnection assessments.</li>
                 </ul>
 
-                <p><strong>Policy Framework Alignment:</strong> Virginia's grid utilization factor legislation (2024) represents a new paradigm in data center interconnection: rather than treating all load as uniformly detrimental to grid stress, the policy recognizes that <em>when</em> load occurs matters as much as <em>how much</em>. Our analysis provides empirical quantification methods that jurisdictions can adopt:</p>
+                <p><strong>Policy Framework Alignment:</strong> Virginia's grid utilization factor legislation (2024) needs to be updated to account for <strong>available</strong> hourly capacity. Otherwise it promotes firm baseload and gas generation, and not variable renewable generation. Our analysis provides empirical quantification methods that jurisdictions can adopt:</p>
                 <ul style="margin-left: 24px; margin-bottom: 16px; color: #b8b8b8; line-height: 1.8;">
-                    <li><strong>Utilization metric:</strong> Average grid utilization (demand/available capacity) provides a simple, measurable benchmark. Flexible profiles that increase utilization by &gt;3 percentage points demonstrate material system benefit.</li>
-                    <li><strong>Stress hour reduction:</strong> Count of hours with effective headroom &lt;3,500 MW provides a tail-risk metric. Profiles that reduce stress hours by &gt;15% relative to flat baseline warrant expedited review.</li>
-                    <li><strong>Economic value test:</strong> Weighted-average LMP differential (flexible vs. flat) quantifies system-wide cost impact. Profiles achieving &gt;15% cost reduction generate broader economic benefits through reduced wholesale prices during tight conditions.</li>
+                    <li><strong>Utilization metric:</strong> Average grid utilization (demand/available capacity) provides a simple, measurable benchmark. Flexible load profiles that increase utilization by &gt;3 percentage points demonstrate material system benefit.</li>
+                    <li><strong>Stress hour reduction:</strong> Count of hours with effective headroom &lt;3,500 MW provides a tail-risk metric. Profiles that reduce stress hours by &gt;15% relative to flat baseline warrant expedited review. Using camel load profile, additional 2.6 GW of flexible load was possible without tightening the stress on the worst day in last 6 years. </li>
+                    <li><strong>Economic value test:</strong> Weighted-average LMP differential (flexible vs. flat) quantifies system-wide cost impact. </li>
                     <li><strong>Environmental screening:</strong> Surplus absorption (GWh/year during non-gas-surplus hours) and marginal emission rate (tCO₂/MWh weighted average) provide climate impact metrics aligned with decarbonization mandates like California's SB 100.</li>
                 </ul>
 
-                <p><strong>Implementation Pathways:</strong> Data center operators can implement flexible load strategies through several mechanisms: (1) <em>Workload scheduling</em>—deferring batch jobs (ML training, rendering, blockchain mining) to low-LMP hours using market price signals; (2) <em>Geographic load balancing</em>—shifting compute tasks across time zones to follow solar patterns (California solar noon → Texas solar noon 2 hours later); (3) <em>Thermal storage</em>—pre-cooling facilities during cheap hours, reducing HVAC load during expensive hours; (4) <em>Demand response contracts</em>—bidding load curtailment into CAISO ancillary service markets during extreme events, monetizing flexibility directly.</p>
+                <p><strong>Implementation Pathways:</strong> Data center operators can implement flexible load strategies through several mechanisms: (1) <em>Workload scheduling</em>—deferring batch jobs (ML training, rendering, blockchain mining) to low-LMP hours using market price signals; (2) <em>Geographic load balancing</em>—shifting compute tasks across time zones to follow solar patterns (California solar noon → Texas solar noon 2 hours later); (3) <em>Behind-the-meter (BTM) energy storage</em>—installing batteries to charge during cheap/surplus hours (solar midday) and discharge during expensive/tight hours (evening peaks), creating a virtual flexible load profile without changing computing workloads. BTM storage is particularly attractive as it decouples grid load from compute load, stacks multiple value streams (energy arbitrage, demand charge reduction, backup power, CAISO ancillary services participation), qualifies for California SGIP incentives, and is already being deployed at scale (Microsoft, Google, Meta data centers). A 500 MW data center with 2-hour BTM storage (1,000 MWh) can shift up to 1,000 MW of effective load between hours, amplifying flexibility beyond what workload scheduling alone can achieve; (4) <em>Thermal storage</em>—pre-cooling facilities during cheap hours, reducing HVAC load during expensive hours (typically 20-30% of data center load, offering 100-200 MW flexibility for a 1,000 MW IT load facility); (5) <em>Demand response contracts</em>—bidding load curtailment into CAISO ancillary service markets during extreme events, monetizing flexibility directly through capacity payments and real-time dispatch.</p>
 
                 <p><strong>Limitations and Future Work:</strong> Our analysis makes several simplifying assumptions that future research should address: (1) Monthly-average capacity profiles should be replaced with day-ahead forecasts or actual generation data once EIA-930 coverage extends through 2025; (2) The empirical LMP-headroom model assumes data centers are price-takers, valid up to ~500-1,000 MW but potentially underestimating price impacts for multi-GW facilities that represent &gt;2% of system demand; (3) Marginal emissions use a simplified dispatch-stack proxy rather than actual generator-level data from EPA CEMS, likely underestimating emissions during complex multi-pollutant optimization scenarios; (4) Regional interconnection effects (California-Pacific Northwest, California-Southwest) are omitted, potentially overestimating curtailment (some surplus is exported rather than wasted); (5) Battery storage impacts on surplus absorption and headroom are not modeled—rapidly growing storage capacity (6 GW in 2024, projected 20 GW by 2030) will reduce curtailment and shift optimal DC load patterns.</p>
 
                 <p><strong>Generalizability:</strong> While this analysis focuses on California, the methodology transfers to other jurisdictions with high renewable penetration. PJM (serving Virginia, Pennsylvania, Mid-Atlantic) exhibits similar duck-curve patterns with solar displacing gas during midday but lacks California's extreme evening ramps due to lower solar penetration (8% vs. 20%). ERCOT (Texas) shows stronger wind patterns (nighttime generation peaks) that would favor different flexible load shapes. The analytical framework—effective headroom calculation, empirical LMP modeling, stress day identification, surplus absorption quantification—applies universally but requires jurisdiction-specific data and calibration.</p>
 
                 <div class="article-insight">
-                    <p><strong>Summary for Policymakers:</strong> Data center load flexibility is not merely an operational optimization—it represents a grid resource that improves reliability, reduces costs, and accelerates clean energy integration. Interconnection policies that recognize and reward flexibility through expedited timelines, reduced fees, or capacity market participation can harness this resource without requiring new generation or transmission infrastructure. The metrics and methods demonstrated here provide a template for implementing utilization-based frameworks in any jurisdiction facing the dual challenges of growing electricity demand and increasing renewable penetration.</p>
+                    <p><strong>Summary for Policymakers:</strong> Data center load flexibility could potentially improves reliability, reduces costs, and accelerates clean energy integration. Interconnection policies that recognize and reward flexibility through expedited timelines, reduced fees, or capacity market participation can harness this resource without requiring new generation or transmission infrastructure. The metrics and methods demonstrated here provide a template for implementing utilization-based frameworks in any jurisdiction facing the dual challenges of growing electricity demand and increasing renewable penetration.</p>
                 </div>
             </div>
         </div>
@@ -1627,6 +1671,28 @@
         // Extract generation metadata, so iterating keys gives only dates
         const genMetadata = generationData.metadata || {};
         delete generationData.metadata;
+
+        // ─── Gas Prices (CA Natural Gas Citygate, $/MCF, EIA) ────────────
+        const GAS_PRICES = {
+            '2020-01': 3.32, '2020-02': 2.55, '2020-03': 2.43, '2020-04': 2.36,
+            '2020-05': 2.47, '2020-06': 2.65, '2020-07': 2.69, '2020-08': 2.27,
+            '2020-09': 3.41, '2020-10': 3.08, '2020-11': 3.79, '2020-12': 4.03,
+            '2021-01': 2.25, '2021-02': 1.28, '2021-03': 4.09, '2021-04': 3.65,
+            '2021-05': 3.92, '2021-06': 4.25, '2021-07': 5.14, '2021-08': 5.26,
+            '2021-09': 5.00, '2021-10': 6.42, '2021-11': 6.97, '2021-12': 6.76,
+            '2022-01': 7.92, '2022-02': 6.04, '2022-03': 5.86, '2022-04': 6.32,
+            '2022-05': 7.47, '2022-06': 10.07, '2022-07': 7.31, '2022-08': 10.38,
+            '2022-09': 9.20, '2022-10': 6.38, '2022-11': 7.08, '2022-12': 11.83,
+            '2023-01': 28.61, '2023-02': 11.10, '2023-03': 4.57, '2023-04': 4.97,
+            '2023-05': 3.95, '2023-06': 3.78, '2023-07': 4.41, '2023-08': 4.78,
+            '2023-09': 4.49, '2023-10': 3.21, '2023-11': 5.97, '2023-12': 6.66,
+            '2024-01': 4.35, '2024-02': 5.59, '2024-03': 4.23, '2024-04': 2.66,
+            '2024-05': 2.51, '2024-06': 2.50, '2024-07': 2.98, '2024-08': 3.14,
+            '2024-09': 2.44, '2024-10': 3.22, '2024-11': 3.74, '2024-12': 4.68,
+            '2025-01': 4.84, '2025-02': 4.92, '2025-03': 4.12, '2025-04': 3.12,
+            '2025-05': 2.92, '2025-06': 2.83, '2025-07': 4.17, '2025-08': 3.91,
+            '2025-09': 5.00, '2025-10': 3.85, '2025-11': 5.97, '2025-12': 6.66,
+        };
 
         // ─── Compute Global Y-Axis Limits ────────────────────────────────
         let maxCapacity = 0;
@@ -2216,12 +2282,16 @@
                 const ds = dateToStr(d);
                 const y = String(d.getFullYear());
                 const m = String(d.getMonth() + 1).padStart(2, '0');
+                const monthKey = `${y}-${m}`;
 
                 const capM = capacityData[y] && capacityData[y][m];
                 const dem = demandData[ds];
+                const pDay = priceData[ds];
                 const hasDem = dem && dem.some(v => v !== null);
+                const gasPrice = GAS_PRICES[monthKey] || 3.0;
 
-                if (!hasDem || !capM) {
+                // Skip if missing demand, capacity, or price data
+                if (!hasDem || !capM || !pDay) {
                     allScatterPoints.push(null);
                     continue;
                 }
@@ -2230,12 +2300,37 @@
                 const totAvail = getVisibleTotalAvail(capM);
                 const reserves = computeReserves(demArr);
 
+                // Compute minimum effective headroom
                 const hr = totAvail.map((a, idx) => Math.round(a - demArr[idx]));
                 const effHr = hr.map((h, idx) => Math.round(h - reserves[idx]));
                 const minH = Math.min(...effHr);
-                const minHHr = effHr.indexOf(minH);
-                const availAtMin = totAvail[minHHr];
 
+                // Compute daily average LMP normalized by gas price
+                let lmpSum = 0, lmpCount = 0;
+                for (let h = 0; h < 24; h++) {
+                    const hrKey = String(h + 1);
+                    const hrData = pDay[hrKey];
+                    if (hrData && hrData.LMP != null) {
+                        lmpSum += hrData.LMP;
+                        lmpCount++;
+                    }
+                }
+
+                if (lmpCount === 0) {
+                    allScatterPoints.push(null);
+                    continue;
+                }
+
+                const avgLmp = lmpSum / lmpCount;
+                const normLmp = avgLmp / gasPrice;
+
+                // Filter outliers (normalized LMP > 200)
+                if (normLmp > 200) {
+                    allScatterPoints.push(null);
+                    continue;
+                }
+
+                // Color gradient by year (blue 2020 -> red 2025)
                 const t = i / 2191;
                 const r = Math.round(59 + t * (239 - 59));
                 const g = Math.round(130 + t * (68 - 130));
@@ -2243,49 +2338,52 @@
                 const color = `rgb(${r}, ${g}, ${b})`;
 
                 allScatterPoints.push({
-                    x: Math.round(availAtMin),
-                    y: minH,
+                    x: minH / 1000,  // Convert to GW for x-axis
+                    y: normLmp,      // Normalized LMP for y-axis
                     date: ds,
-                    color: color
+                    color: color,
+                    minHeadroomMW: minH  // Store original MW for tooltip
                 });
             }
 
             // Update scatter axis bounds
-            let sMinAvail = Infinity, sMaxAvail = 0, sMinHead = Infinity, sMaxHead = -Infinity;
+            let sMinHead = Infinity, sMaxHead = -Infinity;
+            let sMinLmp = Infinity, sMaxLmp = -Infinity;
             for (const pt of allScatterPoints) {
                 if (!pt) continue;
-                sMinAvail = Math.min(sMinAvail, pt.x);
-                sMaxAvail = Math.max(sMaxAvail, pt.x);
-                sMinHead = Math.min(sMinHead, pt.y);
-                sMaxHead = Math.max(sMaxHead, pt.y);
+                sMinHead = Math.min(sMinHead, pt.x);
+                sMaxHead = Math.max(sMaxHead, pt.x);
+                sMinLmp = Math.min(sMinLmp, pt.y);
+                sMaxLmp = Math.max(sMaxLmp, pt.y);
             }
             if (scatterChartReady) {
-                scatterChart.options.scales.x.min = Math.floor(sMinAvail / 5000) * 5000;
-                scatterChart.options.scales.x.max = Math.ceil(sMaxAvail / 5000) * 5000;
-                scatterChart.options.scales.y.min = Math.floor(sMinHead / 5000) * 5000;
-                scatterChart.options.scales.y.max = Math.ceil(sMaxHead / 5000) * 5000;
+                scatterChart.options.scales.x.min = Math.floor(sMinHead);
+                scatterChart.options.scales.x.max = Math.ceil(sMaxHead);
+                scatterChart.options.scales.y.min = Math.max(0, Math.floor(sMinLmp / 10) * 10);
+                scatterChart.options.scales.y.max = Math.ceil(sMaxLmp / 10) * 10;
             }
         }
 
         const scatterChart = new Chart(scatterCtx, {
             type: 'scatter',
             data: {
-                datasets: [{
-                    label: 'Days',
-                    data: [],
-                    backgroundColor: [],
-                    borderColor: [],
-                    borderWidth: 0.5,
-                    pointRadius: 2.5,
-                }]
+                datasets: [
+                    { label: '2020', data: [], backgroundColor: 'rgb(59, 130, 246)', borderColor: 'rgb(59, 130, 246)', borderWidth: 0.5, pointRadius: 2.5 },
+                    { label: '2021', data: [], backgroundColor: 'rgb(95, 119, 210)', borderColor: 'rgb(95, 119, 210)', borderWidth: 0.5, pointRadius: 2.5 },
+                    { label: '2022', data: [], backgroundColor: 'rgb(131, 108, 174)', borderColor: 'rgb(131, 108, 174)', borderWidth: 0.5, pointRadius: 2.5 },
+                    { label: '2023', data: [], backgroundColor: 'rgb(167, 97, 138)', borderColor: 'rgb(167, 97, 138)', borderWidth: 0.5, pointRadius: 2.5 },
+                    { label: '2024', data: [], backgroundColor: 'rgb(203, 86, 102)', borderColor: 'rgb(203, 86, 102)', borderWidth: 0.5, pointRadius: 2.5 },
+                    { label: '2025', data: [], backgroundColor: 'rgb(239, 68, 68)', borderColor: 'rgb(239, 68, 68)', borderWidth: 0.5, pointRadius: 2.5 }
+                ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 onClick: (event, elements) => {
                     if (elements.length > 0) {
+                        const datasetIndex = elements[0].datasetIndex;
                         const index = elements[0].index;
-                        const clickedPoint = scatterChart.data.datasets[0].data[index];
+                        const clickedPoint = scatterChart.data.datasets[datasetIndex].data[index];
                         if (clickedPoint && clickedPoint.date) {
                             const targetIndex = dateStrToIndex(clickedPoint.date);
                             slider.value = targetIndex;
@@ -2294,7 +2392,17 @@
                     }
                 },
                 plugins: {
-                    legend: { display: false },
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            color: '#ccc',
+                            font: { size: 11 },
+                            usePointStyle: true,
+                            pointStyleWidth: 16,
+                            padding: 12
+                        }
+                    },
                     tooltip: {
                         backgroundColor: '#1a1d2e',
                         titleColor: '#fff',
@@ -2310,8 +2418,8 @@
                             label: function(ctx) {
                                 const pt = ctx.raw;
                                 return [
-                                    `Effective Margin: ${pt.y >= 0 ? '+' : ''}${pt.y.toLocaleString()} MW`,
-                                    `Available: ${pt.x.toLocaleString()} MW`
+                                    `Normalized LMP: ${pt.y.toFixed(1)} MCF⁻¹`,
+                                    `Min Headroom: ${pt.minHeadroomMW >= 0 ? '+' : ''}${pt.minHeadroomMW.toLocaleString()} MW (${pt.x.toFixed(1)} GW)`
                                 ];
                             }
                         }
@@ -2320,15 +2428,15 @@
                 scales: {
                     x: {
                         ...commonScaleOpts,
-                        title: { display: true, text: 'Available Capacity at Min Effective Margin Hour (MW)', color: '#888', font: { size: 11 } },
-                        min: minScatterAvail,
-                        max: maxScatterAvail,
+                        title: { display: true, text: 'Minimum Effective Headroom (GW)', color: '#888', font: { size: 11 } },
+                        min: 0,
+                        max: 30,
                     },
                     y: {
                         ...commonScaleOpts,
-                        title: { display: true, text: 'Minimum Effective Margin (MW)', color: '#888', font: { size: 11 } },
-                        min: minScatterHead,
-                        max: maxScatterHead,
+                        title: { display: true, text: 'Normalized LMP ($/MWh per $/MCF)', color: '#888', font: { size: 11 } },
+                        min: 0,
+                        max: 150,
                     }
                 }
             }
@@ -2771,11 +2879,19 @@
                 `<span class="hydro-badge ${hydro.cls}">${hydro.type}</span>`;
             document.getElementById('statHydroSub').textContent = hydro.detail;
 
-            // Update scatter plot (bidirectional) - show points from 0 to sliderIndex
+            // Update scatter plot (bidirectional) - show points from 0 to sliderIndex, split by year
             const visiblePoints = allScatterPoints.slice(0, sliderIndex + 1).filter(p => p !== null);
-            scatterChart.data.datasets[0].data = visiblePoints;
-            scatterChart.data.datasets[0].backgroundColor = visiblePoints.map(p => p.color);
-            scatterChart.data.datasets[0].borderColor = visiblePoints.map(p => p.color);
+            const pointsByYear = { 2020: [], 2021: [], 2022: [], 2023: [], 2024: [], 2025: [] };
+            for (const pt of visiblePoints) {
+                const year = parseInt(pt.date.substring(0, 4));
+                if (pointsByYear[year]) pointsByYear[year].push(pt);
+            }
+            scatterChart.data.datasets[0].data = pointsByYear[2020];
+            scatterChart.data.datasets[1].data = pointsByYear[2021];
+            scatterChart.data.datasets[2].data = pointsByYear[2022];
+            scatterChart.data.datasets[3].data = pointsByYear[2023];
+            scatterChart.data.datasets[4].data = pointsByYear[2024];
+            scatterChart.data.datasets[5].data = pointsByYear[2025];
             scatterChart.update(isFirstUpdate ? 'resize' : 'none');
 
             // Update LMP vs Net Load scatter (accumulating, 24 points per day)
@@ -2922,29 +3038,6 @@
 
         // ─── LMP vs Net Load Scatter (All Hours with Price Data) ────────
         const NON_GAS_RESOURCES = ['Solar', 'Wind', 'Hydro', 'Nuclear', 'Geothermal', 'Biomass', 'Other Thermal'];
-
-        // CA Natural Gas Citygate Prices ($/MCF) — Source: EIA
-        // Key: "YYYY-MM" → price
-        const GAS_PRICES = {
-            '2020-01': 3.32, '2020-02': 2.55, '2020-03': 2.43, '2020-04': 2.36,
-            '2020-05': 2.47, '2020-06': 2.65, '2020-07': 2.69, '2020-08': 2.27,
-            '2020-09': 3.41, '2020-10': 3.08, '2020-11': 3.79, '2020-12': 4.03,
-            '2021-01': 2.25, '2021-02': 1.28, '2021-03': 4.09, '2021-04': 3.65,
-            '2021-05': 3.92, '2021-06': 4.25, '2021-07': 5.14, '2021-08': 5.26,
-            '2021-09': 5.00, '2021-10': 6.42, '2021-11': 6.97, '2021-12': 6.76,
-            '2022-01': 7.92, '2022-02': 6.04, '2022-03': 5.86, '2022-04': 6.32,
-            '2022-05': 7.47, '2022-06': 10.07, '2022-07': 7.31, '2022-08': 10.38,
-            '2022-09': 9.20, '2022-10': 6.38, '2022-11': 7.08, '2022-12': 11.83,
-            '2023-01': 28.61, '2023-02': 11.10, '2023-03': 4.57, '2023-04': 4.97,
-            '2023-05': 3.95, '2023-06': 3.78, '2023-07': 4.41, '2023-08': 4.78,
-            '2023-09': 4.49, '2023-10': 3.21, '2023-11': 5.97, '2023-12': 6.66,
-            '2024-01': 4.35, '2024-02': 5.59, '2024-03': 4.23, '2024-04': 2.66,
-            '2024-05': 2.51, '2024-06': 2.50, '2024-07': 2.98, '2024-08': 3.14,
-            '2024-09': 2.44, '2024-10': 3.22, '2024-11': 3.74, '2024-12': 4.68,
-            '2025-01': 4.84, '2025-02': 4.92, '2025-03': 4.12, '2025-04': 3.12,
-            '2025-05': 2.92, '2025-06': 2.83, '2025-07': 4.17, '2025-08': 3.91,
-            '2025-09': 5.00, '2025-10': 3.85, '2025-11': 5.97, '2025-12': 6.66,
-        };
 
         // LMP-headroom lookup table (memoized, computed once on first use)
         let lmpHeadroomLookup = null;
@@ -3434,7 +3527,7 @@
         // Values are ANNUALIZED (divided by years of data).
         function computeCurtailment(avgMw, flex) {
             const types = isCustomActive ? ['flat', 'camel', 'night', 'custom'] : ['flat', 'camel', 'night'];
-            const NON_GAS_RES = ['Solar', 'Wind', 'Hydro', 'Nuclear', 'Geothermal', 'Biomass', 'Other Thermal'];
+            const NON_GAS = ['Solar', 'Wind', 'Hydro', 'Nuclear', 'Geothermal', 'Coal', 'Oil', 'Other'];  // All non-gas generation
             const curtailByMonth = Array.from({length: 12}, () => {
                 const absorbed = {};
                 for (const t of types) absorbed[t] = 0;
@@ -3446,14 +3539,13 @@
             for (let i = 0; i <= 2191; i++) {
                 const d = indexToDate(i);
                 const ds = dateToStr(d);
-                const y = String(d.getFullYear());
-                const mStr = String(d.getMonth() + 1).padStart(2, '0');
                 const monthIdx = d.getMonth();
 
-                const capM = capacityData[y] && capacityData[y][mStr];
+                const genDay = generationData[ds];  // Use actual EIA-930 generation data
                 const dem = demandData[ds];
                 const hasDem = dem && dem.some(v => v !== null);
-                if (!hasDem || !capM) continue;
+                const hasGen = genDay && Object.keys(genDay).length > 0;
+                if (!hasDem || !hasGen) continue;
 
                 const demArr = dem.map(v => v || 0);
                 const dcProfiles = {};
@@ -3463,13 +3555,16 @@
                 totalDays++;
 
                 for (let h = 0; h < 24; h++) {
+                    // Sum all non-gas generation from EIA-930 actual data
                     let nonGasGen = 0;
-                    for (const res of NON_GAS_RES) {
-                        const arr = capM[res];
-                        if (arr) nonGasGen += arr[h];
+                    for (const res of NON_GAS) {
+                        const arr = genDay[res];
+                        if (arr && arr[h] !== undefined) nonGasGen += arr[h];
                     }
 
                     const demand = demArr[h];
+                    // Surplus occurs when non-gas generation exceeds demand
+                    // This represents potential curtailment (excess must be curtailed or exported)
                     const surplus = Math.max(0, nonGasGen - demand);
 
                     if (surplus > 0) {
@@ -3599,6 +3694,7 @@
         const HEAT_LEFT = 80, HEAT_TOP = 24, HEAT_RIGHT = 80, HEAT_BOTTOM = 20;
         let stressProfile = 'flat';
         let stressDaysCache = null, stressStatsCache = null;
+        let stressRelativeMode = false;
 
         // ─── Optimized Profile Cache ────────────────────────────────
         let optimizedResultCache = null;
@@ -3618,6 +3714,30 @@
                 const s = (t - 0.66) / 0.34;
                 r = Math.round(34 + 62 * s); g = Math.round(197 - 32 * s); b = Math.round(94 + 156 * s);
             }
+            return `rgb(${r},${g},${b})`;
+        }
+
+        // Diverging color scale for relative mode (delta from baseline)
+        // Blue = improved headroom (delta > 0), White = no change, Red = reduced headroom (delta < 0)
+        function relativeDeltaColor(deltaMw) {
+            // Scale: -10000 MW (very bad) → 0 (neutral) → +2000 MW (unlikely improvement)
+            const clampedDelta = Math.max(-10000, Math.min(2000, deltaMw));
+            let r, g, b;
+
+            if (clampedDelta < 0) {
+                // Negative delta (reduced headroom) → white to red
+                const t = Math.abs(clampedDelta) / 10000;  // 0 at zero, 1 at -10000
+                r = Math.round(255);
+                g = Math.round(255 * (1 - t * 0.8));  // 255 → 51 (less green)
+                b = Math.round(255 * (1 - t * 0.8));  // 255 → 51 (less blue)
+            } else {
+                // Positive delta (improved headroom) → white to blue
+                const t = clampedDelta / 2000;  // 0 at zero, 1 at +2000
+                r = Math.round(255 * (1 - t * 0.75));  // 255 → 64
+                g = Math.round(255 * (1 - t * 0.4));   // 255 → 153
+                b = Math.round(255);
+            }
+
             return `rgb(${r},${g},${b})`;
         }
 
@@ -3653,8 +3773,17 @@
             // Draw cells
             for (let r = 0; r < ROWS; r++) {
                 const headrooms = days[r].headroom[profile];
+                const baselineHeadrooms = days[r].headroom.baseline;
+
                 for (let c = 0; c < 24; c++) {
-                    ctx.fillStyle = headroomColor(headrooms[c]);
+                    if (stressRelativeMode && profile !== 'baseline') {
+                        // Relative mode: show delta from baseline
+                        const delta = headrooms[c] - baselineHeadrooms[c];
+                        ctx.fillStyle = relativeDeltaColor(delta);
+                    } else {
+                        // Absolute mode: show actual headroom
+                        ctx.fillStyle = headroomColor(headrooms[c]);
+                    }
                     ctx.fillRect(HEAT_LEFT + c * HEAT_CELL_W, HEAT_TOP + r * HEAT_CELL_H, HEAT_CELL_W - 1, HEAT_CELL_H - 1);
                 }
                 // Date label every 10 rows
@@ -3670,17 +3799,35 @@
             const lx = HEAT_LEFT + 24 * HEAT_CELL_W + 15;
             const ly = HEAT_TOP;
             const lh = ROWS * HEAT_CELL_H;
-            for (let py = 0; py < lh; py++) {
-                const mw = -5000 + 30000 * (1 - py / lh);
-                ctx.fillStyle = headroomColor(mw);
-                ctx.fillRect(lx, ly + py, 12, 1);
+
+            if (stressRelativeMode && profile !== 'baseline') {
+                // Relative mode legend: blue (improved) → white → red (reduced)
+                for (let py = 0; py < lh; py++) {
+                    const delta = 2000 - 12000 * (py / lh);  // +2000 at top → -10000 at bottom
+                    ctx.fillStyle = relativeDeltaColor(delta);
+                    ctx.fillRect(lx, ly + py, 12, 1);
+                }
+                ctx.fillStyle = '#888';
+                ctx.font = '9px -apple-system, BlinkMacSystemFont, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText('+2 GW', lx + 16, ly + 8);
+                ctx.fillText('0 GW', lx + 16, ly + lh * 0.17 + 4);
+                ctx.fillText('-5 GW', lx + 16, ly + lh * 0.58 + 4);
+                ctx.fillText('-10 GW', lx + 16, ly + lh);
+            } else {
+                // Absolute mode legend: red → yellow → blue
+                for (let py = 0; py < lh; py++) {
+                    const mw = -5000 + 30000 * (1 - py / lh);
+                    ctx.fillStyle = headroomColor(mw);
+                    ctx.fillRect(lx, ly + py, 12, 1);
+                }
+                ctx.fillStyle = '#888';
+                ctx.font = '9px -apple-system, BlinkMacSystemFont, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText('25 GW', lx + 16, ly + 8);
+                ctx.fillText('10 GW', lx + 16, ly + lh * 0.5 + 4);
+                ctx.fillText('-5 GW', lx + 16, ly + lh);
             }
-            ctx.fillStyle = '#888';
-            ctx.font = '9px -apple-system, BlinkMacSystemFont, sans-serif';
-            ctx.textAlign = 'left';
-            ctx.fillText('25 GW', lx + 16, ly + 8);
-            ctx.fillText('10 GW', lx + 16, ly + lh * 0.5 + 4);
-            ctx.fillText('-5 GW', lx + 16, ly + lh);
 
             // Summary cards
             const el = document.getElementById('stressSummary');
@@ -3720,10 +3867,18 @@
             if (col >= 0 && col < 24 && row >= 0 && row < stressDaysCache.length) {
                 const d = stressDaysCache[row];
                 const mw = d.headroom[stressProfile][col];
+                const baseMw = d.headroom.baseline[col];
+                const delta = mw - baseMw;
+
                 heatmapTip.style.display = 'block';
                 heatmapTip.style.left = (e.clientX + 12) + 'px';
                 heatmapTip.style.top = (e.clientY - 30) + 'px';
-                heatmapTip.innerHTML = `<b>${d.date}</b> \u2022 ${HOUR_LABELS[col]}<br>Headroom: ${(mw / 1000).toFixed(1)} GW (${Math.round(mw)} MW)`;
+
+                if (stressRelativeMode && stressProfile !== 'baseline') {
+                    heatmapTip.innerHTML = `<b>${d.date}</b> \u2022 ${HOUR_LABELS[col]}<br>Δ Headroom: ${delta >= 0 ? '+' : ''}${(delta / 1000).toFixed(1)} GW (${delta >= 0 ? '+' : ''}${Math.round(delta)} MW)<br><span style="color:#888;font-size:10px;">Baseline: ${(baseMw / 1000).toFixed(1)} GW | With DC: ${(mw / 1000).toFixed(1)} GW</span>`;
+                } else {
+                    heatmapTip.innerHTML = `<b>${d.date}</b> \u2022 ${HOUR_LABELS[col]}<br>Headroom: ${(mw / 1000).toFixed(1)} GW (${Math.round(mw)} MW)`;
+                }
             } else {
                 heatmapTip.style.display = 'none';
             }
@@ -3741,6 +3896,12 @@
                 stressProfile = profile;
                 drawStressHeatmap();
             });
+        });
+
+        // Relative mode checkbox handler
+        document.getElementById('stressRelativeMode').addEventListener('change', function(e) {
+            stressRelativeMode = e.target.checked;
+            drawStressHeatmap();
         });
 
         // ─── Phase 2: Curtailment Chart ─────────────────────────────────
@@ -4699,13 +4860,26 @@
             btn.addEventListener('click', () => {
                 const type = btn.dataset.type;
                 if (type === 'custom') {
-                    // Toggle custom mode
-                    isCustomActive = true;
-                    document.getElementById('customEditorContainer').style.display = '';
-                    document.querySelectorAll('.dc-preset-btn[data-type]').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    drawCustomEditor();
-                    renderDCAnalysis();
+                    // Toggle custom mode on/off
+                    if (isCustomActive) {
+                        // Hide custom editor and switch to Camel preset
+                        isCustomActive = false;
+                        document.getElementById('customEditorContainer').style.display = 'none';
+                        document.querySelectorAll('.dc-preset-btn[data-type]').forEach(b => b.classList.remove('active'));
+                        document.querySelector('.dc-preset-btn[data-type="camel"]').classList.add('active');
+                        document.getElementById('dcFlexSlider').value = 70;
+                        renderDCAnalysis();
+                    } else {
+                        // Show custom editor
+                        isCustomActive = true;
+                        document.getElementById('customEditorContainer').style.display = '';
+                        document.querySelectorAll('.dc-preset-btn[data-type]').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        drawCustomEditor();
+                        renderDCAnalysis();
+                    }
+                    // Update sticky positions after editor is shown/hidden
+                    setTimeout(() => window.updateStickyPositions(), 50);
                 } else {
                     isCustomActive = false;
                     document.getElementById('customEditorContainer').style.display = 'none';
@@ -4717,8 +4891,70 @@
                         document.getElementById('dcFlexSlider').value = 70;
                     }
                     renderDCAnalysis();
+                    // Update sticky positions after editor is hidden
+                    setTimeout(() => window.updateStickyPositions(), 50);
                 }
             });
+        });
+
+        // ─── DC Controls Sticky Behavior ─────────────────────────────────
+        const dcControls = document.getElementById('dcControls');
+        const customEditorContainer = document.getElementById('customEditorContainer');
+        const sliderSection = document.querySelector('.slider-section');
+        const dcControlsOriginalTop = dcControls.offsetTop;
+        let dcControlsHeight = dcControls.offsetHeight;
+        let customEditorHeight = 0;
+
+        // Create placeholders to prevent layout shift when controls become fixed
+        const dcPlaceholder = document.createElement('div');
+        dcPlaceholder.style.display = 'none';
+        dcControls.parentNode.insertBefore(dcPlaceholder, dcControls);
+
+        const customPlaceholder = document.createElement('div');
+        customPlaceholder.style.display = 'none';
+        customEditorContainer.parentNode.insertBefore(customPlaceholder, customEditorContainer);
+
+        window.updateStickyPositions = function() {
+            const scrollY = window.scrollY || window.pageYOffset;
+            const sliderSectionHeight = sliderSection ? sliderSection.offsetHeight : 0;
+            const stickyTopPosition = sliderSectionHeight + 10; // 10px gap below slider section
+            const isCustomVisible = customEditorContainer.style.display !== 'none';
+
+            customEditorHeight = isCustomVisible ? customEditorContainer.offsetHeight : 0;
+            const totalHeight = dcControlsHeight + (isCustomVisible ? customEditorHeight : 0);
+
+            if (scrollY > dcControlsOriginalTop - stickyTopPosition) {
+                // Show sticky controls
+                if (!dcControls.classList.contains('sticky')) {
+                    dcControls.classList.add('sticky');
+                    dcControls.style.top = stickyTopPosition + 'px';
+                    dcPlaceholder.style.height = totalHeight + 'px';
+                    dcPlaceholder.style.display = 'block';
+                }
+
+                // Position custom editor right below DC controls if visible
+                if (isCustomVisible && !customEditorContainer.classList.contains('sticky')) {
+                    customEditorContainer.classList.add('sticky');
+                    customEditorContainer.style.top = (stickyTopPosition + dcControlsHeight) + 'px';
+                } else if (!isCustomVisible && customEditorContainer.classList.contains('sticky')) {
+                    customEditorContainer.classList.remove('sticky');
+                }
+            } else {
+                // Hide sticky controls
+                if (dcControls.classList.contains('sticky')) {
+                    dcControls.classList.remove('sticky');
+                    customEditorContainer.classList.remove('sticky');
+                    dcPlaceholder.style.display = 'none';
+                }
+            }
+        }
+
+        window.addEventListener('scroll', window.updateStickyPositions);
+
+        // Update height on window resize
+        window.addEventListener('resize', () => {
+            dcControlsHeight = dcControls.offsetHeight;
+            window.updateStickyPositions();
         });
 
         // ─── Optimized Profile Event Listeners ──────────────────────────
@@ -4784,7 +5020,10 @@
         renderDCAnalysis();
 
         // Initial render - use setTimeout to ensure charts are fully initialized
-        setTimeout(() => updateCharts(0), 100);
+        setTimeout(() => {
+            const initialSliderValue = parseInt(document.getElementById('dateSlider').value);
+            updateCharts(initialSliderValue);
+        }, 100);
     })();
     </script>
 </body>
