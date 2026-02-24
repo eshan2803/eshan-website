@@ -1112,6 +1112,44 @@
             .main { padding: 12px; }
             .analysis-row { grid-template-columns: 1fr; }
         }
+
+        /* Back to Top Button */
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .back-to-top:hover {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .back-to-top:active {
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 <body>
@@ -1639,7 +1677,7 @@
                 <p><strong>Policy Framework Alignment:</strong> Virginia's grid utilization factor legislation (2024) needs to be updated to account for <strong>available</strong> hourly capacity. Otherwise it promotes firm baseload and gas generation, and not variable renewable generation. Our analysis provides empirical quantification methods that jurisdictions can adopt:</p>
                 <ul style="margin-left: 24px; margin-bottom: 16px; color: #b8b8b8; line-height: 1.8;">
                     <li><strong>Utilization metric:</strong> Average grid utilization (demand/available capacity) provides a simple, measurable benchmark. Flexible load profiles that increase utilization by &gt;3 percentage points demonstrate material system benefit.</li>
-                    <li><strong>Stress hour reduction:</strong> Count of hours with effective headroom &lt;3,500 MW provides a tail-risk metric. Profiles that reduce stress hours by &gt;15% relative to flat baseline warrant expedited review. Using camel load profile, additional 2.6 GW of flexible load was possible without tightening the stress on the worst day in last 6 years. </li>
+                    <li><strong>Stress hour reduction:</strong> Count of hours with effective headroom &lt;3,500 MW provides a tail-risk metric. Profiles that reduce stress hours by &gt;15% relative to flat baseline warrant expedited review. Using camel load profile, additional 1.5-2.0 GW of flexible load was possible without tightening the stress on the worst day in last 6 years. </li>
                     <li><strong>Economic value test:</strong> Weighted-average LMP differential (flexible vs. flat) quantifies system-wide cost impact. </li>
                     <li><strong>Environmental screening:</strong> Surplus absorption (GWh/year during non-gas-surplus hours) and marginal emission rate (tCO₂/MWh weighted average) provide climate impact metrics aligned with decarbonization mandates like California's SB 100.</li>
                 </ul>
@@ -1657,6 +1695,9 @@
         </div>
 
     </div>
+
+    <!-- Back to Top Button -->
+    <button class="back-to-top" id="backToTop" title="Back to top">↑</button>
 
     <script>
     (async function() {
@@ -5060,6 +5101,26 @@
             const initialSliderValue = parseInt(document.getElementById('dateSlider').value);
             updateCharts(initialSliderValue);
         }, 100);
+
+        // ─── Back to Top Button ──────────────────────────────────────────
+        const backToTopBtn = document.getElementById('backToTop');
+
+        // Show/hide button based on scroll position
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 500) {
+                backToTopBtn.classList.add('visible');
+            } else {
+                backToTopBtn.classList.remove('visible');
+            }
+        });
+
+        // Scroll to top when clicked
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
     })();
     </script>
 </body>
