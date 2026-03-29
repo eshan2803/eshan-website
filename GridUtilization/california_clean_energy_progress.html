@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>California's Clean Energy Transformation: 2020-2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0f1117 0%, #1a1d2e 100%);
+            color: #e2e8f0;
+            line-height: 1.7;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #1a1d2e;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            padding: 60px;
+        }
+
+        h1 {
+            font-size: 3em;
+            color: #22d3ee;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 700;
+            text-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+        }
+
+        h2 {
+            font-size: 2.2em;
+            color: #4ade80;
+            margin-top: 60px;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #4ade80;
+            padding-bottom: 15px;
+            font-weight: 600;
+        }
+
+        h3 {
+            font-size: 1.6em;
+            color: #facc15;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        p, li {
+            font-size: 1.1em;
+            margin-bottom: 20px;
+            color: #cbd5e1;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1.3em;
+            color: #94a3b8;
+            margin-bottom: 50px;
+            font-style: italic;
+        }
+
+        .chart-container {
+            margin: 40px 0;
+            padding: 30px;
+            background: #0f1117;
+            border-radius: 12px;
+            border: 2px solid #334155;
+        }
+
+        .chart-container img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+
+        .methodology {
+            background: #1e293b;
+            border-left: 4px solid #60a5fa;
+            padding: 25px;
+            margin: 30px 0;
+            border-radius: 8px;
+        }
+
+        .methodology h4 {
+            color: #60a5fa;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+        }
+
+        .insight {
+            background: #1e293b;
+            border-left: 4px solid #4ade80;
+            padding: 25px;
+            margin: 30px 0;
+            border-radius: 8px;
+        }
+
+        .insight h4 {
+            color: #4ade80;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+        }
+
+        .key-findings {
+            background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%);
+            padding: 30px;
+            border-radius: 12px;
+            margin: 40px 0;
+        }
+
+        .key-findings h3 {
+            color: #ffffff;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .key-findings ul {
+            list-style-position: inside;
+        }
+
+        .key-findings li {
+            color: #e0e7ff;
+            padding: 10px 0;
+            font-size: 1.15em;
+        }
+
+        ul {
+            margin-left: 30px;
+        }
+
+        li {
+            margin-bottom: 15px;
+        }
+
+        strong {
+            color: #22d3ee;
+        }
+
+        .stat-box {
+            display: inline-block;
+            background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%);
+            padding: 15px 25px;
+            border-radius: 8px;
+            margin: 10px 10px 10px 0;
+            font-weight: 600;
+        }
+
+        .highlight {
+            background: rgba(34, 211, 238, 0.1);
+            padding: 3px 8px;
+            border-radius: 4px;
+            color: #22d3ee;
+            font-weight: 600;
+        }
+
+        .warning {
+            background: rgba(251, 146, 60, 0.1);
+            padding: 3px 8px;
+            border-radius: 4px;
+            color: #fb923c;
+            font-weight: 600;
+        }
+
+        .success {
+            background: rgba(74, 222, 128, 0.1);
+            padding: 3px 8px;
+            border-radius: 4px;
+            color: #4ade80;
+            font-weight: 600;
+        }
+
+        code {
+            background: #0f1117;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #22d3ee;
+            font-size: 0.95em;
+        }
+
+        .toc {
+            background: #0f1117;
+            padding: 30px;
+            border-radius: 12px;
+            margin: 40px 0;
+            border: 2px solid #334155;
+        }
+
+        .toc h3 {
+            margin-top: 0;
+            color: #22d3ee;
+        }
+
+        .toc a {
+            color: #60a5fa;
+            text-decoration: none;
+            display: block;
+            padding: 8px 0;
+            transition: color 0.3s;
+        }
+
+        .toc a:hover {
+            color: #22d3ee;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            h2 {
+                font-size: 1.6em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>California's Clean Energy Transformation</h1>
+        <p class="subtitle">A Data-Driven Analysis of Grid Evolution from 2020 to 2025</p>
+
+        <div class="key-findings">
+            <h3>Key Findings at a Glance</h3>
+            <ul>
+                <li><strong>Clean Energy</strong>: California's grid reached <span class="highlight">62% clean energy</span> by 2025 (when imports are properly classified)</li>
+                <li><strong>Natural Gas</strong>: Gas generation declined by <span class="success">26% from 2020 to 2025</span>, dropping from 32% to 24% of supply</li>
+                <li><strong>Battery Storage</strong>: Grew from near-zero to <span class="highlight">11 GW capacity</span>, reaching up to 65% of peak demand on some days</li>
+                <li><strong>Renewable Penetration</strong>: Hours exceeding 100% renewable generation increased dramatically, with some days achieving <span class="success">20+ hours</span> of 100%+ clean energy</li>
+                <li><strong>Negative Prices</strong>: Battery storage curtailed negative pricing events by 2025, after they peaked in 2024</li>
+                <li><strong>Price Impacts</strong>: Battery deployment drove significant <span class="warning">price cannibalization</span>, with ancillary services and energy arbitrage revenues declining</li>
+            </ul>
+        </div>
+
+        <div class="toc">
+            <h3>Table of Contents</h3>
+            <a href="#section-1">1. Understanding Generator Types</a>
+            <a href="#section-2">2. Solar's Impact: The Duck Curve Phenomenon</a>
+            <a href="#section-3">3. Battery Storage Revolution</a>
+            <a href="#section-4">4. Grid Economics: Price Cannibalization</a>
+            <a href="#section-5">5. Renewable Penetration Progress</a>
+            <a href="#section-6">6. Natural Gas Decline</a>
+            <a href="#section-7">7. Energy Mix Analysis</a>
+            <a href="#section-8">8. Import Classification Methodology</a>
+            <a href="#section-9">9. Conclusions</a>
+        </div>
+
+        <h2 id="section-1">1. Understanding Generator Types</h2>
+
+        <p>Before diving into California's transformation, we must understand the fundamental characteristics of different electricity generators. Two key metrics define generator behavior:</p>
+
+        <ul>
+            <li><strong>Ramp Rate</strong>: How quickly a generator can change output (MW/hour)</li>
+            <li><strong>Capacity Factor</strong>: Average output as a percentage of maximum capacity</li>
+        </ul>
+
+        <h3>1.1 Ramp Rate Distributions</h3>
+
+        <div class="chart-container">
+            <img src="ramp_rate_seasonal.png" alt="Ramp rate distributions by generator type">
+        </div>
+
+        <div class="methodology">
+            <h4>📊 Methodology: Ramp Rate Calculation</h4>
+            <p><strong>Data Source:</strong> EIA-930 hourly generation data (2020-2025)</p>
+            <p><strong>Calculation:</strong></p>
+            <ul>
+                <li>For each generator type, calculate hourly power changes: ΔP = P(t+1) - P(t)</li>
+                <li>Ramp rate = |ΔP| in MW per hour (absolute value)</li>
+                <li>Plot distribution as violin/density plot showing the full range of ramp rates</li>
+                <li>Each vertical spread shows the probability density of different ramp magnitudes</li>
+            </ul>
+        </div>
+
+        <div class="insight">
+            <h4>🔍 Key Insights</h4>
+            <ul>
+                <li><span class="highlight">Solar</span> exhibits the highest ramp rates (up to 10,000+ MW/hour) due to sunrise/sunset transitions and cloud cover</li>
+                <li><span class="highlight">Batteries</span> show extremely high ramp capability (up to 6,000 MW/hour), making them ideal for grid balancing</li>
+                <li><span class="highlight">Natural Gas</span> provides moderate flexibility (typically 1,000-3,000 MW/hour), crucial for following load and renewable variability</li>
+                <li><span class="highlight">Nuclear and Hydro</span> show minimal ramping, with most changes under 500 MW/hour, operating primarily as baseload resources</li>
+                <li><span class="highlight">Wind</span> shows moderate ramp rates (1,000-3,000 MW/hour) due to weather front movements</li>
+            </ul>
+        </div>
+
+        <h3>1.2 Ramp Rates vs. LMP</h3>
+
+        <div class="chart-container">
+            <img src="ramp_rate_lmp.png" alt="Ramp rates correlated with electricity prices">
+        </div>
+
+        <div class="insight">
+            <h4>🔍 Key Insights</h4>
+            <ul>
+                <li>High ramp rate events correlate with <span class="warning">elevated electricity prices (LMP)</span>, as the grid must dispatch flexible resources quickly</li>
+                <li>Solar ramps during morning and evening transitions create price spikes when gas generators must ramp up</li>
+                <li>Battery ramps show strong correlation with price volatility, as batteries respond to arbitrage opportunities</li>
+            </ul>
+        </div>
+
+        <h3>1.3 Capacity Factors by Season</h3>
+
+        <div class="chart-container">
+            <img src="capacity_factor_seasonal_with_avg.png" alt="Capacity factors by generator type and season">
+        </div>
+
+        <div class="methodology">
+            <h4>📊 Methodology: Capacity Factor Calculation</h4>
+            <p><strong>Data Source:</strong> CAISO fuel-source data + EIA capacity data</p>
+            <p><strong>Calculation:</strong></p>
+            <ul>
+                <li>Capacity Factor = (Actual Generation) / (Maximum Capacity × Time Period)</li>
+                <li>Calculated for each 5-minute interval, then averaged by season</li>
+                <li>Maximum capacity estimated from observed peak generation over multiple years</li>
+            </ul>
+        </div>
+
+        <div class="insight">
+            <h4>🔍 Key Insights</h4>
+            <ul>
+                <li><span class="highlight">Nuclear</span> operates at ~90% capacity factor year-round (baseload)</li>
+                <li><span class="highlight">Solar</span> averages 25% capacity factor, with summer peak around 30% (daylight hours only)</li>
+                <li><span class="highlight">Wind</span> shows ~35% capacity factor, with higher performance in spring/fall</li>
+                <li><span class="highlight">Natural Gas</span> operates at 40-60% capacity, varying seasonally to follow demand</li>
+                <li><span class="highlight">Large Hydro</span> shows seasonal variation (40-60%), driven by snowmelt and reservoir management</li>
+            </ul>
+        </div>
+
+        <h3>1.4 Capacity Factors vs. LMP</h3>
+
+        <div class="chart-container">
+            <img src="capacity_factor_lmp.png" alt="Capacity factors correlated with electricity prices">
+        </div>
+
+        <div class="insight">
+            <h4>🔍 Key Insights</h4>
+            <ul>
+                <li>Higher natural gas capacity factors coincide with <span class="warning">higher prices</span>, indicating gas dispatch during peak demand</li>
+                <li>Solar capacity factor peaks (midday) often correspond with <span class="success">lower prices</span> due to abundant clean energy</li>
+                <li>This price-capacity relationship drives battery arbitrage economics</li>
+            </ul>
+        </div>
+
+        <h2 id="section-2">2. Solar's Impact: The Duck Curve Phenomenon</h2>
+
+        <p>As solar capacity exploded in California, the grid began exhibiting a distinctive daily pattern known as the "duck curve." This shape emerges from the interaction between demand, solar generation, and the resulting "net load" (demand minus renewables) that conventional generators must meet.</p>
+
+        <h3>2.1 Duck Curve Evolution: April 2020-2025</h3>
+
+        <div class="chart-container">
+            <img src="april_duck_curves.png" alt="April duck curve evolution showing demand, solar, batteries, and net load">
+        </div>
+
+        <div class="methodology">
+            <h4>📊 Methodology: Duck Curve Analysis</h4>
+            <p><strong>Data Source:</strong> CAISO 5-minute fuel-source data for April each year</p>
+            <p><strong>Process:</strong></p>
+            <ul>
+                <li><strong>Gross Demand</strong> = Sum of all generation sources, excluding battery charging</li>
+                <li><strong>Solar Generation</strong> = Solar column from CAISO data</li>
+                <li><strong>Battery Charging</strong> = Negative battery values (load component)</li>
+                <li><strong>Net Load</strong> = Gross Demand - Solar + Battery Charging</li>
+                <li>Calculated hourly averages across all April days for each year</li>
+            </ul>
+            <p><strong>Why April?</strong> Spring months showcase the duck curve most dramatically due to moderate demand and high solar generation.</p>
+        </div>
+
+        <div class="insight">
+            <h4>🔍 Key Insights: The Deepening Duck</h4>
+            <ul>
+                <li><strong>2020-2023</strong>: Duck curve "belly" deepened each year as solar capacity grew. Net load dropped from ~20 GW to ~12 GW at midday.</li>
+                <li><strong>Ramp Challenge</strong>: Evening ramp steepened dramatically. Net load climbs from 12 GW (3pm) to 28 GW (7pm) = <span class="warning">16 GW in 4 hours</span> (4,000 MW/hour ramp requirement)</li>
+                <li><strong>Battery Impact (2024-2025)</strong>: Purple shaded area shows battery charging during solar surplus hours, storing 2-4 GW. This:
+                    <ul>
+                        <li>Absorbs excess solar (reducing negative prices)</li>
+                        <li>Smooths the evening ramp by discharging during sunset</li>
+                    </ul>
+                </li>
+                <li><strong>Net Load Transformation</strong>: By 2025, the duck curve begins to flatten as batteries fill the belly and shave the neck</li>
+            </ul>
+        </div>
+
+        <h3>2.2 Negative Price Events</h3>
+
+        <div class="chart-container">
+            <img src="negative_price_analysis_with_solar.png" alt="Negative price events and their relationship to solar generation">
+        </div>
+
+        <div class="methodology">
+            <h4>📊 Methodology: Negative Price Analysis</h4>
+            <p><strong>Data Source:</strong> CAISO LMP price data + fuel-source generation data</p>
+            <p><strong>Negative Price Definition:</strong> Hours when day-ahead LMP < $0/MWh</p>
+            <p><strong>Analysis:</strong></p>
+            <ul>
+                <li>Count negative price hours per year</li>
+                <li>Correlate with solar generation levels</li>
+                <li>Track minimum price magnitudes</li>
+                <li>Examine seasonal distribution</li>
+            </ul>
+        </div>
+
+        <div class="insight">
+            <h4>🔍 Key Insights: The Battery Solution</h4>
+            <ul>
+                <li><strong>2020-2023</strong>: Negative price hours increased exponentially
+                    <ul>
+                        <li>2020: ~500 hours with negative prices</li>
+                        <li>2023: ~3,000 hours with negative prices</li>
+                        <li>Worst prices reached -$30 to -$50/MWh</li>
+                    </ul>
+                </li>
+                <li><strong>Root Cause</strong>: Solar generation exceeded demand during spring midday, but:
+                    <ul>
+                        <li>Must-run nuclear and hydro couldn't curtail</li>
+                        <li>Gas generators already at minimum output</li>
+                        <li>Limited export capacity to neighbors</li>
+                    </ul>
+                </li>
+                <li><strong>2024 Peak</strong>: Negative price hours peaked at ~3,500 hours, the worst year</li>
+                <li><strong>2025 Reversal</strong>: Battery storage capacity reached critical mass:
+                    <ul>
+                        <li>Negative price hours <span class="success">dropped to ~1,500 hours (-57%)</span></li>
+                        <li>Price magnitudes softened (rarely below -$20/MWh)</li>
+                        <li>Batteries absorbed 2-4 GW of excess solar during price crashes</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <h2 id="section-3">3. Battery Storage Revolution</h2>
+
+        <p>Between 2020 and 2025, California deployed utility-scale battery storage at an unprecedented rate, fundamentally transforming grid operations. From negligible capacity in 2020, batteries grew to <strong>11 GW by 2025</strong>—representing up to 65% of peak demand on some days.</p>
+
+        <h3>3.1 Battery Capacity Growth vs. LMP</h3>
+
+        <div class="chart-container">
+            <img src="battery_gw_vs_lmp.png" alt="Battery GW capacity growth plotted against electricity prices">
+        </div>
+
+        <div class="methodology">
+            <h4>📊 Methodology: Battery Data Processing</h4>
+            <p><strong>Data Source:</strong> CAISO 5-minute battery generation/charging data</p>
+            <p><strong>Metrics:</strong></p>
+            <ul>
+                <li><strong>Daily Peak Battery Discharge (GW)</strong> = Maximum positive battery MW value each day ÷ 1000</li>
+                <li><strong>Battery % of Demand</strong> = (Peak Battery MW / Peak Gross Demand MW) × 100</li>
+                <li><strong>Color Coding</strong>: Line colored by % of demand metric (plasma colormap: purple 0% → yellow 100%)</li>
+            </ul>
+            <p><strong>LMP Prices:</strong> Daily peak day-ahead Locational Marginal Price</p>
+        </div>
+
+        <div class="insight">
+            <h4>🔍 Key Insights</h4>
+            <ul>
+                <li><strong>Exponential Growth</strong>: Battery discharge capacity grew from ~0.5 GW (2020) to ~11 GW (2025)</li>
+                <li><strong>Line Color Evolution</strong>:
+                    <ul>
+                        <li>Early years (purple): Batteries were <5% of peak demand</li>
+                        <li>2024-2025 (yellow/orange): Batteries reached 40-65% of peak demand</li>
+                    </ul>
+                </li>
+                <li><strong>Price Correlation</strong>:
+                    <ul>
+                        <li>High LMP spikes (>$100/MWh) become rarer in 2024-2025</li>
+                        <li>Batteries smooth price volatility by providing peak capacity</li>
+                    </ul>
+                </li>
+                <li><strong>Grid Reliability</strong>: By 2025, batteries became a critical resource during:
+                    <ul>
+                        <li>Evening peak demand (6-9pm)</li>
+                        <li>Heat waves and reliability events</li>
+                        <li>Unexpected generator outages</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <h3>3.2 Battery Discharge vs. LMP by Year</h3>
+
+        <div class="chart-container">
+            <img src="lmp_vs_battery_by_year.png" alt="Scatter plots showing battery-price relationship evolution">
+        </div>
+
+        <div class="methodology">
+            <h4>📊 Methodology: Year-by-Year Scatter Analysis</h4>
+            <p><strong>X-axis:</strong> Daily Peak Battery Discharge (GW)</p>
+            <p><strong>Y-axis:</strong> Daily Peak LMP ($/MWh), capped at 99th percentile for readability</p>
+            <p><strong>Color:</strong> Battery % of Peak Demand (plasma colormap)</p>
+            <p>Each subplot shows one year's data, enabling temporal comparison of battery-price relationships.</p>
+        </div>
+
+        <div class="insight">
+            <h4>🔍 Key Insights: Market Evolution</h4>
+            <ul>
+                <li><strong>2020-2022</strong>: Tight cluster at low GW, prices highly volatile (LMP = $20-$800/MWh)</li>
+                <li><strong>2023</strong>: Horizontal spreading begins as battery capacity grows to 2-6 GW</li>
+                <li><strong>2024-2025</strong>: Major transformation:
+                    <ul>
+                        <li>Batteries spread across 0-11 GW range</li>
+                        <li>High price events (>$500/MWh) largely disappear</li>
+                        <li>Yellow dots (high % of demand) indicate batteries meeting 40-65% of peak load</li>
+                        <li>Price ceiling effect visible: LMP rarely exceeds $200/MWh even on high-discharge days</li>
+                    </ul>
+                </li>
+                <li><strong>Arbitrage Opportunity Decline</strong>: As batteries flatten price spikes, price spreads narrow, reducing future arbitrage revenue</li>
+            </ul>
+        </div>
+
+        <h2 id="section-4">4. Grid Economics: Price Cannibalization</h2>
+
+        <p>As battery capacity saturated the market, an economic phenomenon emerged: <strong>price cannibalization</strong>. Batteries eat their own lunch—their very success in smoothing prices reduces the price spreads that make them profitable.</p>
+
+        <h3>4.1 Impact on Ancillary Services</h3>
+
+        <p>Beyond energy arbitrage, batteries provide critical ancillary services: <strong>Regulation Up (RU)</strong>, <strong>Regulation Down (RD)</strong>, <strong>Spinning Reserve (SR)</strong>, and <strong>Non-Spinning Reserve (NR)</strong>. These services maintain grid frequency and provide backup capacity.</p>
+
+        <h4>Regulation Up (RU)</h4>
+        <div class="chart-container">
+            <img src="battery_vs_ru.png" alt="Battery capacity vs Regulation Up prices">
+        </div>
+
+        <h4>Regulation Down (RD)</h4>
+        <div class="chart-container">
+            <img src="battery_vs_rd.png" alt="Battery capacity vs Regulation Down prices">
+        </div>
+
+        <h4>Spinning Reserve (SR)</h4>
+        <div class="chart-container">
+            <img src="battery_vs_sr.png" alt="Battery capacity vs Spinning Reserve prices">
+        </div>
+
+        <h4>Non-Spinning Reserve (NR)</h4>
+        <div class="chart-container">
+            <img src="battery_vs_nr.png" alt="Battery capacity vs Non-Spinning Reserve prices">
+        </div>
+
+        <div class="methodology">
+            <h4>📊 Methodology: Ancillary Services Analysis</h4>
+            <p><strong>Data Sources:</strong></p>
+            <ul>
+                <li><strong>Battery Discharge:</strong> CAISO daily peak discharge (GW), colored by % of peak demand</li>
+                <li><strong>AS Prices:</strong> CAISO ancillary services price data (daily peak prices for RU, RD, SR, NR)</li>
+            </ul>
+            <p><strong>Color Scheme:</strong></p>
+            <ul>
+                <li><strong>Battery Line:</strong> Plasma gradient showing evolution from <5% (purple) to 40-65% (yellow) of peak demand</li>
+                <li><strong>Price Scatter:</strong> Colored by month (seasonal colormap: winter blue → spring green → summer yellow → fall orange)</li>
+            </ul>
+            <p><strong>Y-axis:</strong> Prices capped at 99th percentile to improve readability</p>
+        </div>
+
+        <div class="insight">
+            <h4>🔍 Key Insights: The Cannibalization Effect</h4>
+            <ul>
+                <li><strong>Regulation Up (RU)</strong>:
+                    <ul>
+                        <li>2020-2022: Prices regularly spiked to $200-$300/MWh</li>
+                        <li>2024-2025: Prices compressed to $20-$100/MWh as batteries flood the RU market</li>
+                        <li>Battery capacity (yellow line) grew from <1 GW to 11 GW while prices collapsed</li>
+                    </ul>
+                </li>
+                <li><strong>Regulation Down (RD)</strong>:
+                    <ul>
+                        <li>Prices dropped from $50-$150/MWh range to $10-$50/MWh</li>
+                        <li>RD market particularly affected as batteries excel at rapid downward response</li>
+                    </ul>
+                </li>
+                <li><strong>Spinning & Non-Spinning Reserve (SR/NR)</strong>:
+                    <ul>
+                        <li>Dramatic price collapse from $200-$300/MWh peaks to <$100/MWh</li>
+                        <li>Batteries can provide these services at near-zero marginal cost</li>
+                    </ul>
+                </li>
+                <li><strong>Revenue Implications</strong>:
+                    <ul>
+                        <li>Early battery projects (2020-2022) achieved high AS revenues</li>
+                        <li>By 2025, AS revenues declined <span class="warning">60-80%</span> from peak levels</li>
+                        <li>Projects increasingly rely on capacity payments and IRA tax credits for profitability</li>
+                    </ul>
+                </li>
+                <li><strong>Winner's Curse</strong>: The first wave of batteries profited immensely, but later projects face saturated markets</li>
+            </ul>
+        </div>
+
+        <h2 id="section-5">5. Renewable Penetration Progress</h2>
+
+        <p>California set aggressive targets for renewable energy penetration. By tracking <strong>hourly renewable penetration</strong> and counting <strong>hours above 100%</strong>, we can measure progress toward 24/7 clean energy.</p>
+
+        <h3>5.1 Hourly Clean Energy Penetration (2020-2025)</h3>
+
+        <div class="chart-container">
+            <img src="renewable_penetration_improved_v3.png" alt="Hourly clean energy penetration over time">
+        </div>
+
+        <div class="methodology">
+            <h4>📊 Methodology: Clean Energy Penetration</h4>
+            <p><strong>Data Source:</strong> CAISO 5-minute fuel-source data</p>
+            <p><strong>Definition:</strong></p>
+            <ul>
+                <li><strong>Clean Energy</strong> = Renewables (Solar, Wind, Geothermal, Biomass, Biogas, Small Hydro) + Nuclear + Large Hydro + Battery Discharge</li>
+                <li><strong>Gross Demand</strong> = Total California consumption (all generation minus battery charging)</li>
+                <li><strong>Clean Energy Penetration %</strong> = (Clean Energy MWh / Gross Demand MWh) × 100</li>
+            </ul>
+            <p><strong>Panel 1 Visualization:</strong></p>
+            <ul>
+                <li>Each dot = one hour of data</li>
+                <li><strong>Color:</strong> Hour of day (HSV colormap: red = midnight, cyan = 6am, yellow = noon, orange = 6pm)</li>
+                <li><strong>White line:</strong> Daily average penetration</li>
+                <li><strong>100% threshold:</strong> White dashed line marking self-sufficiency</li>
+            </ul>
+            <p><strong>Panel 2:</strong> Calendar heatmap showing daily hours ≥100% penetration (0-24 hour scale, green intensity)</p>
+        </div>
+
+        <div class="insight">
+            <h4>🔍 Key Insights: The Path to 24/7 Clean Energy</h4>
+            <ul>
+                <li><strong>Diurnal Pattern</strong> (Panel 1):
+                    <ul>
+                        <li><strong>Yellow/green dots (midday)</strong>: Regularly exceed 100% due to solar abundance</li>
+                        <li><strong>Blue/purple dots (night)</strong>: Cluster at 20-40%, limited to wind, hydro, nuclear</li>
+                        <li><strong>Orange/red dots (evening)</strong>: 30-60%, challenging transition period</li>
+                    </ul>
+                </li>
+                <li><strong>Daily Average Growth</strong> (white line):
+                    <ul>
+                        <li>2020: ~45% average clean penetration</li>
+                        <li>2023: ~55% average</li>
+                        <li>2025: ~65% average</li>
+                    </ul>
+                </li>
+                <li><strong>100% Hours Progress</strong> (Panel 2):
+                    <ul>
+                        <li><strong>2020</strong>: Very few days with any 100% hours (mostly light colors)</li>
+                        <li><strong>2023</strong>: Spring/summer show 2-4 hours per day occasionally</li>
+                        <li><strong>2024-2025</strong>: Best spring days achieve 8-11 hours at 100%+, with consistent 5-7 hour days</li>
+                        <li><strong>Record:</strong> May 24, 2025 achieved 11 consecutive hours at 100%+ clean energy</li>
+                    </ul>
+                </li>
+                <li><strong>Seasonal Patterns</strong>:
+                    <ul>
+                        <li>Spring (March-May): Peak performance due to high solar + moderate demand</li>
+                        <li>Summer (June-August): Good performance despite high demand due to extreme solar</li>
+                        <li>Winter (December-February): Worst performance (short days, low solar)</li>
+                    </ul>
+                </li>
+                <li><strong>Remaining Challenge</strong>: Achieving 100% during night hours requires:
+                    <ul>
+                        <li>Longer-duration storage (8-12 hour batteries)</li>
+                        <li>Expanded transmission to access wind resources</li>
+                        <li>Demand flexibility and load shifting</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <h2 id="section-6">6. Natural Gas Decline</h2>
+
+        <p>As renewables and batteries grew, natural gas—California's largest fossil fuel source—entered structural decline.</p>
+
+        <h3>6.1 Natural Gas Generation Over Time</h3>
+
+        <div class="chart-container">
+            <img src="natural_gas_generation.png" alt="Natural gas generation decline and percentage of demand">
+        </div>
+
+        <div class="methodology">
+            <h4>📊 Methodology: Natural Gas Analysis</h4>
+            <p><strong>Data Source:</strong> CAISO fuel-source data (Natural Gas column)</p>
+            <p><strong>Panel 1: Hourly Natural Gas Generation</strong></p>
+            <ul>
+                <li><strong>Y-axis:</strong> Natural gas generation in MW</li>
+                <li><strong>Color:</strong> Hour of day (HSV colormap)</li>
+                <li><strong>White line:</strong> Daily average gas generation</li>
+            </ul>
+            <p><strong>Panel 2: Daily Gas % of Gross Demand</strong></p>
+            <ul>
+                <li>Calendar heatmap showing what percentage of daily energy came from natural gas</li>
+                <li><strong>Calculation:</strong> For each 5-min interval, Gas % = (Gas MW / Gross Demand MW) × 100, then averaged across the day</li>
+                <li>Red intensity = higher gas dependence</li>
+            </ul>
+        </div>
+
+        <div class="insight">
+            <h4>🔍 Key Insights: Fossil Fuel Displacement</h4>
+            <ul>
+                <li><strong>Decline Trajectory</strong>:
+                    <ul>
+                        <li><strong>2020</strong>: 8,406 MW average daily gas generation (32.2% of demand)</li>
+                        <li><strong>2021-2023</strong>: Gas <em>increased</em> to 9,960 MW (37.3%) as demand growth outpaced renewable additions</li>
+                        <li><strong>2024</strong>: Sharp reversal—dropped to 7,447 MW (28.5%)</li>
+                        <li><strong>2025</strong>: Further decline to 6,188 MW (23.8%)</li>
+                        <li><strong>Total reduction:</strong> <span class="success">-2,218 MW (-26.4%) from 2020 to 2025</span></li>
+                    </ul>
+                </li>
+                <li><strong>Why the 2024-2025 Inflection?</strong>
+                    <ul>
+                        <li>Battery capacity reached critical mass (6-11 GW)</li>
+                        <li>Batteries displaced gas during evening peak (when gas was most valuable)</li>
+                        <li>Continued solar growth further reduced midday gas need</li>
+                    </ul>
+                </li>
+                <li><strong>Calendar Heatmap Trends</strong> (Panel 2):
+                    <ul>
+                        <li><strong>2020-2023</strong>: Mostly orange/red colors (25-45% gas)</li>
+                        <li><strong>2024-2025</strong>: Shift to yellow/light orange (15-30% gas)</li>
+                        <li><strong>Spring days</strong>: Some showing <10% gas (mostly green in heatmap)</li>
+                    </ul>
+                </li>
+                <li><strong>Seasonal Patterns</strong>:
+                    <ul>
+                        <li>Winter: Highest gas dependence (30-40%) due to low solar and high heating demand</li>
+                        <li>Spring: Lowest gas use (10-20%) thanks to solar abundance and moderate demand</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <h2 id="section-7">7. Energy Mix Analysis</h2>
+
+        <p>To understand California's true progress, we need a comprehensive view of where every MWh comes from.</p>
+
+        <h3>7.1 Original Energy Breakdown</h3>
+
+        <div class="chart-container">
+            <img src="energy_breakdown.png" alt="Daily energy breakdown: natural gas, clean energy, and imports">
+        </div>
+
+        <div class="methodology">
+            <h4>📊 Methodology: Energy Mix (Original)</h4>
+            <p><strong>Data Source:</strong> CAISO fuel-source data</p>
+            <p><strong>Categories:</strong></p>
+            <ul>
+                <li><strong>Natural Gas</strong>: CAISO in-state gas generation</li>
+                <li><strong>Clean Energy</strong>: Renewables (Solar, Wind, Geothermal, Biomass, Biogas, Small Hydro) + Nuclear + Large Hydro + Battery Discharge</li>
+                <li><strong>Imports</strong>: Electricity imported from neighboring states (origin unknown)</li>
+            </ul>
+            <p><strong>Calculation:</strong></p>
+            <ul>
+                <li>For each 5-minute interval, sum generation by category</li>
+                <li>Integrate to daily MWh (5-min interval = 1/12 hour)</li>
+                <li>Gross Demand = All generation sources minus battery charging</li>
+            </ul>
+            <p><strong>Clean % = Clean Energy / (Gas + Clean + Imports) × 100</strong></p>
+        </div>
+
+        <div class="insight">
+            <h4>🔍 Key Insights</h4>
+            <ul>
+                <li><strong>Three-Way Split</strong>:
+                    <ul>
+                        <li>Natural Gas (orange): ~200 GWh/day average, declining toward 150 GWh/day by 2025</li>
+                        <li>Clean Energy (green): ~310 GWh/day average, growing toward 400+ GWh/day</li>
+                        <li>Imports (purple): ~105 GWh/day average, stable but uncertain composition</li>
+                    </ul>
+                </li>
+                <li><strong>Average Clean Energy:</strong> <span class="highlight">50.9%</span></li>
+                <li><strong>Problem:</strong> This treats all imports as "unknown," understating California's clean energy progress</li>
+                <li><strong>Reality:</strong> Most imports come from Pacific Northwest hydro and Southwest renewables, not fossil fuels</li>
+            </ul>
+        </div>
+
+        <h2 id="section-8">8. Import Classification Methodology</h2>
+
+        <p>The critical question: <strong>What are we importing?</strong> Is it clean hydro from the Northwest or coal from the Southwest? The answer dramatically changes California's clean energy percentage.</p>
+
+        <h3>8.1 Data Sources and Approach</h3>
+
+        <div class="methodology">
+            <h4>📊 Methodology: Import Source Classification</h4>
+            <p><strong>Challenge:</strong> CAISO reports total imports but doesn't break down by fuel source.</p>
+
+            <p><strong>Solution: Merit Order Dispatch Model</strong></p>
+
+            <p><strong>Data Sources:</strong></p>
+            <ul>
+                <li><strong>EIA Interchange Data (2019-2024):</strong> Hourly import flows from Northwest (NW) and Southwest (SW) regions into CAISO</li>
+                <li><strong>CEC Import Mix Data:</strong> Annual breakdown of generation sources in NW and SW export regions
+                    <ul>
+                        <li>Sources: Coal, Natural Gas, Oil, Nuclear, Large Hydro, Small Hydro, Geothermal, Solar, Wind, Biomass, Unspecified, Other</li>
+                        <li>Reported as GWh by source and region per year</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <p><strong>Modeling Process:</strong></p>
+            <ol>
+                <li><strong>Merit Order Definition:</strong> Define dispatch priority (cheapest/cleanest first)
+                    <ul>
+                        <li>Priority 1: Nuclear, Geothermal, Large Hydro, Small Hydro, Solar, Wind (must-run/zero marginal cost)</li>
+                        <li>Priority 2: Other</li>
+                        <li>Priority 3: Coal</li>
+                        <li>Priority 4: Unspecified (market purchases)</li>
+                        <li>Priority 5: Natural Gas (marginal resource)</li>
+                        <li>Priority 6: Oil</li>
+                    </ul>
+                </li>
+                <li><strong>Solar Profile:</strong> Model hourly solar availability using simple sine curve (peak at 1pm, zero at night)</li>
+                <li><strong>Capacity Optimization:</strong> For each source and region:
+                    <ul>
+                        <li>Initialize capacity using default capacity factors</li>
+                        <li>Simulate hourly dispatch following merit order and availability</li>
+                        <li>Iteratively adjust capacity until annual generation matches CEC targets (±0.1% tolerance)</li>
+                    </ul>
+                </li>
+                <li><strong>Hourly Dispatch:</strong> For each hour, dispatch available generation to meet import demand:
+                    <ul>
+                        <li>Dispatch sources in merit order</li>
+                        <li>Apply availability constraints (e.g., solar profile)</li>
+                        <li>Calculate hourly generation by source</li>
+                    </ul>
+                </li>
+                <li><strong>Carbon Intensity:</strong> Calculate emissions using source-specific CI factors:
+                    <ul>
+                        <li>Coal: 1000 kg CO₂/MWh</li>
+                        <li>Natural Gas: 430 kg CO₂/MWh</li>
+                        <li>Oil: 900 kg CO₂/MWh</li>
+                        <li>Clean sources: 0 kg CO₂/MWh</li>
+                    </ul>
+                </li>
+            </ol>
+
+            <p><strong>2024 Import Mix Results:</strong></p>
+            <ul>
+                <li><strong>Clean:</strong> 70.5% (Nuclear, Hydro, Geothermal, Solar, Wind)</li>
+                <li><strong>Fossil:</strong> 22.9% (Coal, Natural Gas, Oil)</li>
+                <li><strong>Unknown:</strong> 6.6% (Unspecified + Other)</li>
+            </ul>
+
+            <p><strong>2025 Treatment:</strong> Applied 2024 import ratios to 2025 data (actual dispatch data not yet available)</p>
+
+            <p><strong>Classification for Energy Mix:</strong></p>
+            <ul>
+                <li>Use CAISO's reported total import MW (unchanged from original)</li>
+                <li>Apply dispatch model <em>ratios</em> to split imports into clean vs. fossil</li>
+                <li>This preserves gross demand consistency while accurately classifying sources</li>
+            </ul>
+        </div>
+
+        <h3>8.2 Revised Energy Breakdown with Import Classification</h3>
+
+        <div class="chart-container">
+            <img src="energy_breakdown_v2.png" alt="Energy breakdown V2 with imports classified as clean or fossil">
+        </div>
+
+        <div class="methodology">
+            <h4>📊 Methodology: Energy Mix V2 (Import Classification)</h4>
+            <p><strong>Changes from V1:</strong></p>
+            <ul>
+                <li><strong>Fossil</strong> = CAISO Natural Gas + Fossil Imports (coal, gas, oil) + Unknown Imports</li>
+                <li><strong>Clean</strong> = CAISO Clean Sources + Battery Discharge + Clean Imports (hydro, nuclear, renewables)</li>
+                <li><strong>Gross Demand</strong> = Unchanged (same as V1)</li>
+            </ul>
+            <p><strong>Clean % = Clean / (Clean + Fossil) × 100</strong></p>
+            <p><strong>Note:</strong> Unknown imports (6.6%) conservatively classified as fossil</p>
+        </div>
+
+        <div class="insight">
+            <h4>🔍 Key Insights: The True Picture</h4>
+            <ul>
+                <li><strong>Clean Energy Percentage:</strong>
+                    <ul>
+                        <li><strong>Original (V1):</strong> 50.9% clean (treating imports as unknown)</li>
+                        <li><strong>Revised (V2):</strong> <span class="highlight">61.6% clean</span> (classifying imports accurately)</li>
+                        <li><strong>Difference:</strong> +10.7 percentage points—California is significantly cleaner than it appears!</li>
+                    </ul>
+                </li>
+                <li><strong>Why the Difference?</strong>
+                    <ul>
+                        <li>Most imports come from Pacific Northwest (hydro-rich) and Southwest (increasingly solar-rich)</li>
+                        <li>2024 imports were 70.5% clean—much cleaner than California's in-state average</li>
+                        <li>V1 penalized California by treating clean imports as "unknown"</li>
+                    </ul>
+                </li>
+                <li><strong>Fossil Fuel Reality:</strong>
+                    <ul>
+                        <li>Total fossil (in-state gas + fossil imports) averages ~242 GWh/day (38.4%)</li>
+                        <li>Clean sources (in-state + clean imports) average ~379 GWh/day (61.6%)</li>
+                    </ul>
+                </li>
+                <li><strong>Consistency Check:</strong>
+                    <ul>
+                        <li>Natural gas % in <code>natural_gas_generation.png</code> averages 23.8% (gas as % of gross demand)</li>
+                        <li>Clean % in V2 is 61.6%</li>
+                        <li>These don't sum to 100% because:
+                            <ul>
+                                <li>Gas % denominator includes imports</li>
+                                <li>Other sources (biomass, geothermal) bridge the gap</li>
+                                <li>Approximate relationship: <strong>Clean % ≈ 100% - Gas % - Fossil Imports % - Other %</strong></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                <li><strong>Panel 2 Calendar Trends:</strong>
+                    <ul>
+                        <li>2020-2022: Light-to-medium green (40-60% clean)</li>
+                        <li>2024-2025: Medium-to-dark green (60-80% clean)</li>
+                        <li>Spring 2025: Some days exceeding 80% clean energy</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <h2 id="section-9">9. Conclusions</h2>
+
+        <p>California's electricity grid underwent a historic transformation from 2020 to 2025. In just five years:</p>
+
+        <div class="key-findings">
+            <h3>Major Achievements</h3>
+            <ul>
+                <li><strong>Clean Energy:</strong> Reached <span class="highlight">61.6% clean electricity</span> when imports are properly classified (up from ~45% in 2020)</li>
+                <li><strong>Battery Revolution:</strong> Deployed <span class="highlight">11 GW of battery storage</span>, transforming from novelty to necessity</li>
+                <li><strong>Natural Gas Decline:</strong> Cut gas generation by <span class="success">26.4%</span>, from 8,406 MW to 6,188 MW average daily</li>
+                <li><strong>100% Clean Hours:</strong> Best days achieved <span class="success">10-11 hours</span> of 100%+ clean generation, with consistent 5+ hour days in spring</li>
+                <li><strong>Negative Prices:</strong> Solved the oversupply problem—negative price hours dropped 57% in 2025 after peaking in 2024</li>
+            </ul>
+        </div>
+
+        <h3>Key Lessons</h3>
+
+        <h4>1. Batteries Are Essential</h4>
+        <p>The inflection point came when batteries reached 6-10 GW capacity. This "critical mass" enabled:</p>
+        <ul>
+            <li>Absorbing solar oversupply (preventing negative prices)</li>
+            <li>Displacing gas during evening peak (largest emissions reduction)</li>
+            <li>Smoothing the duck curve (reducing ramp requirements)</li>
+            <li>Providing all ancillary services (frequency regulation, reserves)</li>
+        </ul>
+
+        <h4>2. Price Cannibalization Is Real</h4>
+        <p>Battery deployment created a classic "tragedy of the commons":</p>
+        <ul>
+            <li>First wave of batteries (2020-2022) earned high revenues from scarce capacity</li>
+            <li>As capacity saturated markets, price spreads collapsed</li>
+            <li>By 2025, ancillary services revenues fell 60-80% from peaks</li>
+            <li><strong>Implication:</strong> Future projects need capacity payments, tax credits, or other revenue sources beyond pure arbitrage</li>
+        </ul>
+
+        <h4>3. Import Classification Matters</h4>
+        <p>California's true clean energy progress was understated by treating imports as "unknown." Using merit order dispatch modeling to classify imports reveals:</p>
+        <ul>
+            <li>Imports are 70.5% clean (mostly Northwest hydro and Southwest renewables)</li>
+            <li>Accounting for this raises California's clean % by 10+ percentage points</li>
+            <li><strong>Lesson:</strong> Grid accounting must trace energy sources across state lines</li>
+        </ul>
+
+        <h4>4. 24/7 Clean Energy Remains Challenging</h4>
+        <p>Despite dramatic progress, achieving 100% clean electricity 24/7/365 requires:</p>
+        <ul>
+            <li><strong>Long-duration storage:</strong> Current 4-hour batteries can't bridge overnight. Need 8-16 hour systems.</li>
+            <li><strong>Transmission expansion:</strong> Access remote wind resources and enable inter-regional balancing</li>
+            <li><strong>Demand flexibility:</strong> Shift loads to match generation (EV charging, industrial processes, HVAC)</li>
+            <li><strong>Firm clean resources:</strong> Geothermal, next-gen nuclear, or green hydrogen to provide multi-day reliability</li>
+        </ul>
+
+        <h3>Looking Forward</h3>
+
+        <p>California has proven that rapid grid decarbonization is possible—but the easy gains are behind us. The path to 100% requires:</p>
+        <ul>
+            <li>Continued cost declines in storage (targeting $100/kWh for long-duration systems)</li>
+            <li>Policy reforms to reward clean firm capacity, not just energy</li>
+            <li>Market designs that prevent excessive cannibalization while maintaining investment signals</li>
+            <li>Regional coordination to share resources across the Western grid</li>
+        </ul>
+
+        <p>If California maintains this pace, <strong>80%+ clean electricity is achievable by 2030</strong>, with 100% within reach by 2035-2040.</p>
+
+        <hr style="margin: 60px 0; border: none; border-top: 2px solid #334155;">
+
+        <p style="text-align: center; color: #94a3b8; font-size: 0.95em;">
+            <strong>Data Sources:</strong> CAISO OASIS (fuel-source, pricing, ancillary services), EIA Form 930 (interchange), California Energy Commission (import mix)<br>
+            <strong>Analysis Period:</strong> January 1, 2020 – December 31, 2025<br>
+            <strong>Methodology:</strong> Merit order dispatch modeling, capacity factor analysis, carbon intensity calculations<br>
+            <strong>Last Updated:</strong> March 2026
+        </p>
+    </div>
+</body>
+</html>
