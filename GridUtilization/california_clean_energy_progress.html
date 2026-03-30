@@ -219,7 +219,7 @@
 
         <div class="toc">
             <h3>Table of Contents</h3>
-            <a href="#section-1">1. Introduction: Clean Energy and Generator Types</a>
+            <a href="#section-1">1. Introduction</a>
             <a href="#section-2">2. Capacity Factors: Understanding Generator Utilization</a>
             <a href="#section-3">3. Ramp Rates: Grid Flexibility Requirements</a>
             <a href="#section-4">4. Solar's Impact: The Duck Curve Phenomenon</a>
@@ -232,11 +232,11 @@
             <a href="#section-11">11. Conclusions</a>
         </div>
 
-        <h2 id="section-1">1. Introduction: Clean Energy and Generator Types</h2>
+        <h2 id="section-1">1. Introduction</h2>
 
-        <p>California's electricity grid transformation from 2020 to 2025 represents one of the most ambitious clean energy transitions ever attempted. To understand this evolution, we must first grasp what "clean energy" means and how different electricity generators behave.</p>
+        <p>California's electricity grid transformation from 2020 to 2025 represents one of the most ambitious clean energy transitions ever attempted.</p>
 
-        <p><strong>Clean energy</strong> includes all sources that produce electricity without direct greenhouse gas emissions: solar, wind, geothermal, biomass, hydroelectric (both large and small), nuclear, and battery storage when discharging previously stored clean energy. These sources displace fossil fuel generation—primarily natural gas in California—which emits approximately 430 kg of CO₂ per MWh generated.</p>
+        <p>In this report, clean energy includes all sources that produce electricity without direct greenhouse gas emissions: solar, wind, geothermal, biomass, hydroelectric (both large and small), nuclear, and battery storage when discharging previously stored clean energy. These sources displace fossil fuel generation—primarily natural gas in California—which emits approximately 430 kg of CO₂ per MWh generated.</p>
 
         <p>Electricity generators vary dramatically in their operational characteristics. Two fundamental metrics define generator behavior:</p>
 
@@ -245,7 +245,7 @@
             <li><strong>Ramp Rate:</strong> How quickly a generator can change its output, measured in MW per hour. Batteries can ramp at 6,000+ MW/hour, natural gas at 1,000-3,000 MW/hour, while nuclear and large hydro rarely exceed 500 MW/hour. This flexibility—or lack thereof—determines which generators can respond to rapid changes in demand or renewable supply.</li>
         </ul>
 
-        <p>These characteristics shape grid operations. Baseload generators (nuclear, geothermal) run constantly at high capacity factors but cannot respond quickly to fluctuations. Peaking generators (natural gas combustion turbines, batteries) operate at lower capacity factors but provide essential flexibility. Variable renewable energy sources (solar, wind) operate when weather permits, creating both abundance and scarcity.</p>
+        <p>These characteristics shape grid operations. Baseload generators (nuclear, geothermal) run constantly at high capacity factors and are usually not called to respond quickly to fluctuations. Peaking generators (natural gas combustion turbines, batteries) operate at lower capacity factors but provide essential flexibility. Variable renewable energy sources (solar, wind) operate when weather permits, creating both abundance and scarcity.</p>
 
         <p>California's challenge from 2020 to 2025 was integrating massive amounts of variable solar and wind generation while maintaining reliability. This required deploying flexible resources—especially batteries—to balance the grid as fossil fuels declined. The following sections examine how this transformation unfolded through detailed data analysis.</p>
 
@@ -259,9 +259,9 @@
             <img src="capacity_factor_seasonal_with_avg.png" alt="Capacity factors by generator type and season">
         </div>
 
-        <p>The data reveals stark differences across generator types. Nuclear power operates at approximately 90% capacity factor year-round, fulfilling its role as constant baseload generation. This high utilization reflects nuclear's economics: massive capital costs but low fuel costs make it profitable to run continuously. Solar energy averages just 25% capacity factor, with summer peaks around 30% and winter troughs near 20%. This reflects the fundamental constraint of daylight—solar can only generate during roughly 30-40% of hours, and even then, output varies with weather and sun angle.</p>
+        <p>The data reveals stark differences across generator types. Nuclear power (not shown in the chart due to a near constant value over last six years) operates at approximately 90% capacity factor year-round, fulfilling its role as constant baseload generation. This high utilization reflects nuclear's economics: massive capital costs but low fuel costs make it profitable to run continuously. Solar energy averages just 25% capacity factor, with summer peaks around 34% and winter troughs near 17%. This reflects the fundamental constraint of daylight—solar can only generate during roughly 30-40% of hours, and even then, output varies with weather and sun angle. The data points being colored by the time of the day shows how high solar capacity factors naturally are in afternoon hours.</p>
 
-        <p>Wind power demonstrates a different pattern, achieving 35% average capacity factor with highest performance in spring and fall when weather fronts are most active. Large hydro shows strong seasonal variation (40-60% capacity factor), driven by snowmelt patterns and reservoir management—spring runoff enables high generation while summer drought constrains output. Natural gas operates at 40-60% capacity factor, varying seasonally to follow demand patterns. This moderate utilization reflects gas's role as a flexible, marginal resource that ramps up during peak hours and ramps down when renewables are abundant.</p>
+        <p>Wind power demonstrates a different pattern, achieving 35% average capacity factor with highest performance in spring and summer when weather fronts are most active. Large hydro shows strong seasonal variation (16-26% capacity factor), driven by snowmelt patterns and reservoir management—spring runoff enables high generation while summer drought constrains output. Natural gas operates at 20-34% capacity factor, varying seasonally to follow demand patterns. This moderate utilization reflects gas's role as a flexible, marginal resource that ramps up during peak hours and ramps down when renewables are abundant.</p>
 
         <p>These capacity factor patterns have profound implications for grid planning. A grid powered entirely by solar would require roughly 4× the nameplate capacity compared to nuclear to deliver the same annual energy. However, solar's capital costs are far lower, and unlike nuclear, solar output peaks during midday when demand is often highest in summer. The challenge is evening demand, when solar falls to zero but electricity use remains high—a problem batteries increasingly solve.</p>
 
@@ -287,6 +287,10 @@
 
         <p>These distribution plots, derived from EIA-930 hourly generation data spanning 2020-2025, show the probability density of ramp rates for each generator type. For each hour, we calculate the change in generation (ΔP = P(t+1) - P(t)) and plot the distribution of these changes. The width of each "violin" at any vertical position indicates how frequently that ramp magnitude occurs.</p>
 
+        <p>The violin plots are colored based on time of day, so solar's ramp up (positive values) and ramp down (negative values) are distinctly colored, corresponding to morning and evening hours respectively. In contrast, the distribution for hydro, natural gas, and batteries shows less time-of-day distinction (although high positive battery ramps occur mostly during evening hours when discharging to meet peak demand). The width of each violin denotes data density at that ramp rate—wider sections indicate more frequent occurrence. Nuclear, solar, and wind are notably stretched horizontally (wider at low ramp rates), reflecting that these generators spend significant time at low or zero ramp rates: flat supply for nuclear, zero supply at night for solar, and calm periods for wind. Natural gas, by comparison, shows less horizontal stretch because it serves flat load less often, instead ramping frequently to follow demand.</p>
+
+        <p>Importantly, the ramp rates shown here reflect actual operational patterns, not the inherent ramp capability of each generator type. Batteries, natural gas, and hydro can actively follow demand and ramp on command. Solar and wind, however, are bound to natural cycles—they ramp when the sun rises/sets or when weather fronts move, not in response to grid needs.</p>
+
         <p>Solar exhibits the most extreme ramp behavior, with changes reaching 10,000+ MW per hour during sunrise and sunset transitions. These massive ramps reflect California's 15+ GW of solar capacity ramping up collectively each morning and down each evening. Cloud cover can cause rapid swings within minutes, though hourly data smooths these fluctuations. Battery storage demonstrates remarkable ramp capability—up to 6,000 MW/hour—making batteries the ideal resource for balancing solar's variability. Unlike gas plants that need minutes to hours to start and ramp, batteries respond in milliseconds.</p>
 
         <p>Natural gas provides moderate flexibility, typically ramping at 1,000-3,000 MW/hour. This flexibility is crucial for following load and renewable variability, but gas cannot match the speed of batteries. Combined-cycle plants take 30-60 minutes to start and can only ramp a few percent of capacity per minute. Nuclear and large hydro show minimal ramping, with most changes under 500 MW/hour. Nuclear plants are designed for steady baseload operation—frequent ramping causes thermal stress and shortens component life. Large hydro can technically ramp faster but often operates under environmental constraints that limit rapid reservoir releases.</p>
@@ -299,7 +303,7 @@
             <img src="ramp_rate_lmp.png" alt="Ramp rates correlated with electricity prices">
         </div>
 
-        <p>High ramp rate events correlate with elevated electricity prices (LMP), revealing the economic value of flexibility. When solar ramps down rapidly at sunset, gas generators must ramp up quickly to fill the gap. This sudden demand for flexible capacity drives prices up, sometimes dramatically. Similarly, morning solar ramps can suppress prices rapidly, creating negative price events if gas plants cannot curtail fast enough.</p>
+        <p>Because solar and wind cannot respond to demand as well as natural gas and batteries, their ramping doesn't correlate with electricity prices. For example, when solar ramps down rapidly at sunset, gas generators must ramp up quickly to fill the gap. This sudden demand for flexible capacity drives prices up, sometimes dramatically. Similarly, morning solar ramps can suppress prices rapidly, creating negative price events if gas plants cannot curtail fast enough.</p>
 
         <p>Battery ramps show particularly strong correlation with price volatility. Batteries respond to arbitrage opportunities: charging rapidly when prices crash (solar oversupply) and discharging rapidly when prices spike (evening peak). This behavior is visible in the scatter plot as battery ramps cluster during high-price periods. The economic implication is clear: the grid values flexibility, and batteries' exceptional ramp capability positions them to capture that value. This high ramp capability also explains batteries' dominance in ancillary service markets, where rapid response is the primary requirement.</p>
 
@@ -343,7 +347,7 @@
 
         <p>This visualization tracks daily peak battery discharge in GW against day-ahead electricity prices, with the line colored by battery percentage of peak demand—a plasma gradient from purple (0%) through orange to yellow (100%). The data comes from CAISO's 5-minute battery generation data, with daily peak discharge calculated as the maximum positive battery MW value each day divided by 1,000 to convert to GW.</p>
 
-        <p>The exponential growth is unmistakable: battery discharge capacity grew from approximately 0.5 GW in 2020 to 11 GW in 2025. The line color evolution tells a parallel story. In early years (purple), batteries represented less than 5% of peak demand—a novelty resource with minimal grid impact. By 2024-2025, the line shifts to yellow and orange, indicating batteries reaching 40-65% of peak demand on many days. This scale transformation elevated batteries from niche technology to critical infrastructure.</p>
+        <p>The exponential growth is unmistakable: battery discharge capacity grew from approximately 0.5 GW in 2020 to 11 GW in 2025. The line color evolution tells a parallel story. In early years (purple), batteries represented less than 5% of peak demand—a novelty resource with minimal grid impact. By 2024-2025, the line shifts to orange, indicating batteries reaching 40-65% of peak demand on many days. This scale transformation elevated batteries from niche technology to critical infrastructure.</p>
 
         <p>The price correlation is equally striking. In 2020-2022, LMP spikes above $100/MWh were common, with occasional excursions above $500/MWh during heat waves or reliability events. By 2024-2025, these extreme spikes largely disappear. Batteries smooth price volatility by providing peak capacity exactly when needed—evening hours, hot days, and unexpected outages. The grid becomes more reliable not through traditional fossil fuel peakers but through rapidly responding, emissions-free storage.</p>
 
@@ -355,9 +359,11 @@
 
         <p>Breaking the analysis into yearly scatter plots reveals the market's structural evolution. Each subplot plots daily peak battery discharge (GW) on the x-axis against daily peak LMP on the y-axis, with y-axis capped at the 99th percentile for readability. Points are colored by battery percentage of peak demand using the plasma colormap.</p>
 
+        <p>The peak LMP values are colored by time of year. One can observe that in 2020-2023, the extremely high peak LMP values occurred across all colors (i.e., throughout the year), while more recently they are limited to winters (when natural gas prices are higher) and summers (when demand is maximum).</p>
+
         <p>2020-2022 shows a tight cluster at low GW, with prices ranging wildly from $20 to $800/MWh. The grid had minimal battery capacity, so prices remained highly volatile, driven primarily by gas plant availability and heat wave conditions. 2023 marks a transition—horizontal spreading begins as battery capacity grows to 2-6 GW, though price volatility persists.</p>
 
-        <p>The major transformation occurs in 2024-2025. Batteries spread across the full 0-11 GW range, and high price events above $500/MWh largely disappear. Yellow dots indicate days when batteries met 40-65% of peak load—previously unimaginable. A price ceiling effect becomes visible: LMP rarely exceeds $200/MWh even on high-discharge days, because batteries cap prices by providing abundant supply at marginal cost near zero (they're already built; discharging costs almost nothing).</p>
+        <p>The major transformation occurs in 2024-2025. Batteries spread across the full 0-11 GW range, and high price events above $500/MWh largely disappear. Orange dots indicate days when batteries met 40-65% of peak load—previously unimaginable. A price ceiling effect becomes visible: LMP rarely exceeds $200/MWh even on high-discharge days, because batteries cap prices by providing abundant supply at marginal cost near zero (they're already built; discharging costs almost nothing).</p>
 
         <p>This creates a paradox for battery developers: as batteries flatten price spikes, price spreads narrow, reducing future arbitrage revenue. Early projects captured enormous arbitrage value—buying power at -$20/MWh and selling at $200/MWh—but later projects face compressed spreads of $20/MWh to $80/MWh. This "winner's curse" drives developers to seek alternative revenue streams: capacity payments, ancillary services, or federal tax credits from the Inflation Reduction Act.</p>
 
@@ -513,8 +519,6 @@
         <p>The clean energy percentage comparison tells the story: V1 calculated 50.9% clean (treating imports as unknown), while V2 calculates 61.6% clean (classifying imports accurately)—a difference of 10.7 percentage points. This isn't creative accounting or wishful thinking; it reflects reality. Most imports come from regions with predominantly clean generation. The Pacific Northwest exports primarily hydro. The Southwest increasingly exports solar. V1 penalized California by treating these clean imports as "unknown," while V2 credits them appropriately.</p>
 
         <p>Some might argue this overstates California's achievement since the state depends on out-of-state generation. However, electricity grids are inherently interconnected—no region is an island. California exports solar to neighbors during midday oversupply and imports hydro from the Northwest and wind from the Southwest during evening peaks. This mutual dependence enhances reliability and enables higher renewable penetration across the entire Western grid. Accounting for cross-border flows accurately reflects each region's contribution to collective decarbonization.</p>
-
-        <p>The methodology also validates internal consistency. In the natural gas generation chart, gas averaged 23.8% of gross demand in 2025. In V2 energy breakdown, clean energy is 61.6%. These don't sum to 100% because other sources (biomass, geothermal, coal imports) fill the gap. The approximate relationship holds: clean percentage roughly equals 100% minus gas percentage minus fossil imports percentage minus other fossil sources. The numbers align, confirming the analysis is internally consistent.</p>
 
         <h2 id="section-11">11. Conclusions</h2>
 
