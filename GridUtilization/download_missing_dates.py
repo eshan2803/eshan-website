@@ -45,8 +45,17 @@ def rename_downloaded_file(date):
     latest.rename(new_name)
     return True
 
-# Read missing dates
-with open("missing_dates.txt", "r") as f:
+# Read missing dates (check for temp file first, then regular file)
+dates_file = None
+if os.path.exists("temp_missing_dates.txt"):
+    dates_file = "temp_missing_dates.txt"
+elif os.path.exists("missing_dates.txt"):
+    dates_file = "missing_dates.txt"
+else:
+    print("ERROR: No missing dates file found (temp_missing_dates.txt or missing_dates.txt)")
+    exit(1)
+
+with open(dates_file, "r") as f:
     missing_dates = [line.strip() for line in f if line.strip()]
 
 print(f"Downloading {len(missing_dates)} missing dates...")
