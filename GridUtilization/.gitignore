@@ -1,22 +1,19 @@
-# Data files (generated locally)
+# Data files (generated locally, not needed for website)
 *.json
 *.csv
-*.txt
 
-# Python scripts (run locally only)
-*.py
-
-# Logs and temporary files
+# Temporary files
 *.log
 *.bak
 *.backup
 nul
+temp*.txt
 
 # Downloaded/processed data directories
 caiso_downloads/
 caiso_demand_downloads/
 caiso_supply/
 
-# Keep only what's needed for the webpage
-# HTML files are tracked
-# PNG chart images are tracked
+# Python scripts are tracked (needed for running daily_update.bat)
+# HTML files are tracked (needed for website)
+# PNG chart images are tracked (needed for website)
