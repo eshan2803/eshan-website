@@ -419,10 +419,10 @@ def git_commit_and_push():
         log_warning("No changes to commit or commit failed")
         return True  # Don't fail if nothing to commit
 
-    # Push
-    log("Pushing to GitHub...")
+    # Push to simbooni branch (website branch)
+    log("Pushing to GitHub (simbooni branch)...")
     success2, _ = run_command(
-        "git push origin main",
+        "git push origin simbooni",
         "Git push",
         timeout=60
     )
