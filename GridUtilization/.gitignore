@@ -1,0 +1,22 @@
+# Data files (generated locally)
+*.json
+*.csv
+*.txt
+
+# Python scripts (run locally only)
+*.py
+
+# Logs and temporary files
+*.log
+*.bak
+*.backup
+nul
+
+# Downloaded/processed data directories
+caiso_downloads/
+caiso_demand_downloads/
+caiso_supply/
+
+# Keep only what's needed for the webpage
+# HTML files are tracked
+# PNG chart images are tracked
