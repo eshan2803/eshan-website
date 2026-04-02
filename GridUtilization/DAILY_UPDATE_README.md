@@ -27,14 +27,20 @@ The batch file will:
 # Force update even if data is current
 daily_update.bat --force
 
-# Skip comprehensive CSV update (faster, but CSV won't be updated)
+# Skip comprehensive CSV update (faster)
 daily_update.bat --skip-csv
 
-# Both options
+# Full CSV regeneration (for verification, slow)
+daily_update.bat --full-csv
+
+# Combine options
 daily_update.bat --force --skip-csv
 ```
 
-**Note**: By default, the comprehensive CSV is ALWAYS updated to keep all data in sync.
+**Notes**:
+- By default, CSV uses **incremental update** (appends new rows only - very fast)
+- Use `--full-csv` to regenerate entire CSV from scratch (for verification)
+- Use `--skip-csv` to skip CSV entirely (fastest)
 
 ## What Happens During Update
 
@@ -85,9 +91,10 @@ daily_update.bat --force --skip-csv
 - **Time**: ~2-3 minutes
 
 ### Step 8: Update Comprehensive CSV
-- Always runs by default (skip with `--skip-csv`)
-- Regenerates 69MB CSV with all data
-- **Time**: ~5-10 minutes
+- **Incremental update** by default (appends new rows only)
+- For 1 new day: Adds ~288 rows (5-minute intervals)
+- Full regeneration with `--full-csv` flag (verification)
+- **Time**: ~5-10 seconds (incremental) or 5-10 minutes (full)
 
 ### Step 9: Push to GitHub
 - Stages updated files (charts, JSON, CSV)
@@ -97,10 +104,16 @@ daily_update.bat --force --skip-csv
 
 ## Total Time
 
-- **Standard update** (no missing dates): ~10-15 minutes (includes CSV)
-- **With backfill** (1-2 missing days): ~15-20 minutes
-- **Large backfill** (5+ missing days): ~20-35 minutes
-- **Quick mode** (with --skip-csv): ~5-8 minutes (no CSV update)
+**With Incremental CSV (Default):**
+- **Standard update** (no missing dates): 5-8 minutes (includes fast CSV append)
+- **With backfill** (1-2 missing days): 8-12 minutes
+- **Large backfill** (5+ missing days): 12-20 minutes
+
+**Other Modes:**
+- **Quick mode** (--skip-csv): 5-8 minutes (no CSV update)
+- **Full regeneration** (--full-csv): 10-15 minutes (rebuilds entire CSV)
+
+**Speed Improvement**: Incremental CSV update saves ~5-10 minutes per run!
 
 ## Handling Missed Days
 

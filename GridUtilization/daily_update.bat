@@ -10,9 +10,10 @@ REM   3. Regenerate all charts
 REM   4. Push updates to GitHub
 REM
 REM Usage:
-REM   - Double-click to run daily update (includes comprehensive CSV)
+REM   - Double-click to run daily update (includes incremental CSV)
 REM   - Run with --force flag to update even if data is current
-REM   - Run with --skip-csv flag to skip comprehensive CSV (faster)
+REM   - Run with --skip-csv flag to skip CSV update
+REM   - Run with --full-csv flag to regenerate entire CSV (verification)
 REM
 REM ========================================================================
 
@@ -92,10 +93,16 @@ echo.
 REM Parse command line arguments
 set FORCE_FLAG=
 set SKIP_CSV_FLAG=
+set FULL_CSV_FLAG=
 if "%~1"=="--force" set FORCE_FLAG=--force
 if "%~1"=="--skip-csv" set SKIP_CSV_FLAG=--skip-csv
+if "%~1"=="--full-csv" set FULL_CSV_FLAG=--full-csv
 if "%~2"=="--force" set FORCE_FLAG=--force
 if "%~2"=="--skip-csv" set SKIP_CSV_FLAG=--skip-csv
+if "%~2"=="--full-csv" set FULL_CSV_FLAG=--full-csv
+if "%~3"=="--force" set FORCE_FLAG=--force
+if "%~3"=="--skip-csv" set SKIP_CSV_FLAG=--skip-csv
+if "%~3"=="--full-csv" set FULL_CSV_FLAG=--full-csv
 
 REM Display flags if any
 if defined FORCE_FLAG (
@@ -106,6 +113,10 @@ if defined SKIP_CSV_FLAG (
     echo [INFO] Skip CSV mode - comprehensive CSV will NOT be updated
     echo.
 )
+if defined FULL_CSV_FLAG (
+    echo [INFO] Full CSV mode - will regenerate entire CSV from scratch
+    echo.
+)
 
 echo ========================================================================
 echo Starting update process...
@@ -113,7 +124,7 @@ echo ========================================================================
 echo.
 
 REM Run the Python script
-python daily_update.py %FORCE_FLAG% %SKIP_CSV_FLAG%
+python daily_update.py %FORCE_FLAG% %SKIP_CSV_FLAG% %FULL_CSV_FLAG%
 
 REM Check exit code
 if errorlevel 1 (

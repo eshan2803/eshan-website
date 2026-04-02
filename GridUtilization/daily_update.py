@@ -325,15 +325,26 @@ def regenerate_charts():
 
     return all_success
 
-def update_comprehensive_csv():
+def update_comprehensive_csv(use_incremental=True):
     """Update the comprehensive CSV file"""
     log_header("STEP 8: Updating Comprehensive CSV")
 
-    success, _ = run_command(
-        "python create_comprehensive_csv.py",
-        "Comprehensive CSV (may take several minutes)",
-        timeout=1800
-    )
+    if use_incremental and os.path.exists("caiso_comprehensive_data.csv"):
+        # Fast incremental update - only append new dates
+        log("Using incremental update (appending new dates only)")
+        success, _ = run_command(
+            "python append_to_comprehensive_csv.py",
+            "Incremental CSV update (fast)",
+            timeout=300
+        )
+    else:
+        # Full regeneration
+        log("Using full regeneration (processing all dates)")
+        success, _ = run_command(
+            "python create_comprehensive_csv.py",
+            "Full CSV regeneration (may take several minutes)",
+            timeout=1800
+        )
 
     return success
 
@@ -444,7 +455,9 @@ def main():
         log_warning("Skipping comprehensive CSV update (--skip-csv flag)")
         steps_success.append(True)
     else:
-        steps_success.append(update_comprehensive_csv())
+        # Use full regeneration if --full-csv flag is set
+        use_incremental = "--full-csv" not in sys.argv
+        steps_success.append(update_comprehensive_csv(use_incremental=use_incremental))
 
     # Push to GitHub
     steps_success.append(git_commit_and_push())
