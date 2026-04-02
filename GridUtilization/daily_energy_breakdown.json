@@ -13418,6 +13418,13 @@
     "gross_demand_mwh": 574965.17,
     "clean_pct": 72.88
   },
+  "2025-04-01": {
+    "natural_gas_mwh": 52121.17,
+    "clean_mwh": 418894.25,
+    "imports_mwh": 100274.33,
+    "gross_demand_mwh": 571262.92,
+    "clean_pct": 73.32
+  },
   "2025-04-02": {
     "natural_gas_mwh": 58109.67,
     "clean_mwh": 416267.42,
@@ -15965,5 +15972,12 @@
     "imports_mwh": 137700.75,
     "gross_demand_mwh": 622320.42,
     "clean_pct": 48.16
+  },
+  "2026-04-01": {
+    "natural_gas_mwh": 24792.92,
+    "clean_mwh": 262710.0,
+    "imports_mwh": 90077.67,
+    "gross_demand_mwh": 377580.58,
+    "clean_pct": 69.58
   }
 }
