@@ -233,7 +233,7 @@ def main():
     dates_to_add = get_dates_to_append()
 
     if not dates_to_add:
-        print("✓ CSV is up to date - no new dates to add")
+        print("[OK] CSV is up to date - no new dates to add")
         return 0
 
     print(f"Found {len(dates_to_add)} new dates to append:")
@@ -254,17 +254,17 @@ def main():
 
             success = append_date_data(date_obj, writer)
             if success:
-                print(" ✓")
+                print(" [OK]")
             else:
-                print(" ✗")
+                print(" [ERROR]")
 
     # Verify
     new_last_date = get_last_csv_date()
-    print(f"\n✓ CSV updated to {new_last_date}")
+    print(f"\n[OK] CSV updated to {new_last_date}")
 
     # Show file size
     size_mb = CSV_FILE.stat().st_size / (1024 * 1024)
-    print(f"✓ File size: {size_mb:.1f} MB")
+    print(f"[OK] File size: {size_mb:.1f} MB")
 
     print("=" * 70)
     return 0

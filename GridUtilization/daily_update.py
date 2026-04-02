@@ -190,12 +190,24 @@ def download_missing_supply(missing_dates):
 
     log(f"Need to download {len(missing_supply)} supply files")
 
-    # For now, use the CAISO downloader (you may need to adapt this)
-    # This is a placeholder - you'll need to implement supply download
-    log_warning("Supply download not yet automated - manual download may be needed")
-    log_warning(f"Missing dates: {[d.strftime('%Y-%m-%d') for d in missing_supply[:5]]}")
+    # Create temp file with dates
+    with open("temp_supply_dates.txt", "w") as f:
+        for d in missing_supply:
+            f.write(d.strftime("%Y-%m-%d") + "\n")
 
-    return True  # Don't fail the whole process
+    # Run download script (allow ~90 seconds per date for Selenium + CAISO processing)
+    timeout_seconds = max(120, len(missing_supply) * 90)
+    success, _ = run_command(
+        "python download_caiso_supply_browser.py",
+        f"Downloading {len(missing_supply)} supply CSV files",
+        timeout=timeout_seconds
+    )
+
+    # Clean up temp file
+    if os.path.exists("temp_supply_dates.txt"):
+        os.remove("temp_supply_dates.txt")
+
+    return success
 
 def update_lmp_prices():
     """Update LMP prices for new dates"""
@@ -321,7 +333,7 @@ def regenerate_charts():
         ("plot_natural_gas_generation.py", "Natural gas generation chart"),
         ("plot_energy_breakdown.py", "Energy breakdown chart"),
         ("plot_energy_breakdown_v2.py", "Energy breakdown V2 chart"),
-        ("plot_capacity_factor_seasonal_with_avg.py", "Capacity factor seasonal chart"),
+        ("plot_capacity_factors.py", "Capacity factor seasonal chart"),
         ("plot_cf_lmp.py", "Capacity factor vs LMP chart"),
         ("plot_ramp_rate_seasonal.py", "Ramp rate seasonal chart"),
         ("plot_ramp_lmp.py", "Ramp rate vs LMP chart"),
