@@ -15335,14 +15335,6 @@
     "min_gas_pct": 3.67,
     "max_gas_pct": 17.78
   },
-  "2025-04-01": {
-    "avg_gas_mw": 2171.72,
-    "min_gas_mw": 1164.0,
-    "max_gas_mw": 3275.0,
-    "avg_gas_pct": 9.29,
-    "min_gas_pct": 5.26,
-    "max_gas_pct": 14.84
-  },
   "2025-04-02": {
     "avg_gas_mw": 2421.24,
     "min_gas_mw": 1306.0,

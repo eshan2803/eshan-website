@@ -11501,12 +11501,6 @@
     "avg_penetration": 79.34,
     "max_penetration": 101.74
   },
-  "2025-04-01": {
-    "hours_over_100": 1,
-    "avg_oversupply_pct": 1.35,
-    "avg_penetration": 79.27,
-    "max_penetration": 101.35
-  },
   "2025-04-02": {
     "hours_over_100": 1,
     "avg_oversupply_pct": 2.71,

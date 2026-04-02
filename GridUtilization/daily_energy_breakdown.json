@@ -13418,13 +13418,6 @@
     "gross_demand_mwh": 574965.17,
     "clean_pct": 72.88
   },
-  "2025-04-01": {
-    "natural_gas_mwh": 52121.17,
-    "clean_mwh": 418894.25,
-    "imports_mwh": 100274.33,
-    "gross_demand_mwh": 571262.92,
-    "clean_pct": 73.32
-  },
   "2025-04-02": {
     "natural_gas_mwh": 58109.67,
     "clean_mwh": 416267.42,
