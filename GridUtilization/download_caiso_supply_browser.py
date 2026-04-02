@@ -67,13 +67,28 @@ async def download_day(page, date, retry_count=0):
         # Find the Supply date input by ID (found via inspector: dateSupply)
         supply_date_input = page.locator("#dateSupply")
 
-        # Clear and enter the date
+        # Wait for the date input to be visible and ready
+        await supply_date_input.wait_for(state="visible", timeout=TIMEOUT_MS)
+        await page.wait_for_timeout(500)
+
+        # Clear and enter the date with multiple approaches
         await supply_date_input.click()
-        await supply_date_input.fill("")  # Clear field
-        await supply_date_input.fill(date_str_windows)
+        await page.wait_for_timeout(300)
+
+        # Select all and delete to clear
+        await page.keyboard.press("Control+A")
+        await page.keyboard.press("Backspace")
+        await page.wait_for_timeout(300)
+
+        # Type the date
+        await supply_date_input.type(date_str_windows, delay=50)
+        await page.wait_for_timeout(500)
+
+        print(f"    Set date to: {date_str_windows}")
 
         # Press Enter to trigger the date change and chart reload
         await page.keyboard.press("Enter")
+        await page.wait_for_timeout(1000)
 
         # Wait for the chart to reload with the new date's data
         # Wait for network to be idle (chart data loading)
@@ -110,13 +125,28 @@ async def download_day(page, date, retry_count=0):
         # Find the Renewables date input by ID (found via inspector: dateRenewables)
         renewables_date_input = page.locator("#dateRenewables")
 
-        # Clear and enter the date
+        # Wait for the date input to be visible and ready
+        await renewables_date_input.wait_for(state="visible", timeout=TIMEOUT_MS)
+        await page.wait_for_timeout(500)
+
+        # Clear and enter the date with multiple approaches
         await renewables_date_input.click()
-        await renewables_date_input.fill("")  # Clear field
-        await renewables_date_input.fill(date_str_windows)
+        await page.wait_for_timeout(300)
+
+        # Select all and delete to clear
+        await page.keyboard.press("Control+A")
+        await page.keyboard.press("Backspace")
+        await page.wait_for_timeout(300)
+
+        # Type the date
+        await renewables_date_input.type(date_str_windows, delay=50)
+        await page.wait_for_timeout(500)
+
+        print(f"    Set date to: {date_str_windows}")
 
         # Press Enter to trigger the date change and chart reload
         await page.keyboard.press("Enter")
+        await page.wait_for_timeout(1000)
 
         # Wait for the chart to reload with the new date's data
         await page.wait_for_load_state("networkidle", timeout=TIMEOUT_MS)
