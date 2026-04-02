@@ -3,3 +3,11 @@ transmission/archive/
 **/temp_caiso_*.zip
 **/pipelines_raw.geojson
 **/pipelines_raw_osm.geojson
+
+# Python development scripts (not needed for static website)
+transmission/**/*.py
+transport-model/**/*.py
+
+# Keep only:
+# - GridUtilization/daily_update.py (for local data updates)
+# - final_energy_data_2025_with_emissions.csv (used by 2025recap.html)
