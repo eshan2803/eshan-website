@@ -116,16 +116,32 @@ def download_missing_demand(missing_dates):
 
     log_header(f"STEP 1: Downloading Demand Data ({len(missing_dates)} days)")
 
+    # Check which demand files are actually missing
+    demand_dir = Path("caiso_demand_downloads")
+    actually_missing = []
+
+    for d in missing_dates:
+        demand_file = demand_dir / f"{d.strftime('%Y%m%d')}_demand.csv"
+        if not demand_file.exists():
+            actually_missing.append(d)
+
+    if not actually_missing:
+        log_success("All demand files already exist")
+        return True
+
+    log(f"Need to download {len(actually_missing)} demand CSV files")
+
     # Create temp file with dates
     with open("temp_missing_dates.txt", "w") as f:
-        for d in missing_dates:
+        for d in actually_missing:
             f.write(d.strftime("%Y-%m-%d") + "\n")
 
-    # Run download script
+    # Run download script (allow ~60 seconds per date for Selenium)
+    timeout_seconds = max(60, len(actually_missing) * 60)
     success, _ = run_command(
         "python download_missing_dates.py",
-        f"Downloading {len(missing_dates)} demand CSV files",
-        timeout=len(missing_dates) * 10
+        f"Downloading {len(actually_missing)} demand CSV files",
+        timeout=timeout_seconds
     )
 
     # Clean up temp file
