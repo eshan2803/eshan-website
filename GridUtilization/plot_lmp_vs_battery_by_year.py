@@ -38,7 +38,7 @@ for date_str, hours_dict in price_data.items():
                 daily_peak_lmp[dt] = lmp
 
 # ── Match up dates and organize by year ───────────────────────────────────
-data_by_year = {year: {'gw': [], 'pct': [], 'lmp': []} for year in range(2020, 2026)}
+data_by_year = {year: {'gw': [], 'pct': [], 'lmp': []} for year in range(2020, 2027)}
 
 for i, date in enumerate(peak_bat_dates):
     if date in daily_peak_lmp:
@@ -56,9 +56,9 @@ for year in data_by_year:
     print(f"{year}: {len(data_by_year[year]['gw'])} days")
 
 # ── Calculate global ranges for consistent axes ───────────────────────────
-all_gw = np.concatenate([data_by_year[y]['gw'] for y in range(2020, 2026)])
-all_pct = np.concatenate([data_by_year[y]['pct'] for y in range(2020, 2026)])
-all_lmp = np.concatenate([data_by_year[y]['lmp'] for y in range(2020, 2026)])
+all_gw = np.concatenate([data_by_year[y]['gw'] for y in range(2020, 2027)])
+all_pct = np.concatenate([data_by_year[y]['pct'] for y in range(2020, 2027)])
+all_lmp = np.concatenate([data_by_year[y]['lmp'] for y in range(2020, 2027)])
 
 max_gw = all_gw.max()
 max_pct = all_pct.max()
@@ -80,16 +80,16 @@ pct_cmap = plt.cm.plasma
 pct_norm = mcolors.Normalize(vmin=0, vmax=100)
 
 # ══════════════════════════════════════════════════════════════════════════
-# Create 2x3 grid of subplots
+# Create 2x4 grid of subplots
 # ══════════════════════════════════════════════════════════════════════════
-fig, axes = plt.subplots(2, 3, figsize=(18, 12), facecolor=BG_COLOR)
+fig, axes = plt.subplots(2, 4, figsize=(24, 12), facecolor=BG_COLOR)
 fig.suptitle("Peak Electricity Price vs Battery Storage Capacity by Year\n"
              "Color = Battery as % of Peak Demand",
              fontsize=16, fontweight="bold", color="#fff", y=0.995)
 
 axes = axes.flatten()
 
-for idx, year in enumerate(range(2020, 2026)):
+for idx, year in enumerate(range(2020, 2027)):
     ax = axes[idx]
     ax.set_facecolor(BG_COLOR)
 

@@ -104,7 +104,7 @@ ax1.plot(x_daily, daily_avg_gas_mw,
 ax1.set_ylabel("Natural Gas Generation (MW)",
                color=TEXT_COLOR, fontsize=13, fontweight="bold")
 ax1.tick_params(axis="y", colors=TEXT_COLOR)
-ax1.set_title("California Grid: Hourly Natural Gas Generation (2020-2025)\n"
+ax1.set_title("California Grid: Hourly Natural Gas Generation \n"
               "Showing decline as renewables + storage replace fossil fuels",
               color="#fff", fontsize=15, fontweight="bold", pad=15)
 
@@ -132,7 +132,7 @@ cbar1.outline.set_edgecolor(SPINE_COLOR)
 # ══════════════════════════════════════════════════════════════════════════
 print("Creating Panel 2: Calendar heat map of gas percentage...")
 
-years = range(2020, 2026)
+years = range(2020, 2027)
 n_years = len(years)
 
 # Create year strips

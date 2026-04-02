@@ -96,7 +96,7 @@ ax1.plot(x_dates, demand_gwh,
 ax1.set_ylabel("Daily Energy (GWh)",
                color=TEXT_COLOR, fontsize=13, fontweight="bold")
 ax1.tick_params(axis="y", colors=TEXT_COLOR)
-ax1.set_title("California Grid: Daily Energy Supply & Demand (2020-2025)\n"
+ax1.set_title("California Grid: Daily Energy Supply & Demand \n"
               "Stacked: Natural Gas + Clean Energy + Imports",
               color="#fff", fontsize=15, fontweight="bold", pad=15)
 
@@ -116,7 +116,7 @@ ax1.legend(loc='upper left', fontsize=11, framealpha=0.9, facecolor=BG_INNER,
 # ══════════════════════════════════════════════════════════════════════════
 print("Creating Panel 2: Calendar heat map of clean energy %...")
 
-years = range(2020, 2026)
+years = range(2020, 2027)
 n_years = len(years)
 
 # Create year strips
