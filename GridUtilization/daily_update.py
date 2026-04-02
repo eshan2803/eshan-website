@@ -94,18 +94,38 @@ def get_last_data_date():
     return date.today() - timedelta(days=2)
 
 def get_missing_dates(last_date):
-    """Get list of dates between last_date and yesterday that need to be downloaded"""
+    """Get list of dates between last_date and yesterday that need to be downloaded
+
+    Also verifies that source files exist for the last_date itself.
+    If demand or supply files are missing for last_date, includes it in missing list.
+    """
     yesterday = date.today() - timedelta(days=1)
-
-    if last_date >= yesterday:
-        log("Data is up to date")
-        return []
-
     missing = []
-    current = last_date + timedelta(days=1)
-    while current <= yesterday:
-        missing.append(current)
-        current += timedelta(days=1)
+
+    # First, verify source files exist for the last_date
+    demand_file = Path("caiso_demand_downloads") / f"{last_date.strftime('%Y%m%d')}_demand.csv"
+    supply_file = Path("caiso_supply") / f"{last_date.strftime('%Y%m%d')}_fuelsource.csv"
+
+    files_missing = []
+    if not demand_file.exists():
+        files_missing.append("demand CSV")
+    if not supply_file.exists():
+        files_missing.append("supply CSV")
+
+    if files_missing:
+        log_warning(f"Source files missing for {last_date.strftime('%Y-%m-%d')}: {', '.join(files_missing)}")
+        log_warning("Will re-download this date to fix missing files")
+        missing.append(last_date)
+
+    # Then check for any dates after last_date
+    if last_date < yesterday:
+        current = last_date + timedelta(days=1)
+        while current <= yesterday:
+            missing.append(current)
+            current += timedelta(days=1)
+
+    if not missing:
+        log_success("Data is up to date and all source files verified")
 
     return missing
 
@@ -369,6 +389,7 @@ def git_commit_and_push():
         "ancillary_services.json",
         "natural_gas_daily.json",
         "daily_energy_breakdown.json",
+        "caiso_comprehensive_data.csv",
         "*.png",  # All chart images
     ]
 
@@ -419,14 +440,16 @@ def main():
 
     missing_dates = get_missing_dates(last_date)
     if missing_dates:
-        log_warning(f"Found {len(missing_dates)} missing dates:")
-        for d in missing_dates[:5]:
-            log(f"  - {d.strftime('%Y-%m-%d')}")
-        if len(missing_dates) > 5:
-            log(f"  ... and {len(missing_dates) - 5} more")
+        if missing_dates == [last_date]:
+            log_warning("Source files incomplete for last date - will re-download")
+        else:
+            log_warning(f"Found {len(missing_dates)} missing/incomplete dates:")
+            for d in missing_dates[:5]:
+                log(f"  - {d.strftime('%Y-%m-%d')}")
+            if len(missing_dates) > 5:
+                log(f"  ... and {len(missing_dates) - 5} more")
     else:
-        log_success("No missing dates - data is up to date!")
-
+        # No missing dates and all files verified
         # Ask if user wants to continue anyway
         if len(sys.argv) > 1 and sys.argv[1] == "--force":
             log("Force mode enabled, continuing anyway")
