@@ -27,12 +27,14 @@ The batch file will:
 # Force update even if data is current
 daily_update.bat --force
 
-# Include comprehensive CSV update (slower, but complete)
-daily_update.bat --full
+# Skip comprehensive CSV update (faster, but CSV won't be updated)
+daily_update.bat --skip-csv
 
 # Both options
-daily_update.bat --force --full
+daily_update.bat --force --skip-csv
 ```
+
+**Note**: By default, the comprehensive CSV is ALWAYS updated to keep all data in sync.
 
 ## What Happens During Update
 
@@ -82,8 +84,8 @@ daily_update.bat --force --full
 - Battery vs prices, ramp rates, etc.
 - **Time**: ~2-3 minutes
 
-### Step 8: Update Comprehensive CSV (Optional)
-- Only runs with `--full` flag
+### Step 8: Update Comprehensive CSV
+- Always runs by default (skip with `--skip-csv`)
 - Regenerates 69MB CSV with all data
 - **Time**: ~5-10 minutes
 
@@ -95,10 +97,10 @@ daily_update.bat --force --full
 
 ## Total Time
 
-- **Quick update** (no missing dates): ~5-8 minutes
-- **Standard update** (1-2 missing days): ~10-15 minutes
-- **Full update with CSV**: ~20-30 minutes
-- **Backfill** (5+ missing days): ~15-30 minutes
+- **Standard update** (no missing dates): ~10-15 minutes (includes CSV)
+- **With backfill** (1-2 missing days): ~15-20 minutes
+- **Large backfill** (5+ missing days): ~20-35 minutes
+- **Quick mode** (with --skip-csv): ~5-8 minutes (no CSV update)
 
 ## Handling Missed Days
 

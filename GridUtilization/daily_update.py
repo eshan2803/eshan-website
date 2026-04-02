@@ -439,12 +439,12 @@ def main():
     # Generate outputs
     steps_success.append(regenerate_charts())
 
-    # Optional: Update comprehensive CSV (can be slow)
-    if "--full" in sys.argv:
-        steps_success.append(update_comprehensive_csv())
-    else:
-        log_warning("Skipping comprehensive CSV update (use --full to include)")
+    # Update comprehensive CSV (always, unless --skip-csv flag)
+    if "--skip-csv" in sys.argv:
+        log_warning("Skipping comprehensive CSV update (--skip-csv flag)")
         steps_success.append(True)
+    else:
+        steps_success.append(update_comprehensive_csv())
 
     # Push to GitHub
     steps_success.append(git_commit_and_push())
