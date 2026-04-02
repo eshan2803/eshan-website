@@ -1,5 +1,5 @@
 # Eshan Singh - Personal and Professional Website
-
+MIT License
 Welcome to my official website: [eshansingh.xyz](https://eshansingh.xyz)!
 
 This site showcases:
