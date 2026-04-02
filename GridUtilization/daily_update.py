@@ -195,8 +195,9 @@ def download_missing_supply(missing_dates):
         for d in missing_supply:
             f.write(d.strftime("%Y-%m-%d") + "\n")
 
-    # Run download script (allow ~90 seconds per date for Selenium + CAISO processing)
-    timeout_seconds = max(120, len(missing_supply) * 90)
+    # Run download script (allow ~3 minutes per date for Playwright with retries)
+    # Each download can take: 60s × 3 retries + exponential backoff = ~180s max
+    timeout_seconds = max(180, len(missing_supply) * 180)
     success, _ = run_command(
         "python download_caiso_supply_browser.py",
         f"Downloading {len(missing_supply)} supply CSV files",
