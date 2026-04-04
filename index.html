@@ -794,6 +794,19 @@
                 options: JSON.parse(JSON.stringify(sharedOptions))
             };
 
+            // Re-attach tooltip title callback (lost during JSON clone)
+            cfg.options.plugins.tooltip.callbacks.title = function(items) {
+                const raw = items[0].raw?.x || '';
+                const dateStr = typeof raw === 'string' ? raw.slice(0, 10) : '';
+                if (dateStr && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    const [y, m, d] = dateStr.split('-').map(Number);
+                    return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+                        weekday: 'short', month: 'long', day: 'numeric', year: 'numeric'
+                    });
+                }
+                return raw;
+            };
+
             cfg.options.scales.y.title = {
                 display: true, text: yLabel,
                 font: { family: fontFamily, size: 10, weight: '600' },
