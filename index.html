@@ -741,7 +741,8 @@
                     displayColors: false,
                     callbacks: {
                         title: function(items) {
-                            const d = new Date(items[0].parsed.x);
+                            const raw = items[0].raw?.x || items[0].label;
+                            const d = new Date(raw + 'T12:00:00');
                             return d.toLocaleDateString('en-US', {
                                 weekday: 'short', month: 'long', day: 'numeric', year: 'numeric'
                             });
@@ -845,6 +846,24 @@
                         return ctx.parsed.y.toLocaleString() + extraOpts.tooltipSuffix;
                     };
                 }
+                if (extraOpts.lmpTooltip) {
+                    cfg.options.plugins.tooltip.callbacks.title = function(items) {
+                        const pt = points[items[0].dataIndex];
+                        const d = new Date(pt.x + 'T12:00:00');
+                        const dateStr = d.toLocaleDateString('en-US', {
+                            weekday: 'short', month: 'long', day: 'numeric', year: 'numeric'
+                        });
+                        if (pt.h != null) {
+                            const suffix = pt.h >= 12 ? 'PM' : 'AM';
+                            const h12 = pt.h === 0 ? 12 : pt.h > 12 ? pt.h - 12 : pt.h;
+                            return dateStr + '  at ' + h12 + ':00 ' + suffix;
+                        }
+                        return dateStr;
+                    };
+                    cfg.options.plugins.tooltip.callbacks.label = function(ctx) {
+                        return ctx.parsed.y.toLocaleString() + ' $/MWh';
+                    };
+                }
                 if (extraOpts.yearlyStats) {
                     cfg.options.plugins.yearlyStats = extraOpts.yearlyStats;
                 }
@@ -876,15 +895,21 @@
             yearlyStats: { labels: computeYearlyAvg(cleanPctPoints, '%', 1) }
         });
 
-        // Panel 4: Peak LMP (scatter + yearly avg)
-        const lmpPoints = buildPoints(data.peak_lmp);
+        // Panel 4: Peak LMP (scatter + yearly avg) with peak hour in tooltip
+        const lmpPoints = [];
+        for (let i = 0; i < data.dates.length; i++) {
+            if (data.peak_lmp[i] != null) {
+                lmpPoints.push({ x: data.dates[i], y: data.peak_lmp[i], h: data.peak_lmp_hour ? data.peak_lmp_hour[i] : null });
+            }
+        }
         const sortedLmp = lmpPoints.map(p => p.y).sort((a, b) => a - b);
         const p99 = sortedLmp[Math.floor(sortedLmp.length * 0.99)];
         const cappedPoints = lmpPoints.filter(p => p.y <= p99);
 
         makeScatterChart('chart-lmp', cappedPoints, '$/MWh', {
-            yMin: 0, tooltipSuffix: ' $/MWh',
-            yearlyStats: { labels: computeYearlyAvg(lmpPoints, ' $/MWh', 0) }
+            yMin: 0,
+            yearlyStats: { labels: computeYearlyAvg(lmpPoints, ' $/MWh', 0) },
+            lmpTooltip: true
         });
     })();
     </script>
