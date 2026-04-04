@@ -741,11 +741,16 @@
                     displayColors: false,
                     callbacks: {
                         title: function(items) {
-                            const raw = items[0].raw?.x || items[0].label;
-                            const d = new Date(raw + 'T12:00:00');
-                            return d.toLocaleDateString('en-US', {
-                                weekday: 'short', month: 'long', day: 'numeric', year: 'numeric'
-                            });
+                            const raw = items[0].raw?.x || items[0].label || '';
+                            const dateStr = typeof raw === 'string' ? raw.slice(0, 10) : '';
+                            if (dateStr && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                const [y, m, d] = dateStr.split('-').map(Number);
+                                const dt = new Date(y, m - 1, d);
+                                return dt.toLocaleDateString('en-US', {
+                                    weekday: 'short', month: 'long', day: 'numeric', year: 'numeric'
+                                });
+                            }
+                            return raw;
                         }
                     }
                 }
