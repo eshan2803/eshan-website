@@ -159,6 +159,16 @@
             transition: opacity 0.5s, transform 0.5s;
             transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
+
+        /* Dashboard chart cards */
+        #charts-grid .glass-card {
+            transform-style: preserve-3d;
+            transition: box-shadow 0.3s ease, transform 0.3s ease;
+        }
+        #charts-grid .glass-card:hover {
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 
@@ -168,15 +178,12 @@
 
     <div id="bg-canvas" class="fixed top-0 left-0 -z-10"></div>
 
-    <header class="p-8">
+    <header class="px-8 py-4">
         <div class="container mx-auto flex justify-between items-center">
             <a href="#" class="font-lora text-2xl font-semibold">Dr. Eshan Singh</a>
             <nav class="flex items-center space-x-2">
                 <a href="energy.html"
                     class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
-                <a href="2025recap.html"
-                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">2025
-                    Recap</a>
                 <a href="/transport-model/index.html" class="rainbow-glow">
                     <span class="button-content" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Transport
                         Model</span>
@@ -196,19 +203,46 @@
         </div>
     </header>
 
-    <main class="fold text-center">
-        <h1 class="kinetic-headline font-lora text-5xl md:text-7xl font-bold leading-tight text-center text-gray-800">
-            Driving the Future of <em class="font-lora italic">Clean Energy</em>
-        </h1>
-        <p class="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">From deep science to real-world impact, I am dedicated
-            to accelerating the transition to a sustainable energy future.</p>
-
-        <div class="mt-8">
-            <a href="mailto:hello@eshansingh.xyz" class="rainbow-glow">
-                <span class="button-content">Start a Conversation</span>
+    <main class="text-center" style="padding: 0.5rem 1.5rem 2rem;">
+        <div class="max-w-6xl mx-auto w-full px-4">
+            <a href="https://eshansingh.xyz/GridUtilization/california_clean_energy_progress.html" class="hover:opacity-80 transition-opacity">
+                <h1 class="kinetic-headline font-lora text-3xl md:text-5xl font-bold leading-tight text-center text-gray-800 mb-1">
+                    California's Path to <em class="font-lora italic">100% Clean Energy</em>
+                </h1>
             </a>
+            <p class="text-sm text-gray-500 mb-4">Daily metrics from CAISO data &mdash; updated through <span id="last-update-date"></span></p>
+
+            <div class="flex flex-col gap-3" id="charts-grid">
+                <div class="glass-card p-3">
+                    <div class="flex items-baseline gap-2 mb-1">
+                        <h3 class="text-sm font-semibold text-gray-700">Hours with 100%+ Clean Energy</h3>
+                        <span class="text-xs text-gray-400">Daily hours where renewables met or exceeded demand</span>
+                    </div>
+                    <div style="position:relative; height:140px;"><canvas id="chart-clean-hours"></canvas></div>
+                </div>
+                <div class="glass-card p-3">
+                    <div class="flex items-baseline gap-2 mb-1">
+                        <h3 class="text-sm font-semibold text-gray-700">Natural Gas Generation</h3>
+                        <span class="text-xs text-gray-400">Average daily gas-fired generation (MW)</span>
+                    </div>
+                    <div style="position:relative; height:140px;"><canvas id="chart-gas"></canvas></div>
+                </div>
+                <div class="glass-card p-3">
+                    <div class="flex items-baseline gap-2 mb-1">
+                        <h3 class="text-sm font-semibold text-gray-700">Clean Energy Penetration</h3>
+                        <span class="text-xs text-gray-400">Daily clean energy as % of total load</span>
+                    </div>
+                    <div style="position:relative; height:140px;"><canvas id="chart-clean-pct"></canvas></div>
+                </div>
+                <div class="glass-card p-3">
+                    <div class="flex items-baseline gap-2 mb-1">
+                        <h3 class="text-sm font-semibold text-gray-700">Peak Electricity Price</h3>
+                        <span class="text-xs text-gray-400">Daily peak LMP ($/MWh) &mdash; CAISO system average</span>
+                    </div>
+                    <div style="position:relative; height:140px;"><canvas id="chart-lmp"></canvas></div>
+                </div>
+            </div>
         </div>
-        <div class="scroll-down-arrow"><span class="arrow"></span></div>
     </main>
 
 
@@ -220,7 +254,8 @@
                     class="rounded-full shadow-lg mx-auto w-48 h-48 object-cover">
             </div>
             <div class="md:col-span-2">
-                <h2 class="text-4xl font-lora font-semibold mb-4 text-left">Hello!</h2>
+                <h2 class="text-4xl font-lora font-semibold mb-2 text-left">Driving the Future of <em class="font-lora italic">Clean Energy</em></h2>
+                <p class="text-sm text-gray-500 mb-4">From deep science to real-world impact</p>
                 <p class="text-left text-lg text-gray-700 leading-relaxed">
                     I'm Eshan, a scientist and engineer dedicated to accelerating the transition to a sustainable energy
                     future. My work focuses on developing and scaling innovative technologies in renewable energy
@@ -312,6 +347,8 @@
 
 
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <footer class="w-full text-center py-5 border-t border-gray-200/80">
         <div class="flex items-center justify-center space-x-4">
@@ -489,6 +526,368 @@
         });
     </script>
     <script src="custom.js"></script>
+    <script>
+    (async function() {
+        const resp = await fetch('chart_data.json');
+        const data = await resp.json();
+
+        // Show last date
+        const lastDate = data.dates[data.dates.length - 1];
+        const ld = new Date(lastDate + 'T00:00:00');
+        document.getElementById('last-update-date').textContent =
+            ld.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+        // Month color palette (Jan=0 ... Dec=11) - soft, website-aligned tones
+        // Jan-Feb: cool blue, Mar-May: teal/green, Jun-Aug: warm amber, Sep-Nov: purple/mauve, Dec: blue
+        const monthColors = [
+            '#60a5fa', // Jan - blue
+            '#38bdf8', // Feb - sky
+            '#2dd4bf', // Mar - teal
+            '#34d399', // Apr - emerald
+            '#10b981', // May - green
+            '#f59e0b', // Jun - amber
+            '#f97316', // Jul - orange
+            '#ef4444', // Aug - red
+            '#a855f7', // Sep - purple
+            '#8b5cf6', // Oct - violet
+            '#6366f1', // Nov - indigo
+            '#818cf8', // Dec - light indigo
+        ];
+
+        function getMonthColor(dateStr) {
+            return monthColors[new Date(dateStr + 'T00:00:00').getMonth()];
+        }
+
+        // Build points with per-point month colors
+        function buildPoints(values) {
+            const pts = [];
+            for (let i = 0; i < data.dates.length; i++) {
+                if (values[i] != null) pts.push({ x: data.dates[i], y: values[i] });
+            }
+            return pts;
+        }
+
+        function getSegmentColor(points) {
+            return function(ctx) {
+                const idx = ctx.p0DataIndex;
+                return getMonthColor(points[idx].x);
+            };
+        }
+
+        // Value-based fill plugin: colors the area under the curve based on y-value
+        // green (low) -> red (high) or red (low) -> green (high)
+        const valueFillPlugin = {
+            id: 'valueFill',
+            beforeDraw(chart) {
+                const opts = chart.options.plugins.valueFill;
+                if (!opts || !opts.enabled) return;
+
+                const { ctx, chartArea, scales: { x: xScale, y: yScale } } = chart;
+                const dataset = chart.data.datasets[0];
+                const meta = chart.getDatasetMeta(0);
+                const points = meta.data;
+                if (points.length < 2) return;
+
+                const yMin = opts.yMin ?? 0;
+                const yMax = opts.yMax ?? 100;
+                const invert = opts.invert || false; // true = high is green
+                const opacity = opts.opacity ?? 0.14;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(chartArea.left, chartArea.top, chartArea.width, chartArea.height);
+                ctx.clip();
+
+                for (let i = 0; i < points.length - 1; i++) {
+                    const p0 = points[i];
+                    const p1 = points[i + 1];
+                    const v0 = dataset.data[i].y;
+                    const v1 = dataset.data[i + 1].y;
+                    if (v0 == null || v1 == null) continue;
+
+                    // Normalize to 0-1
+                    const t0 = Math.min(1, Math.max(0, (v0 - yMin) / (yMax - yMin)));
+                    const t1 = Math.min(1, Math.max(0, (v1 - yMin) / (yMax - yMin)));
+                    const tAvg = (t0 + t1) / 2;
+
+                    // Interpolate hue: green=142, red=0
+                    let hue;
+                    if (invert) {
+                        hue = tAvg * 142; // 0=red, 1=green
+                    } else {
+                        hue = (1 - tAvg) * 142; // 0=green, 1=red
+                    }
+
+                    const bottomY = yScale.getPixelForValue(yMin);
+
+                    ctx.beginPath();
+                    ctx.moveTo(p0.x, p0.y);
+                    ctx.lineTo(p1.x, p1.y);
+                    ctx.lineTo(p1.x, bottomY);
+                    ctx.lineTo(p0.x, bottomY);
+                    ctx.closePath();
+                    ctx.fillStyle = `hsla(${hue}, 72%, 48%, ${opacity})`;
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            }
+        };
+
+        Chart.register(valueFillPlugin);
+
+        // Yearly stats plugin: draws yearly aggregate labels in the white space
+        const yearlyStatsPlugin = {
+            id: 'yearlyStats',
+            afterDraw(chart) {
+                const opts = chart.options.plugins.yearlyStats;
+                if (!opts || !opts.labels) return;
+
+                const { ctx, chartArea, scales: { x: xScale, y: yScale } } = chart;
+                const labels = opts.labels; // [{year, value, label}]
+
+                ctx.save();
+                ctx.font = `600 9px 'Inter', sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+
+                for (const item of labels) {
+                    // Position x at July 1 of that year (midpoint)
+                    const midDate = new Date(item.year, 6, 1).getTime();
+                    const px = xScale.getPixelForValue(midDate);
+
+                    // Skip if outside chart area
+                    if (px < chartArea.left || px > chartArea.right) continue;
+
+                    // Position y: find the max data value in that year to avoid overlap
+                    const dataset = chart.data.datasets[0].data;
+                    let yearMax = 0;
+                    for (const pt of dataset) {
+                        const yr = new Date(pt.x + 'T00:00:00').getFullYear();
+                        if (yr === item.year && pt.y > yearMax) yearMax = pt.y;
+                    }
+
+                    // Place label above the year's peak, but clamp within chart
+                    const yMax = yScale.max ?? yScale.end;
+                    // Use a position between yearMax and yMax, biased toward the top
+                    const labelY = yearMax + (yMax - yearMax) * 0.35;
+                    let py = yScale.getPixelForValue(labelY);
+
+                    // Ensure it stays within chart area with some padding
+                    py = Math.max(chartArea.top + 4, Math.min(py, chartArea.bottom - 14));
+
+                    // Draw value
+                    ctx.fillStyle = 'rgba(107, 114, 128, 0.55)';
+                    ctx.fillText(item.label, px, py);
+                }
+
+                ctx.restore();
+            }
+        };
+
+        Chart.register(yearlyStatsPlugin);
+
+        // Helper: compute yearly stats from points
+        function computeYearlySum(points) {
+            const byYear = {};
+            for (const p of points) {
+                const yr = new Date(p.x + 'T00:00:00').getFullYear();
+                if (!byYear[yr]) byYear[yr] = 0;
+                byYear[yr] += p.y;
+            }
+            return Object.entries(byYear).map(([year, total]) => ({
+                year: parseInt(year),
+                value: total,
+                label: Math.round(total).toLocaleString() + ' hrs'
+            }));
+        }
+
+        function computeYearlyAvg(points, suffix, decimals) {
+            const byYear = {};
+            for (const p of points) {
+                const yr = new Date(p.x + 'T00:00:00').getFullYear();
+                if (!byYear[yr]) byYear[yr] = { sum: 0, count: 0 };
+                byYear[yr].sum += p.y;
+                byYear[yr].count++;
+            }
+            return Object.entries(byYear).map(([year, v]) => {
+                const avg = v.sum / v.count;
+                const formatted = decimals > 0 ? avg.toFixed(decimals) : Math.round(avg).toLocaleString();
+                return { year: parseInt(year), value: avg, label: formatted + suffix };
+            });
+        }
+
+        // Shared config
+        const gridColor = 'rgba(0,0,0,0.05)';
+        const fontFamily = "'Inter', sans-serif";
+
+        const sharedOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(255,255,255,0.96)',
+                    titleColor: '#1f2937',
+                    bodyColor: '#374151',
+                    borderColor: '#e5e7eb',
+                    borderWidth: 1,
+                    titleFont: { family: fontFamily, weight: '600', size: 12 },
+                    bodyFont: { family: fontFamily, size: 12 },
+                    padding: 10,
+                    cornerRadius: 8,
+                    displayColors: false,
+                    callbacks: {
+                        title: function(items) {
+                            const d = new Date(items[0].parsed.x);
+                            return d.toLocaleDateString('en-US', {
+                                weekday: 'short', month: 'long', day: 'numeric', year: 'numeric'
+                            });
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: { unit: 'year', displayFormats: { year: 'yyyy' } },
+                    grid: { color: gridColor },
+                    ticks: { font: { family: fontFamily, size: 10 }, color: '#9ca3af' }
+                },
+                y: {
+                    grid: { color: gridColor },
+                    ticks: { font: { family: fontFamily, size: 10 }, color: '#9ca3af' }
+                }
+            }
+        };
+
+        function makeLineChart(canvasId, points, yLabel, extraOpts) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+
+            const cfg = {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        data: points,
+                        segment: {
+                            borderColor: getSegmentColor(points)
+                        },
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        pointHitRadius: 8,
+                        pointHoverRadius: 4,
+                        pointHoverBackgroundColor: function(ctx) {
+                            return getMonthColor(points[ctx.dataIndex]?.x || points[0].x);
+                        },
+                        fill: false,
+                        tension: 0.2
+                    }]
+                },
+                options: JSON.parse(JSON.stringify(sharedOptions))
+            };
+
+            cfg.options.scales.y.title = {
+                display: true, text: yLabel,
+                font: { family: fontFamily, size: 10, weight: '600' },
+                color: '#6b7280'
+            };
+
+            if (extraOpts) {
+                if (extraOpts.yMax != null) cfg.options.scales.y.max = extraOpts.yMax;
+                if (extraOpts.yMin != null) cfg.options.scales.y.min = extraOpts.yMin;
+                if (extraOpts.tooltipSuffix) {
+                    cfg.options.plugins.tooltip.callbacks.label = function(ctx) {
+                        return ctx.parsed.y.toLocaleString() + extraOpts.tooltipSuffix;
+                    };
+                }
+                if (extraOpts.valueFill) {
+                    cfg.options.plugins.valueFill = extraOpts.valueFill;
+                }
+                if (extraOpts.yearlyStats) {
+                    cfg.options.plugins.yearlyStats = extraOpts.yearlyStats;
+                }
+            }
+
+            return new Chart(ctx, cfg);
+        }
+
+        function makeScatterChart(canvasId, points, yLabel, extraOpts) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            const colors = points.map(p => getMonthColor(p.x));
+
+            const cfg = {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        data: points,
+                        pointBackgroundColor: colors,
+                        pointBorderColor: colors,
+                        pointRadius: 2,
+                        pointHoverRadius: 5,
+                        borderWidth: 0,
+                    }]
+                },
+                options: JSON.parse(JSON.stringify(sharedOptions))
+            };
+            cfg.options.interaction.mode = 'nearest';
+            cfg.options.scales.y.title = {
+                display: true, text: yLabel,
+                font: { family: fontFamily, size: 10, weight: '600' },
+                color: '#6b7280'
+            };
+            if (extraOpts) {
+                if (extraOpts.yMax != null) cfg.options.scales.y.max = extraOpts.yMax;
+                if (extraOpts.yMin != null) cfg.options.scales.y.min = extraOpts.yMin;
+                if (extraOpts.tooltipSuffix) {
+                    cfg.options.plugins.tooltip.callbacks.label = function(ctx) {
+                        return ctx.parsed.y.toLocaleString() + extraOpts.tooltipSuffix;
+                    };
+                }
+                if (extraOpts.yearlyStats) {
+                    cfg.options.plugins.yearlyStats = extraOpts.yearlyStats;
+                }
+            }
+            return new Chart(ctx, cfg);
+        }
+
+        // Panel 1: Clean energy hours (yearly total)
+        const cleanHoursPoints = buildPoints(data.clean_hours);
+        makeLineChart('chart-clean-hours', cleanHoursPoints, 'Hours / Day', {
+            yMax: 24, yMin: 0, tooltipSuffix: ' hours',
+            yearlyStats: { labels: computeYearlySum(cleanHoursPoints) }
+        });
+
+        // Panel 2: Natural gas (fill + yearly avg)
+        const gasPoints = buildPoints(data.gas_mw);
+        const gasMax = Math.max(...gasPoints.map(p => p.y));
+        makeLineChart('chart-gas', gasPoints, 'MW', {
+            yMin: 0, tooltipSuffix: ' MW',
+            valueFill: { enabled: true, yMin: 0, yMax: gasMax, invert: false, opacity: 0.14 },
+            yearlyStats: { labels: computeYearlyAvg(gasPoints, ' MW', 0) }
+        });
+
+        // Panel 3: Clean energy % (fill + yearly avg)
+        const cleanPctPoints = buildPoints(data.clean_pct);
+        makeLineChart('chart-clean-pct', cleanPctPoints, '% of Load', {
+            yMax: 100, yMin: 0, tooltipSuffix: '%',
+            valueFill: { enabled: true, yMin: 0, yMax: 100, invert: true, opacity: 0.14 },
+            yearlyStats: { labels: computeYearlyAvg(cleanPctPoints, '%', 1) }
+        });
+
+        // Panel 4: Peak LMP (scatter + yearly avg)
+        const lmpPoints = buildPoints(data.peak_lmp);
+        const sortedLmp = lmpPoints.map(p => p.y).sort((a, b) => a - b);
+        const p99 = sortedLmp[Math.floor(sortedLmp.length * 0.99)];
+        const cappedPoints = lmpPoints.filter(p => p.y <= p99);
+
+        makeScatterChart('chart-lmp', cappedPoints, '$/MWh', {
+            yMin: 0, tooltipSuffix: ' $/MWh',
+            yearlyStats: { labels: computeYearlyAvg(lmpPoints, ' $/MWh', 0) }
+        });
+    })();
+    </script>
 </body>
 
 </html>
