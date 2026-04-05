@@ -2,6 +2,9 @@
 *.json
 *.csv
 
+# Python scripts (run locally only, not pushed to website)
+*.py
+
 # Temporary files
 *.log
 *.bak
@@ -13,7 +16,15 @@ temp*.txt
 caiso_downloads/
 caiso_demand_downloads/
 caiso_supply/
+caiso_demand_clean/
+caiso_demand_downloads_old_backup/
+caiso_demand_worker_*/
+test_demand_download/
+test_fuelsource_download/
 
-# Python scripts are tracked (needed for running daily_update.bat)
-# HTML files are tracked (needed for website)
-# PNG chart images are tracked (needed for website)
+# Markdown documentation (optional - keep local unless needed)
+*.md
+
+# Only push to website:
+# - *.png (chart images)
+# - *.html (web pages)
