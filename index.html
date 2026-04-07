@@ -215,6 +215,20 @@
             <div class="flex flex-col gap-3" id="charts-grid">
                 <div class="glass-card p-3">
                     <div class="flex items-baseline gap-2 mb-1">
+                        <h3 class="text-sm font-semibold text-gray-700" id="breakdown-title">Grid Supply &amp; Demand</h3>
+                        <span class="text-xs text-gray-400" id="breakdown-date-label">5-minute generation breakdown vs load</span>
+                    </div>
+                    <div style="position:relative; height:300px;"><canvas id="chart-daily-breakdown"></canvas></div>
+                </div>
+                <div class="glass-card p-3">
+                    <div class="flex items-baseline gap-2 mb-1">
+                        <h3 class="text-sm font-semibold text-gray-700">Clean Energy Penetration</h3>
+                        <span class="text-xs text-gray-400">Daily clean energy as % of total load</span>
+                    </div>
+                    <div style="position:relative; height:140px;"><canvas id="chart-clean-pct"></canvas></div>
+                </div>
+                <div class="glass-card p-3">
+                    <div class="flex items-baseline gap-2 mb-1">
                         <h3 class="text-sm font-semibold text-gray-700">Hours with 100%+ Clean Energy</h3>
                         <span class="text-xs text-gray-400">Daily hours where renewables met or exceeded demand</span>
                     </div>
@@ -226,13 +240,6 @@
                         <span class="text-xs text-gray-400">Average daily gas-fired generation (MW)</span>
                     </div>
                     <div style="position:relative; height:140px;"><canvas id="chart-gas"></canvas></div>
-                </div>
-                <div class="glass-card p-3">
-                    <div class="flex items-baseline gap-2 mb-1">
-                        <h3 class="text-sm font-semibold text-gray-700">Clean Energy Penetration</h3>
-                        <span class="text-xs text-gray-400">Daily clean energy as % of total load</span>
-                    </div>
-                    <div style="position:relative; height:140px;"><canvas id="chart-clean-pct"></canvas></div>
                 </div>
                 <div class="glass-card p-3">
                     <div class="flex items-baseline gap-2 mb-1">
@@ -887,6 +894,152 @@
                 }
             }
             return new Chart(ctx, cfg);
+        }
+
+        // === Daily Breakdown Stacked Area Chart ===
+        try {
+            const bdResp = await fetch('daily_breakdown.json');
+            const bd = await bdResp.json();
+
+            // Format date label
+            const bdDate = new Date(bd.date + 'T00:00:00');
+            const bdDateStr = bdDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+            document.getElementById('breakdown-title').innerHTML = 'Grid Supply &amp; Demand &mdash; ' + bdDateStr;
+            document.getElementById('breakdown-date-label').textContent =
+                '5-minute generation breakdown vs load (MW)';
+
+            // Build time labels as Date objects for proper x-axis
+            const timeLabels = bd.timestamps.map(t => {
+                const [h, m] = t.split(':').map(Number);
+                return new Date(2026, 0, 1, h, m);
+            });
+
+            // Source config: key, label, color (stacked bottom to top)
+            const sourceConfig = [
+                { key: 'solar',       label: 'Solar',         color: '#facc15' },
+                { key: 'wind',        label: 'Wind',          color: '#10b981' },
+                { key: 'nuclear',     label: 'Nuclear',       color: '#a855f7' },
+                { key: 'large_hydro', label: 'Large Hydro',   color: '#2563eb' },
+                { key: 'small_hydro', label: 'Small Hydro',   color: '#7dd3fc' },
+                { key: 'geothermal',  label: 'Geothermal',    color: '#b45309' },
+                { key: 'biomass',     label: 'Biomass',       color: '#16a34a' },
+                { key: 'biogas',      label: 'Biogas',        color: '#86efac' },
+                { key: 'battery_discharging', label: 'Batteries', color: '#22d3ee' },
+                { key: 'imports',     label: 'Imports',       color: '#9ca3af' },
+                { key: 'natural_gas', label: 'Natural Gas',   color: '#ef4444' },
+                { key: 'other',       label: 'Other',         color: '#6b7280' },
+                { key: 'coal',        label: 'Coal',          color: '#374151' },
+            ];
+
+            const stackedDatasets = sourceConfig.map(s => ({
+                label: s.label,
+                data: bd.sources[s.key].map((v, i) => ({ x: timeLabels[i], y: Math.max(0, v) })),
+                backgroundColor: s.color + 'cc',
+                borderColor: s.color,
+                borderWidth: 0.5,
+                fill: true,
+                pointRadius: 0,
+                pointHitRadius: 0,
+                tension: 0.3,
+                stack: 'supply',
+                order: 2
+            }));
+
+            // Load line
+            stackedDatasets.push({
+                label: 'Load (Demand + Charging)',
+                data: bd.load.map((v, i) => ({ x: timeLabels[i], y: v })),
+                borderColor: '#111827',
+                borderWidth: 2.5,
+                borderDash: [6, 3],
+                fill: false,
+                pointRadius: 0,
+                pointHitRadius: 8,
+                pointHoverRadius: 4,
+                tension: 0.3,
+                stack: undefined,
+                order: 1
+            });
+
+            // Battery charging (negative, shown below zero)
+            stackedDatasets.push({
+                label: 'Battery Charging',
+                data: bd.battery_charging.map((v, i) => ({ x: timeLabels[i], y: v > 0 ? -v : 0 })),
+                backgroundColor: '#22d3ee44',
+                borderColor: '#22d3ee',
+                borderWidth: 0.5,
+                fill: true,
+                pointRadius: 0,
+                pointHitRadius: 0,
+                tension: 0.3,
+                stack: 'charging',
+                order: 3
+            });
+
+            const bdCtx = document.getElementById('chart-daily-breakdown').getContext('2d');
+            new Chart(bdCtx, {
+                type: 'line',
+                data: { datasets: stackedDatasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { unit: 'hour', displayFormats: { hour: 'ha' }, tooltipFormat: 'h:mm a' },
+                            ticks: { font: { family: "'Inter', sans-serif", size: 10 }, color: '#9ca3af', maxTicksLimit: 13 },
+                            grid: { color: '#f3f4f6' }
+                        },
+                        y: {
+                            stacked: true,
+                            title: { display: true, text: 'MW', font: { family: "'Inter', sans-serif", size: 10, weight: '600' }, color: '#6b7280' },
+                            ticks: {
+                                font: { family: "'Inter', sans-serif", size: 10 }, color: '#9ca3af',
+                                callback: v => (v / 1000).toFixed(0) + ' GW'
+                            },
+                            grid: { color: '#f3f4f6' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                usePointStyle: true,
+                                pointStyle: 'rectRounded',
+                                padding: 8,
+                                font: { family: "'Inter', sans-serif", size: 9 },
+                                color: '#6b7280',
+                                filter: item => {
+                                    const ds = stackedDatasets[item.datasetIndex];
+                                    const maxVal = Math.max(...ds.data.map(d => Math.abs(d.y)));
+                                    return maxVal > 100;
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(255,255,255,0.95)',
+                            titleColor: '#111',
+                            bodyColor: '#333',
+                            borderColor: '#e5e7eb',
+                            borderWidth: 1,
+                            bodyFont: { family: "'Inter', sans-serif", size: 11 },
+                            titleFont: { family: "'Inter', sans-serif", size: 12, weight: '600' },
+                            callbacks: {
+                                label: function(ctx) {
+                                    const v = ctx.parsed.y;
+                                    if (Math.abs(v) < 1) return null;
+                                    const sign = v < 0 ? '-' : '';
+                                    return ctx.dataset.label + ': ' + sign + Math.abs(v).toLocaleString() + ' MW';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } catch(e) {
+            console.warn('Daily breakdown chart failed:', e);
         }
 
         // Panel 1: Clean energy hours (yearly total)
