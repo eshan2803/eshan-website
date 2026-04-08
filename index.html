@@ -915,15 +915,16 @@
             });
 
             // Source config: key, label, color (stacked bottom to top)
+            // Baseload sources at bottom, then variable, then dispatchable on top
             const sourceConfig = [
-                { key: 'solar',       label: 'Solar',         color: '#facc15' },
-                { key: 'wind',        label: 'Wind',          color: '#10b981' },
                 { key: 'nuclear',     label: 'Nuclear',       color: '#a855f7' },
-                { key: 'large_hydro', label: 'Large Hydro',   color: '#2563eb' },
-                { key: 'small_hydro', label: 'Small Hydro',   color: '#7dd3fc' },
                 { key: 'geothermal',  label: 'Geothermal',    color: '#b45309' },
                 { key: 'biomass',     label: 'Biomass',       color: '#16a34a' },
                 { key: 'biogas',      label: 'Biogas',        color: '#86efac' },
+                { key: 'small_hydro', label: 'Small Hydro',   color: '#7dd3fc' },
+                { key: 'large_hydro', label: 'Large Hydro',   color: '#2563eb' },
+                { key: 'wind',        label: 'Wind',          color: '#10b981' },
+                { key: 'solar',       label: 'Solar',         color: '#facc15' },
                 { key: 'battery_discharging', label: 'Batteries', color: '#22d3ee' },
                 { key: 'imports',     label: 'Imports',       color: '#9ca3af' },
                 { key: 'natural_gas', label: 'Natural Gas',   color: '#ef4444' },
@@ -976,6 +977,25 @@
                 order: 3
             });
 
+            // LMP price line (right y-axis)
+            if (bd.lmp && bd.lmp.some(v => v !== null)) {
+                stackedDatasets.push({
+                    label: 'LMP Price ($/MWh)',
+                    data: bd.lmp.map((v, i) => ({ x: timeLabels[i], y: v })),
+                    borderColor: '#f97316',
+                    borderWidth: 1.5,
+                    fill: false,
+                    pointRadius: 0,
+                    pointHitRadius: 8,
+                    pointHoverRadius: 3,
+                    tension: 0.3,
+                    stack: undefined,
+                    yAxisID: 'yPrice',
+                    order: 0,
+                    spanGaps: true,
+                });
+            }
+
             const bdCtx = document.getElementById('chart-daily-breakdown').getContext('2d');
             new Chart(bdCtx, {
                 type: 'line',
@@ -999,6 +1019,15 @@
                                 callback: v => (v / 1000).toFixed(0) + ' GW'
                             },
                             grid: { color: '#f3f4f6' }
+                        },
+                        yPrice: {
+                            position: 'right',
+                            title: { display: true, text: '$/MWh', font: { family: "'Inter', sans-serif", size: 10, weight: '600' }, color: '#f97316' },
+                            ticks: {
+                                font: { family: "'Inter', sans-serif", size: 10 }, color: '#f97316',
+                                callback: v => '$' + v
+                            },
+                            grid: { drawOnChartArea: false }
                         }
                     },
                     plugins: {
@@ -1029,6 +1058,10 @@
                             callbacks: {
                                 label: function(ctx) {
                                     const v = ctx.parsed.y;
+                                    if (v == null) return null;
+                                    if (ctx.dataset.yAxisID === 'yPrice') {
+                                        return ctx.dataset.label + ': $' + v.toFixed(2);
+                                    }
                                     if (Math.abs(v) < 1) return null;
                                     const sign = v < 0 ? '-' : '';
                                     return ctx.dataset.label + ': ' + sign + Math.abs(v).toLocaleString() + ' MW';
