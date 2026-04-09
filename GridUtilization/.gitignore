@@ -2,6 +2,11 @@
 *.json
 *.csv
 
+# Exceptions: JSON files needed by the website
+!demand_forecast.json
+!available_capacity.json
+!eia_generation.json
+
 # Temporary files
 *.log
 *.bak
