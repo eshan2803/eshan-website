@@ -1386,7 +1386,16 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                     currentPotential.biomass[i] += inputs.capacity.biomass * COST_DATA.capacity_factor.biomass;
                     currentPotential.rng[i] += inputs.capacity.rng * COST_DATA.capacity_factor.rng;
                 }
-                
+
+                // Zero out potential for disabled technologies
+                ['solar', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass', 'rng', 'hydrogen', 'hydro', 'naturalGas', 'coal'].forEach(tech => {
+                    if (enabledTechnologies[tech] === false && currentPotential[tech]) {
+                        for (let i = 0; i < 24; i++) {
+                            currentPotential[tech][i] = 0;
+                        }
+                    }
+                });
+
                 let netLoad = Array(24).fill(0);
                 for (let i = 0; i < 24; i++) {
                     let mustRunGen = 0;
@@ -1523,7 +1532,7 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                 if (useFullMeritOrder) {
                     return calculateFullMeritOrderDispatchAndPrice(netLoad, inputs, currentPotential, hydroCF, countryName, batteryDischargeEnergy);
                 } else {
-                    const hydroCapacity = (currentCountryInstalledCapacity.hydro || 0) + (inputs.capacity.hydro || 0);
+                    const hydroCapacity = enabledTechnologies['hydro'] === false ? 0 : (currentCountryInstalledCapacity.hydro || 0) + (inputs.capacity.hydro || 0);
                     const maxHourlyHydroOutput = countryName === 'California' ? hydroCapacity * 0.32 : hydroCapacity;
                     const hydroGeneration = Array(24).fill(0);
                     let loadAfterHydro = [...netLoad];
@@ -1704,11 +1713,11 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                 const gasGenDetails = { ccgt: { generation: 0, cost: 0 }, ct: { generation: 0, cost: 0 } };
                 const hourlyMarginalPrice = Array(24).fill(0);
 
-                const totalNGCapacity = (currentCountryInstalledCapacity.naturalGas || 0) + (inputs.capacity.naturalGas || 0);
+                const totalNGCapacity = enabledTechnologies['naturalGas'] === false ? 0 : (currentCountryInstalledCapacity.naturalGas || 0) + (inputs.capacity.naturalGas || 0);
                 const ccgtCapacity = totalNGCapacity * 0.7;
                 const ctCapacity = totalNGCapacity * 0.3;
-                
-                const hydroCapacity = (currentCountryInstalledCapacity.hydro || 0) + (inputs.capacity.hydro || 0);
+
+                const hydroCapacity = enabledTechnologies['hydro'] === false ? 0 : (currentCountryInstalledCapacity.hydro || 0) + (inputs.capacity.hydro || 0);
                 const totalDailyHydroEnergy = hydroCapacity * hydroCF * 24;
                 let remainingDailyHydro = totalDailyHydroEnergy;
                 
@@ -1829,10 +1838,10 @@ function getSimulationResult(inputs, solarProfile, windProfile, offshoreWindProf
                 const hourlyMarginalPrice = Array(24).fill(0);
                 const thermalGeneration = { naturalGas: Array(24).fill(0), coal: Array(24).fill(0), rng: Array(24).fill(0) };
                 
-                const totalNGCapacity = (currentCountryInstalledCapacity.naturalGas || 0) + (inputs.capacity.naturalGas || 0);
+                const totalNGCapacity = enabledTechnologies['naturalGas'] === false ? 0 : (currentCountryInstalledCapacity.naturalGas || 0) + (inputs.capacity.naturalGas || 0);
                 const ccgtCapacity = totalNGCapacity * 0.7;
                 const ctCapacity = totalNGCapacity * 0.3;
-                
+
                 const carbonTax = inputs.incentives.carbonTax || 0;
                 const carbonCostCoal = (EMISSION_FACTORS.coal / 1000) * carbonTax;
                 const carbonCostNG = (EMISSION_FACTORS.naturalGas / 1000) * carbonTax;

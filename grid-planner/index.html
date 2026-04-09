@@ -1719,7 +1719,17 @@
                     currentPotential.rng[i] += inputs.capacity.rng * COST_DATA.capacity_factor.rng;
                     currentPotential.hydrogen[i] += inputs.capacity.hydrogen * COST_DATA.capacity_factor.hydrogen;
                 }
-                const hydroCapacity = (currentCountryInstalledCapacity.hydro || 0) + (inputs.capacity.hydro || 0);
+
+                // Zero out potential for disabled technologies
+                ['solar', 'wind', 'offshoreWind', 'nuclear', 'geothermal', 'biomass', 'rng', 'hydrogen', 'hydro', 'naturalGas', 'coal'].forEach(tech => {
+                    if (enabledTechnologies[tech] === false && currentPotential[tech]) {
+                        for (let i = 0; i < 24; i++) {
+                            currentPotential[tech][i] = 0;
+                        }
+                    }
+                });
+
+                const hydroCapacity = enabledTechnologies['hydro'] === false ? 0 : (currentCountryInstalledCapacity.hydro || 0) + (inputs.capacity.hydro || 0);
                 const maxHourlyHydroOutput = countryName === 'California' ? hydroCapacity * 0.32 : hydroCapacity;
 
                 let netLoad = Array(24).fill(0);
@@ -1853,7 +1863,7 @@
                 const hourlyMarginalPrice = Array(24).fill(0);
                 const thermalGeneration = { naturalGas: Array(24).fill(0), coal: Array(24).fill(0) };
 
-                const totalNGCapacity = (currentCountryInstalledCapacity.naturalGas || 0) + (inputs.capacity.naturalGas || 0);
+                const totalNGCapacity = enabledTechnologies['naturalGas'] === false ? 0 : (currentCountryInstalledCapacity.naturalGas || 0) + (inputs.capacity.naturalGas || 0);
                 const ccgtCapacity = totalNGCapacity * 0.7;
                 const ctCapacity = totalNGCapacity * 0.3;
 
