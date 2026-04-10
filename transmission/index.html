@@ -1402,12 +1402,12 @@
             </div>
         </div>
         <div class="button-row" style="display: flex; gap: 10px; align-items: center;">
-            <div id="trends-trigger" title="Historical Trends (Aggregated Prices)">
+            <div id="trends-trigger" title="Show price trends over time periods">
                 <svg viewBox="0 0 24 24">
                     <path d="M3 17h2v5H3zm6-8h2v13H9zm6-4h2v17h-2zm6-4h2v21h-2z" />
                 </svg>
             </div>
-            <div id="lmp-trigger" title="Show Day-Ahead Market Prices ($)">
+            <div id="lmp-trigger" title="Show nodal prices">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <!-- Removed circle, keeping just the $ symbol parts -->
                     <path d="M12 2v20" />
@@ -1537,7 +1537,7 @@
                     <path d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
                 </svg>
             </button>
-            <input type="range" id="timeSlider" min="0" max="23" value="0" step="1" disabled>
+            <input type="range" id="timeSlider" min="0" max="23" value="0" step="1" style="opacity: 0.5;">
             <div id="timeSliderTooltip"></div>
             <button id="openProfileEditorBtn" class="edit-icon-btn" title="Edit Profiles">
                 <svg viewBox="0 0 24 24">
@@ -1767,6 +1767,13 @@
             .then(data => {
                 substationsData = data;
                 console.log(`Loaded ${data.features.length} substations`);
+                // Update LMP button tooltip with the price date from the GeoJSON
+                if (data.price_date) {
+                    const d = new Date(data.price_date + 'T00:00:00');
+                    const formatted = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                    const btn = document.getElementById('lmp-trigger');
+                    if (btn) btn.title = `Show nodal prices for ${formatted}`;
+                }
             })
             .catch(error => {
                 console.error('Error loading substations:', error);
@@ -4170,6 +4177,8 @@
 
             // Force enable button just in case
             if (timeBasedToggle) timeBasedToggle.disabled = false;
+            // Slider is always enabled (auto-activates toggle on interaction)
+            timeSlider.disabled = false;
 
             // Initial update - small delay to ensure plants are loaded
             setTimeout(() => {
@@ -4187,12 +4196,10 @@
                     if (isEnabled) {
                         // Enable time-based simulation
                         timeSlider.style.opacity = '1';
-                        timeSlider.disabled = false;
                         updateSimulation(parseInt(timeSlider.value));
                     } else {
                         // Disable time-based simulation - turn all plants OFF
                         timeSlider.style.opacity = '0.5';
-                        timeSlider.disabled = true;
 
                         // Keep time at current hour at default (as requested)
                         const nowHour = new Date().getHours();
@@ -4224,6 +4231,13 @@
                     }
                 });
             }
+
+            // Auto-activate time-based toggle when user clicks on the slider
+            timeSlider.addEventListener('mousedown', function () {
+                if (timeBasedToggle && !timeBasedToggle.classList.contains('active')) {
+                    timeBasedToggle.click();
+                }
+            });
 
             timeSlider.addEventListener('input', function () {
                 const hour = parseInt(this.value);
@@ -4839,6 +4853,9 @@
             }
         }
 
+        // Track which layers were hidden by LMP activation so we can restore them
+        let lmpHiddenLayers = { plants: false, activeFlow: false, substations: false };
+
         function hideLMPPrices() {
             if (map.hasLayer(lmpLayer)) {
                 map.removeLayer(lmpLayer);
@@ -4847,6 +4864,43 @@
             }
             // Also hide list
             document.getElementById('lmp-list').classList.remove('show');
+
+            // Restore layers that were hidden by LMP activation
+            const plantsHeader = document.getElementById('legend-plants-header');
+            const activeFlowToggle = document.getElementById('legend-activeflow-toggle');
+            const substationsToggle = document.getElementById('legend-substations-toggle');
+
+            if (lmpHiddenLayers.plants && plantsHeader && plantsHeader.style.textDecoration === 'line-through') {
+                plantsHeader.click();
+            }
+            if (lmpHiddenLayers.activeFlow && activeFlowToggle && activeFlowToggle.style.textDecoration === 'line-through') {
+                activeFlowToggle.click();
+            }
+            if (lmpHiddenLayers.substations && substationsToggle && substationsToggle.style.textDecoration === 'line-through') {
+                substationsToggle.click();
+            }
+            lmpHiddenLayers = { plants: false, activeFlow: false, substations: false };
+        }
+
+        function hideLayersForLMP() {
+            // Hide powerplants, active flow, substations when LMP is shown
+            const plantsHeader = document.getElementById('legend-plants-header');
+            const activeFlowToggle = document.getElementById('legend-activeflow-toggle');
+            const substationsToggle = document.getElementById('legend-substations-toggle');
+
+            // Only hide if currently visible; track what we hid
+            if (plantsHeader && plantsHeader.style.textDecoration !== 'line-through') {
+                lmpHiddenLayers.plants = true;
+                plantsHeader.click();
+            }
+            if (activeFlowToggle && activeFlowToggle.style.textDecoration !== 'line-through') {
+                lmpHiddenLayers.activeFlow = true;
+                activeFlowToggle.click();
+            }
+            if (substationsToggle && substationsToggle.style.textDecoration !== 'line-through') {
+                lmpHiddenLayers.substations = true;
+                substationsToggle.click();
+            }
         }
 
         function setupLMPToggle() {
@@ -4863,6 +4917,7 @@
                 if (list.classList.contains('show') && !map.hasLayer(lmpLayer)) {
                     showLMPPrices();
                     btn.classList.add('active');
+                    hideLayersForLMP();
                 }
             });
 
@@ -4890,6 +4945,7 @@
                         if (input.checked) {
                             showLMPPrices();
                             btn.classList.add('active');
+                            hideLayersForLMP();
                         }
                     }
                 });
