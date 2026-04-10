@@ -516,8 +516,8 @@
                     <a href="/grid-planner/index.html" class="rainbow-glow">
                         <span class="button-content">Grid Planner</span>
                     </a>
-                    <a href="/grid-planner/planner.html" class="rainbow-glow">
-                        <span class="button-content">Capacity Expansion</span>
+                    <a href="/grid-operator/index.html" class="rainbow-glow">
+                        <span class="button-content">Grid Operator</span>
                     </a>
                     <a href="https://www.eshansingh.xyz/transmission/index.html" class="rainbow-glow">
                         <span class="button-content">CA Grid Map</span>
@@ -575,7 +575,7 @@
                     <div class="glass-card rounded-lg w-full">
                         <div class="mb-4 relative">
                             <div class="flex justify-between items-center mb-4">
-                                <h2 class="text-2xl font-lora font-semibold text-gray-800">All Year - Hourly Electricity
+                                <h2 class="text-2xl font-lora font-semibold text-gray-800">Hourly Electricity
                                     Generation (GWh)</h2>
                                 <button id="downloadGenerationBtn" class="p-2 rounded-full hover:bg-gray-200"
                                     title="Download CSV">
@@ -592,16 +592,15 @@
 
                     <!-- Marginal Price Chart -->
                     <div class="glass-card rounded-lg w-full">
-                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">All Year - Hourly Marginal Price
+                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Hourly Marginal Energy Price
                             ($/MWh)</h2>
                         <canvas id="marginalPriceChart" height="100"></canvas>
                     </div>
 
                     <!-- Monthly CO2 Emissions Bar Chart -->
                     <div class="glass-card rounded-lg w-full">
-                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">Monthly Total CO2 Emissions
-                            (Metric
-                            Tons)</h2>
+                        <h2 class="text-2xl font-lora font-semibold mb-4 text-gray-800">CO<sub>2</sub> Emissions
+                            (Metric Tons)</h2>
                         <canvas id="co2EmissionsChart" height="100"></canvas>
                     </div>
                 </div>
@@ -2115,7 +2114,24 @@
                         y: { title: { display: true, text: 'Price ($/MWh)' } }
                     },
                     plugins: {
-                        legend: { display: true }
+                        legend: { display: true },
+                        annotation: {
+                            annotations: {
+                                avgPrice: {
+                                    type: 'label',
+                                    content: 'Average Hourly Marginal Energy Price: 0 $/MWh',
+                                    position: { x: 'center', y: 'top' },
+                                    yAdjust: 10,
+                                    backgroundColor: 'rgba(249, 250, 251, 0.85)',
+                                    borderColor: 'rgba(209, 213, 219, 1)',
+                                    borderWidth: 1,
+                                    borderRadius: 6,
+                                    color: '#1f2937',
+                                    font: { weight: 'bold', size: 16 },
+                                    padding: 8,
+                                }
+                            }
+                        }
                     }
                 }
             };
@@ -2124,7 +2140,7 @@
                 data: {
                     labels: MONTHS,
                     datasets: [{
-                        label: 'Total CO2 Emissions (Metric Tons)', data: [],
+                        label: 'CO\u2082 Emissions (Metric Tons)', data: [],
                         backgroundColor: 'rgba(239, 68, 68, 0.6)',
                         borderColor: 'rgba(239, 68, 68, 1)',
                         borderWidth: 1
@@ -2133,7 +2149,7 @@
                 options: {
                     responsive: true, animation: { duration: 0 },
                     scales: {
-                        y: { beginAtZero: true, title: { display: true, text: 'Total CO2 (Metric Tons)' } }
+                        y: { beginAtZero: true, title: { display: true, text: 'CO\u2082 Emissions (Metric Tons)' } }
                     },
                     plugins: {
                         legend: { display: false },
@@ -2141,7 +2157,7 @@
                             annotations: {
                                 totalCO2: {
                                     type: 'label',
-                                    content: 'Total Annual CO2: 0 tons',
+                                    content: 'Total Annual CO\u2082 Emissions: 0 tons',
                                     position: { x: 'center', y: 'top' },
                                     yAdjust: 10,
                                     backgroundColor: 'rgba(249, 250, 251, 0.85)',
@@ -3273,6 +3289,12 @@
                 // Update marginal price chart
                 marginalPriceChart.data.datasets[0].data = hourlyMarginalPrice;
                 marginalPriceChart.data.datasets[1].data = priceWithoutStorage;
+                if (hourlyMarginalPrice.length > 0) {
+                    const avgPrice = hourlyMarginalPrice.reduce((sum, v) => sum + v, 0) / hourlyMarginalPrice.length;
+                    if (marginalPriceChart.options.plugins.annotation && marginalPriceChart.options.plugins.annotation.annotations.avgPrice) {
+                        marginalPriceChart.options.plugins.annotation.annotations.avgPrice.content = `Average Hourly Marginal Energy Price: ${avgPrice.toFixed(2)} $/MWh`;
+                    }
+                }
                 marginalPriceChart.update('none');
 
                 // Update CO2 chart (Monthly Bar Chart)
@@ -3285,7 +3307,7 @@
 
                 co2Chart.data.datasets[0].data = monthlyEmissions;
                 if (co2Chart.options.plugins.annotation && co2Chart.options.plugins.annotation.annotations.totalCO2) {
-                    co2Chart.options.plugins.annotation.annotations.totalCO2.content = `Total Annual CO2: ${(totalAnnualCO2 / 1e9).toFixed(2)} Million Tons`;
+                    co2Chart.options.plugins.annotation.annotations.totalCO2.content = `Total Annual CO\u2082 Emissions: ${(totalAnnualCO2 / 1e9).toFixed(2)} Million Tons`;
                 }
                 co2Chart.update('none');
 
