@@ -858,6 +858,56 @@
             gap: 10px;
         }
 
+        /* ===== Guided Tour ===== */
+        #tour-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            background: rgba(0,0,0,0.55);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        #tour-backdrop.active { opacity: 1; pointer-events: auto; }
+
+        #tour-card {
+            position: fixed;
+            z-index: 10002;
+            background: white;
+            border-radius: 12px;
+            padding: 20px 22px 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+            max-width: 340px;
+            min-width: 260px;
+        }
+        #tour-card h3 { margin: 0 0 8px; font-size: 15px; color: #222; }
+        #tour-card p { margin: 0 0 14px; font-size: 13px; color: #555; line-height: 1.55; }
+        .tour-nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+        .tour-nav button { padding: 6px 14px; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .tour-btn-skip { background: transparent; color: #999; }
+        .tour-btn-skip:hover { color: #666; }
+        .tour-btn-back { background: #eee; color: #444; }
+        .tour-btn-back:hover { background: #ddd; }
+        .tour-btn-next { background: #4A90A4; color: white; }
+        .tour-btn-next:hover { background: #3d7a8d; }
+        .tour-dots { display: flex; gap: 5px; }
+        .tour-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; }
+        .tour-dot.active { background: #4A90A4; }
+
+        /* Tour help button as Leaflet control */
+        .leaflet-control-tour {
+            background: white;
+            border: 2px solid rgba(0,0,0,0.2);
+            border-radius: 4px;
+            width: 30px; height: 30px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; margin-top: 5px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.2);
+            transition: all 0.2s;
+            font-size: 16px; font-weight: 700; color: #4A90A4;
+        }
+        .leaflet-control-tour:hover { background: #f4f4f4; transform: scale(1.05); }
+
         /* Loading Overlay */
         #loading-overlay {
             position: fixed;
@@ -1189,22 +1239,12 @@
             </svg>
         </button>
         <div id="controls">
-            <p><strong>California Power Grid Map</strong></p>
-            <p style="margin: 5px 0; font-size: 13px;">Hover over plants to see details.</p>
-            <p style="margin: 5px 0; font-size: 13px;">Click on plants to turn them ON/OFF.</p>
-            <p style="margin: 5px 0; font-size: 13px;">Select Generator Type by clicking on the Legend Label.</p>
-            <p style="margin: 5px 0; font-size: 13px;">Select multiple Generators by Ctrl/Cmd and clicking on Legend
-                Labels.
-            </p>
-            <p style="margin: 5px 0; font-size: 13px;">Select multiple Basemaps by Ctrl/Cmd and clicking on Basemap
-                Toggles.
-            </p>
             <p id="status"
-                style="margin-top: 10px; padding: 5px; background-color: #f0f0f0; border-radius: 4px; text-align: center;">
+                style="padding: 5px; background-color: #f0f0f0; border-radius: 4px; text-align: center; margin: 0;">
                 <strong>Active Plants: <span id="activeCount">0</span></strong>
             </p>
             <button id="toggleAllBtn"
-                style="width: 100%; margin-top: 10px; padding: 8px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                style="width: 100%; margin-top: 8px; padding: 8px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
                 Turn All Plants ON
             </button>
         </div>
@@ -1522,6 +1562,24 @@
         </div>
     </div>
 
+    <!-- Guided Tour -->
+    <div id="tour-backdrop"></div>
+    <div id="tour-card" style="display:none;">
+        <h3 id="tour-title"></h3>
+        <p id="tour-body"></p>
+        <div class="tour-nav">
+            <button class="tour-btn-skip" id="tour-skip">Skip</button>
+            <div class="tour-dots" id="tour-dots"></div>
+            <div style="display:flex; gap:6px;">
+                <button class="tour-btn-back" id="tour-back">Back</button>
+                <button class="tour-btn-next" id="tour-next">Next</button>
+            </div>
+        </div>
+        <label id="tour-dismiss" style="display:none; margin-top:10px; font-size:11px; color:#888; cursor:pointer; user-select:none;">
+            <input type="checkbox" id="tour-dont-show" style="margin-right:5px; vertical-align:middle;">Don't show this again
+        </label>
+    </div>
+
     <div id="map">
         <div id="trends-loading-overlay">
             <div class="spinner-small"></div>
@@ -1815,11 +1873,16 @@
                     setupControlsToggle();
                     setupActiveFlowToggle();
 
+                    // Add tour button to Leaflet controls
+                    if (window._setupTourControl) window._setupTourControl();
+
                     // Hide loading overlay
                     const overlay = document.getElementById('loading-overlay');
                     overlay.style.opacity = '0';
                     setTimeout(() => {
                         overlay.style.display = 'none';
+                        // Launch guided tour unless previously dismissed
+                        if (window._startTourIfFirstVisit) window._startTourIfFirstVisit();
                     }, 500);
 
                     console.log('Network graph built and map rendered.');
@@ -5523,6 +5586,329 @@
                     }
                 });
             }
+        })();
+
+        // ============================================
+        // GUIDED TOUR
+        // ============================================
+        (function () {
+            const steps = [
+                {
+                    target: '#map',
+                    title: 'California Power Grid',
+                    body: 'This map shows California\'s power grid: power plants, transmission lines, and substations. Hover over plants to see details. Click on plants to turn them ON/OFF.',
+                    position: 'center'
+                },
+                {
+                    target: '#legend-items',
+                    title: 'Interactive Legend',
+                    body: 'Every item here is clickable. Click a fuel type to filter plants. Click <b>Power Plant</b>, <b>Active Flow</b>, <b>Substations</b>, or <b>Transmission Lines</b> to toggle their visibility (hidden items show as strikethrough).<br><br>Select multiple generators with <b>Ctrl/Cmd + Click</b> on legend labels.',
+                    position: 'right'
+                },
+                {
+                    target: '#capacity-slider-container',
+                    title: 'Capacity Filter',
+                    body: 'Drag this slider to filter power plants by minimum capacity (MW). Only plants above the threshold will appear on the map.',
+                    position: 'left'
+                },
+                {
+                    target: '#voltage-slider-container',
+                    title: 'Voltage Filter',
+                    body: 'Drag this slider to filter substations by minimum voltage (kV). Useful for focusing on high-voltage transmission substations.',
+                    position: 'left'
+                },
+                {
+                    target: '#basemap-list',
+                    highlightTargets: ['#basemap-trigger', '#basemap-list'],
+                    title: 'Map Layers',
+                    body: 'Switch between different base maps: Street, Satellite, Elevation, Solar, Wind, Population, Land Cover, CO<sub>2</sub> Storage, and Fire Risk.<br><br>Overlay multiple layers with <b>Ctrl/Cmd + Click</b>.',
+                    position: 'left',
+                    onEnter() {
+                        const list = document.getElementById('basemap-list');
+                        const trigger = document.getElementById('basemap-trigger');
+                        if (list) list.classList.add('show');
+                        if (trigger) trigger.classList.add('active');
+                    },
+                    onLeave() {
+                        const list = document.getElementById('basemap-list');
+                        const trigger = document.getElementById('basemap-trigger');
+                        if (list) list.classList.remove('show');
+                        if (trigger) trigger.classList.remove('active');
+                    }
+                },
+                {
+                    target: '#lmp-trigger',
+                    title: 'Nodal Prices ($)',
+                    body: 'View Day-Ahead Market (DAM) electricity prices at each substation node. Color-coded from green (cheap) to red (expensive). Choose price components: Total, Energy, Congestion, Loss, or GHG.',
+                    position: 'top',
+                    onEnter() {
+                        const btn = document.getElementById('lmp-trigger');
+                        if (btn && !btn.classList.contains('active')) {
+                            showLMPPrices();
+                            btn.classList.add('active');
+                            hideLayersForLMP();
+                        }
+                    },
+                    onLeave() {
+                        if (typeof hideLMPPrices === 'function') hideLMPPrices();
+                    }
+                },
+                {
+                    target: '.trends-modal-content',
+                    highlightTargets: ['#trends-trigger', '.trends-modal-content'],
+                    title: 'Price Trends',
+                    body: 'Visualize historical price trends over customizable time periods. Select a price component (LMP, Energy, Congestion, Losses) and a date range to see average prices across the grid.',
+                    position: 'right',
+                    onEnter() {
+                        const modal = document.getElementById('trends-modal');
+                        if (modal) modal.classList.add('show');
+                    },
+                    onLeave() {
+                        const modal = document.getElementById('trends-modal');
+                        if (modal) modal.classList.remove('show');
+                    }
+                },
+                {
+                    target: '#time-control-panel',
+                    title: 'Time Simulation',
+                    body: 'Click anywhere on the time bar to activate the hourly simulation. Plants turn on/off based on their generation profiles for that hour. Price layers also update to show the selected hour. Use the arrow buttons or drag the slider.',
+                    position: 'top',
+                    onEnter() {
+                        const toggle = document.getElementById('timeBasedToggle');
+                        if (toggle && !toggle.classList.contains('active')) toggle.click();
+                    },
+                    onLeave() {
+                        const toggle = document.getElementById('timeBasedToggle');
+                        if (toggle && toggle.classList.contains('active')) toggle.click();
+                    }
+                },
+                {
+                    target: '#profile-editor-content',
+                    highlightTargets: ['#openProfileEditorBtn', '#profile-editor-content'],
+                    title: 'Edit Daily Profiles',
+                    body: 'Click the pencil icon in the time bar to open this editor. Customize hourly capacity factors for <b>Solar</b>, <b>Wind</b>, and <b>Load Demand</b>. Drag the sliders to adjust generation profiles, then click <b>Apply Changes</b> to update the simulation.',
+                    position: 'right',
+                    onEnter() {
+                        // Click the button to properly initialize and render sliders
+                        const btn = document.getElementById('openProfileEditorBtn');
+                        if (btn) btn.click();
+                        // Lift button above the modal overlay so it's visible through the hole
+                        if (btn) { btn.style.position = 'relative'; btn.style.zIndex = '2001'; }
+                    },
+                    onLeave() {
+                        const modal = document.getElementById('profile-editor-modal');
+                        if (modal) modal.style.display = 'none';
+                        const btn = document.getElementById('openProfileEditorBtn');
+                        if (btn) { btn.style.position = ''; btn.style.zIndex = ''; }
+                    }
+                }
+            ];
+
+            let currentStep = -1;
+            const backdrop = document.getElementById('tour-backdrop');
+            const card = document.getElementById('tour-card');
+            const titleEl = document.getElementById('tour-title');
+            const bodyEl = document.getElementById('tour-body');
+            const dotsEl = document.getElementById('tour-dots');
+            const skipBtn = document.getElementById('tour-skip');
+            const backBtn = document.getElementById('tour-back');
+            const nextBtn = document.getElementById('tour-next');
+            const dontShowCheckbox = document.getElementById('tour-dont-show');
+            const dismissLabel = document.getElementById('tour-dismiss');
+
+            function buildDots() {
+                dotsEl.innerHTML = '';
+                steps.forEach((_, i) => {
+                    const dot = document.createElement('span');
+                    dot.className = 'tour-dot' + (i === currentStep ? ' active' : '');
+                    dotsEl.appendChild(dot);
+                });
+            }
+
+            function getHoleRect(targetEl, step) {
+                const r = targetEl.getBoundingClientRect();
+                const pad = (step && step.spotlightPad !== undefined) ? step.spotlightPad : 8;
+                if (r.width > window.innerWidth * 0.8 && r.height > window.innerHeight * 0.8) {
+                    const m = 60;
+                    return { top: m, left: m, right: window.innerWidth - m, bottom: window.innerHeight - m, width: window.innerWidth - m * 2, height: window.innerHeight - m * 2 };
+                }
+                return { top: r.top - pad, left: r.left - pad, right: r.right + pad, bottom: r.bottom + pad, width: r.width + pad * 2, height: r.height + pad * 2 };
+            }
+
+            function cutBackdropHole(holeRect) {
+                const { top, left, right, bottom } = holeRect;
+                backdrop.style.clipPath = `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${left}px ${top}px, ${left}px ${bottom}px, ${right}px ${bottom}px, ${right}px ${top}px, ${left}px ${top}px)`;
+            }
+
+            function positionCard(holeRect, pos) {
+                const r = holeRect;
+                const pad = 14;
+                card.style.display = 'block';
+                card.style.top = '0px';
+                card.style.left = '0px';
+                const cardRect = card.getBoundingClientRect();
+
+                let top, left;
+                switch (pos) {
+                    case 'center':
+                        top = r.top + r.height - cardRect.height - pad;
+                        left = r.left + r.width / 2 - cardRect.width / 2;
+                        break;
+                    case 'right':
+                        top = r.top + r.height / 2 - cardRect.height / 2;
+                        left = r.right + pad;
+                        break;
+                    case 'left':
+                        top = r.top + r.height / 2 - cardRect.height / 2;
+                        left = r.left - cardRect.width - pad;
+                        break;
+                    case 'top':
+                        top = r.top - cardRect.height - pad;
+                        left = r.left + r.width / 2 - cardRect.width / 2;
+                        break;
+                    case 'bottom':
+                    default:
+                        top = r.bottom + pad;
+                        left = r.left + r.width / 2 - cardRect.width / 2;
+                        break;
+                }
+
+                top = Math.max(8, Math.min(top, window.innerHeight - cardRect.height - 8));
+                left = Math.max(8, Math.min(left, window.innerWidth - cardRect.width - 8));
+
+                card.style.top = top + 'px';
+                card.style.left = left + 'px';
+            }
+
+            function goTo(idx) {
+                // Leave current step
+                if (currentStep >= 0 && currentStep < steps.length) {
+                    const prev = steps[currentStep];
+                    if (prev.onLeave) prev.onLeave();
+                }
+
+                currentStep = idx;
+
+                if (idx < 0 || idx >= steps.length) {
+                    endTour();
+                    return;
+                }
+
+                const step = steps[currentStep];
+
+                // Enter new step
+                if (step.onEnter) step.onEnter();
+
+                // Small delay to let DOM updates from onEnter settle
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        const targetEl = document.querySelector(step.target);
+                        if (!targetEl) { goTo(currentStep + 1); return; }
+
+                        let hole;
+                        if (step.highlightTargets) {
+                            const rects = step.highlightTargets
+                                .map(sel => document.querySelector(sel))
+                                .filter(Boolean)
+                                .map(el => el.getBoundingClientRect());
+                            if (rects.length > 1) {
+                                const pad = (step.spotlightPad !== undefined) ? step.spotlightPad : 8;
+                                const t = Math.min(...rects.map(r => r.top)) - pad;
+                                const l = Math.min(...rects.map(r => r.left)) - pad;
+                                const ri = Math.max(...rects.map(r => r.right)) + pad;
+                                const b = Math.max(...rects.map(r => r.bottom)) + pad;
+                                hole = { top: t, left: l, right: ri, bottom: b, width: ri - l, height: b - t };
+                            } else {
+                                hole = getHoleRect(targetEl, step);
+                            }
+                        } else {
+                            hole = getHoleRect(targetEl, step);
+                        }
+                        cutBackdropHole(hole);
+                        titleEl.textContent = step.title;
+                        bodyEl.innerHTML = step.body;
+                        positionCard(hole, step.position || 'bottom');
+                        buildDots();
+
+                        backBtn.style.display = currentStep === 0 ? 'none' : '';
+                        nextBtn.textContent = currentStep === steps.length - 1 ? 'Done' : 'Next';
+                        dismissLabel.style.display = 'none';
+                    });
+                });
+            }
+
+            function startTour() {
+                backdrop.classList.add('active');
+                card.style.display = 'block';
+                dontShowCheckbox.checked = false;
+                dismissLabel.style.display = 'none';
+                goTo(0);
+            }
+
+            function endTour() {
+                // Leave current step cleanly
+                if (currentStep >= 0 && currentStep < steps.length) {
+                    const prev = steps[currentStep];
+                    if (prev.onLeave) prev.onLeave();
+                }
+                backdrop.style.clipPath = '';
+                backdrop.classList.remove('active');
+                card.style.display = 'none';
+                currentStep = -1;
+                // Only persist dismissal if checkbox was checked
+                if (dontShowCheckbox.checked) {
+                    localStorage.setItem('tour_seen', '1');
+                }
+            }
+
+            // Prevent tour clicks from reaching document handlers (e.g. basemap close)
+            card.addEventListener('click', (e) => { e.stopPropagation(); });
+
+            // Click on dark area ends tour
+            backdrop.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (e.target === backdrop) endTour();
+            });
+
+            skipBtn.addEventListener('click', endTour);
+            backBtn.addEventListener('click', () => goTo(currentStep - 1));
+            nextBtn.addEventListener('click', () => {
+                if (currentStep === steps.length - 1) {
+                    // Last step — show the "Don't show again" checkbox before closing
+                    if (dismissLabel.style.display === 'none') {
+                        dismissLabel.style.display = 'block';
+                        nextBtn.textContent = 'Close';
+                        return;
+                    }
+                }
+                goTo(currentStep + 1);
+            });
+
+            // Create Leaflet control for tour button
+            window._setupTourControl = function () {
+                L.Control.Tour = L.Control.extend({
+                    onAdd: function () {
+                        var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-tour');
+                        container.innerHTML = '?';
+                        container.title = 'Take a guided tour';
+                        L.DomEvent.disableClickPropagation(container);
+                        L.DomEvent.on(container, 'click', function () {
+                            startTour();
+                        });
+                        return container;
+                    },
+                    onRemove: function () { }
+                });
+                L.control.tour = function (opts) { return new L.Control.Tour(opts); };
+                L.control.tour({ position: 'topleft' }).addTo(map);
+            };
+
+            // Auto-launch on every visit unless dismissed
+            window._startTourIfFirstVisit = function () {
+                if (!localStorage.getItem('tour_seen')) {
+                    setTimeout(startTour, 800);
+                }
+            };
         })();
     </script>
 </body>
