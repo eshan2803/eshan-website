@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>California Power Grid Map</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.js"></script>
@@ -229,60 +232,61 @@
             left: 10px;
         }
 
-        /* Custom home button */
-        .leaflet-control-home {
-            background: white;
-            border: 2px solid rgba(0, 0, 0, 0.2);
-            border-radius: 4px;
-            width: 30px;
-            height: 30px;
+        /* Site title overlay */
+        #site-title {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            font-family: 'Lora', serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1f2937;
+            text-decoration: none;
+            pointer-events: auto;
+        }
+        #site-title:hover { color: #4A90A4; }
+
+        /* Push Leaflet top-left controls below the name */
+        .leaflet-top.leaflet-left { top: 38px; }
+
+        /* Reset button appended inside zoom bar */
+        .leaflet-control-zoom .leaflet-control-reset {
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            margin-top: 10px;
-            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
-            transition: all 0.2s;
-        }
-
-        .leaflet-control-home:hover {
-            background: #f4f4f4;
-            transform: scale(1.05);
-        }
-
-        .leaflet-control-home svg {
-            width: 18px;
-            height: 18px;
-            fill: #333;
-        }
-
-        /* Documentation button */
-        .leaflet-control-doc {
-            background: white;
-            border: 2px solid rgba(0, 0, 0, 0.2);
-            border-radius: 4px;
             width: 30px;
             height: 30px;
+            cursor: pointer;
+            text-decoration: none;
+            color: #333;
+            background: white;
+            border-top: 1px solid #ccc;
+        }
+        .leaflet-control-zoom .leaflet-control-reset:hover { background: #f4f4f4; }
+        .leaflet-control-zoom .leaflet-control-reset svg { width: 16px; height: 16px; fill: #333; }
+
+        /* Doc + Tour grouped bar */
+        .leaflet-control-toolbar {
+            display: flex;
+            flex-direction: column;
+        }
+        .leaflet-control-toolbar a {
             display: flex;
             align-items: center;
             justify-content: center;
+            width: 30px;
+            height: 30px;
+            background: white;
             cursor: pointer;
-            margin-top: 5px;
-            /* Spacing between buttons */
-            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
-            transition: all 0.2s;
+            text-decoration: none;
+            color: #333;
+            transition: background 0.2s;
         }
-
-        .leaflet-control-doc:hover {
-            background: #f4f4f4;
-            transform: scale(1.05);
-        }
-
-        .leaflet-control-doc svg {
-            width: 18px;
-            height: 18px;
-            fill: #333;
-        }
+        .leaflet-control-toolbar a:first-child { border-bottom: 1px solid #ccc; }
+        .leaflet-control-toolbar a:hover { background: #f4f4f4; }
+        .leaflet-control-toolbar svg { width: 18px; height: 18px; fill: #333; }
+        .leaflet-control-toolbar .tour-btn { font-size: 16px; font-weight: 700; color: #4A90A4; }
 
         /* Basemap toggle control in bottom-right */
         #basemap-toggle {
@@ -894,19 +898,7 @@
         .tour-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; }
         .tour-dot.active { background: #4A90A4; }
 
-        /* Tour help button as Leaflet control */
-        .leaflet-control-tour {
-            background: white;
-            border: 2px solid rgba(0,0,0,0.2);
-            border-radius: 4px;
-            width: 30px; height: 30px;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; margin-top: 5px;
-            box-shadow: 0 1px 5px rgba(0,0,0,0.2);
-            transition: all 0.2s;
-            font-size: 16px; font-weight: 700; color: #4A90A4;
-        }
-        .leaflet-control-tour:hover { background: #f4f4f4; transform: scale(1.05); }
+        /* Tour help button (inside toolbar bar, styles handled by .leaflet-control-toolbar) */
 
         /* Loading Overlay */
         #loading-overlay {
@@ -1447,7 +1439,7 @@
                     <path d="M3 17h2v5H3zm6-8h2v13H9zm6-4h2v17h-2zm6-4h2v21h-2z" />
                 </svg>
             </div>
-            <div id="lmp-trigger" title="Show Day-Ahead nodal prices">
+            <div id="lmp-trigger" title="Show nodal prices">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <!-- Removed circle, keeping just the $ symbol parts -->
                     <path d="M12 2v20" />
@@ -1581,6 +1573,7 @@
     </div>
 
     <div id="map">
+        <a id="site-title" href="https://eshansingh.xyz">Dr. Eshan Singh</a>
         <div id="trends-loading-overlay">
             <div class="spinner-small"></div>
             <span style="font-size: 13px; color: #667eea; font-weight: 600;">Loading Trends...</span>
@@ -3090,59 +3083,55 @@
             });
         }
 
-        // Setup home button to reset view to default California bounds
+        // Append a reset-view button to the existing zoom control bar
         function setupHomeButton() {
-            // Create custom control for home button
-            L.Control.Home = L.Control.extend({
-                onAdd: function (map) {
-                    var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-home');
-                    container.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>';
-                    container.title = 'Reset to default view';
-
-                    L.DomEvent.disableClickPropagation(container);
-                    L.DomEvent.on(container, 'click', function () {
-                        fitMapToData();
-                    });
-
-                    return container;
-                },
-                onRemove: function (map) {
-                    // Nothing to do here
-                }
+            var zoomBar = document.querySelector('.leaflet-control-zoom');
+            if (!zoomBar) return;
+            var resetBtn = document.createElement('a');
+            resetBtn.className = 'leaflet-control-reset';
+            resetBtn.href = '#';
+            resetBtn.title = 'Reset to default view';
+            resetBtn.setAttribute('role', 'button');
+            resetBtn.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.65 6.35A7.96 7.96 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>';
+            L.DomEvent.disableClickPropagation(resetBtn);
+            L.DomEvent.on(resetBtn, 'click', function (e) {
+                L.DomEvent.preventDefault(e);
+                fitMapToData();
             });
-
-            L.control.home = function (opts) {
-                return new L.Control.Home(opts);
-            }
-
-            // Add the home button to the map
-            L.control.home({ position: 'topleft' }).addTo(map);
+            zoomBar.appendChild(resetBtn);
         }
 
-        // Setup documentation button linking to documentation page
+        // Setup combined doc + tour toolbar
         function setupDocButton() {
-            L.Control.Doc = L.Control.extend({
-                onAdd: function (map) {
-                    var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-doc');
-                    // Open book icon
-                    container.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>';
-                    container.title = 'View Documentation';
+            L.Control.Toolbar = L.Control.extend({
+                onAdd: function () {
+                    var bar = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-toolbar');
 
-                    L.DomEvent.disableClickPropagation(container);
-                    L.DomEvent.on(container, 'click', function () {
+                    // Documentation button
+                    var docBtn = L.DomUtil.create('a', '', bar);
+                    docBtn.href = '#';
+                    docBtn.title = 'View Documentation';
+                    docBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>';
+                    L.DomEvent.on(docBtn, 'click', function (e) {
+                        L.DomEvent.preventDefault(e);
                         window.open('./documentation.html', '_blank');
                     });
 
-                    return container;
+                    // Tour button — click handler wired up later by _setupTourControl
+                    var tourBtn = L.DomUtil.create('a', 'tour-btn', bar);
+                    tourBtn.href = '#';
+                    tourBtn.title = 'Take a guided tour';
+                    tourBtn.textContent = '?';
+                    window._tourBtnEl = tourBtn;
+
+                    L.DomEvent.disableClickPropagation(bar);
+                    return bar;
                 },
-                onRemove: function (map) { }
+                onRemove: function () { }
             });
 
-            L.control.doc = function (opts) {
-                return new L.Control.Doc(opts);
-            }
-
-            L.control.doc({ position: 'topleft' }).addTo(map);
+            L.control.toolbar = function (opts) { return new L.Control.Toolbar(opts); };
+            L.control.toolbar({ position: 'topleft' }).addTo(map);
         }
 
         // Removed custom generator functionality - we're using real power plant data
@@ -5885,22 +5874,14 @@
             });
 
             // Create Leaflet control for tour button
+            // Wire up the tour button created by the toolbar control
             window._setupTourControl = function () {
-                L.Control.Tour = L.Control.extend({
-                    onAdd: function () {
-                        var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-tour');
-                        container.innerHTML = '?';
-                        container.title = 'Take a guided tour';
-                        L.DomEvent.disableClickPropagation(container);
-                        L.DomEvent.on(container, 'click', function () {
-                            startTour();
-                        });
-                        return container;
-                    },
-                    onRemove: function () { }
-                });
-                L.control.tour = function (opts) { return new L.Control.Tour(opts); };
-                L.control.tour({ position: 'topleft' }).addTo(map);
+                if (window._tourBtnEl) {
+                    L.DomEvent.on(window._tourBtnEl, 'click', function (e) {
+                        L.DomEvent.preventDefault(e);
+                        startTour();
+                    });
+                }
             };
 
             // Auto-launch on every visit unless dismissed
