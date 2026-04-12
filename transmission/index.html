@@ -245,7 +245,19 @@
             text-decoration: none;
             pointer-events: auto;
         }
-        #site-title:hover { color: #4A90A4; }
+        #site-title:hover {
+            background: linear-gradient(90deg, #ff0000, #ff8800, #ffdd00, #00cc44, #0088ff, #8800ff, #ff0000);
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: white;
+            -webkit-text-stroke: 1.5px transparent;
+            animation: rainbow-shift 2s linear infinite;
+        }
+        @keyframes rainbow-shift {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
 
         /* Push Leaflet top-left controls below the name */
         .leaflet-top.leaflet-left { top: 38px; }
@@ -5628,7 +5640,7 @@
                 {
                     target: '#lmp-trigger',
                     title: 'Nodal Prices ($)',
-                    body: 'View Day-Ahead Market (DAM) electricity prices at each substation node. Color-coded from green (cheap) to red (expensive). Choose price components: Total, Energy, Congestion, Loss, or GHG.',
+                    body: 'View Day-Ahead Market (DAM) electricity prices at each substation node. Color-coded from green (cheap) to red (expensive). Choose price components: Total, Energy, Congestion, Loss, or GHG.<br><br>Prices are updated daily for current date\'s Day Ahead Prices.',
                     position: 'top',
                     onEnter() {
                         const btn = document.getElementById('lmp-trigger');
@@ -5796,10 +5808,18 @@
 
                         let hole;
                         if (step.highlightTargets) {
+                            const m = 60;
                             const rects = step.highlightTargets
                                 .map(sel => document.querySelector(sel))
                                 .filter(Boolean)
-                                .map(el => el.getBoundingClientRect());
+                                .map(el => {
+                                    const r = el.getBoundingClientRect();
+                                    // Inset full-screen elements so the hole doesn't cover everything
+                                    if (r.width > window.innerWidth * 0.8 && r.height > window.innerHeight * 0.8) {
+                                        return { top: m, left: m, right: window.innerWidth - m, bottom: window.innerHeight - m };
+                                    }
+                                    return r;
+                                });
                             if (rects.length > 1) {
                                 const pad = (step.spotlightPad !== undefined) ? step.spotlightPad : 8;
                                 const t = Math.min(...rects.map(r => r.top)) - pad;
