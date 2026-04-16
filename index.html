@@ -997,8 +997,9 @@
                 });
             }
 
-            const bdCtx = document.getElementById('chart-daily-breakdown').getContext('2d');
-            new Chart(bdCtx, {
+            const bdCanvas = document.getElementById('chart-daily-breakdown');
+            const bdCtx = bdCanvas.getContext('2d');
+            const bdChart = new Chart(bdCtx, {
                 type: 'line',
                 data: { datasets: stackedDatasets },
                 options: {
@@ -1071,6 +1072,33 @@
                         }
                     }
                 }
+            });
+
+            // Tooltip when hovering over the right y-axis (LMP)
+            const lmpTip = document.createElement('div');
+            lmpTip.style.cssText = 'position:absolute;pointer-events:none;opacity:0;transition:opacity 0.15s;' +
+                'background:rgba(255,255,255,0.96);border:1px solid #f97316;border-radius:6px;padding:6px 10px;' +
+                'font-size:11px;color:#92400e;max-width:220px;line-height:1.4;z-index:10;white-space:normal;box-shadow:0 2px 8px rgba(0,0,0,0.1)';
+            bdCanvas.parentElement.appendChild(lmpTip);
+
+            bdCanvas.addEventListener('mousemove', function(e) {
+                const yPriceScale = bdChart.scales.yPrice;
+                if (!yPriceScale) return;
+                const rect = bdCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                if (x >= yPriceScale.left && x <= yPriceScale.right + 10 &&
+                    y >= yPriceScale.top && y <= yPriceScale.bottom) {
+                    lmpTip.textContent = 'CAISO may provide incomplete LMP data up to 4:55 PM.';
+                    lmpTip.style.right = '0px';
+                    lmpTip.style.top = (yPriceScale.top + (yPriceScale.bottom - yPriceScale.top) / 2 - 20) + 'px';
+                    lmpTip.style.opacity = '1';
+                } else {
+                    lmpTip.style.opacity = '0';
+                }
+            });
+            bdCanvas.addEventListener('mouseleave', function() {
+                lmpTip.style.opacity = '0';
             });
         } catch(e) {
             console.warn('Daily breakdown chart failed:', e);
