@@ -1830,6 +1830,43 @@
             .then(data => {
                 substationsData = data;
                 console.log(`Loaded ${data.features.length} substations`);
+                
+                // Calculate hourly limits for relative scaling
+                window.hourlyLMPLimits = [];
+                for (let h = 0; h < 24; h++) {
+                    let hMin = Infinity, hMax = -Infinity;
+                    data.features.forEach(f => {
+                        const prices = f.properties.LMP_Total_24h;
+                        if (prices && Array.isArray(prices)) {
+                            const p = prices[h];
+                            if (p !== null && !isNaN(p)) {
+                                if (p < hMin) hMin = p;
+                                if (p > hMax) hMax = p;
+                            }
+                        }
+                    });
+                    
+                    // Fallbacks if hour has no data
+                    if (hMin === Infinity) hMin = -10;
+                    if (hMax === -Infinity) hMax = 50;
+                    
+                    // Ensure a minimum range for visible contrast
+                    if (hMax - hMin < 5) {
+                        hMin -= 5;
+                        hMax += 5;
+                    }
+                    
+                    window.hourlyLMPLimits[h] = { min: hMin, max: hMax };
+                }
+                
+                // Keep daily limits for fallback
+                let dailyMin = Math.min(...window.hourlyLMPLimits.map(l => l.min));
+                let dailyMax = Math.max(...window.hourlyLMPLimits.map(l => l.max));
+                window.dailyLMPMin = dailyMin;
+                window.dailyLMPMax = dailyMax;
+                
+                console.log(`Hourly scaling initialized. Overall Range: [${dailyMin.toFixed(2)}, ${dailyMax.toFixed(2)}]`);
+
                 // Update LMP button tooltip with the price date from the GeoJSON
                 if (data.price_date) {
                     const d = new Date(data.price_date + 'T00:00:00');
@@ -4251,55 +4288,68 @@
                 }
             }, 1000);
 
-            // Handle button toggle
-            if (timeBasedToggle) {
-                timeBasedToggle.addEventListener('click', function () {
-                    this.classList.toggle('active');
-                    const isEnabled = this.classList.contains('active');
-
-                    if (isEnabled) {
-                        // Enable time-based simulation
-                        timeSlider.style.opacity = '1';
-                        updateSimulation(parseInt(timeSlider.value));
-                    } else {
-                        // Disable time-based simulation - turn all plants OFF
-                        timeSlider.style.opacity = '0.5';
-
-                        // Keep time at current hour at default (as requested)
-                        const nowHour = new Date().getHours();
-                        timeSlider.value = nowHour;
-                        const nowAmpm = nowHour >= 12 ? 'PM' : 'AM';
-                        const nowDisplayHour = nowHour % 12 || 12;
-                        timeText.textContent = `${nowDisplayHour}:00 ${nowAmpm}`;
-                        updateStatusText(nowHour);
-
-                        // Turn all plants OFF
-                        activeGenerators = 0;
-                        networkGraph.plants.forEach(plant => {
-                            plant.isOn = false;
-                            updatePlantMarker(plant, false, '#808080');
-                        });
-
-                        // Update flow to clear all animated lines
-                        updateFlow();
-
-                        // If LMP prices are being shown, they should also update to real-time
-                        if (typeof showLMPPrices === 'function' && map.hasLayer(lmpLayer)) {
-                            showLMPPrices();
-                        }
-                    }
-
+            // Function to enable/disable time-based simulation mode
+            function toggleSimulationMode(forceState) {
+                if (!timeBasedToggle) return;
+                const wasActive = timeBasedToggle.classList.contains('active');
+                const shouldBeActive = (forceState !== undefined) ? forceState : !wasActive;
+                
+                if (shouldBeActive) {
+                    timeBasedToggle.classList.add('active');
+                    timeSlider.style.opacity = '1';
+                    updateSimulation(parseInt(timeSlider.value));
+                    
                     // Update Trends Layer if active
                     if (typeof renderTrendsLayer === 'function' && map.hasLayer(trendsLayer)) {
                         renderTrendsLayer();
                     }
+                } else {
+                    timeBasedToggle.classList.remove('active');
+                    timeSlider.style.opacity = '0.5';
+                    
+                    // Reset to real-time (Default)
+                    const nowHour = new Date().getHours();
+                    timeSlider.value = nowHour;
+                    const nowAmpm = nowHour >= 12 ? 'PM' : 'AM';
+                    const nowDisplayHour = nowHour % 12 || 12;
+                    timeText.textContent = `${nowDisplayHour}:00 ${nowAmpm}`;
+                    updateStatusText(nowHour);
+                    
+                    // Turn all plants OFF when simulation is DISABLED
+                    activeGenerators = 0;
+                    networkGraph.plants.forEach(plant => {
+                        plant.isOn = false;
+                        updatePlantMarker(plant, false, '#808080');
+                    });
+                    
+                    // Update flow to clear all animated lines
+                    updateFlow();
+                    
+                    // If LMP prices are being shown, update to real-time hour prices
+                    if (typeof showLMPPrices === 'function' && map.hasLayer(lmpLayer)) {
+                        showLMPPrices();
+                    }
+                    
+                    // Update Trends Layer if active
+                    if (typeof renderTrendsLayer === 'function' && map.hasLayer(trendsLayer)) {
+                        renderTrendsLayer();
+                    }
+                }
+            }
+
+            // Handle button toggle click
+            if (timeBasedToggle) {
+                timeBasedToggle.addEventListener('click', function (e) {
+                    toggleSimulationMode();
+                    e.stopPropagation();
                 });
             }
 
             // Auto-activate time-based toggle when user clicks on the slider
             timeSlider.addEventListener('mousedown', function () {
                 if (timeBasedToggle && !timeBasedToggle.classList.contains('active')) {
-                    timeBasedToggle.click();
+                    // Call the logic directly to be sure
+                    toggleSimulationMode(true);
                 }
             });
 
@@ -4364,6 +4414,10 @@
 
             // Previous hour button handler
             prevHourBtn.addEventListener('click', function () {
+                // Ensure simulation is ON
+                if (timeBasedToggle && !timeBasedToggle.classList.contains('active')) {
+                    toggleSimulationMode(true);
+                }
                 const currentHour = parseInt(timeSlider.value);
                 const newHour = currentHour === 0 ? 23 : currentHour - 1;
                 timeSlider.value = newHour;
@@ -4375,6 +4429,10 @@
 
             // Next hour button handler
             nextHourBtn.addEventListener('click', function () {
+                // Ensure simulation is ON
+                if (timeBasedToggle && !timeBasedToggle.classList.contains('active')) {
+                    toggleSimulationMode(true);
+                }
                 const currentHour = parseInt(timeSlider.value);
                 const newHour = currentHour === 23 ? 0 : currentHour + 1;
                 timeSlider.value = newHour;
@@ -4855,7 +4913,7 @@
                     }
 
 
-                    const color = getLMPColor(combinedPrice, scaleMode);
+                    const color = getLMPColor(combinedPrice, scaleMode, currentHourIndex);
 
                     const marker = L.circleMarker(sub.latlng, {
                         radius: 5,
@@ -5057,61 +5115,47 @@
             }
         }
 
-        function getLMPColor(price, mode = 'LMP_Total') {
-            // Standard Price Scale (Total, Energy, or High Combined)
-            if (mode === 'LMP_GHG') {
-                // Usually small positive or zero
-                // User requested WHITE for GHG as they are all 0
-                return '#FFFFFF';
+        function getLMPColor(price, mode = 'LMP_Total', hour = null) {
+            if (price === null || price === undefined || isNaN(price)) return '#808080';
+
+            // Special handling for GHG components
+            if (mode === 'LMP_GHG') return '#FFFFFF';
+
+            // Components (Congestion, Loss) use a white-centered Diverging Scale
+            if (mode === 'LMP_Congestion' || mode === 'LMP_Loss') {
+                const limit = mode === 'LMP_Congestion' ? 20 : 10;
+                if (price === 0) return '#FFFFFF';
+                // Positive = Red
+                if (price > 0) return interpolateColor('#FFFFFF', '#F44336', Math.min(1, price / limit));
+                // Negative = Blue
+                return interpolateColor('#FFFFFF', '#2196F3', Math.min(1, Math.abs(price) / (limit/2)));
             }
 
-            // Diverging Gradient for Components (Blue -> White -> Red)
-            if (mode === 'LMP_Congestion' || mode === 'LMP_Loss' || mode === 'Combined') {
-                // Baseline 0 = White (#FFFFFF)
-                // Positive = Red (#F44336)
-                // Negative = Blue (#2196F3)
+            // Total LMP & Combined use the Red-to-Green Gradient Scale
+            // Get current scaling limits (Try Hourly Relative first, then Daily Absolute)
+            let min = window.dailyLMPMin !== undefined ? window.dailyLMPMin : -20;
+            let max = window.dailyLMPMax !== undefined ? window.dailyLMPMax : 100;
 
-                // Define range roughly
-                let max = 15; // Max cost -> Red
-                let min = -15; // Max credit -> Blue
+            if (hour !== null && window.hourlyLMPLimits && window.hourlyLMPLimits[hour]) {
+                min = window.hourlyLMPLimits[hour].min;
+                max = window.hourlyLMPLimits[hour].max;
+            }
 
-                // For Total/Combined, prices are usually ~30. So this scale would be all red.
-                // We need adaptive scaling.
-                // If Combined and > 20, use Standard price scale?
-                // User asked for "Gradient... for Congestion and Loss".
-
-                if (mode === 'LMP_Congestion') {
-                    // Congestion usually 0-20. 
-                    // 0 -> White.
-                    // 15 -> Red.
-                    // -5 -> Blue (rare)
-                    if (price === 0) return '#FFFFFF';
-                    if (price > 0) return interpolateColor('#FFFFFF', '#F44336', Math.min(1, price / 15));
-                    return interpolateColor('#FFFFFF', '#2196F3', Math.min(1, Math.abs(price) / 5));
-                }
-
-                if (mode === 'LMP_Loss') {
-                    // Loss usually -5 to +5
-                    if (price === 0) return '#FFFFFF';
-                    if (price > 0) return interpolateColor('#FFFFFF', '#F44336', Math.min(1, price / 5));
-                    return interpolateColor('#FFFFFF', '#2196F3', Math.min(1, Math.abs(price) / 5));
-                }
-
-                // Fallback for Combined if dominated by components
-                // If value is small (< 10), use gradient?
-                if (Math.abs(price) < 15) {
-                    if (price >= 0) return interpolateColor('#FFFFFF', '#F44336', Math.min(1, price / 15));
-                    return interpolateColor('#FFFFFF', '#2196F3', Math.min(1, Math.abs(price) / 15));
+            // If 0 is within our range, use Red -> White -> Green for clear neutrality
+            if (min < 0 && max > 0) {
+                if (price < 0) {
+                    const factor = Math.min(1, Math.abs(price) / Math.abs(min));
+                    return interpolateColor('#FFFFFF', '#F44336', factor); // White (0) to Red (min)
+                } else {
+                    const factor = Math.min(1, price / max);
+                    return interpolateColor('#FFFFFF', '#4CAF50', factor); // White (0) to Green (max)
                 }
             }
 
-            // Standard Price Scale (Total, Energy, or High Combined)
-            // < $30 green, $30-60 yellow, > $60 red
-            if (price < 30) return '#4CAF50';
-            if (price < 45) return '#8BC34A';
-            if (price < 60) return '#FFEB3B';
-            if (price < 80) return '#FF9800';
-            return '#F44336';
+            // Otherwise simple linear gradient from min to max
+            let factor = (price - min) / (max - min);
+            factor = Math.max(0, Math.min(1, factor));
+            return interpolateColor('#F44336', '#4CAF50', factor); // Low (Red) to High (Green)
         }
 
         // Setup controls panel toggle (hide/show with arrow button and swipe support)
