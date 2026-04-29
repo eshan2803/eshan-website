@@ -17,6 +17,11 @@ GRID_COLOR = "#2a2d3e"
 SPINE_COLOR = "#3a3d4e"
 ACCENT_RED = "#ef4444"
 
+# Create a cyclic colormap for the seasons/months
+# Winter (Blue) -> Spring (Green) -> Summer (Orange) -> Fall (Red/Purple) -> Winter (Blue)
+season_colors = ["#3b82f6", "#10b981", "#fbbf24", "#ef4444", "#3b82f6"]
+season_cmap = mcolors.LinearSegmentedColormap.from_list("seasons", season_colors)
+
 def generate_revenue_chart(df_daily, title, filename):
     print(f"Generating chart: {filename}...")
     
@@ -32,17 +37,15 @@ def generate_revenue_chart(df_daily, title, filename):
 
     max_half_width = 0.38
     
-    # Normalize LMP spread for coloring
-    spread_max = df_daily['lmp_spread'].quantile(0.95) # Cap at 95th percentile to prevent extreme spikes washing out colors
-    norm = mcolors.Normalize(vmin=0, vmax=spread_max)
-    cmap = plt.cm.plasma
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    # Normalize day of year for coloring
+    norm = mcolors.Normalize(vmin=1, vmax=365)
+    sm = plt.cm.ScalarMappable(cmap=season_cmap, norm=norm)
 
     for i, yr in enumerate(years):
         year_df = df_daily[df_daily['year'] == yr].copy()
         
         revs = year_df['revenue_m'].values
-        spreads = year_df['lmp_spread'].values
+        doy = year_df['day_of_year'].values
         
         if len(revs) < 2:
             continue
@@ -71,12 +74,12 @@ def generate_revenue_chart(df_daily, title, filename):
         raw_jitter = np.random.uniform(-1, 1, size=len(revs))
         x_pos = i + raw_jitter * densities_norm * max_half_width
         
-        # Sort by spread so higher spreads are painted on top
-        sort_idx = np.argsort(spreads)
+        # Sort by day of year so later days don't blindly overlap early days
+        sort_idx = np.random.permutation(len(revs))
         
-        # Scatter plot with spread colors
-        ax.scatter(x_pos[sort_idx], revs[sort_idx], c=spreads[sort_idx],
-                    cmap=cmap, norm=norm,
+        # Scatter plot with seasonal colors
+        ax.scatter(x_pos[sort_idx], revs[sort_idx], c=doy[sort_idx],
+                    cmap=season_cmap, norm=norm,
                     s=15, alpha=0.8, edgecolors="none", rasterized=True)
 
         # Mean line
@@ -107,11 +110,15 @@ def generate_revenue_chart(df_daily, title, filename):
     ax.set_title(title, color="#fff", fontsize=16, fontweight="bold", pad=20)
     ax.axhline(0, color=ACCENT_RED, linewidth=1, linestyle="--", alpha=0.7)
 
-    # Colorbar formatted
+    # Colorbar formatted with Month names
     cbar = fig.colorbar(sm, ax=ax, orientation="vertical", pad=0.02, aspect=40)
-    cbar.set_label("Daily LMP Spread ($/MWh)", color=TEXT_COLOR, fontsize=12, fontweight="bold")
+    cbar.set_label("Time of Year", color=TEXT_COLOR, fontsize=12, fontweight="bold")
     cbar.ax.tick_params(colors="#888", labelsize=10)
     cbar.outline.set_edgecolor(SPINE_COLOR)
+    
+    # Set colorbar ticks to roughly middle of months
+    cbar.set_ticks([15, 45, 74, 105, 135, 166, 196, 227, 258, 288, 319, 349])
+    cbar.set_ticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
 
     out_path = os.path.join(script_dir, filename)
     fig.savefig(out_path, dpi=200, facecolor=BG_OUTER, bbox_inches="tight")
@@ -135,15 +142,12 @@ def main():
     
     print("Grouping by day...")
     daily_df = df.groupby('date').agg(
-        total_revenue=('interval_revenue', 'sum'),
-        max_lmp=('lmp', 'max'),
-        min_lmp=('lmp', 'min')
+        total_revenue=('interval_revenue', 'sum')
     ).reset_index()
-    
-    daily_df['lmp_spread'] = daily_df['max_lmp'] - daily_df['min_lmp']
     
     daily_df['date'] = pd.to_datetime(daily_df['date'])
     daily_df['year'] = daily_df['date'].dt.year
+    daily_df['day_of_year'] = daily_df['date'].dt.dayofyear
     
     # Convert revenue to millions
     daily_df['revenue_m'] = daily_df['total_revenue'] / 1_000_000.0
