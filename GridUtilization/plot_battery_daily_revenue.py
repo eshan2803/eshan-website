@@ -17,11 +17,6 @@ GRID_COLOR = "#2a2d3e"
 SPINE_COLOR = "#3a3d4e"
 ACCENT_RED = "#ef4444"
 
-# Create a cyclic colormap for the seasons/months
-# Winter (Blue) -> Spring (Green) -> Summer (Orange) -> Fall (Red/Purple) -> Winter (Blue)
-season_colors = ["#3b82f6", "#10b981", "#fbbf24", "#ef4444", "#3b82f6"]
-season_cmap = mcolors.LinearSegmentedColormap.from_list("seasons", season_colors)
-
 def generate_revenue_chart(df_daily, title, filename):
     print(f"Generating chart: {filename}...")
     
@@ -37,15 +32,17 @@ def generate_revenue_chart(df_daily, title, filename):
 
     max_half_width = 0.38
     
-    # Normalize day of year for coloring
-    norm = mcolors.Normalize(vmin=1, vmax=365)
-    sm = plt.cm.ScalarMappable(cmap=season_cmap, norm=norm)
+    # Normalize LMP spread for coloring
+    spread_max = df_daily['lmp_spread'].quantile(0.95) # Cap at 95th percentile to prevent extreme spikes washing out colors
+    norm = mcolors.Normalize(vmin=0, vmax=spread_max)
+    cmap = plt.cm.plasma
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 
     for i, yr in enumerate(years):
         year_df = df_daily[df_daily['year'] == yr].copy()
         
         revs = year_df['revenue_m'].values
-        doy = year_df['day_of_year'].values
+        spreads = year_df['lmp_spread'].values
         
         if len(revs) < 2:
             continue
@@ -74,13 +71,12 @@ def generate_revenue_chart(df_daily, title, filename):
         raw_jitter = np.random.uniform(-1, 1, size=len(revs))
         x_pos = i + raw_jitter * densities_norm * max_half_width
         
-        # Sort by day of year so later days don't blindly overlap early days, or keep it random to mix
-        # Random shuffle is usually better for cyclic variables to not obscure any part
-        sort_idx = np.random.permutation(len(revs))
+        # Sort by spread so higher spreads are painted on top
+        sort_idx = np.argsort(spreads)
         
-        # Scatter plot with seasonal colors
-        ax.scatter(x_pos[sort_idx], revs[sort_idx], c=doy[sort_idx],
-                    cmap=season_cmap, norm=norm,
+        # Scatter plot with spread colors
+        ax.scatter(x_pos[sort_idx], revs[sort_idx], c=spreads[sort_idx],
+                    cmap=cmap, norm=norm,
                     s=15, alpha=0.8, edgecolors="none", rasterized=True)
 
         # Mean line
@@ -94,12 +90,12 @@ def generate_revenue_chart(df_daily, title, filename):
                  ha="center", va="bottom", fontsize=10, color="white",
                  fontweight="bold", zorder=6)
 
-        # Count label at the bottom
-        y_bottom = ax.get_ylim()[0] if ax.get_ylim()[0] < 0 else 0
+        # Total Yearly Revenue label at the bottom
+        total_yr_rev = year_df['total_revenue'].sum() / 1_000_000.0
         label_y = ax.get_ylim()[1] * 0.95
-        ax.text(i, label_y, f"n={len(revs)} days",
-                 ha="center", va="bottom", fontsize=10, color="#888",
-                 alpha=0.9)
+        ax.text(i, label_y, f"Total: ${total_yr_rev:.0f}M",
+                 ha="center", va="bottom", fontsize=11, color="#888",
+                 alpha=0.9, fontweight="bold")
 
     ax.set_xticks(range(len(years)))
     ax.set_xticklabels([str(yr) for yr in years], fontsize=12, color="#888")
@@ -111,15 +107,11 @@ def generate_revenue_chart(df_daily, title, filename):
     ax.set_title(title, color="#fff", fontsize=16, fontweight="bold", pad=20)
     ax.axhline(0, color=ACCENT_RED, linewidth=1, linestyle="--", alpha=0.7)
 
-    # Colorbar formatted with Month names
+    # Colorbar formatted
     cbar = fig.colorbar(sm, ax=ax, orientation="vertical", pad=0.02, aspect=40)
-    cbar.set_label("Time of Year", color=TEXT_COLOR, fontsize=12, fontweight="bold")
+    cbar.set_label("Daily LMP Spread ($/MWh)", color=TEXT_COLOR, fontsize=12, fontweight="bold")
     cbar.ax.tick_params(colors="#888", labelsize=10)
     cbar.outline.set_edgecolor(SPINE_COLOR)
-    
-    # Set colorbar ticks to roughly middle of months
-    cbar.set_ticks([15, 45, 74, 105, 135, 166, 196, 227, 258, 288, 319, 349])
-    cbar.set_ticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
 
     out_path = os.path.join(script_dir, filename)
     fig.savefig(out_path, dpi=200, facecolor=BG_OUTER, bbox_inches="tight")
@@ -136,11 +128,6 @@ def main():
     df['batteries_mw'] = pd.to_numeric(df['batteries_mw'], errors='coerce').fillna(0)
     
     print("Calculating interval revenue...")
-    # batteries_mw is negative for charging, positive for discharging.
-    # If charging (negative): interval_revenue = batteries_mw * lmp / 12
-    # e.g., -10MW * $30/MWh = -$300 / 12 = -$25 (we pay $25)
-    # If discharging (positive): interval_revenue = batteries_mw * lmp / 12
-    # e.g., 10MW * $100/MWh = $1000 / 12 = $83.33 (we earn $83.33)
     df['interval_revenue'] = df['batteries_mw'] * df['lmp'] / 12.0
     
     # Add date columns
@@ -149,11 +136,14 @@ def main():
     print("Grouping by day...")
     daily_df = df.groupby('date').agg(
         total_revenue=('interval_revenue', 'sum'),
+        max_lmp=('lmp', 'max'),
+        min_lmp=('lmp', 'min')
     ).reset_index()
+    
+    daily_df['lmp_spread'] = daily_df['max_lmp'] - daily_df['min_lmp']
     
     daily_df['date'] = pd.to_datetime(daily_df['date'])
     daily_df['year'] = daily_df['date'].dt.year
-    daily_df['day_of_year'] = daily_df['date'].dt.dayofyear
     
     # Convert revenue to millions
     daily_df['revenue_m'] = daily_df['total_revenue'] / 1_000_000.0
@@ -165,7 +155,7 @@ def main():
     
     generate_revenue_chart(
         df_plot,
-        "Distribution of Daily Battery Arbitrage Revenue (2023-Present)\nColored by Time of Year",
+        "Distribution of Daily Battery Arbitrage Revenue (2023-Present)\nColored by Daily LMP Spread",
         "battery_daily_revenue_distribution.png"
     )
 
