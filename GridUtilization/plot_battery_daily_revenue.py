@@ -21,7 +21,7 @@ ACCENT_RED = "#ef4444"
 season_colors = ["#3b82f6", "#10b981", "#fbbf24", "#ef4444", "#3b82f6"]
 season_cmap = mcolors.LinearSegmentedColormap.from_list("seasons", season_colors)
 
-def generate_revenue_chart(df_daily, title, filename, y_col, y_label, fmt_func, is_kw_yr=False):
+def generate_revenue_chart(df_daily, title, filename, y_col, y_label, fmt_func, is_kw_day=False):
     print(f"Generating chart: {filename}...")
     
     years = sorted(df_daily['year'].unique())
@@ -86,15 +86,15 @@ def generate_revenue_chart(df_daily, title, filename, y_col, y_label, fmt_func, 
                    colors="white", linewidths=2, zorder=5)
         
         # Text labels for mean
-        mean_str = f"${mean_rev:.2f}M" if not is_kw_yr else f"${mean_rev:.0f}"
+        mean_str = f"${mean_rev:.2f}M" if not is_kw_day else f"${mean_rev:.2f}"
         ax.text(i, mean_rev + (ax.get_ylim()[1] - ax.get_ylim()[0])*0.015, mean_str,
                  ha="center", va="bottom", fontsize=10, color="white",
                  fontweight="bold", zorder=6)
 
         # Total/Average label at the bottom
-        if is_kw_yr:
-            yr_avg = mean_rev
-            bottom_txt = f"Avg: ${yr_avg:.0f}/kW-yr"
+        if is_kw_day:
+            total_yr_kw_rev = revs.sum()
+            bottom_txt = f"Total: ${total_yr_kw_rev:.0f}/kW-yr"
         else:
             total_yr_rev = year_df['total_revenue'].sum() / 1_000_000.0
             bottom_txt = f"Total: ${total_yr_rev:.0f}M"
@@ -151,18 +151,14 @@ def main():
     daily_df['day_of_year'] = daily_df['date'].dt.dayofyear
     
     # Calculate installed capacity as the cumulative maximum of the daily peak discharge.
-    # This acts as a reliable proxy for installed capacity, avoiding the issue where
-    # batteries might not fully discharge on mild days.
     daily_df = daily_df.sort_values('date')
     daily_df['installed_capacity_mw'] = daily_df['peak_discharge_mw'].cummax()
     
     # Revenue calculations
     daily_df['revenue_m'] = daily_df['total_revenue'] / 1_000_000.0
     
-    # Calculate annualized $/kW-yr:
-    # 1. Daily revenue per kW = total_revenue / (installed_capacity_mw * 1000)
-    # 2. Annualize by multiplying by 365
-    daily_df['annualized_kw_yr'] = (daily_df['total_revenue'] / (daily_df['installed_capacity_mw'] * 1000.0)) * 365.0
+    # Calculate daily $/kW-day
+    daily_df['daily_kw_revenue'] = daily_df['total_revenue'] / (daily_df['installed_capacity_mw'] * 1000.0)
     
     # Filter since 2023
     df_plot = daily_df[daily_df['year'] >= 2023].copy()
@@ -177,18 +173,18 @@ def main():
         y_col='revenue_m',
         y_label="Daily Arbitrage Revenue (Millions $)",
         fmt_func=lambda x, p: f"${x:,.1f}M",
-        is_kw_yr=False
+        is_kw_day=False
     )
     
-    # Chart 2: Annualized $/kW-yr
+    # Chart 2: $/kW-day
     generate_revenue_chart(
         df_plot,
-        "Distribution of Annualized Battery Arbitrage Revenue (2023-Present)\nColored by Time of Year",
-        "battery_annualized_revenue_kw_distribution.png",
-        y_col='annualized_kw_yr',
-        y_label="Annualized Arbitrage Revenue ($/kW-year)",
-        fmt_func=lambda x, p: f"${x:,.0f}",
-        is_kw_yr=True
+        "Distribution of Daily Battery Arbitrage Revenue per kW (2023-Present)\nColored by Time of Year",
+        "battery_kw_day_revenue_distribution.png",
+        y_col='daily_kw_revenue',
+        y_label="Daily Arbitrage Revenue ($/kW-day)",
+        fmt_func=lambda x, p: f"${x:,.2f}",
+        is_kw_day=True
     )
 
 if __name__ == "__main__":
