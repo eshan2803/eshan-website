@@ -153,7 +153,7 @@ def main():
     
     # Version 1: Only negative prices
     print("Processing Version 1: Negative LMPs...")
-    df_neg = df[df['lmp'] < 0].copy()
+    df_neg = df[(df['lmp'] < 0) & (df['year'] >= 2023)].copy()
     generate_distribution_chart(
         df_neg, 
         "Distribution of 5-Minute Negative LMP Prices by Year\nColored by Battery Charging (GW)",
