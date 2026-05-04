@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>California OPF Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #0a0d12;
+            --panel: #111722;
+            --panel-2: #161f2d;
+            --line: #273244;
+            --muted: #8ea0b8;
+            --text: #edf3fb;
+            --green: #41d39a;
+            --yellow: #ffd166;
+            --red: #ff5c7a;
+            --blue: #58a6ff;
+            --violet: #b084f5;
+        }
+
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            overflow: hidden;
+        }
+
+        button, input, select { font: inherit; }
+        button {
+            border: 1px solid var(--line);
+            color: var(--text);
+            background: #1a2433;
+            border-radius: 6px;
+            height: 36px;
+            padding: 0 12px;
+            cursor: pointer;
+        }
+        button:hover { border-color: #3c4d66; background: #202c3e; }
+        button.primary { background: #1f6feb; border-color: #2f81f7; font-weight: 700; }
+
+        .app {
+            display: grid;
+            grid-template-columns: minmax(300px, 350px) minmax(420px, 1fr) minmax(310px, 380px);
+            grid-template-rows: 1fr;
+            height: 100vh;
+            min-width: 980px;
+        }
+
+        .sidebar, .inspector {
+            background: var(--panel);
+            border-color: var(--line);
+            overflow-y: auto;
+        }
+        .sidebar { border-right: 1px solid var(--line); }
+        .inspector { border-left: 1px solid var(--line); }
+        .panel-pad { padding: 20px; }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        .brand h1 {
+            margin: 0;
+            font-size: 22px;
+            line-height: 1.1;
+            letter-spacing: 0;
+        }
+        .status-pill {
+            min-width: 84px;
+            text-align: center;
+            color: #07130e;
+            background: var(--green);
+            font-size: 12px;
+            font-weight: 800;
+            border-radius: 999px;
+            padding: 6px 10px;
+        }
+
+        .section { padding: 18px 0; border-top: 1px solid var(--line); }
+        .section:first-of-type { border-top: 0; padding-top: 0; }
+        .section-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .metric {
+            border: 1px solid var(--line);
+            background: var(--panel-2);
+            border-radius: 8px;
+            padding: 12px;
+            min-height: 74px;
+        }
+        .metric .label { color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .metric .value { margin-top: 8px; font-size: 22px; font-weight: 800; white-space: nowrap; }
+        .metric .sub { margin-top: 4px; color: var(--muted); font-size: 12px; }
+
+        .control-row {
+            display: grid;
+            grid-template-columns: 1fr 78px;
+            align-items: center;
+            gap: 12px;
+            margin: 14px 0;
+        }
+        .control-row label { color: #cbd7e7; font-size: 13px; font-weight: 700; }
+        .number-input {
+            width: 78px;
+            height: 34px;
+            color: var(--text);
+            background: #0d121a;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 0 8px;
+            text-align: right;
+        }
+        input[type=range] {
+            grid-column: 1 / -1;
+            width: 100%;
+            accent-color: var(--blue);
+        }
+
+        .list { display: grid; gap: 8px; }
+        .list-item {
+            width: 100%;
+            min-height: 46px;
+            display: grid;
+            grid-template-columns: 12px 1fr auto;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid var(--line);
+            background: #121a26;
+            border-radius: 8px;
+            padding: 10px 12px;
+            text-align: left;
+        }
+        .list-item.active { border-color: var(--blue); background: #162842; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--blue); }
+        .name { font-weight: 800; font-size: 13px; }
+        .meta { margin-top: 3px; color: var(--muted); font-size: 12px; }
+        .tag { color: #d5e2f2; font-size: 12px; font-weight: 800; white-space: nowrap; }
+
+        .map-shell {
+            position: relative;
+            min-width: 0;
+            min-height: 0;
+            background: #081018;
+        }
+        #map { width: 100%; height: 100%; background: #081018; }
+        .map-toolbar {
+            position: absolute;
+            z-index: 700;
+            top: 16px;
+            left: 16px;
+            right: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            pointer-events: none;
+        }
+        .legend {
+            pointer-events: auto;
+            border: 1px solid rgba(148, 163, 184, .24);
+            background: rgba(13, 18, 26, .88);
+            backdrop-filter: blur(12px);
+            border-radius: 8px;
+            box-shadow: 0 16px 40px rgba(0,0,0,.35);
+        }
+        .legend { width: 190px; padding: 12px; }
+        .legend-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; font-weight: 700; }
+        .legend-line { width: 22px; height: 4px; border-radius: 3px; background: #6f7c91; }
+        .legend-line.hot { background: var(--red); }
+        .legend-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(255,255,255,.85); }
+        .legend-scale {
+            height: 10px;
+            width: 100%;
+            margin-top: 9px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #2563eb, #8b1bb1, #f97316);
+        }
+        .legend-scale-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .timeline {
+            position: absolute;
+            z-index: 720;
+            left: 24px;
+            bottom: 24px;
+            width: 250px;
+            border: 1px solid rgba(148, 163, 184, .22);
+            background: rgba(15, 23, 42, .96);
+            border-radius: 8px;
+            padding: 12px 16px 10px;
+            box-shadow: 0 16px 40px rgba(0,0,0,.35);
+        }
+        .timeline-top {
+            display: block;
+            margin-bottom: 6px;
+        }
+        .timeline-title { display: inline; font-size: 15px; font-weight: 500; }
+        .hour-readout { display: inline; color: var(--yellow); font-size: 15px; font-weight: 800; }
+        #hourSlider {
+            width: 100%;
+            height: 4px;
+            margin: 0;
+            accent-color: var(--yellow);
+            appearance: none;
+            background: transparent;
+        }
+        #hourSlider::-webkit-slider-runnable-track {
+            height: 4px;
+            border-radius: 999px;
+            background: #253348;
+        }
+        #hourSlider::-webkit-slider-thumb {
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            margin-top: -5px;
+            border-radius: 50%;
+            background: var(--yellow);
+            cursor: pointer;
+        }
+        #hourSlider::-moz-range-track {
+            height: 4px;
+            border-radius: 999px;
+            background: #253348;
+        }
+        #hourSlider::-moz-range-progress {
+            height: 4px;
+            border-radius: 999px;
+            background: #253348;
+        }
+        #hourSlider::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border: 0;
+            border-radius: 50%;
+            background: var(--yellow);
+            cursor: pointer;
+        }
+        .hour-ticks {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 4px;
+            color: #7fa2d3;
+            font-size: 11px;
+        }
+
+        .node-label {
+            width: 56px;
+            height: 56px;
+            transform: translate(-28px, -28px);
+            pointer-events: none;
+            position: relative;
+        }
+        .node-core {
+            width: 46px;
+            height: 46px;
+            margin: 5px;
+            border: 3px solid #f8fbff;
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(255,255,255,.28);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .node-label.selected .node-core {
+            outline: 3px solid rgba(255,255,255,.22);
+            outline-offset: 3px;
+        }
+        .node-price-mini {
+            color: white;
+            font-size: 12px;
+            font-weight: 900;
+            text-shadow: 0 2px 5px #000;
+            white-space: nowrap;
+        }
+        .res-label {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.9);
+            border-radius: 50%;
+            box-shadow: 0 8px 18px rgba(0,0,0,.55);
+        }
+        .opf-tooltip {
+            border: 1px solid rgba(148, 163, 184, .28);
+            color: white;
+            background: rgba(8, 13, 20, .94);
+            box-shadow: 0 14px 34px rgba(0,0,0,.38);
+            border-radius: 7px;
+            padding: 7px 9px;
+            font-size: 12px;
+            line-height: 1.35;
+            font-weight: 800;
+        }
+        .opf-tooltip .muted {
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .chart-wrap {
+            height: 210px;
+            border: 1px solid var(--line);
+            background: #0d121a;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .table { display: grid; gap: 6px; }
+        .table-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 12px;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(39, 50, 68, .65);
+            font-size: 13px;
+        }
+        .table-row:last-child { border-bottom: 0; }
+        .warn { color: var(--yellow); }
+        .bad { color: var(--red); }
+        .good { color: var(--green); }
+
+        .leaflet-control-container { display: none; }
+        .leaflet-tile-pane { filter: saturate(.75) brightness(.74) contrast(1.05); }
+        .flow-particle {
+            width: var(--particle-size, 8px);
+            height: var(--particle-size, 8px);
+            border-radius: 50%;
+            background: rgba(240, 246, 255, .95);
+            border: 1px solid rgba(255,255,255,.75);
+            box-shadow: 0 0 12px rgba(240, 246, 255, .8);
+        }
+
+        @media (max-width: 1100px) {
+            .app { grid-template-columns: 320px 1fr; }
+            .inspector { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="panel-pad">
+                <div class="brand">
+                    <h1>California OPF Studio</h1>
+                    <div id="solveStatus" class="status-pill">READY</div>
+                </div>
+
+                <section class="section">
+                    <div class="section-title">System Summary</div>
+                    <div class="metric-grid">
+                        <div class="metric">
+                            <div class="label">Objective</div>
+                            <div id="metricCost" class="value">$0</div>
+                            <div class="sub">24-hour production cost</div>
+                        </div>
+                        <div class="metric">
+                            <div class="label">Peak Load</div>
+                            <div id="metricLoad" class="value">0 MW</div>
+                            <div class="sub">scenario adjusted</div>
+                        </div>
+                        <div class="metric">
+                            <div class="label">Avg LMP</div>
+                            <div id="metricLmp" class="value">$0</div>
+                            <div class="sub">selected hour</div>
+                        </div>
+                        <div class="metric">
+                            <div class="label">Congestion</div>
+                            <div id="metricCongestion" class="value">0</div>
+                            <div class="sub">congested branches now</div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <div class="section-title">Scenario Controls <button id="resetBtn">Reset</button></div>
+                    <div id="controls"></div>
+                    <button id="solveBtn" class="primary">Solve DC OPF</button>
+                </section>
+
+                <section class="section">
+                    <div class="section-title">California Zones</div>
+                    <div id="zoneList" class="list"></div>
+                </section>
+            </div>
+        </aside>
+
+        <main class="map-shell">
+            <div id="map"></div>
+            <div class="map-toolbar">
+                <div></div>
+                <div class="legend">
+                    <div class="section-title" style="margin:0;">Legend</div>
+                    <div class="legend-row"><span class="legend-dot" style="background:#4b5a73"></span> Bus</div>
+                    <div class="legend-row"><span class="legend-dot" style="background:#22c55e"></span> Generation</div>
+                    <div class="legend-row"><span class="legend-dot" style="background:#f97316"></span> Load</div>
+                    <div class="legend-row"><span class="legend-dot" style="background:#a855f7"></span> Storage</div>
+                    <div class="legend-row"><span class="legend-line"></span> Branch</div>
+                    <div class="legend-row"><span class="legend-line hot"></span> Congested branch</div>
+                    <div class="section-title" style="margin:16px 0 0;">LMP ($/MWh)</div>
+                    <div class="legend-scale"></div>
+                    <div class="legend-scale-labels"><span id="lmpMin">$0</span><span id="lmpMax">$0</span></div>
+                </div>
+            </div>
+            <div class="timeline">
+                <div class="timeline-top">
+                    <span class="timeline-title">Hour Ending: </span><span id="hourLabel" class="hour-readout">18</span>
+                </div>
+                <input id="hourSlider" type="range" min="1" max="24" value="18">
+                <div class="hour-ticks"><span>1</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
+            </div>
+        </main>
+
+        <aside class="inspector">
+            <div class="panel-pad">
+                <section class="section">
+                    <div class="section-title">Selected Zone</div>
+                    <div id="zoneDetail"></div>
+                </section>
+                <section class="section">
+                    <div class="section-title">Dispatch</div>
+                    <div class="chart-wrap"><canvas id="dispatchChart"></canvas></div>
+                </section>
+                <section class="section">
+                    <div class="section-title">Path Loading</div>
+                    <div id="lineTable" class="table"></div>
+                </section>
+            </div>
+        </aside>
+
+    </div>
+
+    <script type="module">
+        import solver from './solver.mjs';
+
+        const HOURS = Array.from({ length: 24 }, (_, i) => i + 1);
+        const BASE_LOAD_SHAPE = [0.72,0.68,0.65,0.64,0.66,0.74,0.86,0.94,0.98,1.00,1.02,1.03,1.04,1.06,1.10,1.17,1.27,1.36,1.42,1.36,1.24,1.08,0.92,0.80];
+        const SOLAR_SHAPE = [0,0,0,0,0,0.04,0.18,0.42,0.66,0.84,0.95,1,0.98,0.91,0.76,0.52,0.24,0.04,0,0,0,0,0,0];
+        const WIND_SHAPE = [0.76,0.80,0.83,0.86,0.82,0.75,0.61,0.48,0.40,0.36,0.34,0.32,0.35,0.39,0.46,0.55,0.66,0.75,0.82,0.88,0.91,0.90,0.86,0.80];
+        const HYDRO_SHAPE = [0.70,0.68,0.66,0.64,0.64,0.70,0.78,0.82,0.80,0.78,0.76,0.75,0.76,0.78,0.84,0.92,1.00,1.00,0.96,0.90,0.84,0.80,0.76,0.72];
+        const IMPORT_SHAPE = Array(24).fill(1);
+
+        const RESOURCE_COLORS = {
+            gas: '#ff5c7a',
+            solar: '#ffd166',
+            wind: '#58a6ff',
+            hydro: '#41d39a',
+            nuclear: '#b084f5',
+            import: '#9aa7b8',
+            storage: '#f78acb',
+            emergency: '#f97316',
+            shed: '#ff9f1c'
+        };
+
+        const baseZones = {
+            np15: {
+                name: 'NP15', lat: 39.8, lng: -122.2, baseLoad: 7200,
+                resources: {
+                    hydro: { type: 'hydro', cap: 4200, cost: 8, shape: HYDRO_SHAPE },
+                    gas: { type: 'gas', cap: 4700, cost: 54 },
+                    wind: { type: 'wind', cap: 1600, cost: 2, shape: WIND_SHAPE },
+                    import_north: { type: 'import', cap: 3400, cost: 34, shape: IMPORT_SHAPE }
+                }
+            },
+            bay: {
+                name: 'Bay Area', lat: 37.8, lng: -122.1, baseLoad: 6200,
+                resources: {
+                    gas: { type: 'gas', cap: 5600, cost: 64 },
+                    battery: { type: 'storage', powerCap: 900, duration: 4, efficiency: 0.88, initialSoc: 0.5 }
+                }
+            },
+            sac: {
+                name: 'Sacramento', lat: 38.7, lng: -121.4, baseLoad: 4300,
+                resources: {
+                    hydro: { type: 'hydro', cap: 1900, cost: 10, shape: HYDRO_SHAPE },
+                    solar: { type: 'solar', cap: 1800, cost: 0, shape: SOLAR_SHAPE },
+                    gas: { type: 'gas', cap: 2300, cost: 58 }
+                }
+            },
+            central: {
+                name: 'Central Valley', lat: 36.4, lng: -120.0, baseLoad: 5200,
+                resources: {
+                    solar: { type: 'solar', cap: 8700, cost: 0, shape: SOLAR_SHAPE },
+                    wind: { type: 'wind', cap: 2600, cost: 2, shape: WIND_SHAPE },
+                    gas: { type: 'gas', cap: 2600, cost: 60 },
+                    battery: { type: 'storage', powerCap: 1400, duration: 4, efficiency: 0.88, initialSoc: 0.45 }
+                }
+            },
+            zp26: {
+                name: 'ZP26', lat: 35.2, lng: -119.2, baseLoad: 3600,
+                resources: {
+                    solar: { type: 'solar', cap: 5200, cost: 0, shape: SOLAR_SHAPE },
+                    gas: { type: 'gas', cap: 2400, cost: 62 }
+                }
+            },
+            sp15: {
+                name: 'SP15', lat: 34.4, lng: -117.8, baseLoad: 10500,
+                resources: {
+                    gas: { type: 'gas', cap: 12800, cost: 76 },
+                    solar: { type: 'solar', cap: 6500, cost: 0, shape: SOLAR_SHAPE },
+                    import_east: { type: 'import', cap: 4200, cost: 43, shape: IMPORT_SHAPE },
+                    battery: { type: 'storage', powerCap: 2200, duration: 4, efficiency: 0.88, initialSoc: 0.5 }
+                }
+            },
+            la: {
+                name: 'LA Basin', lat: 34.05, lng: -118.25, baseLoad: 7600,
+                resources: {
+                    gas: { type: 'gas', cap: 9200, cost: 82 },
+                    battery: { type: 'storage', powerCap: 1500, duration: 4, efficiency: 0.88, initialSoc: 0.5 }
+                }
+            },
+            sdge: {
+                name: 'San Diego', lat: 32.8, lng: -117.1, baseLoad: 3900,
+                resources: {
+                    gas: { type: 'gas', cap: 4300, cost: 88 },
+                    solar: { type: 'solar', cap: 1800, cost: 0, shape: SOLAR_SHAPE },
+                    battery: { type: 'storage', powerCap: 650, duration: 4, efficiency: 0.88, initialSoc: 0.5 }
+                }
+            },
+            imperial: {
+                name: 'Imperial', lat: 32.9, lng: -115.5, baseLoad: 1200,
+                resources: {
+                    solar: { type: 'solar', cap: 3600, cost: 0, shape: SOLAR_SHAPE },
+                    wind: { type: 'wind', cap: 800, cost: 2, shape: WIND_SHAPE },
+                    import_south: { type: 'import', cap: 1000, cost: 48, shape: IMPORT_SHAPE }
+                }
+            }
+        };
+
+        const baseLines = {
+            coi: { name: 'COI', from: 'np15', to: 'sac', limit: 4800, b: 12 },
+            p15: { name: 'Path 15', from: 'np15', to: 'central', limit: 3600, b: 10 },
+            bay_sac: { name: 'Bay-Sac', from: 'sac', to: 'bay', limit: 2600, b: 9 },
+            bay_cv: { name: 'Bay-CV', from: 'bay', to: 'central', limit: 3200, b: 9 },
+            cv_zp: { name: 'CV-ZP26', from: 'central', to: 'zp26', limit: 4400, b: 11 },
+            p26: { name: 'Path 26', from: 'zp26', to: 'sp15', limit: 4200, b: 10 },
+            sp_la: { name: 'SP15-LA', from: 'sp15', to: 'la', limit: 5600, b: 12 },
+            la_sd: { name: 'LA-SDGE', from: 'la', to: 'sdge', limit: 2400, b: 8 },
+            desert_la: { name: 'Desert-LA', from: 'imperial', to: 'la', limit: 2600, b: 9 },
+            desert_sp: { name: 'Desert-SP15', from: 'imperial', to: 'sp15', limit: 3100, b: 9 }
+        };
+
+        const state = {
+            hour: 18,
+            selectedZone: 'sp15',
+            selectedResource: 'gas',
+            scenario: {
+                loadScale: 100,
+                solarScale: 100,
+                windScale: 100,
+                gasPrice: 100,
+                importPrice: 100,
+                pathScale: 100,
+                storageScale: 100
+            },
+            zones: structuredClone(baseZones),
+            lines: structuredClone(baseLines),
+            solution: null,
+            dispatch: {},
+            lmps: {},
+            flows: {},
+            totals: {}
+        };
+
+        let map;
+        let dispatchChart;
+        let layers = { nodes: {}, resources: {}, lines: {}, labels: {}, particles: {} };
+        let particleTimer = null;
+
+        const fmtMW = value => `${Math.round(value).toLocaleString()} MW`;
+        const fmtMoney = value => `$${Math.round(value).toLocaleString()}`;
+        const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+        const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+        function resourceCap(resource, hourIndex) {
+            const scaleByType = {
+                solar: state.scenario.solarScale / 100,
+                wind: state.scenario.windScale / 100,
+                storage: state.scenario.storageScale / 100
+            };
+            const scale = scaleByType[resource.type] ?? 1;
+            const shape = resource.shape ? resource.shape[hourIndex] : 1;
+            return (resource.cap ?? resource.powerCap ?? 0) * shape * scale;
+        }
+
+        function resourceCost(resource) {
+            if (resource.type === 'gas') return resource.cost * state.scenario.gasPrice / 100;
+            if (resource.type === 'import') return resource.cost * state.scenario.importPrice / 100;
+            return resource.cost ?? 0.01;
+        }
+
+        function zoneLoad(zone, hourIndex, extra = 0) {
+            return zone.baseLoad * BASE_LOAD_SHAPE[hourIndex] * state.scenario.loadScale / 100 + extra;
+        }
+
+        function addVar(model, id, cost = 0, unrestricted = false) {
+            model.variables[id] = model.variables[id] || { cost };
+            model.variables[id].cost = cost;
+            if (unrestricted) model.unrestricted[id] = 1;
+            return model.variables[id];
+        }
+
+        function buildModel(loadBump = null) {
+            const model = { optimize: 'cost', opType: 'min', constraints: {}, variables: {}, unrestricted: {}, options: { presolve: false } };
+
+            HOURS.forEach(hour => {
+                const h = hour - 1;
+                Object.entries(state.zones).forEach(([zoneId, zone]) => {
+                    const bump = loadBump && loadBump.zoneId === zoneId && loadBump.hour === hour ? loadBump.amount : 0;
+                    model.constraints[`bal_${zoneId}_h${hour}`] = { equal: zoneLoad(zone, h, bump) };
+                    model.constraints[`thetaRef_h${hour}`] = { equal: 0 };
+
+                    const theta = addVar(model, `theta_${zoneId}_h${hour}`, 0, true);
+                    theta[`thetaRef_h${hour}`] = zoneId === 'np15' ? 1 : 0;
+
+                    Object.entries(zone.resources).forEach(([resId, res]) => {
+                        if (res.type === 'storage') {
+                            const scale = state.scenario.storageScale / 100;
+                            const powerCap = res.powerCap * scale;
+                            const charge = addVar(model, `charge_${zoneId}_${resId}_h${hour}`, 0.02);
+                            const discharge = addVar(model, `discharge_${zoneId}_${resId}_h${hour}`, 0.02);
+                            charge[`bal_${zoneId}_h${hour}`] = -1;
+                            discharge[`bal_${zoneId}_h${hour}`] = 1;
+                            model.constraints[`chargeCap_${zoneId}_${resId}_h${hour}`] = { max: powerCap };
+                            model.constraints[`dischargeCap_${zoneId}_${resId}_h${hour}`] = { max: powerCap };
+                            charge[`chargeCap_${zoneId}_${resId}_h${hour}`] = 1;
+                            discharge[`dischargeCap_${zoneId}_${resId}_h${hour}`] = 1;
+                        } else {
+                            const gen = addVar(model, `gen_${zoneId}_${resId}_h${hour}`, resourceCost(res));
+                            gen[`bal_${zoneId}_h${hour}`] = 1;
+                            model.constraints[`cap_${zoneId}_${resId}_h${hour}`] = { max: resourceCap(res, h) };
+                            gen[`cap_${zoneId}_${resId}_h${hour}`] = 1;
+                        }
+                    });
+
+                    const emergency = addVar(model, `emergency_${zoneId}_h${hour}`, 325);
+                    emergency[`bal_${zoneId}_h${hour}`] = 1;
+                    model.constraints[`emergencyCap_${zoneId}_h${hour}`] = { max: zoneLoad(zone, h, bump) * 0.18 };
+                    emergency[`emergencyCap_${zoneId}_h${hour}`] = 1;
+
+                    const shed = addVar(model, `shed_${zoneId}_h${hour}`, 1000);
+                    shed[`bal_${zoneId}_h${hour}`] = 1;
+                    model.constraints[`shedCap_${zoneId}_h${hour}`] = { max: zoneLoad(zone, h, bump) };
+                    shed[`shedCap_${zoneId}_h${hour}`] = 1;
+                });
+
+                Object.entries(state.lines).forEach(([lineId, line]) => {
+                    const limit = line.limit * state.scenario.pathScale / 100;
+                    const flow = addVar(model, `flow_${lineId}_h${hour}`, 0.001, true);
+                    flow[`bal_${line.from}_h${hour}`] = -1;
+                    flow[`bal_${line.to}_h${hour}`] = 1;
+                    model.constraints[`lineCap_${lineId}_h${hour}`] = { min: -limit, max: limit };
+                    flow[`lineCap_${lineId}_h${hour}`] = 1;
+
+                    model.constraints[`dc_${lineId}_h${hour}`] = { equal: 0 };
+                    flow[`dc_${lineId}_h${hour}`] = 1;
+                    addVar(model, `theta_${line.from}_h${hour}`, 0, true)[`dc_${lineId}_h${hour}`] = -line.b;
+                    addVar(model, `theta_${line.to}_h${hour}`, 0, true)[`dc_${lineId}_h${hour}`] = line.b;
+                });
+            });
+
+            Object.entries(state.zones).forEach(([zoneId, zone]) => {
+                Object.entries(zone.resources).forEach(([resId, res]) => {
+                    if (res.type !== 'storage') return;
+                    const scale = state.scenario.storageScale / 100;
+                    const energyCap = res.powerCap * scale * res.duration;
+                    HOURS.forEach(hour => {
+                        const soc = addVar(model, `soc_${zoneId}_${resId}_h${hour}`, 0);
+                        model.constraints[`socCap_${zoneId}_${resId}_h${hour}`] = { max: energyCap };
+                        soc[`socCap_${zoneId}_${resId}_h${hour}`] = 1;
+                        model.constraints[`socBal_${zoneId}_${resId}_h${hour}`] = { equal: hour === 1 ? res.initialSoc * energyCap : 0 };
+                        soc[`socBal_${zoneId}_${resId}_h${hour}`] = 1;
+                        addVar(model, `charge_${zoneId}_${resId}_h${hour}`, 0.02)[`socBal_${zoneId}_${resId}_h${hour}`] = -res.efficiency;
+                        addVar(model, `discharge_${zoneId}_${resId}_h${hour}`, 0.02)[`socBal_${zoneId}_${resId}_h${hour}`] = 1 / res.efficiency;
+                        if (hour > 1) addVar(model, `soc_${zoneId}_${resId}_h${hour - 1}`, 0)[`socBal_${zoneId}_${resId}_h${hour}`] = -1;
+                    });
+                    model.constraints[`socEnd_${zoneId}_${resId}`] = { equal: res.initialSoc * energyCap };
+                    addVar(model, `soc_${zoneId}_${resId}_h24`, 0)[`socEnd_${zoneId}_${resId}`] = 1;
+                });
+            });
+
+            return model;
+        }
+
+        function solveModel() {
+            setStatus('SOLVING', cssVar('--yellow'), '#211900');
+            document.getElementById('solveBtn').textContent = 'Solving...';
+            const solution = solver.Solve(buildModel());
+            state.solution = solution;
+            deriveResults();
+            estimateLmps();
+            setStatus(solution.feasible ? 'SOLVED' : 'INFEASIBLE', solution.feasible ? cssVar('--green') : cssVar('--red'), solution.feasible ? '#07130e' : '#270611');
+            document.getElementById('solveBtn').textContent = 'Solve DC OPF';
+            renderAll();
+        }
+
+        function deriveResults() {
+            const sol = state.solution || {};
+            state.dispatch = {};
+            state.flows = {};
+            state.totals = { cost: sol.result || sol.evaluation || 0, load: 0, shed: 0, renewable: 0 };
+
+            HOURS.forEach(hour => {
+                const h = hour - 1;
+                Object.entries(state.zones).forEach(([zoneId, zone]) => {
+                    state.dispatch[zoneId] = state.dispatch[zoneId] || {};
+                    state.totals.load += zoneLoad(zone, h);
+                    Object.entries(zone.resources).forEach(([resId, res]) => {
+                        state.dispatch[zoneId][resId] = state.dispatch[zoneId][resId] || [];
+                        let value = 0;
+                        if (res.type === 'storage') {
+                            value = (sol[`discharge_${zoneId}_${resId}_h${hour}`] || 0) - (sol[`charge_${zoneId}_${resId}_h${hour}`] || 0);
+                        } else {
+                            value = sol[`gen_${zoneId}_${resId}_h${hour}`] || 0;
+                            if (res.type === 'solar' || res.type === 'wind' || res.type === 'hydro') state.totals.renewable += value;
+                        }
+                        state.dispatch[zoneId][resId][h] = value;
+                    });
+                    state.dispatch[zoneId].emergency = state.dispatch[zoneId].emergency || [];
+                    state.dispatch[zoneId].emergency[h] = sol[`emergency_${zoneId}_h${hour}`] || 0;
+                    state.dispatch[zoneId].shed = state.dispatch[zoneId].shed || [];
+                    state.dispatch[zoneId].shed[h] = sol[`shed_${zoneId}_h${hour}`] || 0;
+                    state.totals.shed += state.dispatch[zoneId].shed[h];
+                });
+
+                Object.entries(state.lines).forEach(([lineId]) => {
+                    state.flows[lineId] = state.flows[lineId] || [];
+                    state.flows[lineId][h] = sol[`flow_${lineId}_h${hour}`] || 0;
+                });
+            });
+        }
+
+        function estimateLmps() {
+            state.lmps = {};
+            Object.keys(state.zones).forEach(zoneId => {
+                state.lmps[zoneId] = [];
+                HOURS.forEach(hour => {
+                    const h = hour - 1;
+                    const zone = state.zones[zoneId];
+                    const shed = state.dispatch[zoneId]?.shed?.[h] || 0;
+                    if (shed > 0.1) {
+                        state.lmps[zoneId][h] = 1000;
+                        return;
+                    }
+                    const emergency = state.dispatch[zoneId]?.emergency?.[h] || 0;
+                    if (emergency > 0.1) {
+                        state.lmps[zoneId][h] = 325;
+                        return;
+                    }
+
+                    const marginalCosts = Object.entries(zone.resources)
+                        .filter(([, res]) => res.type !== 'storage')
+                        .map(([resId, res]) => {
+                            const dispatch = state.dispatch[zoneId]?.[resId]?.[h] || 0;
+                            const cap = Math.max(0, resourceCap(res, h));
+                            return { cost: resourceCost(res), dispatch, cap };
+                        })
+                        .filter(item => item.dispatch > 0.5 && item.dispatch < item.cap - 0.5)
+                        .map(item => item.cost);
+
+                    const dispatchedCosts = Object.entries(zone.resources)
+                        .filter(([, res]) => res.type !== 'storage')
+                        .map(([resId, res]) => ({ cost: resourceCost(res), dispatch: state.dispatch[zoneId]?.[resId]?.[h] || 0 }))
+                        .filter(item => item.dispatch > 0.5)
+                        .map(item => item.cost);
+
+                    const storageDispatch = Object.entries(zone.resources)
+                        .filter(([, res]) => res.type === 'storage')
+                        .some(([resId]) => (state.dispatch[zoneId]?.[resId]?.[h] || 0) > 0.5);
+
+                    const price = marginalCosts.length
+                        ? Math.max(...marginalCosts)
+                        : dispatchedCosts.length
+                            ? Math.max(...dispatchedCosts)
+                            : storageDispatch ? 70 : 25;
+                    const loadRatio = zoneLoad(zone, h) / Math.max(1, zone.baseLoad * BASE_LOAD_SHAPE[h]);
+                    const loadPressure = clamp((loadRatio - 0.95) / 0.35, 0, 1);
+                    const utilizationPressure = Object.entries(state.lines)
+                        .filter(([, line]) => line.from === zoneId || line.to === zoneId)
+                        .reduce((peak, [lineId, line]) => {
+                            const flow = Math.abs(state.flows[lineId]?.[h] || 0);
+                            const limit = line.limit * state.scenario.pathScale / 100;
+                            return Math.max(peak, flow / Math.max(1, limit));
+                        }, 0);
+                    const renewableShare = Object.entries(zone.resources)
+                        .filter(([, res]) => res.type === 'solar' || res.type === 'wind' || res.type === 'hydro')
+                        .reduce((sum, [resId]) => sum + (state.dispatch[zoneId]?.[resId]?.[h] || 0), 0) / Math.max(1, zoneLoad(zone, h));
+                    const congestionPressure = Math.max(0, clamp(utilizationPressure, 0, 1) - 0.75) / 0.25;
+                    const pressureAdder = 18 * loadPressure + 24 * congestionPressure * loadPressure;
+                    const renewableDiscount = 18 * clamp(renewableShare, 0, 1) * (1 - loadPressure * 0.55);
+                    state.lmps[zoneId][h] = clamp(price + pressureAdder - renewableDiscount, 5, 325);
+                });
+            });
+
+            HOURS.forEach(hour => {
+                const h = hour - 1;
+                for (let pass = 0; pass < 4; pass += 1) {
+                    Object.entries(state.lines).forEach(([lineId, line]) => {
+                        const flow = state.flows[lineId]?.[h] || 0;
+                        const limit = line.limit * state.scenario.pathScale / 100;
+                        const util = Math.abs(flow) / Math.max(1, limit);
+                        if (util < 0.98) {
+                            const avg = (state.lmps[line.from][h] + state.lmps[line.to][h]) / 2;
+                            state.lmps[line.from][h] = state.lmps[line.from][h] * 0.65 + avg * 0.35;
+                            state.lmps[line.to][h] = state.lmps[line.to][h] * 0.65 + avg * 0.35;
+                            return;
+                        }
+                        if (flow >= 0) {
+                            state.lmps[line.to][h] = Math.max(state.lmps[line.to][h], state.lmps[line.from][h] + 18);
+                        } else {
+                            state.lmps[line.from][h] = Math.max(state.lmps[line.from][h], state.lmps[line.to][h] + 18);
+                        }
+                    });
+                }
+                Object.keys(state.zones).forEach(zoneId => {
+                    state.lmps[zoneId][h] = clamp(state.lmps[zoneId][h], 0, 5000);
+                });
+            });
+        }
+
+        function hexToRgb(hex) {
+            const clean = hex.replace('#', '').trim();
+            return {
+                r: parseInt(clean.slice(0, 2), 16),
+                g: parseInt(clean.slice(2, 4), 16),
+                b: parseInt(clean.slice(4, 6), 16)
+            };
+        }
+
+        function rgbToHex({ r, g, b }) {
+            return `#${[r, g, b].map(v => Math.round(v).toString(16).padStart(2, '0')).join('')}`;
+        }
+
+        function mixColor(a, b, t) {
+            const from = hexToRgb(a);
+            const to = hexToRgb(b);
+            return rgbToHex({
+                r: from.r + (to.r - from.r) * t,
+                g: from.g + (to.g - from.g) * t,
+                b: from.b + (to.b - from.b) * t
+            });
+        }
+
+        function lmpColor(lmp) {
+            const low = '#2563eb';
+            const mid = '#8b1bb1';
+            const high = '#f97316';
+            const values = Object.values(state.lmps).map(series => series?.[state.hour - 1] ?? 0);
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const t = max > min ? clamp((lmp - min) / (max - min), 0, 1) : 0.5;
+            return t < 0.5 ? mixColor(low, mid, t * 2) : mixColor(mid, high, (t - 0.5) * 2);
+        }
+
+        function setStatus(text, bg, fg) {
+            const el = document.getElementById('solveStatus');
+            el.textContent = text;
+            el.style.background = bg;
+            el.style.color = fg;
+        }
+
+        function markScenarioPending() {
+            setStatus('PENDING', cssVar('--yellow'), '#211900');
+            document.getElementById('solveBtn').textContent = 'Solve DC OPF';
+        }
+
+        function initMap() {
+            map = L.map('map', { zoomControl: false, attributionControl: false, preferCanvas: true }).setView([36.8, -119.5], 7);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 10 }).addTo(map);
+        }
+
+        function clearMapLayers() {
+            Object.values(layers).forEach(group => Object.values(group).flat().forEach(layer => map.removeLayer(layer)));
+            layers = { nodes: {}, resources: {}, lines: {}, labels: {}, particles: {} };
+        }
+
+        function interpolateLatLng(from, to, t) {
+            return [
+                from.lat + (to.lat - from.lat) * t,
+                from.lng + (to.lng - from.lng) * t
+            ];
+        }
+
+        function startFlowParticles() {
+            if (particleTimer) clearInterval(particleTimer);
+            particleTimer = setInterval(() => {
+                if (!map || !state.solution) return;
+                const h = state.hour - 1;
+                Object.entries(state.lines).forEach(([lineId, line]) => {
+                    const particles = layers.particles[lineId] || [];
+                    const flow = state.flows[lineId]?.[h] || 0;
+                    const magnitude = Math.abs(flow);
+                    const util = magnitude / Math.max(1, line.limit * state.scenario.pathScale / 100);
+                    const from = flow >= 0 ? state.zones[line.from] : state.zones[line.to];
+                    const to = flow >= 0 ? state.zones[line.to] : state.zones[line.from];
+                    const speed = clamp(util, 0.25, 1.25);
+                    particles.forEach((marker, index) => {
+                        const base = (performance.now() / (2600 / speed) + index / particles.length) % 1;
+                        marker.setLatLng(interpolateLatLng(from, to, base));
+                        marker.setOpacity(magnitude > 10 ? 0.9 : 0);
+                    });
+                });
+            }, 60);
+        }
+
+        function renderMap() {
+            if (!map || !state.solution) return;
+            clearMapLayers();
+            const h = state.hour - 1;
+            const branchLimits = Object.values(state.lines).map(line => line.limit * state.scenario.pathScale / 100);
+            const minBranchLimit = Math.min(...branchLimits);
+            const maxBranchLimit = Math.max(...branchLimits);
+            const branchWidth = limit => {
+                const t = maxBranchLimit > minBranchLimit ? (limit - minBranchLimit) / (maxBranchLimit - minBranchLimit) : 0.5;
+                return 3 + t * 7;
+            };
+
+            Object.entries(state.lines).forEach(([lineId, line]) => {
+                const from = state.zones[line.from];
+                const to = state.zones[line.to];
+                const flow = state.flows[lineId][h] || 0;
+                const limit = line.limit * state.scenario.pathScale / 100;
+                const util = Math.abs(flow) / Math.max(1, limit);
+                const color = util > .98 ? cssVar('--red') : '#8b99ad';
+                layers.lines[lineId] = L.polyline([[from.lat, from.lng], [to.lat, to.lng]], {
+                    color, weight: branchWidth(limit), opacity: .88
+                }).addTo(map)
+                    .bindTooltip(`<strong>${line.name}</strong><br><span class="muted">${state.zones[line.from].name} -> ${state.zones[line.to].name}</span><br>${Math.round(flow)} MW / ${Math.round(util * 100)}%`, {
+                        className: 'opf-tooltip',
+                        direction: 'top',
+                        sticky: true,
+                        opacity: 1
+                    })
+                    .on('click', () => renderLineTable(lineId));
+                const particleCount = util > .85 ? 2 : 1;
+                const particleSize = Math.round(6 + clamp(util, 0, 1) * 11);
+                layers.particles[lineId] = Array.from({ length: particleCount }, (_, index) => {
+                    const marker = L.marker(interpolateLatLng(from, to, index / particleCount), {
+                        interactive: false,
+                        icon: L.divIcon({
+                            className: '',
+                            html: `<div class="flow-particle" style="--particle-size:${particleSize}px"></div>`,
+                            iconSize: [particleSize, particleSize],
+                            iconAnchor: [particleSize / 2, particleSize / 2]
+                        })
+                    }).addTo(map);
+                    return marker;
+                });
+            });
+
+            Object.entries(state.zones).forEach(([zoneId, zone]) => {
+                const lmp = state.lmps[zoneId]?.[h] ?? 0;
+                const color = lmpColor(lmp);
+                layers.nodes[zoneId] = L.marker([zone.lat, zone.lng], {
+                    icon: L.divIcon({
+                        className: '',
+                        html: `<div class="node-label ${zoneId === state.selectedZone ? 'selected' : ''}"><div class="node-core" style="background:${color}; box-shadow:0 0 18px ${color}"><div class="node-price-mini">$${Math.round(lmp)}</div></div></div>`,
+                        iconSize: [56, 56],
+                        iconAnchor: [0, 0]
+                    })
+                }).addTo(map)
+                    .bindTooltip(`<strong>${zone.name}</strong><br>$${Math.round(lmp)}/MWh<br><span class="muted">${fmtMW(zoneLoad(zone, h))} load</span>`, {
+                        className: 'opf-tooltip',
+                        direction: 'top',
+                        offset: [0, -14],
+                        opacity: 1
+                    })
+                    .on('click', () => selectZone(zoneId));
+
+                const genTotal = Object.entries(zone.resources)
+                    .filter(([, res]) => res.type !== 'storage')
+                    .reduce((sum, [resId]) => sum + (state.dispatch[zoneId][resId]?.[h] || 0), 0);
+                const storageTotal = Object.entries(zone.resources)
+                    .filter(([, res]) => res.type === 'storage')
+                    .reduce((sum, [resId]) => sum + (state.dispatch[zoneId][resId]?.[h] || 0), 0);
+                const satellites = [
+                    { id: 'load', label: 'Load', value: zoneLoad(zone, h), color: '#f97316', angle: -Math.PI / 2, click: () => selectZone(zoneId) },
+                    { id: 'gen', label: 'Generation', value: genTotal, color: '#22c55e', angle: Math.PI * 0.8, click: () => selectResource(zoneId, Object.keys(zone.resources).find(id => zone.resources[id].type !== 'storage')) },
+                    { id: 'storage', label: 'Storage', value: storageTotal, color: '#a855f7', angle: Math.PI * 0.2, click: () => selectResource(zoneId, Object.keys(zone.resources).find(id => zone.resources[id].type === 'storage') || Object.keys(zone.resources)[0]) }
+                ];
+                layers.resources[zoneId] = satellites.map(item => {
+                    const radius = .34;
+                    const lat = zone.lat + Math.cos(item.angle) * radius;
+                    const lng = zone.lng + Math.sin(item.angle) * radius;
+                    return L.marker([lat, lng], {
+                        icon: L.divIcon({
+                            className: '',
+                            html: `<div class="res-label" style="background:${item.color}"></div>`,
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 10]
+                        })
+                    }).addTo(map)
+                        .bindTooltip(`<strong>${zone.name} ${item.label}</strong><br><span class="muted">${Math.round(item.value)} MW at HE ${state.hour}</span>`, {
+                            className: 'opf-tooltip',
+                            direction: 'top',
+                            offset: [0, -8],
+                            opacity: 1
+                        })
+                        .on('click', item.click);
+                });
+            });
+        }
+
+        function renderControls() {
+            const controls = [
+                ['loadScale', 'Load', 70, 130, '%'],
+                ['solarScale', 'Solar buildout', 0, 180, '%'],
+                ['windScale', 'Wind buildout', 0, 180, '%'],
+                ['gasPrice', 'Gas price', 50, 180, '%'],
+                ['importPrice', 'Import price', 50, 180, '%'],
+                ['pathScale', 'Transmission limits', 45, 140, '%'],
+                ['storageScale', 'Storage buildout', 0, 220, '%']
+            ];
+            document.getElementById('controls').innerHTML = controls.map(([key, label, min, max, unit]) => `
+                <div class="control-row">
+                    <label for="${key}">${label}</label>
+                    <input id="${key}Num" class="number-input" type="number" min="${min}" max="${max}" value="${state.scenario[key]}">
+                    <input id="${key}" type="range" min="${min}" max="${max}" value="${state.scenario[key]}" aria-label="${label}">
+                </div>
+            `).join('');
+
+            controls.forEach(([key]) => {
+                const range = document.getElementById(key);
+                const number = document.getElementById(`${key}Num`);
+                const update = value => {
+                    const next = Number(value);
+                    state.scenario[key] = next;
+                    range.value = next;
+                    number.value = next;
+                    markScenarioPending();
+                };
+                range.addEventListener('input', e => update(e.target.value));
+                number.addEventListener('change', e => update(e.target.value));
+            });
+        }
+
+        function renderZoneList() {
+            const h = state.hour - 1;
+            document.getElementById('zoneList').innerHTML = Object.entries(state.zones).map(([zoneId, zone]) => {
+                const lmp = state.lmps[zoneId]?.[h] ?? 0;
+                const load = zoneLoad(zone, h);
+                return `<button class="list-item ${zoneId === state.selectedZone ? 'active' : ''}" data-zone="${zoneId}">
+                    <span class="dot" style="background:${lmpColor(lmp)}"></span>
+                    <span><span class="name">${zone.name}</span><span class="meta">${fmtMW(load)} load</span></span>
+                    <span class="tag">$${Math.round(lmp)}</span>
+                </button>`;
+            }).join('');
+            document.querySelectorAll('[data-zone]').forEach(btn => btn.addEventListener('click', () => selectZone(btn.dataset.zone)));
+        }
+
+        function renderZoneDetail() {
+            const zone = state.zones[state.selectedZone];
+            const h = state.hour - 1;
+            const lmp = state.lmps[state.selectedZone]?.[h] ?? 0;
+            const load = zoneLoad(zone, h);
+            const resourceRows = Object.entries(zone.resources).map(([resId, res]) => {
+                const value = state.dispatch[state.selectedZone]?.[resId]?.[h] || 0;
+                const cap = res.type === 'storage' ? res.powerCap * state.scenario.storageScale / 100 : resourceCap(res, h);
+                return `<button class="list-item ${resId === state.selectedResource ? 'active' : ''}" data-resource="${resId}">
+                    <span class="dot" style="background:${RESOURCE_COLORS[res.type]}"></span>
+                    <span><span class="name">${resId.replaceAll('_', ' ')}</span><span class="meta">${res.type} · cap ${fmtMW(cap)}</span></span>
+                    <span class="tag">${Math.round(value)} MW</span>
+                </button>`;
+            }).join('');
+
+            document.getElementById('zoneDetail').innerHTML = `
+                <div class="metric" style="margin-bottom:12px;">
+                    <div class="label">${zone.name}</div>
+                    <div class="value" style="color:${lmpColor(lmp)}">$${Math.round(lmp)}/MWh</div>
+                    <div class="sub">${fmtMW(load)} load at HE ${state.hour}</div>
+                </div>
+                <div class="list">${resourceRows}</div>
+            `;
+            document.querySelectorAll('[data-resource]').forEach(btn => btn.addEventListener('click', () => selectResource(state.selectedZone, btn.dataset.resource)));
+        }
+
+        function renderChart() {
+            const zoneId = state.selectedZone;
+            const zone = state.zones[zoneId];
+            const datasets = Object.entries(zone.resources).map(([resId, res]) => ({
+                label: resId.replaceAll('_', ' '),
+                data: state.dispatch[zoneId]?.[resId] || Array(24).fill(0),
+                borderWidth: 0,
+                backgroundColor: RESOURCE_COLORS[res.type] || '#fff',
+                borderRadius: 3
+            }));
+            if ((state.dispatch[zoneId]?.emergency || []).some(v => v > 0.5)) {
+                datasets.push({
+                    label: 'emergency',
+                    data: state.dispatch[zoneId].emergency,
+                    borderWidth: 0,
+                    backgroundColor: RESOURCE_COLORS.emergency,
+                    borderRadius: 3
+                });
+            }
+            datasets.push({
+                label: 'load',
+                data: HOURS.map((_, i) => zoneLoad(zone, i)),
+                type: 'line',
+                borderColor: '#edf3fb',
+                pointRadius: 0,
+                tension: .25,
+                borderWidth: 2
+            });
+
+            if (dispatchChart) dispatchChart.destroy();
+            dispatchChart = new Chart(document.getElementById('dispatchChart'), {
+                type: 'bar',
+                data: { labels: HOURS.map(h => String(h)), datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { labels: { color: '#cbd7e7', boxWidth: 10, usePointStyle: true } }
+                    },
+                    scales: {
+                        x: { stacked: false, ticks: { color: '#8ea0b8' }, grid: { display: false } },
+                        y: { ticks: { color: '#8ea0b8' }, grid: { color: '#273244' } }
+                    }
+                }
+            });
+        }
+
+        function renderLineTable(highlight = null) {
+            const h = state.hour - 1;
+            const rows = Object.entries(state.lines)
+                .map(([lineId, line]) => {
+                    const flow = state.flows[lineId]?.[h] || 0;
+                    const limit = line.limit * state.scenario.pathScale / 100;
+                    const util = Math.abs(flow) / Math.max(1, limit);
+                    return { lineId, line, flow, limit, util };
+                })
+                .sort((a, b) => b.util - a.util);
+            document.getElementById('lineTable').innerHTML = rows.map(({ lineId, line, flow, limit, util }) => {
+                const cls = util > .98 ? 'bad' : util > .85 ? 'warn' : 'good';
+                const prefix = lineId === highlight ? '* ' : '';
+                return `<div class="table-row">
+                    <span>${prefix}${line.name}<br><span class="meta">${state.zones[line.from].name} -> ${state.zones[line.to].name}</span></span>
+                    <strong class="${cls}">${Math.round(flow)} / ${Math.round(limit)} MW</strong>
+                </div>`;
+            }).join('');
+        }
+
+        function renderMetrics() {
+            const h = state.hour - 1;
+            const lmps = Object.keys(state.zones).map(zoneId => state.lmps[zoneId]?.[h] ?? 0);
+            const avgLmp = lmps.reduce((sum, v) => sum + v, 0) / Math.max(1, lmps.length);
+            const peakLoad = Math.max(...HOURS.map((_, i) => Object.values(state.zones).reduce((sum, zone) => sum + zoneLoad(zone, i), 0)));
+            const binding = Object.entries(state.lines).filter(([lineId, line]) => {
+                const flow = Math.abs(state.flows[lineId]?.[h] || 0);
+                const limit = line.limit * state.scenario.pathScale / 100;
+                return flow / Math.max(1, limit) > .98;
+            }).length;
+            document.getElementById('metricCost').textContent = fmtMoney(state.totals.cost / 1000) + 'k';
+            document.getElementById('metricLoad').textContent = fmtMW(peakLoad);
+            document.getElementById('metricLmp').textContent = `$${Math.round(avgLmp)}`;
+            document.getElementById('metricCongestion').textContent = String(binding);
+            document.getElementById('lmpMin').textContent = `$${Math.round(Math.min(...lmps))}`;
+            document.getElementById('lmpMax').textContent = `$${Math.round(Math.max(...lmps))}`;
+        }
+
+        function renderAll() {
+            document.getElementById('hourLabel').textContent = String(state.hour);
+            renderMetrics();
+            renderZoneList();
+            renderZoneDetail();
+            renderChart();
+            renderLineTable();
+            renderMap();
+        }
+
+        function selectZone(zoneId) {
+            state.selectedZone = zoneId;
+            state.selectedResource = Object.keys(state.zones[zoneId].resources)[0];
+            renderAll();
+        }
+
+        function selectResource(zoneId, resId) {
+            state.selectedZone = zoneId;
+            state.selectedResource = resId;
+            renderAll();
+        }
+
+        function resetScenario() {
+            Object.keys(state.scenario).forEach(key => state.scenario[key] = 100);
+            renderControls();
+            solveModel();
+        }
+
+        function init() {
+            initMap();
+            renderControls();
+            document.getElementById('hourSlider').addEventListener('input', e => {
+                state.hour = Number(e.target.value);
+                renderAll();
+            });
+            document.getElementById('solveBtn').addEventListener('click', solveModel);
+            document.getElementById('resetBtn').addEventListener('click', resetScenario);
+            solveModel();
+            startFlowParticles();
+        }
+
+        init();
+    </script>
+</body>
+</html>
