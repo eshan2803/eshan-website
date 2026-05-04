@@ -826,26 +826,46 @@
 
             HOURS.forEach(hour => {
                 const h = hour - 1;
-                for (let pass = 0; pass < 4; pass += 1) {
-                    Object.entries(state.lines).forEach(([lineId, line]) => {
-                        const flow = state.flows[lineId]?.[h] || 0;
-                        const limit = line.limit * state.scenario.pathScale / 100;
-                        const util = Math.abs(flow) / Math.max(1, limit);
-                        if (util < 0.98) {
-                            const avg = (state.lmps[line.from][h] + state.lmps[line.to][h]) / 2;
-                            state.lmps[line.from][h] = state.lmps[line.from][h] * 0.65 + avg * 0.35;
-                            state.lmps[line.to][h] = state.lmps[line.to][h] * 0.65 + avg * 0.35;
-                            return;
-                        }
-                        if (flow >= 0) {
-                            state.lmps[line.to][h] = Math.max(state.lmps[line.to][h], state.lmps[line.from][h] + 18);
-                        } else {
-                            state.lmps[line.from][h] = Math.max(state.lmps[line.from][h], state.lmps[line.to][h] + 18);
-                        }
+                const zoneIds = Object.keys(state.zones);
+                const parent = Object.fromEntries(zoneIds.map(zoneId => [zoneId, zoneId]));
+                const find = zoneId => {
+                    while (parent[zoneId] !== zoneId) {
+                        parent[zoneId] = parent[parent[zoneId]];
+                        zoneId = parent[zoneId];
+                    }
+                    return zoneId;
+                };
+                const union = (a, b) => {
+                    const rootA = find(a);
+                    const rootB = find(b);
+                    if (rootA !== rootB) parent[rootB] = rootA;
+                };
+
+                Object.entries(state.lines).forEach(([lineId, line]) => {
+                    const flow = Math.abs(state.flows[lineId]?.[h] || 0);
+                    const limit = line.limit * state.scenario.pathScale / 100;
+                    const util = flow / Math.max(1, limit);
+                    if (util < 0.98) union(line.from, line.to);
+                });
+
+                const components = {};
+                zoneIds.forEach(zoneId => {
+                    const root = find(zoneId);
+                    components[root] = components[root] || [];
+                    components[root].push(zoneId);
+                });
+
+                Object.values(components).forEach(component => {
+                    const weighted = component.reduce((acc, zoneId) => {
+                        const load = zoneLoad(state.zones[zoneId], h);
+                        acc.priceLoad += state.lmps[zoneId][h] * load;
+                        acc.load += load;
+                        return acc;
+                    }, { priceLoad: 0, load: 0 });
+                    const componentPrice = weighted.load > 0 ? weighted.priceLoad / weighted.load : state.lmps[component[0]][h];
+                    component.forEach(zoneId => {
+                        state.lmps[zoneId][h] = clamp(componentPrice, 0, 1000);
                     });
-                }
-                Object.keys(state.zones).forEach(zoneId => {
-                    state.lmps[zoneId][h] = clamp(state.lmps[zoneId][h], 0, 5000);
                 });
             });
         }
@@ -1147,8 +1167,8 @@
                         legend: { labels: { color: '#cbd7e7', boxWidth: 10, usePointStyle: true } }
                     },
                     scales: {
-                        x: { stacked: false, ticks: { color: '#8ea0b8' }, grid: { display: false } },
-                        y: { ticks: { color: '#8ea0b8' }, grid: { color: '#273244' } }
+                        x: { stacked: true, ticks: { color: '#8ea0b8' }, grid: { display: false } },
+                        y: { stacked: true, ticks: { color: '#8ea0b8' }, grid: { color: '#273244' } }
                     }
                 }
             });
