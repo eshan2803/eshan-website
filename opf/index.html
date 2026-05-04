@@ -893,13 +893,17 @@
             });
         }
 
+        function lmpDomain() {
+            const values = Object.values(state.lmps).flat().filter(value => Number.isFinite(value));
+            if (!values.length) return { min: 0, max: 1 };
+            return { min: Math.min(...values), max: Math.max(...values) };
+        }
+
         function lmpColor(lmp) {
             const low = '#2563eb';
             const mid = '#8b1bb1';
             const high = '#f97316';
-            const values = Object.values(state.lmps).map(series => series?.[state.hour - 1] ?? 0);
-            const min = Math.min(...values);
-            const max = Math.max(...values);
+            const { min, max } = lmpDomain();
             const t = max > min ? clamp((lmp - min) / (max - min), 0, 1) : 0.5;
             return t < 0.5 ? mixColor(low, mid, t * 2) : mixColor(mid, high, (t - 0.5) * 2);
         }
@@ -1208,8 +1212,9 @@
             document.getElementById('metricLoad').textContent = fmtMW(peakLoad);
             document.getElementById('metricLmp').textContent = `$${Math.round(avgLmp)}`;
             document.getElementById('metricCongestion').textContent = String(binding);
-            document.getElementById('lmpMin').textContent = `$${Math.round(Math.min(...lmps))}`;
-            document.getElementById('lmpMax').textContent = `$${Math.round(Math.max(...lmps))}`;
+            const domain = lmpDomain();
+            document.getElementById('lmpMin').textContent = `$${Math.round(domain.min)}`;
+            document.getElementById('lmpMax').textContent = `$${Math.round(domain.max)}`;
         }
 
         function renderAll() {
