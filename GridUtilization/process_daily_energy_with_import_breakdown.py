@@ -81,7 +81,10 @@ print(f"Loaded import data for {len(import_lookup)} hour entries")
 # Build hourly 2024 ratios for fallback (hour-of-day specific, not annual average)
 # This captures the merit-order dispatch pattern: mid-day is mostly clean, nighttime is more fossil
 print("Calculating 2024 hourly import ratios (by hour of day)...")
-import_2024 = import_df[import_df['Date_dt'].dt.year == 2024]
+if not import_df.empty:
+    import_2024 = import_df[import_df['Date_dt'].dt.year == 2024]
+else:
+    import_2024 = pd.DataFrame()
 
 hourly_2024_totals = {}  # hour -> {clean, fossil, unknown}
 for h in range(1, 25):

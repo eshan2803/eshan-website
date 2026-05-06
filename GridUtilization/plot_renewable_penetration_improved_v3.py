@@ -29,7 +29,7 @@ with open(os.path.join(script_dir, "renewable_penetration_hourly_corrected.json"
 
 # Load daily data (ENERGY-BASED)
 print("Loading daily data (ENERGY-BASED)...")
-with open(os.path.join(script_dir, "renewable_penetration_daily_energy_based.json")) as f:
+with open(os.path.join(script_dir, "renewable_penetration_daily_corrected_full.json")) as f:
     daily_data = json.load(f)
 
 # Parse hourly data
