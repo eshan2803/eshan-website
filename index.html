@@ -999,6 +999,29 @@
 
             const bdCanvas = document.getElementById('chart-daily-breakdown');
             const bdCtx = bdCanvas.getContext('2d');
+            
+            // Calculate min/max to align zeros
+            let maxMW = Math.max(...bd.load) * 1.05;
+            let minMW = Math.min(...bd.battery_charging.map(v => -v)) * 1.05;
+            if (minMW >= 0) minMW = -1000;
+            
+            let maxLMP = 100;
+            let minLMP = -10;
+            if (bd.lmp && bd.lmp.some(v => v !== null)) {
+                const validLMP = bd.lmp.filter(v => v !== null);
+                maxLMP = Math.max(10, Math.max(...validLMP) * 1.05);
+                minLMP = Math.min(-10, Math.min(...validLMP) * 1.05);
+            }
+            
+            const ratioMW = Math.abs(maxMW / minMW);
+            const ratioLMP = Math.abs(maxLMP / minLMP);
+            
+            if (ratioMW > ratioLMP) {
+                maxLMP = ratioMW * Math.abs(minLMP);
+            } else {
+                maxMW = ratioLMP * Math.abs(minMW);
+            }
+
             const bdChart = new Chart(bdCtx, {
                 type: 'line',
                 data: { datasets: stackedDatasets },
@@ -1015,6 +1038,8 @@
                         },
                         y: {
                             stacked: true,
+                            min: minMW,
+                            max: maxMW,
                             title: { display: true, text: 'MW', font: { family: "'Inter', sans-serif", size: 10, weight: '600' }, color: '#6b7280' },
                             ticks: {
                                 font: { family: "'Inter', sans-serif", size: 10 }, color: '#9ca3af',
@@ -1024,6 +1049,8 @@
                         },
                         yPrice: {
                             position: 'right',
+                            min: minLMP,
+                            max: maxLMP,
                             title: { display: true, text: '$/MWh', font: { family: "'Inter', sans-serif", size: 10, weight: '600' }, color: '#f97316' },
                             ticks: {
                                 font: { family: "'Inter', sans-serif", size: 10 }, color: '#f97316',
