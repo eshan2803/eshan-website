@@ -1,5 +1,8 @@
 name: Daily California Grid Update
 on:
+  push:
+    branches:
+      - simbooni
   schedule:
     # Runs at 14:00 UTC (7:00 AM PDT) every day
     - cron: '0 14 * * *'
