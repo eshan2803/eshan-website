@@ -1017,9 +1017,9 @@
             const ratioLMP = Math.abs(maxLMP / minLMP);
             
             if (ratioMW > ratioLMP) {
-                maxLMP = ratioMW * Math.abs(minLMP);
+                minMW = -(maxMW / ratioLMP);
             } else {
-                maxMW = ratioLMP * Math.abs(minMW);
+                minLMP = -(maxLMP / ratioMW);
             }
 
             const bdChart = new Chart(bdCtx, {
