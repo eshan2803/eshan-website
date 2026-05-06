@@ -23,7 +23,7 @@ jobs:
       - name: Install Dependencies
         run: |
           pip install pandas numpy matplotlib requests pytz scipy playwright selenium
-          playwright install chromium
+          playwright install chromium --with-deps
 
       - name: Run Update Script
         run: |
