@@ -26,11 +26,36 @@ def main():
         print("ERROR: CSV is empty")
         return 1
 
-    last_ts = rows[-1]["timestamp"]
-    last_date = last_ts.split(" ")[0]
+    # Use the latest complete 5-minute day. Occasionally the updater may append
+    # a partial current/yesterday file; the homepage chart should not present that
+    # as a full-day daily breakdown.
+    days = []
+    current_date = None
+    current_rows = []
+    for row in rows:
+        ts = row["timestamp"]
+        row_date = ts.split(" ")[0]
+        if row_date != current_date:
+            if current_rows:
+                days.append((current_date, current_rows))
+            current_date = row_date
+            current_rows = []
+        current_rows.append(row)
+    if current_rows:
+        days.append((current_date, current_rows))
 
-    # Filter rows for the last date
-    day_rows = [r for r in rows if r["timestamp"].startswith(last_date)]
+    complete_days = []
+    for day, day_rows_candidate in days:
+        last_time = day_rows_candidate[-1]["timestamp"].split(" ")[1] if " " in day_rows_candidate[-1]["timestamp"] else ""
+        if len(day_rows_candidate) >= 288 and last_time == "23:55":
+            complete_days.append((day, day_rows_candidate))
+
+    if complete_days:
+        last_date, day_rows = complete_days[-1]
+    else:
+        last_date, day_rows = days[-1]
+        print(f"WARNING: no complete 288-point day found; falling back to {last_date}")
+
     print(f"Exporting breakdown for {last_date} ({len(day_rows)} rows)")
 
     def safe_float(v):
