@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>California OPF Studio</title>
+    <title>California OPF</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -11,6 +11,9 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        .js-error {
+            position: fixed; top: 0; left: 0; right: 0; background: red; color: white; z-index: 9999; padding: 20px; font-family: monospace; white-space: pre-wrap;
+        }
         :root {
             --bg: #0a0d12;
             --panel: #111722;
@@ -45,8 +48,17 @@
         .data-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; background: var(--panel); border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
         .data-table th, .data-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line); font-size: 13px; }
         .data-table th { background: var(--panel-2); color: var(--muted); font-weight: 700; text-transform: uppercase; font-size: 11px; }
-        .data-table input { background: transparent; border: 1px solid transparent; color: var(--text); width: 100%; font-family: inherit; }
-        .data-table input:focus { border-bottom: 1px solid var(--blue); outline: none; }
+        .data-table input, .data-table select { background: transparent; border: 1px solid transparent; color: var(--text); width: 100%; font-family: inherit; }
+        .data-table input:focus, .data-table select:focus { border-bottom: 1px solid var(--blue); outline: none; }
+        .inner-tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+        .inner-tab { padding: 10px 0; font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer; position: relative; }
+        .inner-tab.active { color: var(--text); }
+        .inner-tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: var(--yellow); }
+        .inner-tab .badge { background: #334155; color: #cbd7e7; font-size: 10px; padding: 2px 6px; border-radius: 99px; margin-left: 6px; }
+        .inner-tab-content { display: none; }
+        .inner-tab-content.active { display: block; }
+        .result-table-container { margin-top: 40px; }
+        .result-table-container h3 { margin-bottom: 10px; font-size: 14px; color: var(--muted); }
 
         button, input, select { font: inherit; }
         button {
@@ -60,10 +72,14 @@
         }
         button:hover { border-color: #3c4d66; background: #202c3e; }
         button.primary { background: #1f6feb; border-color: #2f81f7; font-weight: 700; }
+        button.loading {
+            opacity: .78;
+            cursor: progress;
+        }
 
         .app {
             display: grid;
-            grid-template-columns: minmax(300px, 350px) minmax(420px, 1fr) minmax(310px, 380px);
+            grid-template-columns: minmax(390px, 430px) minmax(420px, 1fr) minmax(310px, 380px);
             grid-template-rows: 1fr;
             flex: 1;
             min-height: 0;
@@ -77,6 +93,15 @@
         }
         .sidebar { border-right: 1px solid var(--line); }
         .inspector { border-left: 1px solid var(--line); }
+        .sidebar::-webkit-scrollbar, .inspector::-webkit-scrollbar, .data-view::-webkit-scrollbar { width: 10px; height: 10px; }
+        .sidebar::-webkit-scrollbar-track, .inspector::-webkit-scrollbar-track, .data-view::-webkit-scrollbar-track { background: #0b111b; }
+        .sidebar::-webkit-scrollbar-thumb, .inspector::-webkit-scrollbar-thumb, .data-view::-webkit-scrollbar-thumb {
+            background: #27364b;
+            border: 2px solid #0b111b;
+            border-radius: 999px;
+        }
+        .sidebar::-webkit-scrollbar-thumb:hover, .inspector::-webkit-scrollbar-thumb:hover, .data-view::-webkit-scrollbar-thumb:hover { background: #3b4d67; }
+        .sidebar, .inspector, .data-view { scrollbar-color: #27364b #0b111b; scrollbar-width: thin; }
         .panel-pad { padding: 20px; }
 
         .brand {
@@ -175,16 +200,201 @@
         .list-item.active { border-color: var(--blue); background: #162842; }
         .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--blue); }
         .name { font-weight: 800; font-size: 13px; }
+        .name + .meta { margin-left: 4px; }
         .meta { margin-top: 3px; color: var(--muted); font-size: 12px; }
         .tag { color: #d5e2f2; font-size: 12px; font-weight: 800; white-space: nowrap; }
+        .detail-stack { display: grid; gap: 10px; }
+        .summary-button {
+            width: 100%;
+            min-height: 54px;
+            display: grid;
+            grid-template-columns: 12px 1fr auto;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid var(--line);
+            background: #121a26;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: left;
+            color: var(--text);
+        }
+        .summary-button.active { border-color: var(--blue); background: #162842; }
+        .summary-panel {
+            border: 1px solid var(--line);
+            background: #0f1623;
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: minmax(0, .9fr) minmax(0, 1fr) auto;
+            gap: 10px;
+            align-items: end;
+        }
+        .form-field { display: grid; gap: 6px; }
+        .form-field label {
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+        .select-input {
+            width: 100%;
+            height: 38px;
+            color: var(--text);
+            background: #1d2a3d;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 0 10px;
+        }
+        .mini-button {
+            height: 38px;
+            padding: 0 14px;
+            border-color: var(--line);
+            background: #1d2a3d;
+        }
+        .peak-input {
+            width: 100%;
+            height: 38px;
+            color: var(--text);
+            background: #0d121a;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 0 10px;
+        }
+        .location-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .drag-hint {
+            margin-top: 10px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.35;
+        }
+        .drag-hint.active { color: #93c5fd; }
+        .load-editor-note {
+            margin: 12px 0 8px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+        .load-profile-canvas {
+            width: 100%;
+            height: 190px;
+            display: block;
+            touch-action: none;
+            cursor: crosshair;
+        }
+        .mini-chart-canvas {
+            width: 100%;
+            height: 180px;
+            display: block;
+            touch-action: none;
+        }
+        .load-axis-label {
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 11px;
+            text-align: center;
+        }
+        .generator-list { display: grid; gap: 8px; margin-top: 10px; }
+        .editor-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .color-swatch {
+            width: 18px;
+            height: 18px;
+            padding: 0;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,.85);
+            overflow: hidden;
+            background: transparent;
+        }
+        .color-swatch::-webkit-color-swatch-wrapper { padding: 0; }
+        .color-swatch::-webkit-color-swatch { border: 0; border-radius: 50%; }
+        .table-color-swatch {
+            width: 18px;
+            height: 18px;
+            display: inline-block;
+            vertical-align: middle;
+            border-radius: 50%;
+            border: 1.5px solid rgba(255,255,255,.78);
+            box-shadow: 0 3px 10px rgba(0,0,0,.35);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .table-color-swatch input {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .data-table td.color-cell { width: 54px; text-align: center; }
+        .data-table select {
+            color: var(--text);
+            background: #1d2a3d;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 6px 8px;
+        }
+        .data-table select option {
+            color: var(--text);
+            background: #111722;
+        }
+        .cost-points {
+            display: grid;
+            gap: 6px;
+            margin-top: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            scrollbar-color: #27364b #0b111b;
+            scrollbar-width: thin;
+        }
+        .cost-point-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 8px;
+            align-items: center;
+        }
+        .cost-point-header {
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
 
         .map-shell {
             position: relative;
             min-width: 0;
             min-height: 0;
             background: #081018;
+            overflow: hidden;
         }
         #map { width: 100%; height: 100%; background: #081018; }
+        .leaflet-container,
+        .leaflet-tile-container,
+        .leaflet-tile {
+            background: #081018;
+        }
+        #map,
+        #map:focus,
+        #map:focus-visible,
+        .leaflet-container,
+        .leaflet-container:focus,
+        .leaflet-container:focus-visible,
+        .leaflet-interactive:focus {
+            outline: none !important;
+            box-shadow: none !important;
+        }
         .map-toolbar {
             position: absolute;
             z-index: 700;
@@ -303,7 +513,7 @@
             width: 46px;
             height: 46px;
             margin: 5px;
-            border: 3px solid #f8fbff;
+            border: 2px solid rgba(248,251,255,.92);
             border-radius: 50%;
             box-shadow: 0 0 20px rgba(255,255,255,.28);
             display: flex;
@@ -311,8 +521,9 @@
             justify-content: center;
         }
         .node-label.selected .node-core {
-            outline: 3px solid rgba(255,255,255,.22);
-            outline-offset: 3px;
+            outline: 4px solid rgba(96, 165, 250, .72);
+            outline-offset: 5px;
+            box-shadow: 0 0 0 9px rgba(96,165,250,.18), 0 0 26px rgba(96,165,250,.58);
         }
         .node-price-mini {
             color: white;
@@ -324,7 +535,7 @@
         .res-label {
             width: 20px;
             height: 20px;
-            border: 3px solid rgba(255,255,255,.9);
+            border: 1.5px solid rgba(255,255,255,.78);
             border-radius: 50%;
             box-shadow: 0 8px 18px rgba(0,0,0,.55);
         }
@@ -378,89 +589,157 @@
         }
 
         @media (max-width: 1100px) {
-            .app { grid-template-columns: 320px 1fr; }
+            .app { grid-template-columns: 360px 1fr; }
             .inspector { display: none; }
         }
     </style>
 </head>
 <body>
+    <script>
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            const el = document.createElement('div');
+            el.className = 'js-error';
+            el.innerHTML = `Error: ${msg}\nLine: ${lineNo}\nCol: ${columnNo}\nStack: ${error?.stack}`;
+            document.body.appendChild(el);
+            return false;
+        };
+    </script>
     <header class="app-header">
         <div style="font-weight: 800; display:flex; align-items:center; gap:10px;">
             <div style="width:20px; height:20px; border-radius:4px; background:linear-gradient(135deg, var(--blue), var(--violet));"></div>
-            OPF Studio - California
+            California OPF
         </div>
         <div class="header-tabs">
             <div class="header-tab active" onclick="switchView('graph')">Graph</div>
             <div class="header-tab" onclick="switchView('data')">Data</div>
         </div>
         <div style="display:flex; gap:10px;">
-            <button class="primary" id="solveBtnStudio" onclick="solveModel()">Solve Model</button>
+            <button class="primary" id="solveBtnStudio" onclick="solveModel()">Solve DC OPF</button>
         </div>
     </header>
 
     <div id="dataView" class="data-view">
-        <h2 style="margin-top:0;">Generators</h2>
-        <table class="data-table" id="tableGens">
-            <thead><tr><th>Zone</th><th>Name</th><th>Type</th><th>Capacity (MW)</th><th>Cost ($/MWh)</th></tr></thead>
-            <tbody></tbody>
-        </table>
-        
-        <h2>Branches</h2>
-        <table class="data-table" id="tableLines">
-            <thead><tr><th>Name</th><th>From</th><th>To</th><th>Forward Limit</th><th>Reverse Limit</th><th>Reactance</th></tr></thead>
-            <tbody></tbody>
-        </table>
-        
-        <h2>Storage</h2>
-        <table class="data-table" id="tableStorage">
-            <thead><tr><th>Zone</th><th>Name</th><th>Power Cap (MW)</th><th>Duration (H)</th><th>Efficiency</th></tr></thead>
-            <tbody></tbody>
-        </table>
+        <div class="inner-tabs">
+            <div class="inner-tab active" onclick="switchInnerTab('buses')">Buses <span class="badge" id="badgeBuses">0</span></div>
+            <div class="inner-tab" onclick="switchInnerTab('gens')">Generators <span class="badge" id="badgeGens">0</span></div>
+            <div class="inner-tab" onclick="switchInnerTab('loads')">Loads <span class="badge" id="badgeLoads">0</span></div>
+            <div class="inner-tab" onclick="switchInnerTab('branches')">Branches <span class="badge" id="badgeBranches">0</span></div>
+            <div class="inner-tab" onclick="switchInnerTab('storage')">Storage <span class="badge" id="badgeStorage">0</span></div>
+        </div>
+
+        <div id="tab_buses" class="inner-tab-content active">
+            <table class="data-table" id="tableBuses">
+                <thead><tr><th>ID</th><th>Name</th><th>Generators</th><th>Loads</th><th>Storage</th><th></th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <div class="result-table-container">
+                <h3>LMP Results ($/MWh)</h3>
+                <div style="overflow-x: auto;">
+                    <table class="data-table" id="tableLMPs">
+                        <thead><tr id="lmpHeaders"></tr></thead>
+                        <tbody id="lmpBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab_gens" class="inner-tab-content">
+            <table class="data-table" id="tableGens">
+                <thead><tr><th>Color</th><th>Name</th><th>Bus</th><th>PMax (MW)</th><th>Profile</th><th>Cost Type</th><th>Sell Price</th><th></th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <div class="result-table-container">
+                <h3>Dispatch (MW)</h3>
+                <div style="overflow-x: auto;">
+                    <table class="data-table" id="tableGenDispatch">
+                        <thead><tr id="genDispatchHeaders"></tr></thead>
+                        <tbody id="genDispatchBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="result-table-container">
+                <h3>Operating Cost ($)</h3>
+                <div style="overflow-x: auto;">
+                    <table class="data-table" id="tableGenCost">
+                        <thead><tr id="genCostHeaders"></tr></thead>
+                        <tbody id="genCostBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab_loads" class="inner-tab-content">
+            <table class="data-table" id="tableLoads">
+                <thead><tr><th>Name</th><th>Bus</th><th>Peak (MW)</th><th>Min (MW)</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div id="tab_branches" class="inner-tab-content">
+            <table class="data-table" id="tableLines">
+                <thead><tr><th>Name</th><th>From</th><th>To</th><th>Forward Rating</th><th>Reverse Rating</th><th>Reactance (P.U.)</th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <div class="result-table-container">
+                <h3>Branch Flows (MW) & Shadow Prices</h3>
+                <div style="overflow-x: auto;">
+                    <table class="data-table" id="tableBranchResults">
+                        <thead><tr id="branchResHeaders"></tr></thead>
+                        <tbody id="branchResBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab_storage" class="inner-tab-content">
+            <table class="data-table" id="tableStorage">
+                <thead><tr><th>Name</th><th>Bus</th><th>Power Cap (MW)</th><th>Duration (H)</th><th>Efficiency</th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <div class="result-table-container">
+                <h3>Operation (MW)</h3>
+                <div style="overflow-x: auto;">
+                    <table class="data-table" id="tableStorageOperation">
+                        <thead><tr id="storageOperationHeaders"></tr></thead>
+                        <tbody id="storageOperationBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="result-table-container">
+                <h3>Revenue / Arbitrage ($)</h3>
+                <div style="overflow-x: auto;">
+                    <table class="data-table" id="tableStorageRevenue">
+                        <thead><tr id="storageRevenueHeaders"></tr></thead>
+                        <tbody id="storageRevenueBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="result-table-container">
+                <h3>Daily Storage Revenue ($)</h3>
+                <div style="overflow-x: auto;">
+                    <table class="data-table" id="tableStorageRevenueTotal">
+                        <thead><tr id="storageRevenueTotalHeaders"></tr></thead>
+                        <tbody id="storageRevenueTotalBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="app" id="appGrid">
         <aside class="sidebar">
             <div class="panel-pad">
-                <div class="brand">
-                    <h1>California OPF Studio</h1>
-                    <div id="solveStatus" class="status-pill">READY</div>
-                </div>
-
                 <section class="section">
-                    <div class="section-title">System Summary</div>
-                    <div class="metric-grid">
-                        <div class="metric">
-                            <div class="label">Objective</div>
-                            <div id="metricCost" class="value">$0</div>
-                            <div class="sub">24-hour production cost</div>
-                        </div>
-                        <div class="metric">
-                            <div class="label">Peak Load</div>
-                            <div id="metricLoad" class="value">0 MW</div>
-                            <div class="sub">scenario adjusted</div>
-                        </div>
-                        <div class="metric">
-                            <div class="label">Avg LMP</div>
-                            <div id="metricLmp" class="value">$0</div>
-                            <div class="sub">selected hour</div>
-                        </div>
-                        <div class="metric">
-                            <div class="label">Congestion</div>
-                            <div id="metricCongestion" class="value">0</div>
-                            <div class="sub">congested branches now</div>
-                        </div>
-                    </div>
+                    <div class="section-title" id="selectionTitle">Selected Zone</div>
+                    <div id="zoneDetail"></div>
                 </section>
-
                 <section class="section">
-                    <div class="section-title">Scenario Controls <button id="resetBtn">Reset</button></div>
-                    <div id="controls"></div>
-                    <button id="solveBtn" class="primary">Solve DC OPF</button>
+                    <div class="section-title">Dispatch</div>
+                    <div class="chart-wrap"><canvas id="dispatchChart"></canvas></div>
                 </section>
-
                 <section class="section">
-                    <div class="section-title">California Zones</div>
-                    <div id="zoneList" class="list"></div>
+                    <div class="section-title">Selected Bus LMP</div>
+                    <div class="chart-wrap"><canvas id="lmpChart"></canvas></div>
                 </section>
             </div>
         </aside>
@@ -494,16 +773,52 @@
         <aside class="inspector">
             <div class="panel-pad">
                 <section class="section">
-                    <div class="section-title">Selected Zone</div>
-                    <div id="zoneDetail"></div>
-                </section>
-                <section class="section">
-                    <div class="section-title">Dispatch</div>
-                    <div class="chart-wrap"><canvas id="dispatchChart"></canvas></div>
+                    <div class="section-title">System Summary</div>
+                    <div class="metric-grid">
+                        <div class="metric">
+                            <div class="label">Objective</div>
+                            <div id="metricCost" class="value">$0</div>
+                            <div class="sub">24-hour production cost</div>
+                        </div>
+                        <div class="metric" id="peakLoadMetric" style="cursor:pointer;">
+                            <div class="label">Peak Load</div>
+                            <div id="metricLoad" class="value">0 MW</div>
+                            <div class="sub">click to scale all buses</div>
+                        </div>
+                        <div class="metric">
+                            <div class="label">Avg LMP</div>
+                            <div id="metricLmp" class="value">$0</div>
+                            <div class="sub">average across buses, selected hour</div>
+                        </div>
+                        <div class="metric">
+                            <div class="label">Min LMP</div>
+                            <div id="metricLmpMin24" class="value">$0</div>
+                            <div class="sub">24-hour minimum</div>
+                        </div>
+                        <div class="metric">
+                            <div class="label">Max LMP</div>
+                            <div id="metricLmpMax24" class="value">$0</div>
+                            <div class="sub">24-hour maximum</div>
+                        </div>
+                        <div class="metric">
+                            <div class="label">Congestion</div>
+                            <div id="metricCongestion" class="value">0</div>
+                            <div class="sub">congested branches now</div>
+                        </div>
+                        <div class="metric"><div class="label">Buses</div><div id="metricBuses" class="value">0</div><div class="sub">network nodes</div></div>
+                        <div class="metric"><div class="label">Branches</div><div id="metricBranches" class="value">0</div><div class="sub">transmission paths</div></div>
+                        <div class="metric"><div class="label">Loads</div><div id="metricLoads" class="value">0</div><div class="sub">bus load profiles</div></div>
+                        <div class="metric"><div class="label">Generators</div><div id="metricGenerators" class="value">0</div><div class="sub">non-storage resources</div></div>
+                        <div class="metric"><div class="label">Storage</div><div id="metricStorage" class="value">0</div><div class="sub">storage resources</div></div>
+                    </div>
                 </section>
                 <section class="section">
                     <div class="section-title">Path Loading</div>
                     <div id="lineTable" class="table"></div>
+                </section>
+                <section class="section">
+                    <div class="section-title">California Zones</div>
+                    <div id="zoneList" class="list"></div>
                 </section>
             </div>
         </aside>
@@ -522,7 +837,7 @@
                 document.querySelectorAll('.header-tab')[0].classList.add('active');
                 document.getElementById('appGrid').style.display = 'grid';
                 document.getElementById('dataView').classList.remove('active');
-                if (window.map) setTimeout(() => window.map.invalidateSize(), 10);
+                if (window.map?.invalidateSize) setTimeout(() => window.map.invalidateSize(), 10);
             } else {
                 document.querySelectorAll('.header-tab')[1].classList.add('active');
                 document.getElementById('appGrid').style.display = 'none';
@@ -532,64 +847,258 @@
         };
 
         window.updateParam = function(type, id1, id2, field, value) {
-            let num = parseFloat(value);
-            if (isNaN(num)) return;
             if (type === 'gen') {
-                state.zones[id1].generators[id2][field] = num;
+                const gen = state.zones[id1].resources[id2];
+                if (!gen) return;
+                gen[field] = field === 'color' || field === 'costType' || field === 'profileType' ? value : Number(value);
+                if (field === 'costType' && value === 'piecewise') ensureCostPoints(gen);
+                if (field === 'profileType') {
+                    const profile = GENERATOR_PROFILES[value];
+                    if (profile?.shape) gen.profile = normalizeGeneratorShape(profile.shape);
+                    if (value === 'custom' && !gen.profile) gen.profile = normalizeGeneratorShape(gen.shape || Array(24).fill(1));
+                }
             } else if (type === 'line') {
-                state.lines[id1][field] = num;
+                const num = Number(value);
+                if (!Number.isFinite(num)) return;
+                const line = state.lines[id1];
+                if (!line) return;
+                if (field === 'reactance') {
+                    setLineReactance(line, num);
+                } else {
+                    line[field] = num;
+                    if (field === 'forwardLimit' || field === 'reverseLimit' || field === 'limit') {
+                        line.limit = Math.max(lineForwardLimit(line), lineReverseLimit(line));
+                    }
+                }
             } else if (type === 'storage') {
-                state.zones[id1].storage[id2][field] = num;
+                const storage = state.zones[id1].resources[id2];
+                const num = Number(value);
+                if (!storage || !Number.isFinite(num)) return;
+                storage[field] = num;
             }
-            solveModel();
+            invalidateSolution();
+            renderAll();
+            if (document.getElementById('dataView').classList.contains('active')) renderDataTables();
+        };
+
+        window.switchInnerTab = function(tabId) {
+            document.querySelectorAll('.inner-tab').forEach(el => {
+                if (el.getAttribute('onclick').includes(tabId)) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
+            document.querySelectorAll('.inner-tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab_' + tabId).classList.add('active');
         };
 
         window.renderDataTables = function() {
+            let numBuses = 0, numGens = 0, numLoads = 0, numBranches = 0, numStorage = 0;
+            
+            let busesHtml = '';
             let gensHtml = '';
+            let loadsHtml = '';
             let storageHtml = '';
+            
+            let idCounter = 1;
             Object.entries(state.zones).forEach(([zoneId, zone]) => {
-                Object.entries(zone.generators || {}).forEach(([genId, gen]) => {
+                numBuses++;
+                const zGens = Object.values(zone.resources || {}).filter(res => res.type !== 'storage').length;
+                const zStorage = Object.values(zone.resources || {}).filter(res => res.type === 'storage').length;
+                const zLoads = 1; // Assuming 1 load per bus in this model
+                numLoads++;
+                
+                busesHtml += `<tr>
+                    <td>${idCounter++}</td>
+                    <td>${zone.name}</td>
+                    <td>${zGens}</td>
+                    <td>${zLoads}</td>
+                    <td>${zStorage}</td>
+                    <td><button style="border-color:#ff5c7a; color:#ff5c7a; height:24px; padding:0 8px; font-size:11px;">Delete</button></td>
+                </tr>`;
+                
+                loadsHtml += `<tr>
+                    <td>${zone.load?.name || zone.name + ' Load'}</td>
+                    <td>${zone.name}</td>
+                    <td>${zone.load?.baseMW || 0}</td>
+                    <td>0</td>
+                </tr>`;
+
+                Object.entries(zone.resources || {}).filter(([, gen]) => gen.type !== 'storage').forEach(([genId, gen]) => {
+                    numGens++;
+                    const profileType = gen.profileType || inferredGeneratorProfileType(gen);
                     gensHtml += `<tr>
+                        <td class="color-cell"><span class="table-color-swatch" style="background:${gen.color || '#22c55e'}"><input type="color" value="${gen.color || '#22c55e'}" onchange="updateParam('gen', '${zoneId}', '${genId}', 'color', this.value)"></span></td>
+                        <td>${resourceDisplayName(zone, genId, gen)}</td>
                         <td>${zone.name}</td>
-                        <td>${gen.name}</td>
-                        <td><span class="status-pill" style="background:${RESOURCE_COLORS[gen.profile || gen.type] || '#58a6ff'}; color:#000;">${gen.profile || gen.type}</span></td>
                         <td><input type="number" value="${gen.cap}" onchange="updateParam('gen', '${zoneId}', '${genId}', 'cap', this.value)"></td>
-                        <td><input type="number" value="${gen.cost}" onchange="updateParam('gen', '${zoneId}', '${genId}', 'cost', this.value)"></td>
+                        <td>
+                            <select onchange="updateParam('gen', '${zoneId}', '${genId}', 'profileType', this.value)">
+                                ${generatorProfileOptions(profileType)}
+                            </select>
+                        </td>
+                        <td>
+                            <select onchange="updateParam('gen', '${zoneId}', '${genId}', 'costType', this.value)">
+                                <option value="linear" ${(gen.costType || 'linear') === 'linear' ? 'selected' : ''}>Linear</option>
+                                <option value="piecewise" ${gen.costType === 'piecewise' ? 'selected' : ''}>Piecewise Linear</option>
+                            </select>
+                        </td>
+                        <td>${gen.costType === 'piecewise' ? 'piecewise' : `<input type="number" value="${gen.cost ?? resourceCost(gen)}" onchange="updateParam('gen', '${zoneId}', '${genId}', 'cost', this.value)">`}</td>
+                        <td><button style="border-color:#ff5c7a; color:#ff5c7a; height:24px; padding:0 8px; font-size:11px;">Delete</button></td>
                     </tr>`;
                 });
-                Object.entries(zone.storage || {}).forEach(([stId, st]) => {
+                
+                Object.entries(zone.resources || {}).filter(([, st]) => st.type === 'storage').forEach(([stId, st]) => {
+                    numStorage++;
                     storageHtml += `<tr>
+                        <td>${resourceDisplayName(zone, stId, st)}</td>
                         <td>${zone.name}</td>
-                        <td>${st.name}</td>
                         <td><input type="number" value="${st.powerCap}" onchange="updateParam('storage', '${zoneId}', '${stId}', 'powerCap', this.value)"></td>
                         <td><input type="number" value="${st.duration}" onchange="updateParam('storage', '${zoneId}', '${stId}', 'duration', this.value)"></td>
                         <td><input type="number" value="${st.efficiency}" onchange="updateParam('storage', '${zoneId}', '${stId}', 'efficiency', this.value)"></td>
                     </tr>`;
                 });
             });
-            document.querySelector('#tableGens tbody').innerHTML = gensHtml;
-            document.querySelector('#tableStorage tbody').innerHTML = storageHtml;
-
+            
             let linesHtml = '';
             Object.entries(state.lines).forEach(([lineId, line]) => {
+                numBranches++;
                 linesHtml += `<tr>
                     <td>${line.name}</td>
                     <td>${state.zones[line.from]?.name || line.from}</td>
                     <td>${state.zones[line.to]?.name || line.to}</td>
-                    <td><input type="number" value="${line.forwardLimit}" onchange="updateParam('line', '${lineId}', null, 'forwardLimit', this.value)"></td>
-                    <td><input type="number" value="${line.reverseLimit}" onchange="updateParam('line', '${lineId}', null, 'reverseLimit', this.value)"></td>
-                    <td><input type="number" value="${line.reactance}" onchange="updateParam('line', '${lineId}', null, 'reactance', this.value)"></td>
+                    <td><input type="number" value="${lineForwardLimit(line)}" onchange="updateParam('line', '${lineId}', null, 'forwardLimit', this.value)"></td>
+                    <td><input type="number" value="${lineReverseLimit(line)}" onchange="updateParam('line', '${lineId}', null, 'reverseLimit', this.value)"></td>
+                    <td><input type="number" step="0.0001" value="${lineReactance(line).toFixed(4)}" onchange="updateParam('line', '${lineId}', null, 'reactance', this.value)"></td>
                 </tr>`;
             });
+            
+            document.querySelector('#tableBuses tbody').innerHTML = busesHtml;
+            document.querySelector('#tableGens tbody').innerHTML = gensHtml;
+            document.querySelector('#tableLoads tbody').innerHTML = loadsHtml;
             document.querySelector('#tableLines tbody').innerHTML = linesHtml;
+            document.querySelector('#tableStorage tbody').innerHTML = storageHtml;
+            
+            document.getElementById('badgeBuses').innerText = numBuses;
+            document.getElementById('badgeGens').innerText = numGens;
+            document.getElementById('badgeLoads').innerText = numLoads;
+            document.getElementById('badgeBranches').innerText = numBranches;
+            document.getElementById('badgeStorage').innerText = numStorage;
+
+            // Render Results tables
+            if (state.lmps) {
+                const zoneKeys = Object.keys(state.zones);
+                document.getElementById('lmpHeaders').innerHTML = '<th>HE</th>' + zoneKeys.map(z => `<th>${state.zones[z].name.toUpperCase()} ($/MWH)</th>`).join('');
+                let lmpBody = '';
+                for (let h = 0; h < 24; h++) {
+                    lmpBody += `<tr><td>${h+1}</td>` + zoneKeys.map(z => `<td>${(state.lmps[z]?.[h] ?? 0).toFixed(2)}</td>`).join('') + `</tr>`;
+                }
+                document.getElementById('lmpBody').innerHTML = lmpBody;
+            }
+
+            const generatorRows = Object.entries(state.zones).flatMap(([zoneId, zone]) =>
+                Object.entries(zone.resources || {})
+                    .filter(([, res]) => res.type !== 'storage')
+                    .map(([resId, res]) => ({ zoneId, zone, resId, res, label: resourceDisplayName(zone, resId, res) }))
+            );
+            document.getElementById('genDispatchHeaders').innerHTML = '<th>HE</th>' + generatorRows.map(({ label }) => `<th>${label.toUpperCase()} (MW)</th>`).join('');
+            document.getElementById('genCostHeaders').innerHTML = '<th>HE</th>' + generatorRows.map(({ label }) => `<th>${label.toUpperCase()} ($)</th>`).join('');
+            let genDispatchBody = '';
+            let genCostBody = '';
+            HOURS.forEach(hour => {
+                const h = hour - 1;
+                genDispatchBody += `<tr><td>${hour}</td>` + generatorRows.map(({ zoneId, resId }) => {
+                    const value = state.dispatch[zoneId]?.[resId]?.[h] || 0;
+                    return `<td>${value.toFixed(2)}</td>`;
+                }).join('') + '</tr>';
+                genCostBody += `<tr><td>${hour}</td>` + generatorRows.map(({ zoneId, resId, res }) => {
+                    const dispatch = state.dispatch[zoneId]?.[resId]?.[h] || 0;
+                    const cost = resourceOperatingCost(res, dispatch);
+                    return `<td>${cost.toFixed(2)}</td>`;
+                }).join('') + '</tr>';
+            });
+            document.getElementById('genDispatchBody').innerHTML = genDispatchBody;
+            document.getElementById('genCostBody').innerHTML = genCostBody;
+
+            const storageRows = Object.entries(state.zones).flatMap(([zoneId, zone]) =>
+                Object.entries(zone.resources || {})
+                    .filter(([, res]) => res.type === 'storage')
+                    .map(([resId, res]) => ({ zoneId, zone, resId, res, label: resourceDisplayName(zone, resId, res) }))
+            );
+            document.getElementById('storageOperationHeaders').innerHTML = '<th>HE</th>' + storageRows.map(({ label }) => `<th>${label.toUpperCase()} (MW)</th>`).join('');
+            document.getElementById('storageRevenueHeaders').innerHTML = '<th>HE</th>' + storageRows.map(({ label }) => `<th>${label.toUpperCase()} ($)</th>`).join('');
+            document.getElementById('storageRevenueTotalHeaders').innerHTML = storageRows.map(({ label }) => `<th>${label.toUpperCase()} ($)</th>`).join('');
+            let storageOperationBody = '';
+            let storageRevenueBody = '';
+            const storageRevenueTotals = Object.fromEntries(storageRows.map(({ zoneId, resId }) => [`${zoneId}_${resId}`, 0]));
+            HOURS.forEach(hour => {
+                const h = hour - 1;
+                storageOperationBody += `<tr><td>${hour}</td>` + storageRows.map(({ zoneId, resId }) => {
+                    const operation = state.dispatch[zoneId]?.[resId]?.[h] || 0;
+                    return `<td>${operation.toFixed(2)}</td>`;
+                }).join('') + '</tr>';
+                storageRevenueBody += `<tr><td>${hour}</td>` + storageRows.map(({ zoneId, resId }) => {
+                    const operation = state.dispatch[zoneId]?.[resId]?.[h] || 0;
+                    const lmp = state.lmps[zoneId]?.[h] || 0;
+                    const revenue = operation * lmp;
+                    storageRevenueTotals[`${zoneId}_${resId}`] += revenue;
+                    return `<td>${revenue.toFixed(2)}</td>`;
+                }).join('') + '</tr>';
+            });
+            document.getElementById('storageOperationBody').innerHTML = storageOperationBody;
+            document.getElementById('storageRevenueBody').innerHTML = storageRevenueBody;
+            document.getElementById('storageRevenueTotalBody').innerHTML = '<tr>' + storageRows.map(({ zoneId, resId }) => `<td>${storageRevenueTotals[`${zoneId}_${resId}`].toFixed(2)}</td>`).join('') + '</tr>';
+
+            if (state.flows) {
+                const lineKeys = Object.keys(state.lines);
+                document.getElementById('branchResHeaders').innerHTML = '<th>HE</th>' + lineKeys.map(l => `<th>${state.lines[l].name.toUpperCase()} (MW)</th>`).join('');
+                let flowBody = '';
+                for (let h = 0; h < 24; h++) {
+                    flowBody += `<tr><td>${h+1}</td>` + lineKeys.map(l => {
+                        const flow = state.flows[l]?.[h] ?? 0;
+                        const fw = lineScaledForwardLimit(state.lines[l]);
+                        const rv = lineScaledReverseLimit(state.lines[l]);
+                        const limit = flow >= 0 ? fw : rv;
+                        const util = Math.abs(flow) / Math.max(1, limit);
+                        const color = util > 0.98 ? 'var(--red)' : 'inherit';
+                        return `<td style="color:${color}">${flow.toFixed(0)}</td>`;
+                    }).join('') + `</tr>`;
+                }
+                document.getElementById('branchResBody').innerHTML = flowBody;
+            }
         };
 
         const HOURS = Array.from({ length: 24 }, (_, i) => i + 1);
         const BASE_LOAD_SHAPE = [0.72,0.68,0.65,0.64,0.66,0.74,0.86,0.94,0.98,1.00,1.02,1.03,1.04,1.06,1.10,1.17,1.27,1.36,1.42,1.36,1.24,1.08,0.92,0.80];
+        const LOAD_PROFILES = {
+            flat: { label: 'Flat', shape: Array(24).fill(1) },
+            residential: { label: 'Residential', shape: [0.64,0.60,0.58,0.57,0.60,0.72,0.88,0.96,0.94,0.88,0.84,0.82,0.84,0.88,0.94,1.04,1.20,1.36,1.44,1.34,1.16,0.96,0.80,0.70] },
+            commercial: { label: 'Commercial', shape: [0.52,0.50,0.49,0.49,0.52,0.62,0.78,0.94,1.06,1.14,1.18,1.20,1.18,1.16,1.12,1.06,0.96,0.82,0.68,0.60,0.56,0.54,0.53,0.52] },
+            industrial: { label: 'Industrial', shape: [0.92,0.91,0.90,0.90,0.91,0.94,0.98,1.02,1.04,1.05,1.05,1.04,1.04,1.04,1.03,1.03,1.02,1.00,0.98,0.96,0.95,0.94,0.93,0.92] },
+            ev: { label: 'EV Charging', shape: [1.18,1.10,0.96,0.82,0.70,0.62,0.58,0.56,0.58,0.62,0.66,0.70,0.74,0.80,0.88,0.98,1.10,1.24,1.38,1.48,1.52,1.46,1.36,1.26] }
+        };
+        const normalizeLoadShape = shape => {
+            const max = Math.max(...shape, 1);
+            return shape.map(value => clamp(value / max, 0, 1));
+        };
+        const normalizeGeneratorShape = shape => {
+            const max = Math.max(...shape, 1);
+            return shape.map(value => clamp(value / max, 0, 1));
+        };
         const SOLAR_SHAPE = [0,0,0,0,0,0.04,0.18,0.42,0.66,0.84,0.95,1,0.98,0.91,0.76,0.52,0.24,0.04,0,0,0,0,0,0];
         const WIND_SHAPE = [0.76,0.80,0.83,0.86,0.82,0.75,0.61,0.48,0.40,0.36,0.34,0.32,0.35,0.39,0.46,0.55,0.66,0.75,0.82,0.88,0.91,0.90,0.86,0.80];
         const HYDRO_SHAPE = [0.70,0.68,0.66,0.64,0.64,0.70,0.78,0.82,0.80,0.78,0.76,0.75,0.76,0.78,0.84,0.92,1.00,1.00,0.96,0.90,0.84,0.80,0.76,0.72];
         const IMPORT_SHAPE = Array(24).fill(1);
+        const GENERATOR_PROFILES = {
+            custom: { label: 'Custom', shape: null },
+            flat: { label: 'Flat', shape: Array(24).fill(1) },
+            solar: { label: 'Solar', shape: SOLAR_SHAPE },
+            wind_onshore: { label: 'Wind Onshore', shape: WIND_SHAPE },
+            wind_offshore: { label: 'Wind Offshore', shape: [0.84,0.86,0.88,0.89,0.88,0.85,0.78,0.70,0.64,0.60,0.58,0.58,0.60,0.64,0.70,0.76,0.82,0.88,0.92,0.95,0.96,0.94,0.90,0.86] },
+            peaker: { label: 'Peaker', shape: [0.10,0.08,0.08,0.08,0.10,0.16,0.24,0.32,0.38,0.42,0.45,0.46,0.46,0.48,0.54,0.66,0.82,0.96,1.00,0.96,0.76,0.52,0.30,0.16] },
+            baseload: { label: 'Baseload', shape: Array(24).fill(1) }
+        };
 
         const RESOURCE_COLORS = {
             gas: '#ff5c7a',
@@ -621,7 +1130,7 @@
                 }
             },
             sac: {
-                name: 'Sacramento', lat: 38.7, lng: -121.4, baseLoad: 2620,
+                name: 'Sacramento', lat: 38.95, lng: -120.95, baseLoad: 2620,
                 resources: {
                     hydro: { type: 'hydro', cap: 1900, cost: 10, shape: HYDRO_SHAPE },
                     solar: { type: 'solar', cap: 1800, cost: 0, shape: SOLAR_SHAPE },
@@ -645,7 +1154,7 @@
                 }
             },
             sp15: {
-                name: 'SP15', lat: 34.4, lng: -117.8, baseLoad: 6380,
+                name: 'SP15', lat: 34.75, lng: -117.8, baseLoad: 6380,
                 resources: {
                     gas: { type: 'gas', cap: 12800, cost: 76 },
                     solar: { type: 'solar', cap: 6500, cost: 0, shape: SOLAR_SHAPE },
@@ -695,6 +1204,9 @@
             hour: 18,
             selectedZone: 'sp15',
             selectedResource: 'gas',
+            selectedPanel: null,
+            selectedBranch: null,
+            draggingZone: null,
             scenario: {
                 loadScale: 100,
                 solarScale: 100,
@@ -709,16 +1221,24 @@
             solution: null,
             dispatch: {},
             lmps: {},
+            priceSetters: {},
             flows: {},
             totals: {}
         };
 
         let map;
         let dispatchChart;
+        let lmpChart;
         let layers = { nodes: {}, resources: {}, lines: {}, labels: {}, particles: {} };
         let particleTimer = null;
+        let editingLoadProfile = false;
+        let editingGeneratorProfile = false;
+        let editingCostPoint = null;
+        let editingStorageProfile = false;
+        let isSolving = false;
 
         const fmtMW = value => `${Math.round(value).toLocaleString()} MW`;
+        const fmtMWh = value => `${Math.round(value).toLocaleString()} MWh`;
         const fmtMoney = value => `$${Math.round(value).toLocaleString()}`;
         const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
         const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -730,18 +1250,131 @@
                 storage: state.scenario.storageScale / 100
             };
             const scale = scaleByType[resource.type] ?? 1;
-            const shape = resource.shape ? resource.shape[hourIndex] : 1;
+            const shape = resource.profile ? resource.profile[hourIndex] : (resource.shape ? resource.shape[hourIndex] : 1);
             return (resource.cap ?? resource.powerCap ?? 0) * shape * scale;
         }
 
         function resourceCost(resource) {
+            if (resource.costType === 'piecewise' && resource.costPoints?.length > 1) {
+                const points = resource.costPoints.slice().sort((a, b) => a.power - b.power);
+                const first = points[0];
+                const last = points[points.length - 1];
+                return (last.cost - first.cost) / Math.max(1, last.power - first.power);
+            }
             if (resource.type === 'gas') return resource.cost * state.scenario.gasPrice / 100;
             if (resource.type === 'import') return resource.cost * state.scenario.importPrice / 100;
             return resource.cost ?? 0.01;
         }
 
+        function resourceOperatingCost(resource, dispatch) {
+            if (resource.costType === 'piecewise' && resource.costPoints?.length > 1) {
+                const points = ensureCostPoints(resource);
+                if (dispatch <= points[0].power) return points[0].cost;
+                for (let i = 1; i < points.length; i++) {
+                    const prev = points[i - 1];
+                    const next = points[i];
+                    if (dispatch <= next.power) {
+                        const t = (dispatch - prev.power) / Math.max(1, next.power - prev.power);
+                        return prev.cost + t * (next.cost - prev.cost);
+                    }
+                }
+                const last = points[points.length - 1];
+                return last.cost;
+            }
+            return dispatch * resourceCost(resource);
+        }
+
+        function priceSettingResources(zoneIds, hourIndex) {
+            const resources = zoneIds.flatMap(zoneId => {
+                const zone = state.zones[zoneId];
+                return Object.entries(zone.resources || {})
+                    .filter(([, res]) => res.type !== 'storage')
+                    .map(([resId, res]) => {
+                        const dispatch = state.dispatch[zoneId]?.[resId]?.[hourIndex] || 0;
+                        const cap = Math.max(0, resourceCap(res, hourIndex));
+                        return {
+                            key: `${zoneId}:${resId}`,
+                            cost: resourceCost(res),
+                            dispatch,
+                            cap,
+                            marginal: dispatch > 0.5 && dispatch < cap - 0.5
+                        };
+                    });
+            });
+            const marginal = resources.filter(item => item.marginal);
+            const candidates = marginal.length ? marginal : resources.filter(item => item.dispatch > 0.5);
+            if (!candidates.length) return [];
+            const maxCost = Math.max(...candidates.map(item => item.cost));
+            return candidates
+                .filter(item => Math.abs(item.cost - maxCost) < 0.01)
+                .map(item => item.key);
+        }
+
+        function storageEnergyCap(res) {
+            return (res.energyCap ?? ((res.powerCap || 0) * (res.duration || 1))) * state.scenario.storageScale / 100;
+        }
+
+        function storagePowerCap(res) {
+            return (res.powerCap || 0) * state.scenario.storageScale / 100;
+        }
+
+        function numericOr(value, fallback = 0) {
+            const parsed = Number(value);
+            return Number.isFinite(parsed) ? parsed : fallback;
+        }
+
+        function lineForwardLimit(line) {
+            return numericOr(line.forwardLimit, numericOr(line.limit, 0));
+        }
+
+        function lineReverseLimit(line) {
+            return numericOr(line.reverseLimit, numericOr(line.limit, 0));
+        }
+
+        function lineScaledForwardLimit(line) {
+            return lineForwardLimit(line) * state.scenario.pathScale / 100;
+        }
+
+        function lineScaledReverseLimit(line) {
+            return lineReverseLimit(line) * state.scenario.pathScale / 100;
+        }
+
+        function lineLimitForFlow(line, flow) {
+            return flow >= 0 ? lineScaledForwardLimit(line) : lineScaledReverseLimit(line);
+        }
+
+        function lineReactance(line) {
+            const explicit = Number(line.reactance);
+            if (Number.isFinite(explicit) && explicit > 0) return explicit;
+            const susceptance = Number(line.b);
+            return Number.isFinite(susceptance) && susceptance !== 0 ? 1 / susceptance : 0;
+        }
+
+        function setLineReactance(line, value) {
+            if (!Number.isFinite(value) || value <= 0) return;
+            line.reactance = value;
+            line.b = 1 / value;
+        }
+
         function zoneLoad(zone, hourIndex, extra = 0) {
-            return zone.baseLoad * BASE_LOAD_SHAPE[hourIndex] * state.scenario.loadScale / 100 + extra;
+            const shape = zone.loadProfile || normalizeLoadShape(BASE_LOAD_SHAPE);
+            return zone.baseLoad * shape[hourIndex] * state.scenario.loadScale / 100 + extra;
+        }
+
+        function systemPeakLoad() {
+            return Math.max(...HOURS.map((_, i) => Object.values(state.zones).reduce((sum, zone) => sum + zoneLoad(zone, i), 0)));
+        }
+
+        function scaleSystemPeakLoad(nextPeak) {
+            const currentPeak = systemPeakLoad();
+            if (!Number.isFinite(nextPeak) || nextPeak <= 0 || currentPeak <= 0) return;
+            const ratio = nextPeak / currentPeak;
+            Object.values(state.zones).forEach(zone => {
+                zone.baseLoad = Math.max(1, zone.baseLoad * ratio);
+            });
+            invalidateSolution();
+            renderAll();
+            if (document.getElementById('dataView').classList.contains('active')) renderDataTables();
         }
 
         function addVar(model, id, cost = 0, unrestricted = false) {
@@ -749,6 +1382,19 @@
             model.variables[id].cost = cost;
             if (unrestricted) model.unrestricted[id] = 1;
             return model.variables[id];
+        }
+
+        function addCoeff(variable, constraint, coefficient) {
+            variable[constraint] = (variable[constraint] || 0) + coefficient;
+        }
+
+        function addSignedCoeff(model, id, constraint, coefficient, cost = 0) {
+            addCoeff(addVar(model, `${id}_pos`, cost), constraint, coefficient);
+            addCoeff(addVar(model, `${id}_neg`, cost), constraint, -coefficient);
+        }
+
+        function signedValue(solution, id) {
+            return (solution[`${id}_pos`] || 0) - (solution[`${id}_neg`] || 0);
         }
 
         function buildModel(loadBump = null) {
@@ -761,21 +1407,27 @@
                     model.constraints[`bal_${zoneId}_h${hour}`] = { equal: zoneLoad(zone, h, bump) };
                     model.constraints[`thetaRef_h${hour}`] = { equal: 0 };
 
-                    const theta = addVar(model, `theta_${zoneId}_h${hour}`, 0, true);
-                    theta[`thetaRef_h${hour}`] = zoneId === 'np15' ? 1 : 0;
+                    addSignedCoeff(model, `theta_${zoneId}_h${hour}`, `thetaRef_h${hour}`, zoneId === 'np15' ? 1 : 0);
 
                     Object.entries(zone.resources).forEach(([resId, res]) => {
                         if (res.type === 'storage') {
-                            const scale = state.scenario.storageScale / 100;
-                            const powerCap = res.powerCap * scale;
-                            const charge = addVar(model, `charge_${zoneId}_${resId}_h${hour}`, 0.02);
-                            const discharge = addVar(model, `discharge_${zoneId}_${resId}_h${hour}`, 0.02);
+                            const powerCap = storagePowerCap(res);
+                            const chargeCost = res.allowGridCharging === false ? 10000 : (res.cyclingCost ?? 0.02);
+                            const dischargeCost = res.cyclingCost ?? 0.02;
+                            const charge = addVar(model, `charge_${zoneId}_${resId}_h${hour}`, chargeCost);
+                            const discharge = addVar(model, `discharge_${zoneId}_${resId}_h${hour}`, dischargeCost);
                             charge[`bal_${zoneId}_h${hour}`] = -1;
                             discharge[`bal_${zoneId}_h${hour}`] = 1;
                             model.constraints[`chargeCap_${zoneId}_${resId}_h${hour}`] = { max: powerCap };
                             model.constraints[`dischargeCap_${zoneId}_${resId}_h${hour}`] = { max: powerCap };
                             charge[`chargeCap_${zoneId}_${resId}_h${hour}`] = 1;
                             discharge[`dischargeCap_${zoneId}_${resId}_h${hour}`] = 1;
+                            if (res.maxDailyCycles) {
+                                const maxThroughput = 2 * storageEnergyCap(res) * res.maxDailyCycles;
+                                model.constraints[`cycleCap_${zoneId}_${resId}`] = model.constraints[`cycleCap_${zoneId}_${resId}`] || { max: maxThroughput };
+                                charge[`cycleCap_${zoneId}_${resId}`] = 1;
+                                discharge[`cycleCap_${zoneId}_${resId}`] = 1;
+                            }
                         } else {
                             const gen = addVar(model, `gen_${zoneId}_${resId}_h${hour}`, resourceCost(res));
                             gen[`bal_${zoneId}_h${hour}`] = 1;
@@ -796,36 +1448,49 @@
                 });
 
                 Object.entries(state.lines).forEach(([lineId, line]) => {
-                    const limit = line.limit * state.scenario.pathScale / 100;
-                    const flow = addVar(model, `flow_${lineId}_h${hour}`, 0.001, true);
-                    flow[`bal_${line.from}_h${hour}`] = -1;
-                    flow[`bal_${line.to}_h${hour}`] = 1;
-                    model.constraints[`lineCap_${lineId}_h${hour}`] = { min: -limit, max: limit };
-                    flow[`lineCap_${lineId}_h${hour}`] = 1;
+                    const forwardLimit = lineScaledForwardLimit(line);
+                    const reverseLimit = lineScaledReverseLimit(line);
+                    const forwardFlow = addVar(model, `flow_${lineId}_fwd_h${hour}`, 0.001);
+                    const reverseFlow = addVar(model, `flow_${lineId}_rev_h${hour}`, 0.001);
+                    addCoeff(forwardFlow, `bal_${line.from}_h${hour}`, -1);
+                    addCoeff(forwardFlow, `bal_${line.to}_h${hour}`, 1);
+                    addCoeff(reverseFlow, `bal_${line.from}_h${hour}`, 1);
+                    addCoeff(reverseFlow, `bal_${line.to}_h${hour}`, -1);
+                    model.constraints[`lineFwdCap_${lineId}_h${hour}`] = { max: forwardLimit };
+                    model.constraints[`lineRevCap_${lineId}_h${hour}`] = { max: reverseLimit };
+                    addCoeff(forwardFlow, `lineFwdCap_${lineId}_h${hour}`, 1);
+                    addCoeff(reverseFlow, `lineRevCap_${lineId}_h${hour}`, 1);
 
                     model.constraints[`dc_${lineId}_h${hour}`] = { equal: 0 };
-                    flow[`dc_${lineId}_h${hour}`] = 1;
-                    addVar(model, `theta_${line.from}_h${hour}`, 0, true)[`dc_${lineId}_h${hour}`] = -line.b;
-                    addVar(model, `theta_${line.to}_h${hour}`, 0, true)[`dc_${lineId}_h${hour}`] = line.b;
+                    addCoeff(forwardFlow, `dc_${lineId}_h${hour}`, 1);
+                    addCoeff(reverseFlow, `dc_${lineId}_h${hour}`, -1);
+                    addSignedCoeff(model, `theta_${line.from}_h${hour}`, `dc_${lineId}_h${hour}`, -line.b);
+                    addSignedCoeff(model, `theta_${line.to}_h${hour}`, `dc_${lineId}_h${hour}`, line.b);
                 });
             });
 
             Object.entries(state.zones).forEach(([zoneId, zone]) => {
                 Object.entries(zone.resources).forEach(([resId, res]) => {
                     if (res.type !== 'storage') return;
-                    const scale = state.scenario.storageScale / 100;
-                    const energyCap = res.powerCap * scale * res.duration;
+                    const energyCap = storageEnergyCap(res);
+                    const initialSoc = res.initialSoc ?? 0;
+                    const terminalSoc = res.terminalSoc ?? initialSoc;
                     HOURS.forEach(hour => {
                         const soc = addVar(model, `soc_${zoneId}_${resId}_h${hour}`, 0);
                         model.constraints[`socCap_${zoneId}_${resId}_h${hour}`] = { max: energyCap };
                         soc[`socCap_${zoneId}_${resId}_h${hour}`] = 1;
-                        model.constraints[`socBal_${zoneId}_${resId}_h${hour}`] = { equal: hour === 1 ? res.initialSoc * energyCap : 0 };
+                        if (res.socProfile?.[hour - 1] !== undefined) {
+                            const target = clamp(res.socProfile[hour - 1], 0, 1) * energyCap;
+                            model.constraints[`socTarget_${zoneId}_${resId}_h${hour}`] = { min: target * 0.92, max: target * 1.08 };
+                            soc[`socTarget_${zoneId}_${resId}_h${hour}`] = 1;
+                        }
+                        model.constraints[`socBal_${zoneId}_${resId}_h${hour}`] = { equal: hour === 1 ? initialSoc * energyCap : 0 };
                         soc[`socBal_${zoneId}_${resId}_h${hour}`] = 1;
-                        addVar(model, `charge_${zoneId}_${resId}_h${hour}`, 0.02)[`socBal_${zoneId}_${resId}_h${hour}`] = -res.efficiency;
-                        addVar(model, `discharge_${zoneId}_${resId}_h${hour}`, 0.02)[`socBal_${zoneId}_${resId}_h${hour}`] = 1 / res.efficiency;
+                        addVar(model, `charge_${zoneId}_${resId}_h${hour}`, res.cyclingCost ?? 0.02)[`socBal_${zoneId}_${resId}_h${hour}`] = -(res.efficiency ?? 1);
+                        addVar(model, `discharge_${zoneId}_${resId}_h${hour}`, res.cyclingCost ?? 0.02)[`socBal_${zoneId}_${resId}_h${hour}`] = 1 / Math.max(0.01, res.efficiency ?? 1);
                         if (hour > 1) addVar(model, `soc_${zoneId}_${resId}_h${hour - 1}`, 0)[`socBal_${zoneId}_${resId}_h${hour}`] = -1;
                     });
-                    model.constraints[`socEnd_${zoneId}_${resId}`] = { equal: res.initialSoc * energyCap };
+                    model.constraints[`socEnd_${zoneId}_${resId}`] = { equal: terminalSoc * energyCap };
                     addVar(model, `soc_${zoneId}_${resId}_h24`, 0)[`socEnd_${zoneId}_${resId}`] = 1;
                 });
             });
@@ -833,16 +1498,24 @@
             return model;
         }
 
-        function solveModel() {
+        async function solveModel() {
+            if (isSolving) return;
+            isSolving = true;
             setStatus('SOLVING', cssVar('--yellow'), '#211900');
-            document.getElementById('solveBtn').textContent = 'Solving...';
-            const solution = solver.Solve(buildModel());
-            state.solution = solution;
-            deriveResults();
-            estimateLmps();
-            setStatus(solution.feasible ? 'SOLVED' : 'INFEASIBLE', solution.feasible ? cssVar('--green') : cssVar('--red'), solution.feasible ? '#07130e' : '#270611');
-            document.getElementById('solveBtn').textContent = 'Solve DC OPF';
-            renderAll();
+            setSolveButtonLoading(true);
+            await new Promise(resolve => setTimeout(resolve, 60));
+            try {
+                const solution = solver.Solve(buildModel());
+                state.solution = solution;
+                deriveResults();
+                estimateLmps();
+                setStatus(solution.feasible ? 'SOLVED' : 'INFEASIBLE', solution.feasible ? cssVar('--green') : cssVar('--red'), solution.feasible ? '#07130e' : '#270611');
+                renderAll();
+                if (document.getElementById('dataView').classList.contains('active')) renderDataTables();
+            } finally {
+                setSolveButtonLoading(false);
+                isSolving = false;
+            }
         }
 
         function deriveResults() {
@@ -876,13 +1549,14 @@
 
                 Object.entries(state.lines).forEach(([lineId]) => {
                     state.flows[lineId] = state.flows[lineId] || [];
-                    state.flows[lineId][h] = sol[`flow_${lineId}_h${hour}`] || 0;
+                    state.flows[lineId][h] = (sol[`flow_${lineId}_fwd_h${hour}`] || 0) - (sol[`flow_${lineId}_rev_h${hour}`] || 0);
                 });
             });
         }
 
         function estimateLmps() {
             state.lmps = {};
+            state.priceSetters = {};
             Object.keys(state.zones).forEach(zoneId => {
                 state.lmps[zoneId] = [];
                 HOURS.forEach(hour => {
@@ -924,14 +1598,14 @@
                         : dispatchedCosts.length
                             ? Math.max(...dispatchedCosts)
                             : storageDispatch ? 70 : 25;
-                    const loadRatio = zoneLoad(zone, h) / Math.max(1, zone.baseLoad * BASE_LOAD_SHAPE[h]);
+                    const loadRatio = zoneLoad(zone, h) / Math.max(1, zone.baseLoad * state.scenario.loadScale / 100);
                     const loadPressure = clamp((loadRatio - 0.95) / 0.35, 0, 1);
                     const utilizationPressure = Object.entries(state.lines)
                         .filter(([, line]) => line.from === zoneId || line.to === zoneId)
                         .reduce((peak, [lineId, line]) => {
-                            const flow = Math.abs(state.flows[lineId]?.[h] || 0);
-                            const limit = line.limit * state.scenario.pathScale / 100;
-                            return Math.max(peak, flow / Math.max(1, limit));
+                            const flow = state.flows[lineId]?.[h] || 0;
+                            const limit = lineLimitForFlow(line, flow);
+                            return Math.max(peak, Math.abs(flow) / Math.max(1, limit));
                         }, 0);
                     const renewableShare = Object.entries(zone.resources)
                         .filter(([, res]) => res.type === 'solar' || res.type === 'wind' || res.type === 'hydro')
@@ -961,9 +1635,9 @@
                 };
 
                 Object.entries(state.lines).forEach(([lineId, line]) => {
-                    const flow = Math.abs(state.flows[lineId]?.[h] || 0);
-                    const limit = line.limit * state.scenario.pathScale / 100;
-                    const util = flow / Math.max(1, limit);
+                    const flow = state.flows[lineId]?.[h] || 0;
+                    const limit = lineLimitForFlow(line, flow);
+                    const util = Math.abs(flow) / Math.max(1, limit);
                     if (util < 0.98) union(line.from, line.to);
                 });
 
@@ -975,6 +1649,8 @@
                 });
 
                 Object.values(components).forEach(component => {
+                    state.priceSetters[h] = state.priceSetters[h] || [];
+                    state.priceSetters[h].push(...priceSettingResources(component, h));
                     const weighted = component.reduce((acc, zoneId) => {
                         const load = zoneLoad(state.zones[zoneId], h);
                         acc.priceLoad += state.lmps[zoneId][h] * load;
@@ -1029,19 +1705,70 @@
 
         function setStatus(text, bg, fg) {
             const el = document.getElementById('solveStatus');
+            if (!el) return;
             el.textContent = text;
             el.style.background = bg;
             el.style.color = fg;
         }
 
+        function setSolveButtonText(text) {
+            const el = document.getElementById('solveBtnStudio') || document.getElementById('solveBtn');
+            if (el) el.textContent = text;
+        }
+
+        function setSolveButtonLoading(isLoading) {
+            const el = document.getElementById('solveBtnStudio') || document.getElementById('solveBtn');
+            if (!el) return;
+            el.textContent = isLoading ? 'Loading...' : 'Solve DC OPF';
+            el.disabled = isLoading;
+            el.classList.toggle('loading', isLoading);
+        }
+
         function markScenarioPending() {
             setStatus('PENDING', cssVar('--yellow'), '#211900');
-            document.getElementById('solveBtn').textContent = 'Solve DC OPF';
+            setSolveButtonText('Solve DC OPF');
+        }
+
+        function invalidateSolution() {
+            state.solution = null;
+            state.dispatch = {};
+            state.lmps = {};
+            state.priceSetters = {};
+            state.flows = {};
+            state.totals = {};
+            markScenarioPending();
         }
 
         function initMap() {
             map = L.map('map', { zoomControl: false, attributionControl: false, preferCanvas: true }).setView([36.8, -119.5], 7);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 10 }).addTo(map);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+                maxZoom: 18,
+                subdomains: 'abcd'
+            }).addTo(map);
+            loadCaliforniaBoundary();
+        }
+
+        async function loadCaliforniaBoundary() {
+            try {
+                const response = await fetch('https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json');
+                const data = await response.json();
+                const california = {
+                    type: 'FeatureCollection',
+                    features: data.features.filter(feature => feature.properties?.name === 'California')
+                };
+                L.geoJSON(california, {
+                    interactive: false,
+                    style: {
+                        color: 'rgba(71, 85, 105, .62)',
+                        weight: 1.8,
+                        opacity: .7,
+                        fillColor: 'rgba(96, 165, 250, .025)',
+                        fillOpacity: .025
+                    }
+                }).addTo(map);
+            } catch (error) {
+                console.warn('California boundary failed to load', error);
+            }
         }
 
         function clearMapLayers() {
@@ -1056,6 +1783,18 @@
             ];
         }
 
+        function storageFill(zoneId, resId, res, hourIndex) {
+            const energyCap = Math.max(1, storageEnergyCap(res));
+            let soc = 0;
+            for (let i = 0; i <= hourIndex; i++) {
+                const net = state.dispatch[zoneId]?.[resId]?.[i] || 0;
+                if (net < 0) soc += -net * (res.efficiency || 1);
+                if (net > 0) soc -= net / Math.max(0.01, res.efficiency || 1);
+                soc = clamp(soc, 0, energyCap);
+            }
+            return soc / energyCap;
+        }
+
         function startFlowParticles() {
             if (particleTimer) clearInterval(particleTimer);
             particleTimer = setInterval(() => {
@@ -1065,12 +1804,11 @@
                     const particles = layers.particles[lineId] || [];
                     const flow = state.flows[lineId]?.[h] || 0;
                     const magnitude = Math.abs(flow);
-                    const util = magnitude / Math.max(1, line.limit * state.scenario.pathScale / 100);
+                    const util = magnitude / Math.max(1, lineLimitForFlow(line, flow));
                     const from = flow >= 0 ? state.zones[line.from] : state.zones[line.to];
                     const to = flow >= 0 ? state.zones[line.to] : state.zones[line.from];
-                    const speed = clamp(util, 0.25, 1.25);
                     particles.forEach((marker, index) => {
-                        const base = (performance.now() / (2600 / speed) + index / particles.length) % 1;
+                        const base = (performance.now() / 3200 + index / particles.length) % 1;
                         marker.setLatLng(interpolateLatLng(from, to, base));
                         marker.setOpacity(magnitude > 10 ? 0.9 : 0);
                     });
@@ -1079,10 +1817,11 @@
         }
 
         function renderMap() {
-            if (!map || !state.solution) return;
+            if (!map) return;
             clearMapLayers();
             const h = state.hour - 1;
-            const branchLimits = Object.values(state.lines).map(line => line.limit * state.scenario.pathScale / 100);
+            const solved = Boolean(state.solution);
+            const branchLimits = Object.values(state.lines).map(line => Math.max(lineScaledForwardLimit(line), lineScaledReverseLimit(line)));
             const minBranchLimit = Math.min(...branchLimits);
             const maxBranchLimit = Math.max(...branchLimits);
             const branchWidth = limit => {
@@ -1093,23 +1832,27 @@
             Object.entries(state.lines).forEach(([lineId, line]) => {
                 const from = state.zones[line.from];
                 const to = state.zones[line.to];
-                const flow = state.flows[lineId][h] || 0;
-                const limit = line.limit * state.scenario.pathScale / 100;
+                const flow = state.flows[lineId]?.[h] || 0;
+                const limit = lineLimitForFlow(line, flow);
                 const util = Math.abs(flow) / Math.max(1, limit);
-                const color = util > .98 ? cssVar('--red') : '#8b99ad';
+                const selected = lineId === state.selectedBranch;
+                const color = selected ? cssVar('--yellow') : (util > .98 ? cssVar('--red') : '#8b99ad');
                 layers.lines[lineId] = L.polyline([[from.lat, from.lng], [to.lat, to.lng]], {
-                    color, weight: branchWidth(limit), opacity: .88
+                    color, weight: branchWidth(Math.max(lineScaledForwardLimit(line), lineScaledReverseLimit(line))) + (selected ? 2 : 0), opacity: selected ? 1 : .88
                 }).addTo(map)
-                    .bindTooltip(`<strong>${line.name}</strong><br><span class="muted">${state.zones[line.from].name} -> ${state.zones[line.to].name}</span><br>${Math.round(flow)} MW / ${Math.round(util * 100)}%`, {
+                    .bindTooltip(`<strong>${line.name}</strong><br><span class="muted">${state.zones[line.from].name} -> ${state.zones[line.to].name}</span><br>${solved ? `${Math.round(flow)} MW / ${Math.round(util * 100)}%` : `${Math.round(limit)} MW rating`}`, {
                         className: 'opf-tooltip',
                         direction: 'top',
                         sticky: true,
                         opacity: 1
                     })
-                    .on('click', () => renderLineTable(lineId));
-                const particleCount = util > .85 ? 2 : 1;
+                    .on('click', () => selectBranch(lineId));
+                const fromPoint = map.latLngToLayerPoint([from.lat, from.lng]);
+                const toPoint = map.latLngToLayerPoint([to.lat, to.lng]);
+                const particleSpacing = 120;
+                const particleCount = Math.max(1, Math.round(fromPoint.distanceTo(toPoint) / particleSpacing));
                 const particleSize = Math.round(6 + clamp(util, 0, 1) * 11);
-                layers.particles[lineId] = Array.from({ length: particleCount }, (_, index) => {
+                layers.particles[lineId] = solved ? Array.from({ length: particleCount }, (_, index) => {
                     const marker = L.marker(interpolateLatLng(from, to, index / particleCount), {
                         interactive: false,
                         icon: L.divIcon({
@@ -1120,52 +1863,82 @@
                         })
                     }).addTo(map);
                     return marker;
-                });
+                }) : [];
             });
 
             Object.entries(state.zones).forEach(([zoneId, zone]) => {
                 const lmp = state.lmps[zoneId]?.[h] ?? 0;
                 const color = lmpColor(lmp);
                 layers.nodes[zoneId] = L.marker([zone.lat, zone.lng], {
+                    draggable: state.draggingZone === zoneId,
                     icon: L.divIcon({
                         className: '',
-                        html: `<div class="node-label ${zoneId === state.selectedZone ? 'selected' : ''}"><div class="node-core" style="background:${color}; box-shadow:0 0 18px ${color}"><div class="node-price-mini">$${Math.round(lmp)}</div></div></div>`,
+                        html: `<div class="node-label ${zoneId === state.selectedZone ? 'selected' : ''}"><div class="node-core" style="background:${color}; box-shadow:0 0 18px ${color}"><div class="node-price-mini">${solved ? `$${Math.round(lmp)}` : ''}</div></div></div>`,
                         iconSize: [56, 56],
                         iconAnchor: [0, 0]
                     })
                 }).addTo(map)
-                    .bindTooltip(`<strong>${zone.name}</strong><br>$${Math.round(lmp)}/MWh<br><span class="muted">${fmtMW(zoneLoad(zone, h))} load</span>`, {
+                    .bindTooltip(`<strong>${zone.name}</strong><br>${solved ? `$${Math.round(lmp)}/MWh` : 'Unsolved'}<br><span class="muted">${fmtMW(zoneLoad(zone, h))} load</span>`, {
                         className: 'opf-tooltip',
                         direction: 'top',
                         offset: [0, -14],
                         opacity: 1
                     })
-                    .on('click', () => selectZone(zoneId));
+                    .on('click', () => selectZone(zoneId))
+                    .on('dragend', event => {
+                        const next = event.target.getLatLng();
+                        zone.lat = Number(next.lat.toFixed(4));
+                        zone.lng = Number(next.lng.toFixed(4));
+                        invalidateSolution();
+                        renderAll();
+                    });
 
-                const genTotal = Object.entries(zone.resources)
+                const generatorEntries = Object.entries(zone.resources)
                     .filter(([, res]) => res.type !== 'storage')
-                    .reduce((sum, [resId]) => sum + (state.dispatch[zoneId][resId]?.[h] || 0), 0);
+                const storageEntry = Object.entries(zone.resources)
+                    .find(([, res]) => res.type === 'storage');
                 const storageTotal = Object.entries(zone.resources)
                     .filter(([, res]) => res.type === 'storage')
-                    .reduce((sum, [resId]) => sum + (state.dispatch[zoneId][resId]?.[h] || 0), 0);
+                    .reduce((sum, [resId]) => sum + (state.dispatch[zoneId]?.[resId]?.[h] || 0), 0);
                 const satellites = [
-                    { id: 'load', label: 'Load', value: zoneLoad(zone, h), color: '#f97316', angle: -Math.PI / 2, click: () => selectZone(zoneId) },
-                    { id: 'gen', label: 'Generation', value: genTotal, color: '#22c55e', angle: Math.PI * 0.8, click: () => selectResource(zoneId, Object.keys(zone.resources).find(id => zone.resources[id].type !== 'storage')) },
-                    { id: 'storage', label: 'Storage', value: storageTotal, color: '#a855f7', angle: Math.PI * 0.2, click: () => selectResource(zoneId, Object.keys(zone.resources).find(id => zone.resources[id].type === 'storage') || Object.keys(zone.resources)[0]) }
-                ];
+                    { id: 'load', label: 'Load', value: zoneLoad(zone, h), utilization: zoneLoad(zone, h) / Math.max(1, zone.baseLoad * state.scenario.loadScale / 100), color: '#f97316', click: () => selectLoad(zoneId) },
+                    ...generatorEntries.map(([resId, res]) => ({
+                        id: resId,
+                        label: resourceDisplayName(zone, resId, res),
+                        value: state.dispatch[zoneId]?.[resId]?.[h] || 0,
+                        utilization: (state.dispatch[zoneId]?.[resId]?.[h] || 0) / Math.max(1, resourceCap(res, h)),
+                        color: res.color || '#22c55e',
+                        priceSetting: Boolean(state.priceSetters[h]?.includes(`${zoneId}:${resId}`)),
+                        click: () => selectResource(zoneId, resId)
+                    })),
+                    {
+                        id: 'storage',
+                        label: 'Storage',
+                        value: storageTotal,
+                        utilization: storageEntry ? storageFill(zoneId, storageEntry[0], storageEntry[1], h) : 0,
+                        color: '#a855f7',
+                        click: () => storageEntry ? selectResource(zoneId, storageEntry[0]) : selectZone(zoneId)
+                    }
+                ].map((item, index, items) => ({
+                    ...item,
+                    angle: (Math.PI * 2 * index / items.length) - (Math.PI / 2)
+                }));
                 layers.resources[zoneId] = satellites.map(item => {
-                    const radius = .34;
-                    const lat = zone.lat + Math.cos(item.angle) * radius;
-                    const lng = zone.lng + Math.sin(item.angle) * radius;
-                    return L.marker([lat, lng], {
+                    const orbitRadius = 40;
+                    const dotRadius = 10;
+                    const dx = Math.sin(item.angle) * orbitRadius;
+                    const dy = -Math.cos(item.angle) * orbitRadius;
+                    const borderWidth = item.priceSetting ? 4 : 1.5;
+                    const glow = item.priceSetting ? 'box-shadow:0 0 0 3px rgba(250,204,21,.32), 0 0 18px rgba(250,204,21,.7);' : '';
+                    return L.marker([zone.lat, zone.lng], {
                         icon: L.divIcon({
                             className: '',
-                            html: `<div class="res-label" style="background:${item.color}"></div>`,
+                            html: `<div class="res-label" style="border-width:${borderWidth}px; ${glow} background:conic-gradient(${item.color} 0deg ${Math.round(clamp(item.utilization || 0, 0, 1) * 360)}deg, rgba(15,23,42,.92) ${Math.round(clamp(item.utilization || 0, 0, 1) * 360)}deg 360deg)"></div>`,
                             iconSize: [20, 20],
-                            iconAnchor: [10, 10]
+                            iconAnchor: [dotRadius - dx, dotRadius - dy]
                         })
                     }).addTo(map)
-                        .bindTooltip(`<strong>${zone.name} ${item.label}</strong><br><span class="muted">${Math.round(item.value)} MW at HE ${state.hour}</span>`, {
+                        .bindTooltip(`<strong>${zone.name} ${item.label}</strong><br><span class="muted">${Math.round(item.value)} MW at HE ${state.hour}<br>${Math.round(clamp(item.utilization || 0, 0, 1) * 100)}% filled${item.priceSetting ? '<br>Setting local LMP' : ''}</span>`, {
                             className: 'opf-tooltip',
                             direction: 'top',
                             offset: [0, -8],
@@ -1223,40 +1996,995 @@
             document.querySelectorAll('[data-zone]').forEach(btn => btn.addEventListener('click', () => selectZone(btn.dataset.zone)));
         }
 
+        function renderBranchDetail() {
+            const lineId = state.selectedBranch;
+            const line = state.lines[lineId];
+            const title = document.getElementById('selectionTitle');
+            if (title) title.textContent = 'Selected Branch';
+            if (!line) {
+                state.selectedBranch = null;
+                renderZoneDetail();
+                return;
+            }
+            const h = state.hour - 1;
+            const flow = state.flows[lineId]?.[h] || 0;
+            const limit = lineLimitForFlow(line, flow);
+            const util = Math.abs(flow) / Math.max(1, limit);
+            const zoneOptions = Object.entries(state.zones)
+                .map(([zoneId, zone]) => `<option value="${zoneId}">${zone.name}</option>`)
+                .join('');
+            document.getElementById('zoneDetail').innerHTML = `
+                <div class="metric" style="margin-bottom:12px;">
+                    <div class="label">${line.name}</div>
+                    <div class="value" style="color:${util > .98 ? cssVar('--red') : cssVar('--yellow')}">${state.solution ? `${Math.round(flow)} MW` : 'Unsolved'}</div>
+                    <div class="sub">${state.zones[line.from]?.name || line.from} -> ${state.zones[line.to]?.name || line.to} at HE ${state.hour}</div>
+                </div>
+                <div class="summary-panel">
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label>From</label>
+                            <select id="branchFromInput" class="select-input">${zoneOptions}</select>
+                        </div>
+                        <div class="form-field">
+                            <label>To</label>
+                            <select id="branchToInput" class="select-input">${zoneOptions}</select>
+                        </div>
+                        <button id="applyBranchTopology" class="mini-button">Apply</button>
+                    </div>
+                    <div class="form-grid" style="margin-top:10px;">
+                        <div class="form-field">
+                            <label>Forward Tx Capacity (MW)</label>
+                            <input id="branchForwardInput" class="peak-input" type="number" min="0" step="1" value="${Math.round(lineForwardLimit(line))}">
+                        </div>
+                        <div class="form-field">
+                            <label>Reverse Tx Capacity (MW)</label>
+                            <input id="branchReverseInput" class="peak-input" type="number" min="0" step="1" value="${Math.round(lineReverseLimit(line))}">
+                        </div>
+                        <button id="applyBranchRatings" class="mini-button">Apply</button>
+                    </div>
+                    <div class="form-grid" style="margin-top:10px;">
+                        <div class="form-field" style="grid-column:1 / span 2;">
+                            <label>Reactance (P.U.)</label>
+                            <input id="branchReactanceInput" class="peak-input" type="number" min="0.0001" step="0.0001" value="${lineReactance(line).toFixed(4)}">
+                        </div>
+                        <button id="applyBranchReactance" class="mini-button">Apply</button>
+                    </div>
+                    <div class="load-editor-note">Forward flow follows From -> To. Reverse capacity applies in the opposite direction.</div>
+                </div>
+            `;
+            document.getElementById('branchFromInput').value = line.from;
+            document.getElementById('branchToInput').value = line.to;
+            setupBranchEditor(lineId);
+        }
+
+        function setupBranchEditor(lineId) {
+            const line = state.lines[lineId];
+            if (!line) return;
+            const applyTopology = () => {
+                const from = document.getElementById('branchFromInput')?.value;
+                const to = document.getElementById('branchToInput')?.value;
+                if (!state.zones[from] || !state.zones[to] || from === to) return;
+                line.from = from;
+                line.to = to;
+                invalidateSolution();
+                renderAll();
+                if (document.getElementById('dataView').classList.contains('active')) renderDataTables();
+            };
+            const applyRatings = () => {
+                const forward = Number(document.getElementById('branchForwardInput')?.value);
+                const reverse = Number(document.getElementById('branchReverseInput')?.value);
+                if (Number.isFinite(forward) && forward >= 0) line.forwardLimit = forward;
+                if (Number.isFinite(reverse) && reverse >= 0) line.reverseLimit = reverse;
+                line.limit = Math.max(lineForwardLimit(line), lineReverseLimit(line));
+                invalidateSolution();
+                renderAll();
+                if (document.getElementById('dataView').classList.contains('active')) renderDataTables();
+            };
+            const applyReactance = () => {
+                const reactance = Number(document.getElementById('branchReactanceInput')?.value);
+                setLineReactance(line, reactance);
+                invalidateSolution();
+                renderAll();
+                if (document.getElementById('dataView').classList.contains('active')) renderDataTables();
+            };
+            document.getElementById('applyBranchTopology')?.addEventListener('click', applyTopology);
+            document.getElementById('applyBranchRatings')?.addEventListener('click', applyRatings);
+            document.getElementById('applyBranchReactance')?.addEventListener('click', applyReactance);
+        }
+
         function renderZoneDetail() {
+            if (state.selectedBranch) {
+                renderBranchDetail();
+                return;
+            }
+            const title = document.getElementById('selectionTitle');
+            if (title) title.textContent = 'Selected Zone';
             const zone = state.zones[state.selectedZone];
             const h = state.hour - 1;
             const lmp = state.lmps[state.selectedZone]?.[h] ?? 0;
             const load = zoneLoad(zone, h);
-            const resourceRows = Object.entries(zone.resources).map(([resId, res]) => {
-                const value = state.dispatch[state.selectedZone]?.[resId]?.[h] || 0;
-                const cap = res.type === 'storage' ? res.powerCap * state.scenario.storageScale / 100 : resourceCap(res, h);
-                return `<button class="list-item ${resId === state.selectedResource ? 'active' : ''}" data-resource="${resId}">
-                    <span class="dot" style="background:${RESOURCE_COLORS[res.type]}"></span>
-                    <span><span class="name">${resId.replaceAll('_', ' ')}</span><span class="meta">${res.type} · cap ${fmtMW(cap)}</span></span>
-                    <span class="tag">${Math.round(value)} MW</span>
-                </button>`;
-            }).join('');
+            const generators = Object.entries(zone.resources).filter(([, res]) => res.type !== 'storage');
+            const storageEntries = Object.entries(zone.resources).filter(([, res]) => res.type === 'storage');
+            const storageCapacity = Object.values(zone.resources)
+                .filter(res => res.type === 'storage')
+                .reduce((sum, res) => sum + storagePowerCap(res), 0);
+            const locationPanel = state.selectedPanel === 'location' ? `
+                <div class="summary-panel">
+                    <div class="location-grid">
+                        <div class="form-field">
+                            <label>Latitude</label>
+                            <input id="zoneLatInput" class="peak-input" type="number" step="0.0001" value="${zone.lat.toFixed(4)}">
+                        </div>
+                        <div class="form-field">
+                            <label>Longitude</label>
+                            <input id="zoneLngInput" class="peak-input" type="number" step="0.0001" value="${zone.lng.toFixed(4)}">
+                        </div>
+                    </div>
+                    <button id="applyLocation" class="mini-button" style="margin-top:10px;">Apply</button>
+                    <button id="toggleLocationDrag" class="mini-button" style="margin-top:10px;">${state.draggingZone === state.selectedZone ? 'Done Dragging' : 'Drag On Map'}</button>
+                    <div class="drag-hint ${state.draggingZone === state.selectedZone ? 'active' : ''}">${state.draggingZone === state.selectedZone ? 'Drag the selected bus on the map. Connected branches update with the node.' : 'Edit coordinates directly or enable map dragging.'}</div>
+                </div>
+            ` : '';
+            const loadPanel = state.selectedPanel === 'load' ? `
+                <div class="summary-panel">
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label>Peak Load (MW)</label>
+                            <input id="peakLoadInput" class="peak-input" type="number" min="1" step="1" value="${Math.round(zone.baseLoad)}">
+                        </div>
+                        <div class="form-field">
+                            <label>Profile</label>
+                            <select id="loadProfileSelect" class="select-input">
+                                ${Object.entries(LOAD_PROFILES).map(([key, profile]) => `<option value="${key}">${profile.label}</option>`).join('')}
+                            </select>
+                        </div>
+                        <button id="applyLoadProfile" class="mini-button">Apply</button>
+                    </div>
+                    <div class="load-editor-note">Drag over bars to adjust hourly demand</div>
+                    <canvas id="loadProfileCanvas" class="load-profile-canvas"></canvas>
+                    <div class="load-axis-label">Hour</div>
+                </div>
+            ` : '';
+            if (state.selectedPanel === 'generators' && state.selectedResource && !generators.some(([resId]) => resId === state.selectedResource)) {
+                state.selectedResource = generators[0]?.[0] || 'load';
+            }
+            const generatorPanel = state.selectedPanel === 'generators' ? `
+                <div class="summary-panel">
+                    <div class="generator-list">
+                        ${generators.map(([resId, res]) => {
+                            const value = state.dispatch[state.selectedZone]?.[resId]?.[h] || 0;
+                            return `<div>
+                                <button class="list-item ${resId === state.selectedResource ? 'active' : ''}" data-generator="${resId}">
+                                    <span class="dot" style="background:${res.color || '#22c55e'}"></span>
+                                    <span><span class="name">${resourceDisplayName(zone, resId, res)}</span><span class="meta">cap ${fmtMW(res.cap || 0)}</span></span>
+                                    <span class="tag">${Math.round(value)} MW</span>
+                                </button>
+                                ${resId === state.selectedResource ? renderGeneratorEditor(resId, res) : ''}
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            ` : '';
+            if (state.selectedPanel === 'storage' && state.selectedResource && !storageEntries.some(([resId]) => resId === state.selectedResource)) {
+                state.selectedResource = storageEntries[0]?.[0] || null;
+            }
+            const storagePanel = state.selectedPanel === 'storage' ? `
+                <div class="summary-panel">
+                    <div class="generator-list">
+                        ${storageEntries.map(([resId, res]) => {
+                            const value = state.dispatch[state.selectedZone]?.[resId]?.[h] || 0;
+                            return `<div>
+                                <button class="list-item ${resId === state.selectedResource ? 'active' : ''}" data-storage="${resId}">
+                                    <span class="dot" style="background:#a855f7"></span>
+                                    <span><span class="name">${resourceDisplayName(zone, resId, res)}</span><span class="meta">${fmtMW(storagePowerCap(res))} · ${fmtMWh(storageEnergyCap(res))}</span></span>
+                                    <span class="tag">${Math.round(value)} MW</span>
+                                </button>
+                                ${resId === state.selectedResource ? renderStorageEditor(resId, res) : ''}
+                            </div>`;
+                        }).join('') || '<div class="muted">No storage resources on this bus</div>'}
+                    </div>
+                </div>
+            ` : '';
 
             document.getElementById('zoneDetail').innerHTML = `
                 <div class="metric" style="margin-bottom:12px;">
                     <div class="label">${zone.name}</div>
-                    <div class="value" style="color:${lmpColor(lmp)}">$${Math.round(lmp)}/MWh</div>
-                    <div class="sub">${fmtMW(load)} load at HE ${state.hour}</div>
+                    <div id="zoneDetailMetric" class="value" style="color:${lmpColor(lmp)}">$${Math.round(lmp)}/MWh</div>
+                    <div id="zoneDetailSub" class="sub">${fmtMW(load)} load at HE ${state.hour}</div>
                 </div>
-                <div class="list">${resourceRows}</div>
+                <div class="detail-stack">
+                    <button class="summary-button ${state.selectedPanel === 'location' ? 'active' : ''}" data-panel="location">
+                        <span class="dot" style="background:#60a5fa"></span>
+                        <span><span class="name">Location</span><span class="meta">Bus coordinates</span></span>
+                        <span class="tag">${zone.lat.toFixed(2)}, ${zone.lng.toFixed(2)}</span>
+                    </button>
+                    ${locationPanel}
+                    <button class="summary-button ${state.selectedPanel === 'load' ? 'active' : ''}" data-panel="load">
+                        <span class="dot" style="background:#f97316"></span>
+                        <span><span class="name">Load</span><span class="meta">Current demand</span></span>
+                        <span id="selectedLoadSummary" class="tag">${fmtMW(load)}</span>
+                    </button>
+                    ${loadPanel}
+                    <button class="summary-button ${state.selectedPanel === 'generators' ? 'active' : ''}" data-panel="generators">
+                        <span class="dot" style="background:#22c55e"></span>
+                        <span><span class="name">Generators</span><span class="meta">Online resource count</span></span>
+                        <span class="tag">${generators.length}</span>
+                    </button>
+                    ${generatorPanel}
+                    <button class="summary-button ${state.selectedPanel === 'storage' ? 'active' : ''}" data-panel="storage">
+                        <span class="dot" style="background:#a855f7"></span>
+                        <span><span class="name">Storage</span><span class="meta">Total power capacity</span></span>
+                        <span class="tag">${storageEntries.length ? fmtMW(storageCapacity) : 'None'}</span>
+                    </button>
+                    ${storagePanel}
+                </div>
             `;
-            document.querySelectorAll('[data-resource]').forEach(btn => btn.addEventListener('click', () => selectResource(state.selectedZone, btn.dataset.resource)));
+            document.querySelectorAll('[data-panel]').forEach(btn => btn.addEventListener('click', () => {
+                const wasOpen = state.selectedPanel === btn.dataset.panel;
+                state.selectedPanel = wasOpen ? null : btn.dataset.panel;
+                if (!wasOpen && state.selectedPanel === 'generators' && !state.selectedResource) {
+                    state.selectedResource = generators[0]?.[0] || null;
+                }
+                if (!wasOpen && state.selectedPanel === 'storage' && !state.selectedResource) {
+                    state.selectedResource = storageEntries[0]?.[0] || null;
+                }
+                if (state.selectedPanel !== 'generators') state.draggingZone = null;
+                renderZoneDetail();
+            }));
+            document.querySelectorAll('[data-generator]').forEach(btn => btn.addEventListener('click', () => {
+                state.selectedResource = state.selectedResource === btn.dataset.generator ? null : btn.dataset.generator;
+                renderZoneDetail();
+            }));
+            document.querySelectorAll('[data-storage]').forEach(btn => btn.addEventListener('click', () => {
+                state.selectedResource = state.selectedResource === btn.dataset.storage ? null : btn.dataset.storage;
+                renderZoneDetail();
+            }));
+            setupLocationEditor();
+            setupLoadProfileEditor();
+            setupGeneratorEditor();
+            setupStorageEditor();
+        }
+
+        function renderStorageEditor(resId, res) {
+            const energy = storageEnergyCap(res);
+            return `
+                <div class="summary-panel" style="margin-top:10px;">
+                    <div class="editor-title">
+                        <span class="dot" style="background:#a855f7"></span>
+                        <strong>${resourceDisplayName(state.zones[state.selectedZone], resId, res)}</strong>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label>Name</label>
+                            <input id="storageNameInput" class="peak-input" value="${resourceDisplayName(state.zones[state.selectedZone], resId, res)}">
+                        </div>
+                        <div class="form-field">
+                            <label>Power Capacity (MW)</label>
+                            <input id="storagePowerInput" class="peak-input" type="number" min="0" step="1" value="${Math.round(res.powerCap || 0)}">
+                        </div>
+                        <button id="applyStorageBasics" class="mini-button">Apply</button>
+                    </div>
+                    <div class="form-grid" style="margin-top:10px;">
+                        <div class="form-field"><label>Duration (H)</label><input id="storageDurationInput" class="peak-input" type="number" min="0" step="0.1" value="${res.duration ?? 0}"></div>
+                        <div class="form-field"><label>Energy Capacity (MWh)</label><input id="storageEnergyInput" class="peak-input" type="number" min="0" step="1" value="${Math.round(energy)}"></div>
+                        <button id="applyStorageEnergy" class="mini-button">Apply</button>
+                    </div>
+                    <div class="form-grid" style="margin-top:10px;">
+                        <div class="form-field"><label>Efficiency (%)</label><input id="storageEfficiencyInput" class="peak-input" type="number" min="1" max="100" step="1" value="${Math.round((res.efficiency ?? 1) * 100)}"></div>
+                        <div class="form-field"><label>Cycling Cost ($/MWh)</label><input id="storageCyclingCostInput" class="peak-input" type="number" min="0" step="0.01" value="${res.cyclingCost ?? 0.02}"></div>
+                        <button id="applyStorageCost" class="mini-button">Apply</button>
+                    </div>
+                    <div class="form-grid" style="margin-top:10px;">
+                        <div class="form-field"><label>Initial SOC (%)</label><input id="storageInitialSocInput" class="peak-input" type="number" min="0" max="100" step="1" value="${Math.round((res.initialSoc ?? 0) * 100)}"></div>
+                        <div class="form-field"><label>Terminal SOC (%)</label><input id="storageTerminalSocInput" class="peak-input" type="number" min="0" max="100" step="1" value="${Math.round((res.terminalSoc ?? res.initialSoc ?? 0) * 100)}"></div>
+                        <button id="applyStorageSoc" class="mini-button">Apply</button>
+                    </div>
+                    <div class="form-grid" style="margin-top:10px;">
+                        <div class="form-field"><label>Max Daily Cycles</label><input id="storageCyclesInput" class="peak-input" type="number" min="0" step="0.1" value="${res.maxDailyCycles ?? ''}" placeholder="none"></div>
+                        <div class="form-field"><label>Grid Charging</label><select id="storageGridChargingInput" class="select-input"><option value="true" ${res.allowGridCharging !== false ? 'selected' : ''}>Allowed</option><option value="false" ${res.allowGridCharging === false ? 'selected' : ''}>Disabled</option></select></div>
+                        <button id="applyStorageRules" class="mini-button">Apply</button>
+                    </div>
+                    <div class="load-editor-note">Drag bars to shape target SOC profile</div>
+                    <canvas id="storageSocCanvas" class="mini-chart-canvas"></canvas>
+                    <div class="load-axis-label">Hour</div>
+                </div>
+            `;
+        }
+
+        function renderGeneratorEditor(resId, res) {
+            const zone = state.zones[state.selectedZone];
+            const profileType = inferredGeneratorProfileType(res);
+            const costType = res.costType || 'linear';
+            const points = ensureCostPoints(res);
+            return `
+                <div class="summary-panel" style="margin-top:10px;">
+                    <div class="editor-title">
+                        <input id="genColorInput" class="color-swatch" type="color" value="${res.color || '#22c55e'}" aria-label="Generator color">
+                        <strong>${resourceDisplayName(zone, resId, res)}</strong>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label>Name</label>
+                            <input id="genNameInput" class="peak-input" value="${resourceDisplayName(zone, resId, res)}">
+                        </div>
+                        <div class="form-field">
+                            <label>Max MW</label>
+                            <input id="genCapInput" class="peak-input" type="number" min="0" step="1" value="${Math.round(res.cap || 0)}">
+                        </div>
+                        <button id="applyGenBasics" class="mini-button">Apply</button>
+                    </div>
+                    <div class="form-grid" style="margin-top:10px;">
+                        <div class="form-field" style="grid-column:1 / span 2;">
+                            <label>Profile</label>
+                            <select id="genProfileSelect" class="select-input">
+                                ${generatorProfileOptions(profileType)}
+                            </select>
+                        </div>
+                        <button id="applyGenProfile" class="mini-button">Apply</button>
+                    </div>
+                    <div class="load-editor-note">Drag bars to adjust hourly capacity</div>
+                    <canvas id="genProfileCanvas" class="mini-chart-canvas"></canvas>
+                    <div class="load-axis-label">Hour</div>
+                    <div class="form-grid" style="margin-top:14px;">
+                        <div class="form-field" style="grid-column:1 / span 2;">
+                            <label>Cost Curve</label>
+                            <select id="genCostType" class="select-input">
+                                <option value="linear" ${costType === 'linear' ? 'selected' : ''}>Linear</option>
+                                <option value="piecewise" ${costType === 'piecewise' ? 'selected' : ''}>Piecewise Linear</option>
+                            </select>
+                        </div>
+                        <button id="applyGenCost" class="mini-button">Apply</button>
+                    </div>
+                    <div id="linearCostFields" class="form-field" style="margin-top:10px; ${costType === 'piecewise' ? 'display:none;' : ''}">
+                        <label>Sell Price ($/MWh)</label>
+                        <input id="genLinearPrice" class="peak-input" type="number" step="0.1" value="${resourceCost({ ...res, costType: 'linear' }).toFixed(1)}">
+                    </div>
+                    <div id="piecewiseCostFields" style="${costType === 'piecewise' ? '' : 'display:none;'}">
+                        <div class="cost-points">
+                            <div class="cost-point-row cost-point-header">
+                                <span>MW</span>
+                                <span>Cost ($)</span>
+                                <span></span>
+                            </div>
+                            ${points.map((point, index) => `<div class="cost-point-row" data-cost-row="${index}">
+                                <input class="peak-input cost-power" type="number" step="1" value="${Math.round(point.power * 10) / 10}">
+                                <input class="peak-input cost-cost" type="number" step="1" value="${Math.round(point.cost * 10) / 10}">
+                                <button class="mini-button remove-cost-point" data-index="${index}">x</button>
+                            </div>`).join('')}
+                        </div>
+                        <button id="addCostPoint" class="mini-button" style="margin-top:8px; width:100%;">+ Add Point</button>
+                    </div>
+                    <div class="load-editor-note">Drag knots on the chart to reshape the curve</div>
+                    <canvas id="genCostCanvas" class="mini-chart-canvas"></canvas>
+                </div>
+            `;
+        }
+
+        function setupLocationEditor() {
+            const apply = document.getElementById('applyLocation');
+            const drag = document.getElementById('toggleLocationDrag');
+            if (apply) {
+                apply.addEventListener('click', () => {
+                    const zone = state.zones[state.selectedZone];
+                    const lat = Number(document.getElementById('zoneLatInput')?.value);
+                    const lng = Number(document.getElementById('zoneLngInput')?.value);
+                    if (Number.isFinite(lat)) zone.lat = lat;
+                    if (Number.isFinite(lng)) zone.lng = lng;
+                    state.draggingZone = null;
+                    invalidateSolution();
+                    renderAll();
+                });
+            }
+            if (drag) {
+                drag.addEventListener('click', () => {
+                    state.draggingZone = state.draggingZone === state.selectedZone ? null : state.selectedZone;
+                    renderAll();
+                });
+            }
+        }
+
+        function setupLoadProfileEditor() {
+            const canvas = document.getElementById('loadProfileCanvas');
+            if (!canvas) return;
+            const select = document.getElementById('loadProfileSelect');
+            const peakInput = document.getElementById('peakLoadInput');
+            const apply = document.getElementById('applyLoadProfile');
+            const zone = state.zones[state.selectedZone];
+            if (select) select.value = LOAD_PROFILES[zone.loadProfileType] ? zone.loadProfileType : 'residential';
+            const updatePeakLoad = () => {
+                if (!peakInput) return;
+                const nextPeak = Math.max(1, Number(peakInput.value) || zone.baseLoad);
+                zone.baseLoad = nextPeak;
+                peakInput.value = Math.round(nextPeak);
+                invalidateSolution();
+                renderAll();
+            };
+            if (peakInput) peakInput.addEventListener('change', updatePeakLoad);
+            if (apply && select) {
+                apply.addEventListener('click', () => {
+                    if (peakInput) {
+                        const nextPeak = Math.max(1, Number(peakInput.value) || state.zones[state.selectedZone].baseLoad);
+                        state.zones[state.selectedZone].baseLoad = nextPeak;
+                    }
+                    const profile = LOAD_PROFILES[select.value];
+                    if (!profile) return;
+                    state.zones[state.selectedZone].loadProfile = normalizeLoadShape(profile.shape);
+                    state.zones[state.selectedZone].loadProfileType = select.value;
+                    invalidateSolution();
+                    renderAll();
+                });
+            }
+
+            const editAtPointer = event => {
+                const rect = canvas.getBoundingClientRect();
+                if (!rect.width || !rect.height) return;
+                const x = clamp(event.clientX - rect.left, 0, rect.width);
+                const y = clamp(event.clientY - rect.top, 0, rect.height);
+                const hourIndex = clamp(Math.floor(x / rect.width * 24), 0, 23);
+                const topPad = 14;
+                const bottomPad = 28;
+                const usableHeight = Math.max(1, rect.height - topPad - bottomPad);
+                const normalized = clamp((rect.height - bottomPad - y) / usableHeight, 0.02, 1);
+                const zone = state.zones[state.selectedZone];
+                zone.loadProfile = (zone.loadProfile || normalizeLoadShape(BASE_LOAD_SHAPE)).slice();
+                zone.loadProfileType = 'custom';
+                zone.loadProfile[hourIndex] = normalized;
+                invalidateSolution();
+                drawLoadProfileCanvas();
+                const selectedLoadSummary = document.getElementById('selectedLoadSummary');
+                if (selectedLoadSummary) selectedLoadSummary.textContent = fmtMW(zoneLoad(zone, state.hour - 1));
+                renderMetrics();
+                renderZoneList();
+                renderMap();
+            };
+
+            canvas.addEventListener('pointerdown', event => {
+                editingLoadProfile = true;
+                canvas.setPointerCapture?.(event.pointerId);
+                editAtPointer(event);
+            });
+            canvas.addEventListener('pointermove', event => {
+                if (editingLoadProfile) editAtPointer(event);
+            });
+            canvas.addEventListener('pointerup', () => {
+                editingLoadProfile = false;
+            });
+            canvas.addEventListener('pointercancel', () => {
+                editingLoadProfile = false;
+            });
+            drawLoadProfileCanvas();
+        }
+
+        function drawLoadProfileCanvas() {
+            const canvas = document.getElementById('loadProfileCanvas');
+            if (!canvas) return;
+            const rect = canvas.getBoundingClientRect();
+            const width = Math.max(320, Math.round(rect.width || canvas.clientWidth || 320));
+            const height = Math.max(180, Math.round(rect.height || canvas.clientHeight || 190));
+            if (canvas.width !== width) canvas.width = width;
+            if (canvas.height !== height) canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            const zone = state.zones[state.selectedZone];
+            const shape = zone.loadProfile || normalizeLoadShape(BASE_LOAD_SHAPE);
+            const peak = Math.max(zone.baseLoad * state.scenario.loadScale / 100, 1);
+            const topPad = 14;
+            const bottomPad = 28;
+            const leftPad = 54;
+            const rightPad = 8;
+            const plotW = width - leftPad - rightPad;
+            const plotH = height - topPad - bottomPad;
+
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = '#0f1623';
+            ctx.fillRect(0, 0, width, height);
+            ctx.strokeStyle = '#263348';
+            ctx.lineWidth = 1;
+            ctx.fillStyle = '#9db8dc';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            [0, 0.5, 1].forEach(t => {
+                const y = topPad + plotH * (1 - t);
+                ctx.beginPath();
+                ctx.moveTo(leftPad, y);
+                ctx.lineTo(width - rightPad, y);
+                ctx.stroke();
+                ctx.fillText(Math.round(peak * t).toLocaleString(), leftPad - 6, y);
+            });
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText('MW', 4, topPad);
+
+            const barGap = 2;
+            const barW = plotW / 24 - barGap;
+            shape.forEach((value, i) => {
+                const mw = zone.baseLoad * value * state.scenario.loadScale / 100;
+                const barH = plotH * mw / peak;
+                const x = leftPad + i * plotW / 24 + barGap / 2;
+                const y = topPad + plotH - barH;
+                ctx.fillStyle = '#f97316';
+                ctx.fillRect(x, y, barW, barH);
+            });
+            ctx.fillStyle = '#9db8dc';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            [0, 4, 8, 12, 16, 20, 23].forEach(hour => {
+                const x = leftPad + (hour + 0.5) * plotW / 24;
+                ctx.fillText(String(hour), x, height - bottomPad + 8);
+            });
+        }
+
+        function ensureCostPoints(res) {
+            if (!res.costPoints?.length) {
+                const cap = Math.max(1, res.cap || 1);
+                const price = res.cost ?? 0;
+                res.costPoints = [
+                    { power: 0, cost: 0 },
+                    { power: cap * 0.5, cost: cap * 0.5 * price },
+                    { power: cap, cost: cap * price }
+                ];
+            }
+            res.costPoints = res.costPoints
+                .map(point => ({ power: Math.max(0, Number(point.power) || 0), cost: Number(point.cost) || 0 }))
+                .sort((a, b) => a.power - b.power);
+            return res.costPoints;
+        }
+
+        function selectedGeneratorResource() {
+            const zone = state.zones[state.selectedZone];
+            const res = zone.resources[state.selectedResource];
+            return res && res.type !== 'storage' ? res : null;
+        }
+
+        function resourceDisplayName(zone, resId, res) {
+            return res.name || `${zone.name} ${resId.replaceAll('_', ' ')}`;
+        }
+
+        function inferredGeneratorProfileType(res) {
+            if (res.profileType) return res.profileType;
+            if (res.type === 'solar') return 'solar';
+            if (res.type === 'wind') return 'wind_onshore';
+            if (res.type === 'gas') return 'peaker';
+            return 'flat';
+        }
+
+        function generatorProfileOptions(selected) {
+            const keys = ['custom', 'flat', 'solar', 'peaker', 'wind_onshore', 'wind_offshore'];
+            return keys.map(key => `<option value="${key}" ${key === selected ? 'selected' : ''}>${GENERATOR_PROFILES[key].label}</option>`).join('');
+        }
+
+        function setupGeneratorEditor() {
+            const res = selectedGeneratorResource();
+            if (!res || state.selectedPanel !== 'generators') return;
+            const colorInput = document.getElementById('genColorInput');
+            const basics = document.getElementById('applyGenBasics');
+            const profileApply = document.getElementById('applyGenProfile');
+            const costApply = document.getElementById('applyGenCost');
+            const costType = document.getElementById('genCostType');
+            const addPoint = document.getElementById('addCostPoint');
+
+            if (colorInput) colorInput.addEventListener('input', event => {
+                res.color = event.target.value;
+                invalidateSolution();
+                renderMap();
+                renderChart();
+            });
+            if (basics) basics.addEventListener('click', () => {
+                res.name = document.getElementById('genNameInput')?.value || res.name;
+                res.cap = Math.max(0, Number(document.getElementById('genCapInput')?.value) || 0);
+                invalidateSolution();
+                renderAll();
+            });
+            if (profileApply) profileApply.addEventListener('click', () => {
+                const key = document.getElementById('genProfileSelect')?.value || 'custom';
+                const profile = GENERATOR_PROFILES[key];
+                res.profileType = key;
+                if (profile?.shape) res.profile = normalizeGeneratorShape(profile.shape);
+                invalidateSolution();
+                renderAll();
+            });
+            if (costType) costType.addEventListener('change', () => {
+                if (res.costType === 'piecewise') readCostPointInputs(res);
+                res.costType = costType.value;
+                if (res.costType === 'piecewise') ensureCostPoints(res);
+                invalidateSolution();
+                const linearFields = document.getElementById('linearCostFields');
+                const piecewiseFields = document.getElementById('piecewiseCostFields');
+                if (linearFields) linearFields.style.display = res.costType === 'piecewise' ? 'none' : '';
+                if (piecewiseFields) piecewiseFields.style.display = res.costType === 'piecewise' ? '' : 'none';
+                drawGeneratorCostCanvas();
+            });
+            if (costApply) costApply.addEventListener('click', () => {
+                res.costType = costType?.value || 'linear';
+                if (res.costType === 'linear') {
+                    res.cost = Number(document.getElementById('genLinearPrice')?.value) || 0;
+                } else {
+                    readCostPointInputs(res);
+                }
+                invalidateSolution();
+                renderAll();
+            });
+            if (addPoint) addPoint.addEventListener('click', () => {
+                const points = ensureCostPoints(res);
+                const cap = Math.max(1, res.cap || 1);
+                points.push({ power: cap * 0.75, cost: cap * 0.75 * resourceCost({ ...res, costType: 'linear' }) });
+                res.costType = 'piecewise';
+                invalidateSolution();
+                renderZoneDetail();
+            });
+            document.querySelectorAll('.remove-cost-point').forEach(btn => btn.addEventListener('click', () => {
+                const points = ensureCostPoints(res);
+                if (points.length <= 3) return;
+                points.splice(Number(btn.dataset.index), 1);
+                invalidateSolution();
+                renderZoneDetail();
+            }));
+            document.querySelectorAll('.cost-power, .cost-cost').forEach(input => input.addEventListener('change', () => {
+                readCostPointInputs(res);
+                invalidateSolution();
+                drawGeneratorCostCanvas();
+            }));
+            setupGeneratorProfileCanvas();
+            setupGeneratorCostCanvas();
+        }
+
+        function selectedStorageResource() {
+            const zone = state.zones[state.selectedZone];
+            const res = zone.resources[state.selectedResource];
+            return res && res.type === 'storage' ? res : null;
+        }
+
+        function setupStorageEditor() {
+            const res = selectedStorageResource();
+            if (!res || state.selectedPanel !== 'storage') return;
+            const applyBasics = document.getElementById('applyStorageBasics');
+            const applyEnergy = document.getElementById('applyStorageEnergy');
+            const applyCost = document.getElementById('applyStorageCost');
+            const applySoc = document.getElementById('applyStorageSoc');
+            const applyRules = document.getElementById('applyStorageRules');
+            if (applyBasics) applyBasics.addEventListener('click', () => {
+                res.name = document.getElementById('storageNameInput')?.value || res.name;
+                res.powerCap = Math.max(0, Number(document.getElementById('storagePowerInput')?.value) || 0);
+                invalidateSolution();
+                renderAll();
+            });
+            if (applyEnergy) applyEnergy.addEventListener('click', () => {
+                res.duration = Math.max(0, Number(document.getElementById('storageDurationInput')?.value) || 0);
+                const energy = Number(document.getElementById('storageEnergyInput')?.value);
+                if (Number.isFinite(energy) && energy > 0) res.energyCap = energy / Math.max(0.01, state.scenario.storageScale / 100);
+                invalidateSolution();
+                renderAll();
+            });
+            if (applyCost) applyCost.addEventListener('click', () => {
+                res.efficiency = clamp((Number(document.getElementById('storageEfficiencyInput')?.value) || 100) / 100, 0.01, 1);
+                res.cyclingCost = Math.max(0, Number(document.getElementById('storageCyclingCostInput')?.value) || 0);
+                invalidateSolution();
+                renderAll();
+            });
+            if (applySoc) applySoc.addEventListener('click', () => {
+                res.initialSoc = clamp((Number(document.getElementById('storageInitialSocInput')?.value) || 0) / 100, 0, 1);
+                res.terminalSoc = clamp((Number(document.getElementById('storageTerminalSocInput')?.value) || 0) / 100, 0, 1);
+                invalidateSolution();
+                renderAll();
+            });
+            if (applyRules) applyRules.addEventListener('click', () => {
+                const cycles = Number(document.getElementById('storageCyclesInput')?.value);
+                if (Number.isFinite(cycles) && cycles > 0) res.maxDailyCycles = cycles; else delete res.maxDailyCycles;
+                res.allowGridCharging = document.getElementById('storageGridChargingInput')?.value !== 'false';
+                invalidateSolution();
+                renderAll();
+            });
+            setupStorageSocCanvas();
+        }
+
+        function setupStorageSocCanvas() {
+            const canvas = document.getElementById('storageSocCanvas');
+            const res = selectedStorageResource();
+            if (!canvas || !res) return;
+            const editAtPointer = event => {
+                const rect = canvas.getBoundingClientRect();
+                if (!rect.width || !rect.height) return;
+                const x = clamp(event.clientX - rect.left, 0, rect.width);
+                const y = clamp(event.clientY - rect.top, 0, rect.height);
+                const hourIndex = clamp(Math.floor(x / rect.width * 24), 0, 23);
+                const normalized = clamp((rect.height - 28 - y) / Math.max(1, rect.height - 42), 0, 1);
+                res.socProfile = (res.socProfile || Array(24).fill(res.terminalSoc ?? res.initialSoc ?? 0)).slice();
+                res.socProfile[hourIndex] = normalized;
+                invalidateSolution();
+                drawStorageSocCanvas();
+            };
+            canvas.addEventListener('pointerdown', event => {
+                editingStorageProfile = true;
+                canvas.setPointerCapture?.(event.pointerId);
+                editAtPointer(event);
+            });
+            canvas.addEventListener('pointermove', event => {
+                if (editingStorageProfile) editAtPointer(event);
+            });
+            canvas.addEventListener('pointerup', () => editingStorageProfile = false);
+            canvas.addEventListener('pointercancel', () => editingStorageProfile = false);
+            drawStorageSocCanvas();
+        }
+
+        function drawStorageSocCanvas() {
+            const canvas = document.getElementById('storageSocCanvas');
+            const res = selectedStorageResource();
+            if (!canvas || !res) return;
+            const ctx = canvas.getContext('2d');
+            const rect = canvas.getBoundingClientRect();
+            const width = Math.max(320, Math.round(rect.width || canvas.clientWidth || 320));
+            const height = Math.max(170, Math.round(rect.height || canvas.clientHeight || 180));
+            if (canvas.width !== width) canvas.width = width;
+            if (canvas.height !== height) canvas.height = height;
+            const shape = res.socProfile || Array(24).fill(res.terminalSoc ?? res.initialSoc ?? 0);
+            drawBarProfile(ctx, width, height, shape, 100, '#a855f7');
+        }
+
+        function readCostPointInputs(res) {
+            const rows = [...document.querySelectorAll('[data-cost-row]')];
+            if (!rows.length) return;
+            res.costPoints = rows.map(row => ({
+                power: Number(row.querySelector('.cost-power')?.value) || 0,
+                cost: Number(row.querySelector('.cost-cost')?.value) || 0
+            })).sort((a, b) => a.power - b.power);
+        }
+
+        function setupGeneratorProfileCanvas() {
+            const canvas = document.getElementById('genProfileCanvas');
+            const res = selectedGeneratorResource();
+            if (!canvas || !res) return;
+            const editAtPointer = event => {
+                const rect = canvas.getBoundingClientRect();
+                if (!rect.width || !rect.height) return;
+                const x = clamp(event.clientX - rect.left, 0, rect.width);
+                const y = clamp(event.clientY - rect.top, 0, rect.height);
+                const hourIndex = clamp(Math.floor(x / rect.width * 24), 0, 23);
+                const normalized = clamp((rect.height - 28 - y) / Math.max(1, rect.height - 42), 0, 1);
+                res.profile = (res.profile || normalizeGeneratorShape(res.shape || Array(24).fill(1))).slice();
+                res.profileType = 'custom';
+                res.profile[hourIndex] = normalized;
+                invalidateSolution();
+                drawGeneratorProfileCanvas();
+                renderMap();
+                renderChart();
+            };
+            canvas.addEventListener('pointerdown', event => {
+                editingGeneratorProfile = true;
+                canvas.setPointerCapture?.(event.pointerId);
+                editAtPointer(event);
+            });
+            canvas.addEventListener('pointermove', event => {
+                if (editingGeneratorProfile) editAtPointer(event);
+            });
+            canvas.addEventListener('pointerup', () => editingGeneratorProfile = false);
+            canvas.addEventListener('pointercancel', () => editingGeneratorProfile = false);
+            drawGeneratorProfileCanvas();
+        }
+
+        function drawGeneratorProfileCanvas() {
+            const canvas = document.getElementById('genProfileCanvas');
+            const res = selectedGeneratorResource();
+            if (!canvas || !res) return;
+            const ctx = canvas.getContext('2d');
+            const rect = canvas.getBoundingClientRect();
+            const width = Math.max(320, Math.round(rect.width || canvas.clientWidth || 320));
+            const height = Math.max(170, Math.round(rect.height || canvas.clientHeight || 180));
+            if (canvas.width !== width) canvas.width = width;
+            if (canvas.height !== height) canvas.height = height;
+            const shape = res.profile || normalizeGeneratorShape(res.shape || Array(24).fill(1));
+            const cap = Math.max(1, res.cap || 1);
+            drawBarProfile(ctx, width, height, shape, cap, res.color || '#22c55e');
+        }
+
+        function drawBarProfile(ctx, width, height, shape, peak, color) {
+            const topPad = 14, bottomPad = 28, leftPad = 54, rightPad = 8;
+            const plotW = width - leftPad - rightPad;
+            const plotH = height - topPad - bottomPad;
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = '#0f1623';
+            ctx.fillRect(0, 0, width, height);
+            ctx.strokeStyle = '#263348';
+            ctx.fillStyle = '#9db8dc';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            [0, 0.5, 1].forEach(t => {
+                const y = topPad + plotH * (1 - t);
+                ctx.beginPath(); ctx.moveTo(leftPad, y); ctx.lineTo(width - rightPad, y); ctx.stroke();
+                ctx.fillText(Math.round(peak * t).toLocaleString(), leftPad - 6, y);
+            });
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText('MW', 4, topPad);
+            const barGap = 2;
+            const barW = plotW / 24 - barGap;
+            shape.forEach((value, i) => {
+                const barH = plotH * clamp(value, 0, 1);
+                const x = leftPad + i * plotW / 24 + barGap / 2;
+                const y = topPad + plotH - barH;
+                ctx.fillStyle = color;
+                ctx.fillRect(x, y, barW, barH);
+            });
+            ctx.fillStyle = '#9db8dc';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            [0, 4, 8, 12, 16, 20, 23].forEach(hour => {
+                ctx.fillText(String(hour), leftPad + (hour + 0.5) * plotW / 24, height - bottomPad + 8);
+            });
+        }
+
+        function setupGeneratorCostCanvas() {
+            const canvas = document.getElementById('genCostCanvas');
+            if (!canvas) return;
+            canvas.addEventListener('pointerdown', event => {
+                const hit = nearestCostPoint(event);
+                if (hit !== null) {
+                    editingCostPoint = hit;
+                    canvas.setPointerCapture?.(event.pointerId);
+                }
+            });
+            canvas.addEventListener('pointermove', event => {
+                if (editingCostPoint === null) return;
+                updateCostPointFromPointer(event, editingCostPoint);
+            });
+            canvas.addEventListener('pointerup', () => editingCostPoint = null);
+            canvas.addEventListener('pointercancel', () => editingCostPoint = null);
+            drawGeneratorCostCanvas();
+        }
+
+        function costCanvasGeometry(canvas, res) {
+            const rect = canvas.getBoundingClientRect();
+            const width = Math.max(320, Math.round(rect.width || canvas.clientWidth || 320));
+            const height = Math.max(210, Math.round(rect.height || canvas.clientHeight || 210));
+            const leftPad = 64, rightPad = 14, topPad = 18, bottomPad = 48;
+            const linearCost = Math.max(0, (res.cap || 1) * (res.cost || 0));
+            const points = res.costType === 'piecewise' ? ensureCostPoints(res) : [{ power: 0, cost: 0 }, { power: res.cap || 1, cost: linearCost }];
+            const maxPower = Math.max(res.cap || 1, ...points.map(p => p.power), 1);
+            const maxCost = Math.max(1, ...points.map(p => p.cost));
+            return { width, height, leftPad, rightPad, topPad, bottomPad, plotW: width - leftPad - rightPad, plotH: height - topPad - bottomPad, maxPower, maxCost };
+        }
+
+        function nearestCostPoint(event) {
+            const canvas = document.getElementById('genCostCanvas');
+            const res = selectedGeneratorResource();
+            if (!canvas || !res) return null;
+            if (res.costType !== 'piecewise') return null;
+            const rect = canvas.getBoundingClientRect();
+            const g = costCanvasGeometry(canvas, res);
+            const points = ensureCostPoints(res);
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            let nearest = null;
+            let nearestDist = Infinity;
+            points.forEach((point, index) => {
+                const px = g.leftPad + point.power / g.maxPower * g.plotW;
+                const py = g.topPad + g.plotH - point.cost / g.maxCost * g.plotH;
+                const dist = Math.hypot(px - x, py - y);
+                if (dist < nearestDist && dist < 18) { nearest = index; nearestDist = dist; }
+            });
+            return nearest;
+        }
+
+        function updateCostPointFromPointer(event, index) {
+            const canvas = document.getElementById('genCostCanvas');
+            const res = selectedGeneratorResource();
+            if (!canvas || !res) return;
+            if (res.costType !== 'piecewise') return;
+            const rect = canvas.getBoundingClientRect();
+            const g = costCanvasGeometry(canvas, res);
+            const x = clamp(event.clientX - rect.left, g.leftPad, g.leftPad + g.plotW);
+            const y = clamp(event.clientY - rect.top, g.topPad, g.topPad + g.plotH);
+            const points = ensureCostPoints(res);
+            points[index] = {
+                power: (x - g.leftPad) / g.plotW * g.maxPower,
+                cost: (g.topPad + g.plotH - y) / g.plotH * g.maxCost
+            };
+            const row = document.querySelector(`[data-cost-row="${index}"]`);
+            if (row) {
+                const powerInput = row.querySelector('.cost-power');
+                const costInput = row.querySelector('.cost-cost');
+                if (powerInput) powerInput.value = Math.round(points[index].power * 10) / 10;
+                if (costInput) costInput.value = Math.round(points[index].cost * 10) / 10;
+            }
+            res.costType = 'piecewise';
+            invalidateSolution();
+            drawGeneratorCostCanvas();
+        }
+
+        function drawGeneratorCostCanvas() {
+            const canvas = document.getElementById('genCostCanvas');
+            const res = selectedGeneratorResource();
+            if (!canvas || !res) return;
+            const ctx = canvas.getContext('2d');
+            const g = costCanvasGeometry(canvas, res);
+            if (canvas.width !== g.width) canvas.width = g.width;
+            if (canvas.height !== g.height) canvas.height = g.height;
+            const points = res.costType === 'piecewise'
+                ? ensureCostPoints(res)
+                : [{ power: 0, cost: 0 }, { power: res.cap || 1, cost: Math.max(0, (res.cap || 1) * (res.cost || 0)) }];
+            ctx.clearRect(0, 0, g.width, g.height);
+            ctx.fillStyle = '#0f1623';
+            ctx.fillRect(0, 0, g.width, g.height);
+            ctx.strokeStyle = '#263348';
+            ctx.fillStyle = '#9db8dc';
+            ctx.font = '11px sans-serif';
+            ctx.lineWidth = 1;
+            [0, .5, 1].forEach(t => {
+                const y = g.topPad + g.plotH * (1 - t);
+                ctx.beginPath(); ctx.moveTo(g.leftPad, y); ctx.lineTo(g.width - g.rightPad, y); ctx.stroke();
+                ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+                ctx.fillText(Math.round(g.maxCost * t).toLocaleString(), g.leftPad - 6, y);
+            });
+            [0, .5, 1].forEach(t => {
+                const x = g.leftPad + g.plotW * t;
+                ctx.beginPath(); ctx.moveTo(x, g.topPad); ctx.lineTo(x, g.topPad + g.plotH); ctx.stroke();
+                ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+                ctx.fillText(Math.round(g.maxPower * t).toLocaleString(), x, g.topPad + g.plotH + 8);
+            });
+            ctx.save();
+            ctx.translate(14, g.topPad + g.plotH / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Cost ($)', 0, 0);
+            ctx.restore();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText('Power (MW)', g.leftPad + g.plotW / 2, g.height - 4);
+            ctx.beginPath();
+            points.forEach((point, index) => {
+                const x = g.leftPad + point.power / g.maxPower * g.plotW;
+                const y = g.topPad + g.plotH - point.cost / g.maxCost * g.plotH;
+                if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            });
+            ctx.strokeStyle = '#f8d66d';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            points.forEach(point => {
+                const x = g.leftPad + point.power / g.maxPower * g.plotW;
+                const y = g.topPad + g.plotH - point.cost / g.maxCost * g.plotH;
+                ctx.fillStyle = '#f8d66d';
+                ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+            });
+        }
+
+        function currentHourHighlightPlugin() {
+            return {
+                id: 'currentHourHighlight',
+                beforeDatasetsDraw(chart) {
+                    const xScale = chart.scales.x;
+                    const area = chart.chartArea;
+                    if (!xScale || !area) return;
+                    const x = xScale.getPixelForValue(String(state.hour));
+                    const fallbackX = xScale.getPixelForValue(state.hour - 1);
+                    const centerX = Number.isFinite(x) ? x : fallbackX;
+                    const adjacent = state.hour < 24 ? state.hour : state.hour - 2;
+                    const nextX = xScale.getPixelForValue(adjacent);
+                    const width = Math.max(10, Math.abs(nextX - centerX) * 0.82);
+                    const ctx = chart.ctx;
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(250, 204, 21, .14)';
+                    ctx.strokeStyle = 'rgba(250, 204, 21, .70)';
+                    ctx.lineWidth = 1;
+                    ctx.fillRect(centerX - width / 2, area.top, width, area.bottom - area.top);
+                    ctx.strokeRect(centerX - width / 2, area.top, width, area.bottom - area.top);
+                    ctx.restore();
+                }
+            };
         }
 
         function renderChart() {
             const zoneId = state.selectedZone;
             const zone = state.zones[zoneId];
+            const currentHourPlugin = currentHourHighlightPlugin();
             const datasets = Object.entries(zone.resources).map(([resId, res]) => ({
-                label: resId.replaceAll('_', ' '),
+                label: resourceDisplayName(zone, resId, res),
                 data: state.dispatch[zoneId]?.[resId] || Array(24).fill(0),
                 borderWidth: 0,
-                backgroundColor: RESOURCE_COLORS[res.type] || '#fff',
+                backgroundColor: res.color || RESOURCE_COLORS[res.type] || '#fff',
                 borderRadius: 3
             }));
             if ((state.dispatch[zoneId]?.emergency || []).some(v => v > 0.5)) {
@@ -1282,6 +3010,7 @@
             dispatchChart = new Chart(document.getElementById('dispatchChart'), {
                 type: 'bar',
                 data: { labels: HOURS.map(h => String(h)), datasets },
+                plugins: [currentHourPlugin],
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
@@ -1297,12 +3026,49 @@
             });
         }
 
-        function renderLineTable(highlight = null) {
+        function renderLmpChart() {
+            const canvas = document.getElementById('lmpChart');
+            if (!canvas) return;
+            const zone = state.zones[state.selectedZone];
+            const data = HOURS.map((_, i) => state.lmps[state.selectedZone]?.[i] ?? 0);
+            if (lmpChart) lmpChart.destroy();
+            lmpChart = new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: HOURS.map(h => String(h)),
+                    datasets: [{
+                        label: `${zone.name} LMP`,
+                        data,
+                        borderColor: '#60a5fa',
+                        backgroundColor: 'rgba(96,165,250,.18)',
+                        pointRadius: 0,
+                        tension: .25,
+                        borderWidth: 2,
+                        fill: true
+                    }]
+                },
+                plugins: [currentHourHighlightPlugin()],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { labels: { color: '#cbd7e7', boxWidth: 10, usePointStyle: true } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#8ea0b8' }, grid: { display: false } },
+                        y: { ticks: { color: '#8ea0b8' }, grid: { color: '#273244' } }
+                    }
+                }
+            });
+        }
+
+        function renderLineTable(highlight = state.selectedBranch) {
             const h = state.hour - 1;
             const rows = Object.entries(state.lines)
                 .map(([lineId, line]) => {
                     const flow = state.flows[lineId]?.[h] || 0;
-                    const limit = line.limit * state.scenario.pathScale / 100;
+                    const limit = lineLimitForFlow(line, flow);
                     const util = Math.abs(flow) / Math.max(1, limit);
                     return { lineId, line, flow, limit, util };
                 })
@@ -1319,18 +3085,28 @@
 
         function renderMetrics() {
             const h = state.hour - 1;
+            const solved = Boolean(state.solution);
             const lmps = Object.keys(state.zones).map(zoneId => state.lmps[zoneId]?.[h] ?? 0);
             const avgLmp = lmps.reduce((sum, v) => sum + v, 0) / Math.max(1, lmps.length);
-            const peakLoad = Math.max(...HOURS.map((_, i) => Object.values(state.zones).reduce((sum, zone) => sum + zoneLoad(zone, i), 0)));
+            const lmpValues24 = Object.values(state.lmps).flat().filter(Number.isFinite);
+            const peakLoad = systemPeakLoad();
+            const resourceEntries = Object.values(state.zones).flatMap(zone => Object.values(zone.resources || {}));
             const binding = Object.entries(state.lines).filter(([lineId, line]) => {
-                const flow = Math.abs(state.flows[lineId]?.[h] || 0);
-                const limit = line.limit * state.scenario.pathScale / 100;
-                return flow / Math.max(1, limit) > .98;
+                const flow = state.flows[lineId]?.[h] || 0;
+                const limit = lineLimitForFlow(line, flow);
+                return Math.abs(flow) / Math.max(1, limit) > .98;
             }).length;
-            document.getElementById('metricCost').textContent = fmtMoney(state.totals.cost / 1000) + 'k';
+            document.getElementById('metricCost').textContent = solved ? fmtMoney((state.totals.cost || 0) / 1000) + 'k' : '--';
             document.getElementById('metricLoad').textContent = fmtMW(peakLoad);
-            document.getElementById('metricLmp').textContent = `$${Math.round(avgLmp)}`;
-            document.getElementById('metricCongestion').textContent = String(binding);
+            document.getElementById('metricLmp').textContent = solved ? `$${Math.round(avgLmp)}` : '--';
+            document.getElementById('metricLmpMin24').textContent = solved && lmpValues24.length ? `$${Math.round(Math.min(...lmpValues24))}` : '--';
+            document.getElementById('metricLmpMax24').textContent = solved && lmpValues24.length ? `$${Math.round(Math.max(...lmpValues24))}` : '--';
+            document.getElementById('metricCongestion').textContent = solved ? String(binding) : '--';
+            document.getElementById('metricBuses').textContent = String(Object.keys(state.zones).length);
+            document.getElementById('metricBranches').textContent = String(Object.keys(state.lines).length);
+            document.getElementById('metricLoads').textContent = String(Object.keys(state.zones).length);
+            document.getElementById('metricGenerators').textContent = String(resourceEntries.filter(res => res.type !== 'storage').length);
+            document.getElementById('metricStorage').textContent = String(resourceEntries.filter(res => res.type === 'storage').length);
             const domain = lmpDomain();
             document.getElementById('lmpMin').textContent = `$${Math.round(domain.min)}`;
             document.getElementById('lmpMax').textContent = `$${Math.round(domain.max)}`;
@@ -1342,6 +3118,30 @@
             renderZoneList();
             renderZoneDetail();
             renderChart();
+            renderLmpChart();
+            renderLineTable();
+            renderMap();
+        }
+
+        function renderHourChange() {
+            document.getElementById('hourLabel').textContent = String(state.hour);
+            renderMetrics();
+            renderZoneList();
+            if (state.selectedBranch) renderZoneDetail();
+            const zone = state.zones[state.selectedZone];
+            const h = state.hour - 1;
+            const selectedLoadSummary = document.getElementById('selectedLoadSummary');
+            if (selectedLoadSummary) selectedLoadSummary.textContent = fmtMW(zoneLoad(zone, h));
+            const zoneDetailMetric = document.getElementById('zoneDetailMetric');
+            if (zoneDetailMetric) {
+                const lmp = state.lmps[state.selectedZone]?.[h] ?? 0;
+                zoneDetailMetric.style.color = lmpColor(lmp);
+                zoneDetailMetric.textContent = `$${Math.round(lmp)}/MWh`;
+            }
+            const zoneDetailSub = document.getElementById('zoneDetailSub');
+            if (zoneDetailSub) zoneDetailSub.textContent = `${fmtMW(zoneLoad(zone, h))} load at HE ${state.hour}`;
+            if (dispatchChart) dispatchChart.draw();
+            if (lmpChart) lmpChart.draw();
             renderLineTable();
             renderMap();
         }
@@ -1349,33 +3149,78 @@
         function selectZone(zoneId) {
             state.selectedZone = zoneId;
             state.selectedResource = 'load';
+            state.selectedPanel = null;
+            state.selectedBranch = null;
+            state.draggingZone = null;
             renderAll();
         }
 
         function selectResource(zoneId, resId) {
             state.selectedZone = zoneId;
             state.selectedResource = resId;
+            state.selectedBranch = null;
+            const res = state.zones[zoneId].resources[resId];
+            state.selectedPanel = resId === 'load' ? 'load' : (res?.type === 'storage' ? 'storage' : 'generators');
+            state.draggingZone = null;
             renderAll();
+        }
+
+        function selectLoad(zoneId) {
+            state.selectedZone = zoneId;
+            state.selectedResource = 'load';
+            state.selectedPanel = 'load';
+            state.selectedBranch = null;
+            state.draggingZone = null;
+            renderAll();
+        }
+
+        function selectBranch(lineId) {
+            if (!state.lines[lineId]) return;
+            state.selectedBranch = lineId;
+            state.selectedPanel = null;
+            state.selectedResource = null;
+            state.draggingZone = null;
+            renderAll();
+        }
+
+        function setupPeakLoadEditor() {
+            const metric = document.getElementById('peakLoadMetric');
+            const value = document.getElementById('metricLoad');
+            if (!metric || !value) return;
+            metric.addEventListener('click', () => {
+                if (document.getElementById('systemPeakLoadInput')) return;
+                const current = Math.round(systemPeakLoad());
+                value.innerHTML = `<input id="systemPeakLoadInput" class="peak-input" type="number" min="1" step="1" value="${current}" style="height:32px; font-size:22px; font-weight:800;">`;
+                const input = document.getElementById('systemPeakLoadInput');
+                input?.focus();
+                input?.select();
+                const commit = () => scaleSystemPeakLoad(Number(input.value));
+                input?.addEventListener('change', commit);
+                input?.addEventListener('keydown', event => {
+                    if (event.key === 'Enter') commit();
+                    if (event.key === 'Escape') renderMetrics();
+                });
+            });
         }
 
         function resetScenario() {
             Object.keys(state.scenario).forEach(key => state.scenario[key] = 100);
-            if (typeof renderControls === 'function') renderControls();
             solveModel();
         }
 
         function init() {
             initMap();
-            if (typeof renderControls === 'function') renderControls();
+            setSolveButtonText('Solve DC OPF');
             document.getElementById('hourSlider').addEventListener('input', e => {
                 state.hour = Number(e.target.value);
-                renderAll();
+                renderHourChange();
             });
-            const solveBtn = document.getElementById('solveBtn');
-            if (solveBtn) solveBtn.addEventListener('click', solveModel);
+            const solveBtn = document.getElementById('solveBtnStudio') || document.getElementById('solveBtn');
+            if (solveBtn && !solveBtn.hasAttribute('onclick')) solveBtn.addEventListener('click', solveModel);
             const resetBtn = document.getElementById('resetBtn');
             if (resetBtn) resetBtn.addEventListener('click', resetScenario);
-            solveModel();
+            setupPeakLoadEditor();
+            renderAll();
             startFlowParticles();
         }
 
