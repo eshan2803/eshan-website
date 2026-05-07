@@ -33,7 +33,20 @@
             color: var(--text);
             font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
+        .app-header { height: 50px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; background: var(--panel); border-bottom: 1px solid var(--line); }
+        .header-tabs { display: flex; gap: 8px; background: var(--panel-2); padding: 4px; border-radius: 6px; border: 1px solid var(--line); }
+        .header-tab { padding: 4px 16px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--muted); }
+        .header-tab.active { background: var(--blue); color: white; }
+        .data-view { display: none; background: var(--bg); flex: 1; padding: 20px 40px; overflow-y: auto; }
+        .data-view.active { display: block; }
+        .data-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; background: var(--panel); border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+        .data-table th, .data-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line); font-size: 13px; }
+        .data-table th { background: var(--panel-2); color: var(--muted); font-weight: 700; text-transform: uppercase; font-size: 11px; }
+        .data-table input { background: transparent; border: 1px solid transparent; color: var(--text); width: 100%; font-family: inherit; }
+        .data-table input:focus { border-bottom: 1px solid var(--blue); outline: none; }
 
         button, input, select { font: inherit; }
         button {
@@ -52,7 +65,8 @@
             display: grid;
             grid-template-columns: minmax(300px, 350px) minmax(420px, 1fr) minmax(310px, 380px);
             grid-template-rows: 1fr;
-            height: 100vh;
+            flex: 1;
+            min-height: 0;
             min-width: 980px;
         }
 
@@ -370,7 +384,41 @@
     </style>
 </head>
 <body>
-    <div class="app">
+    <header class="app-header">
+        <div style="font-weight: 800; display:flex; align-items:center; gap:10px;">
+            <div style="width:20px; height:20px; border-radius:4px; background:linear-gradient(135deg, var(--blue), var(--violet));"></div>
+            OPF Studio - California
+        </div>
+        <div class="header-tabs">
+            <div class="header-tab active" onclick="switchView('graph')">Graph</div>
+            <div class="header-tab" onclick="switchView('data')">Data</div>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <button class="primary" id="solveBtnStudio" onclick="solveModel()">Solve Model</button>
+        </div>
+    </header>
+
+    <div id="dataView" class="data-view">
+        <h2 style="margin-top:0;">Generators</h2>
+        <table class="data-table" id="tableGens">
+            <thead><tr><th>Zone</th><th>Name</th><th>Type</th><th>Capacity (MW)</th><th>Cost ($/MWh)</th></tr></thead>
+            <tbody></tbody>
+        </table>
+        
+        <h2>Branches</h2>
+        <table class="data-table" id="tableLines">
+            <thead><tr><th>Name</th><th>From</th><th>To</th><th>Forward Limit</th><th>Reverse Limit</th><th>Reactance</th></tr></thead>
+            <tbody></tbody>
+        </table>
+        
+        <h2>Storage</h2>
+        <table class="data-table" id="tableStorage">
+            <thead><tr><th>Zone</th><th>Name</th><th>Power Cap (MW)</th><th>Duration (H)</th><th>Efficiency</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="app" id="appGrid">
         <aside class="sidebar">
             <div class="panel-pad">
                 <div class="brand">
@@ -464,6 +512,77 @@
 
     <script type="module">
         import solver from './solver.mjs';
+
+        window.solver = solver;
+        window.solveModel = solveModel;
+
+        window.switchView = function(view) {
+            document.querySelectorAll('.header-tab').forEach(el => el.classList.remove('active'));
+            if (view === 'graph') {
+                document.querySelectorAll('.header-tab')[0].classList.add('active');
+                document.getElementById('appGrid').style.display = 'grid';
+                document.getElementById('dataView').classList.remove('active');
+                if (window.map) setTimeout(() => window.map.invalidateSize(), 10);
+            } else {
+                document.querySelectorAll('.header-tab')[1].classList.add('active');
+                document.getElementById('appGrid').style.display = 'none';
+                document.getElementById('dataView').classList.add('active');
+                renderDataTables();
+            }
+        };
+
+        window.updateParam = function(type, id1, id2, field, value) {
+            let num = parseFloat(value);
+            if (isNaN(num)) return;
+            if (type === 'gen') {
+                state.zones[id1].generators[id2][field] = num;
+            } else if (type === 'line') {
+                state.lines[id1][field] = num;
+            } else if (type === 'storage') {
+                state.zones[id1].storage[id2][field] = num;
+            }
+            solveModel();
+        };
+
+        window.renderDataTables = function() {
+            let gensHtml = '';
+            let storageHtml = '';
+            Object.entries(state.zones).forEach(([zoneId, zone]) => {
+                Object.entries(zone.generators || {}).forEach(([genId, gen]) => {
+                    gensHtml += `<tr>
+                        <td>${zone.name}</td>
+                        <td>${gen.name}</td>
+                        <td><span class="status-pill" style="background:${RESOURCE_COLORS[gen.profile || gen.type] || '#58a6ff'}; color:#000;">${gen.profile || gen.type}</span></td>
+                        <td><input type="number" value="${gen.cap}" onchange="updateParam('gen', '${zoneId}', '${genId}', 'cap', this.value)"></td>
+                        <td><input type="number" value="${gen.cost}" onchange="updateParam('gen', '${zoneId}', '${genId}', 'cost', this.value)"></td>
+                    </tr>`;
+                });
+                Object.entries(zone.storage || {}).forEach(([stId, st]) => {
+                    storageHtml += `<tr>
+                        <td>${zone.name}</td>
+                        <td>${st.name}</td>
+                        <td><input type="number" value="${st.powerCap}" onchange="updateParam('storage', '${zoneId}', '${stId}', 'powerCap', this.value)"></td>
+                        <td><input type="number" value="${st.duration}" onchange="updateParam('storage', '${zoneId}', '${stId}', 'duration', this.value)"></td>
+                        <td><input type="number" value="${st.efficiency}" onchange="updateParam('storage', '${zoneId}', '${stId}', 'efficiency', this.value)"></td>
+                    </tr>`;
+                });
+            });
+            document.querySelector('#tableGens tbody').innerHTML = gensHtml;
+            document.querySelector('#tableStorage tbody').innerHTML = storageHtml;
+
+            let linesHtml = '';
+            Object.entries(state.lines).forEach(([lineId, line]) => {
+                linesHtml += `<tr>
+                    <td>${line.name}</td>
+                    <td>${state.zones[line.from]?.name || line.from}</td>
+                    <td>${state.zones[line.to]?.name || line.to}</td>
+                    <td><input type="number" value="${line.forwardLimit}" onchange="updateParam('line', '${lineId}', null, 'forwardLimit', this.value)"></td>
+                    <td><input type="number" value="${line.reverseLimit}" onchange="updateParam('line', '${lineId}', null, 'reverseLimit', this.value)"></td>
+                    <td><input type="number" value="${line.reactance}" onchange="updateParam('line', '${lineId}', null, 'reactance', this.value)"></td>
+                </tr>`;
+            });
+            document.querySelector('#tableLines tbody').innerHTML = linesHtml;
+        };
 
         const HOURS = Array.from({ length: 24 }, (_, i) => i + 1);
         const BASE_LOAD_SHAPE = [0.72,0.68,0.65,0.64,0.66,0.74,0.86,0.94,0.98,1.00,1.02,1.03,1.04,1.06,1.10,1.17,1.27,1.36,1.42,1.36,1.24,1.08,0.92,0.80];
@@ -1229,7 +1348,7 @@
 
         function selectZone(zoneId) {
             state.selectedZone = zoneId;
-            state.selectedResource = Object.keys(state.zones[zoneId].resources)[0];
+            state.selectedResource = 'load';
             renderAll();
         }
 
@@ -1241,19 +1360,21 @@
 
         function resetScenario() {
             Object.keys(state.scenario).forEach(key => state.scenario[key] = 100);
-            renderControls();
+            if (typeof renderControls === 'function') renderControls();
             solveModel();
         }
 
         function init() {
             initMap();
-            renderControls();
+            if (typeof renderControls === 'function') renderControls();
             document.getElementById('hourSlider').addEventListener('input', e => {
                 state.hour = Number(e.target.value);
                 renderAll();
             });
-            document.getElementById('solveBtn').addEventListener('click', solveModel);
-            document.getElementById('resetBtn').addEventListener('click', resetScenario);
+            const solveBtn = document.getElementById('solveBtn');
+            if (solveBtn) solveBtn.addEventListener('click', solveModel);
+            const resetBtn = document.getElementById('resetBtn');
+            if (resetBtn) resetBtn.addEventListener('click', resetScenario);
             solveModel();
             startFlowParticles();
         }
