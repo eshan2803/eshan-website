@@ -1,5 +1,8 @@
 name: Daily Transmission Prices Update
 on:
+  push:
+    branches:
+      - simbooni
   schedule:
     # Runs at 15:00 UTC (8:00 AM PDT) every day
     - cron: '0 15 * * *'
