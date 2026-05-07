@@ -1,0 +1,41 @@
+name: Daily Transmission Prices Update
+on:
+  schedule:
+    # Runs at 15:00 UTC (8:00 AM PDT) every day
+    - cron: '0 15 * * *'
+  workflow_dispatch: # Allows you to run it manually from GitHub UI
+
+permissions:
+  contents: write
+
+jobs:
+  update-prices:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: simbooni
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          pip install pandas numpy requests pytz
+
+      - name: Run Fetch Prices Script
+        run: |
+          git config --global user.name "GridBot"
+          git config --global user.email "bot@eshansingh.xyz"
+          cd transmission
+          python fetch_caiso_prices.py
+
+      - name: Commit and Push Changes
+        run: |
+          cd transmission
+          git add -f substations_with_prices.geojson
+          git commit -m "Auto-update LMP prices for $(date +'%Y-%m-%d')" || echo "No changes to commit"
+          git push origin simbooni
