@@ -538,6 +538,9 @@ if __name__ == "__main__":
 
     # Keep window open if run by double-clicking
     if len(sys.argv) == 1:
-        input("\nPress Enter to close...")
+        try:
+            input("\nPress Enter to close...")
+        except EOFError:
+            pass
 
     sys.exit(exit_code)
