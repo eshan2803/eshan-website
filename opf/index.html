@@ -699,39 +699,42 @@
         .hour-readout { display: inline; color: var(--yellow); font-size: 15px; font-weight: 800; }
         #hourSlider {
             width: 100%;
-            height: 4px;
-            margin: 0;
+            height: 28px;
+            margin: -8px 0 -6px;
             accent-color: var(--yellow);
             appearance: none;
             background: transparent;
+            cursor: pointer;
         }
         #hourSlider::-webkit-slider-runnable-track {
-            height: 4px;
+            height: 8px;
             border-radius: 999px;
             background: #253348;
         }
         #hourSlider::-webkit-slider-thumb {
             appearance: none;
-            width: 14px;
-            height: 14px;
-            margin-top: -5px;
+            width: 22px;
+            height: 22px;
+            margin-top: -7px;
             border-radius: 50%;
             background: var(--yellow);
+            border: 3px solid rgba(15, 23, 42, .96);
+            box-shadow: 0 0 0 3px rgba(250, 204, 21, .16);
             cursor: pointer;
         }
         #hourSlider::-moz-range-track {
-            height: 4px;
+            height: 8px;
             border-radius: 999px;
             background: #253348;
         }
         #hourSlider::-moz-range-progress {
-            height: 4px;
+            height: 8px;
             border-radius: 999px;
             background: #253348;
         }
         #hourSlider::-moz-range-thumb {
-            width: 14px;
-            height: 14px;
+            width: 22px;
+            height: 22px;
             border: 0;
             border-radius: 50%;
             background: var(--yellow);
@@ -749,8 +752,8 @@
             width: 56px;
             height: 56px;
             transform: translate(-28px, -28px);
-            pointer-events: none;
             position: relative;
+            cursor: pointer;
         }
         .node-core {
             width: 46px;
@@ -775,12 +778,68 @@
             text-shadow: 0 2px 5px #000;
             white-space: nowrap;
         }
+        .node-price-mini.unserved {
+            color: #ffffff;
+            font-size: 28px;
+            line-height: 1;
+        }
         .res-label {
             width: 20px;
             height: 20px;
             border: 1.5px solid rgba(255,255,255,.78);
             border-radius: 50%;
             box-shadow: 0 8px 18px rgba(0,0,0,.55);
+            cursor: pointer;
+        }
+        .res-hit {
+            width: 34px;
+            height: 34px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .chart-wrap canvas { cursor: ew-resize; }
+        .unserved-panel {
+            border: 1px solid rgba(255, 92, 122, .34);
+            background: rgba(39, 6, 17, .28);
+            border-radius: 8px;
+            padding: 12px;
+            color: #ffd6df;
+        }
+        .unserved-panel .section-title {
+            color: #ff8fa3;
+            margin-bottom: 10px;
+        }
+        .unserved-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .unserved-stat {
+            border: 1px solid rgba(255, 92, 122, .18);
+            border-radius: 6px;
+            background: rgba(15, 23, 42, .5);
+            padding: 9px;
+        }
+        .unserved-stat .label {
+            color: #ffb3c1;
+            font-size: 10px;
+            font-weight: 900;
+            letter-spacing: .07em;
+            text-transform: uppercase;
+        }
+        .unserved-stat .value {
+            margin-top: 5px;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 900;
+        }
+        .unserved-note {
+            margin-top: 10px;
+            color: #ffc0cb;
+            font-size: 12px;
+            line-height: 1.45;
         }
         .opf-tooltip {
             border: 1px solid rgba(148, 163, 184, .28);
@@ -985,6 +1044,9 @@
                 <section class="section">
                     <div class="section-title">Selected Bus LMP</div>
                     <div class="chart-wrap"><canvas id="lmpChart"></canvas></div>
+                </section>
+                <section id="unservedSection" class="section" style="display:none;">
+                    <div id="unservedPanel"></div>
                 </section>
             </div>
         </aside>
@@ -1600,7 +1662,7 @@
             import: '#9aa7b8',
             storage: '#f78acb',
             emergency: '#f97316',
-            shed: '#ff9f1c'
+            shed: '#ff5c7a'
         };
 
         const baseZones = {
@@ -1723,10 +1785,10 @@
         const INITIAL_MAP_CENTER = [36.8, -119.5];
         const INITIAL_MAP_ZOOM = 7;
 
-        let map;
-        let dispatchChart;
-        let lmpChart;
-        let layers = { nodes: {}, resources: {}, lines: {}, labels: {}, particles: {} };
+            let map;
+            let dispatchChart;
+            let lmpChart;
+            let layers = { nodes: {}, nodeHits: {}, resources: {}, lines: {}, lineHits: {}, labels: {}, particles: {} };
         let particleTimer = null;
         let editingLoadProfile = false;
         let editingGeneratorProfile = false;
@@ -1838,6 +1900,10 @@
 
         function lineLimitForFlow(line, flow) {
             return flow >= 0 ? lineScaledForwardLimit(line) : lineScaledReverseLimit(line);
+        }
+
+        function lineHasTransferCapacity(line) {
+            return Math.max(lineScaledForwardLimit(line), lineScaledReverseLimit(line)) > 0.001;
         }
 
         function lineReactance(line) {
@@ -2082,7 +2148,7 @@
             const sol = state.solution || {};
             state.dispatch = {};
             state.flows = {};
-            state.totals = { cost: sol.result || sol.evaluation || 0, load: 0, shed: 0, renewable: 0 };
+            state.totals = { cost: sol.result || sol.evaluation || 0, load: 0, shed: 0, emergency: 0, renewable: 0 };
 
             HOURS.forEach(hour => {
                 const h = hour - 1;
@@ -2104,6 +2170,7 @@
                     state.dispatch[zoneId].emergency[h] = sol[`emergency_${zoneId}_h${hour}`] || 0;
                     state.dispatch[zoneId].shed = state.dispatch[zoneId].shed || [];
                     state.dispatch[zoneId].shed[h] = sol[`shed_${zoneId}_h${hour}`] || 0;
+                    state.totals.emergency += state.dispatch[zoneId].emergency[h];
                     state.totals.shed += state.dispatch[zoneId].shed[h];
                 });
 
@@ -2198,7 +2265,7 @@
                     const flow = state.flows[lineId]?.[h] || 0;
                     const limit = lineLimitForFlow(line, flow);
                     const util = Math.abs(flow) / Math.max(1, limit);
-                    if (util < 0.98) union(line.from, line.to);
+                    if (lineHasTransferCapacity(line) && util < 0.98) union(line.from, line.to);
                 });
 
                 const components = {};
@@ -2455,7 +2522,27 @@
         window.fitMapView = function() {
             if (!map) return;
             hideSiteNotice();
-            map.setView(INITIAL_MAP_CENTER, INITIAL_MAP_ZOOM);
+            const points = Object.values(state.zones)
+                .filter(zone => Number.isFinite(zone.lat) && Number.isFinite(zone.lng))
+                .map(zone => [zone.lat, zone.lng]);
+            if (!points.length) {
+                map.setView(INITIAL_MAP_CENTER, INITIAL_MAP_ZOOM);
+                return;
+            }
+            if (points.length === 1) {
+                map.setView(points[0], 9);
+                return;
+            }
+            const width = map.getSize().x;
+            const height = map.getSize().y;
+            const horizontalPad = Math.round(clamp(width * 0.08, 34, 110));
+            const verticalPad = Math.round(clamp(height * 0.08, 34, 90));
+            map.fitBounds(L.latLngBounds(points), {
+                paddingTopLeft: [horizontalPad, verticalPad],
+                paddingBottomRight: [horizontalPad, Math.max(verticalPad, 84)],
+                maxZoom: 8.75,
+                animate: true
+            });
         };
 
         function initMap() {
@@ -2503,7 +2590,7 @@
 
         function clearMapLayers() {
             Object.values(layers).forEach(group => Object.values(group).flat().forEach(layer => map.removeLayer(layer)));
-            layers = { nodes: {}, resources: {}, lines: {}, labels: {}, particles: {} };
+            layers = { nodes: {}, nodeHits: {}, resources: {}, lines: {}, lineHits: {}, labels: {}, particles: {} };
         }
 
         function interpolateLatLng(from, to, t) {
@@ -2523,6 +2610,62 @@
                 soc = clamp(soc, 0, energyCap);
             }
             return soc / energyCap;
+        }
+
+        function zoneUnservedSeries(zoneId) {
+            return state.dispatch[zoneId]?.shed || Array(24).fill(0);
+        }
+
+        function zoneEmergencySeries(zoneId) {
+            return state.dispatch[zoneId]?.emergency || Array(24).fill(0);
+        }
+
+        function zoneUnservedSummary(zoneId) {
+            const shed = zoneUnservedSeries(zoneId);
+            const emergency = zoneEmergencySeries(zoneId);
+            const hours = shed
+                .map((value, index) => ({ hour: index + 1, value }))
+                .filter(item => item.value > 0.1);
+            return {
+                hasUnserved: hours.length > 0,
+                peak: Math.max(0, ...shed),
+                total: shed.reduce((sum, value) => sum + value, 0),
+                hours: hours.map(item => item.hour),
+                current: shed[state.hour - 1] || 0,
+                emergencyPeak: Math.max(0, ...emergency),
+                emergencyTotal: emergency.reduce((sum, value) => sum + value, 0)
+            };
+        }
+
+        function renderUnservedPanel() {
+            const section = document.getElementById('unservedSection');
+            const panel = document.getElementById('unservedPanel');
+            if (!section || !panel) return;
+            if (state.selectedBranch || !state.selectedZone) {
+                section.style.display = 'none';
+                panel.innerHTML = '';
+                return;
+            }
+            const summary = zoneUnservedSummary(state.selectedZone);
+            section.style.display = summary.hasUnserved ? '' : 'none';
+            if (!summary.hasUnserved) {
+                panel.innerHTML = '';
+                return;
+            }
+            const hourText = summary.hours.length > 8
+                ? `${summary.hours.slice(0, 8).join(', ')}...`
+                : summary.hours.join(', ');
+            panel.innerHTML = `
+                <div class="unserved-panel">
+                    <div class="section-title">Unserved Load</div>
+                    <div class="unserved-grid">
+                        <div class="unserved-stat"><div class="label">Current</div><div class="value">${fmtMW(summary.current)}</div></div>
+                        <div class="unserved-stat"><div class="label">Peak</div><div class="value">${fmtMW(summary.peak)}</div></div>
+                        <div class="unserved-stat"><div class="label">Total</div><div class="value">${Math.round(summary.total).toLocaleString()} MWh</div></div>
+                    </div>
+                    <div class="unserved-note">Affected hours: ${hourText}. Emergency generation peak: ${fmtMW(summary.emergencyPeak)}. This usually means the bus lacks enough local supply or usable import capacity.</div>
+                </div>
+            `;
         }
 
         function startFlowParticles() {
@@ -2568,6 +2711,16 @@
                 const util = Math.abs(flow) / Math.max(1, limit);
                 const selected = lineId === state.selectedBranch;
                 const color = selected ? cssVar('--yellow') : (util > .98 ? cssVar('--red') : '#8b99ad');
+                layers.lineHits[lineId] = L.polyline([[from.lat, from.lng], [to.lat, to.lng]], {
+                    color: '#ffffff',
+                    weight: 24,
+                    opacity: 0.01,
+                    interactive: true
+                }).addTo(map)
+                    .on('click', event => {
+                        L.DomEvent.stop(event);
+                        selectBranch(lineId);
+                    });
                 layers.lines[lineId] = L.polyline([[from.lat, from.lng], [to.lat, to.lng]], {
                     color, weight: branchWidth(Math.max(lineScaledForwardLimit(line), lineScaledReverseLimit(line))) + (selected ? 2 : 0), opacity: selected ? 1 : .88, dashArray: Math.max(lineForwardLimit(line), lineReverseLimit(line)) <= 0 ? '6 8' : null
                 }).addTo(map)
@@ -2577,7 +2730,10 @@
                         sticky: true,
                         opacity: 1
                     })
-                    .on('click', () => selectBranch(lineId));
+                    .on('click', event => {
+                        L.DomEvent.stop(event);
+                        selectBranch(lineId);
+                    });
                 const fromPoint = map.latLngToLayerPoint([from.lat, from.lng]);
                 const toPoint = map.latLngToLayerPoint([to.lat, to.lng]);
                 const particleSpacing = 120;
@@ -2599,17 +2755,30 @@
 
             Object.entries(state.zones).forEach(([zoneId, zone]) => {
                 const lmp = state.lmps[zoneId]?.[h] ?? 0;
+                const unserved = zoneUnservedSummary(zoneId);
                 const color = lmpColor(lmp);
+                layers.nodeHits[zoneId] = L.circleMarker([zone.lat, zone.lng], {
+                    radius: 24,
+                    stroke: false,
+                    fill: true,
+                    fillOpacity: 0.01,
+                    interactive: true
+                }).addTo(map)
+                    .on('click', event => {
+                        L.DomEvent.stop(event);
+                        if (handleBranchBusClick(zoneId)) return;
+                        selectZone(zoneId);
+                    });
                 layers.nodes[zoneId] = L.marker([zone.lat, zone.lng], {
                     draggable: state.draggingZone === zoneId,
                     icon: L.divIcon({
                         className: '',
-                        html: `<div class="node-label ${zoneId === state.selectedZone ? 'selected' : ''}"><div class="node-core" style="background:${color}; box-shadow:0 0 18px ${color}"><div class="node-price-mini">${solved ? `$${Math.round(lmp)}` : ''}</div></div></div>`,
+                        html: `<div class="node-label ${zoneId === state.selectedZone ? 'selected' : ''}"><div class="node-core" style="background:${unserved.hasUnserved ? cssVar('--red') : color}; box-shadow:0 0 18px ${unserved.hasUnserved ? cssVar('--red') : color}"><div class="node-price-mini ${unserved.hasUnserved ? 'unserved' : ''}">${solved ? (unserved.hasUnserved ? '&times;' : `$${Math.round(lmp)}`) : ''}</div></div></div>`,
                         iconSize: [56, 56],
                         iconAnchor: [0, 0]
                     })
                 }).addTo(map)
-                    .bindTooltip(`<strong>${zone.name}</strong><br>${solved ? `$${Math.round(lmp)}/MWh` : 'Unsolved'}<br><span class="muted">${fmtMW(zoneLoad(zone, h))} load</span>`, {
+                    .bindTooltip(`<strong>${zone.name}</strong><br>${unserved.hasUnserved ? `${fmtMW(unserved.current)} unserved at HE ${state.hour}` : (solved ? `$${Math.round(lmp)}/MWh` : 'Unsolved')}<br><span class="muted">${fmtMW(zoneLoad(zone, h))} load</span>`, {
                         className: 'opf-tooltip',
                         direction: 'top',
                         offset: [0, -14],
@@ -2668,9 +2837,9 @@
                     return L.marker([zone.lat, zone.lng], {
                         icon: L.divIcon({
                             className: '',
-                            html: `<div class="res-label" style="border-width:${borderWidth}px; ${glow} background:conic-gradient(${item.color} 0deg ${Math.round(clamp(item.utilization || 0, 0, 1) * 360)}deg, rgba(15,23,42,.92) ${Math.round(clamp(item.utilization || 0, 0, 1) * 360)}deg 360deg)"></div>`,
-                            iconSize: [20, 20],
-                            iconAnchor: [dotRadius - dx, dotRadius - dy]
+                            html: `<div class="res-hit"><div class="res-label" style="border-width:${borderWidth}px; ${glow} background:conic-gradient(${item.color} 0deg ${Math.round(clamp(item.utilization || 0, 0, 1) * 360)}deg, rgba(15,23,42,.92) ${Math.round(clamp(item.utilization || 0, 0, 1) * 360)}deg 360deg)"></div></div>`,
+                            iconSize: [34, 34],
+                            iconAnchor: [17 - dx, 17 - dy]
                         })
                     }).addTo(map)
                         .bindTooltip(`<strong>${zone.name} ${item.label}</strong><br><span class="muted">${Math.round(item.value)} MW at HE ${state.hour}<br>${Math.round(clamp(item.utilization || 0, 0, 1) * 100)}% filled${item.priceSetting ? '<br>Setting local LMP' : ''}</span>`, {
@@ -2930,6 +3099,7 @@
             const h = state.hour - 1;
             const lmp = state.lmps[state.selectedZone]?.[h] ?? 0;
             const load = zoneLoad(zone, h);
+            const unserved = zoneUnservedSummary(state.selectedZone);
             const hasLoad = !zone.loadDeleted;
             const generators = Object.entries(zone.resources).filter(([, res]) => res.type !== 'storage');
             const storageEntries = Object.entries(zone.resources).filter(([, res]) => res.type === 'storage');
@@ -2985,8 +3155,8 @@
             document.getElementById('zoneDetail').innerHTML = `
                 <div class="metric" style="margin-bottom:12px;">
                     <div class="label">${zone.name}</div>
-                    <div id="zoneDetailMetric" class="value" style="color:${lmpColor(lmp)}">$${Math.round(lmp)}/MWh</div>
-                    <div id="zoneDetailSub" class="sub">${fmtMW(load)} load at HE ${state.hour}</div>
+                    <div id="zoneDetailMetric" class="value" style="color:${unserved.hasUnserved ? cssVar('--red') : lmpColor(lmp)}">${unserved.hasUnserved ? 'Unserved Load' : `$${Math.round(lmp)}/MWh`}</div>
+                    <div id="zoneDetailSub" class="sub">${unserved.hasUnserved ? `${fmtMW(unserved.current)} unserved at HE ${state.hour}` : `${fmtMW(load)} load at HE ${state.hour}`}</div>
                 </div>
                 <div class="bus-manage">
                     <div class="bus-manage-section">
@@ -3840,6 +4010,48 @@
             };
         }
 
+        function setHour(nextHour) {
+            const hour = clamp(Math.round(Number(nextHour) || state.hour), 1, 24);
+            if (hour === state.hour) return;
+            state.hour = hour;
+            const slider = document.getElementById('hourSlider');
+            if (slider) slider.value = String(hour);
+            renderHourChange();
+        }
+
+        function chartHourFromPointer(canvas, event) {
+            if (!canvas) return state.hour;
+            const rect = canvas.getBoundingClientRect();
+            const leftPad = 44;
+            const rightPad = 14;
+            const x = clamp(event.clientX - rect.left, leftPad, Math.max(leftPad + 1, rect.width - rightPad));
+            const relative = (x - leftPad) / Math.max(1, rect.width - leftPad - rightPad);
+            return clamp(Math.floor(relative * 24) + 1, 1, 24);
+        }
+
+        function setupHourScrubChart(chart) {
+            if (!chart?.canvas) return;
+            const canvas = chart.canvas;
+            let scrubbing = false;
+            const scrub = event => {
+                if (!canvas.isConnected) {
+                    scrubbing = false;
+                    return;
+                }
+                setHour(chartHourFromPointer(canvas, event));
+            };
+            canvas.addEventListener('pointerdown', event => {
+                scrubbing = true;
+                canvas.setPointerCapture?.(event.pointerId);
+                scrub(event);
+            });
+            canvas.addEventListener('pointermove', event => {
+                if (scrubbing) scrub(event);
+            });
+            canvas.addEventListener('pointerup', () => { scrubbing = false; });
+            canvas.addEventListener('pointercancel', () => { scrubbing = false; });
+        }
+
         function renderChart() {
             const zoneId = state.selectedZone;
             const zone = state.zones[zoneId];
@@ -3857,6 +4069,15 @@
                     data: state.dispatch[zoneId].emergency,
                     borderWidth: 0,
                     backgroundColor: RESOURCE_COLORS.emergency,
+                    borderRadius: 3
+                });
+            }
+            if ((state.dispatch[zoneId]?.shed || []).some(v => v > 0.5)) {
+                datasets.push({
+                    label: 'unserved load',
+                    data: state.dispatch[zoneId].shed,
+                    borderWidth: 0,
+                    backgroundColor: RESOURCE_COLORS.shed,
                     borderRadius: 3
                 });
             }
@@ -3888,6 +4109,7 @@
                     }
                 }
             });
+            setupHourScrubChart(dispatchChart);
         }
 
         function renderLmpChart() {
@@ -3925,6 +4147,7 @@
                     }
                 }
             });
+            setupHourScrubChart(lmpChart);
         }
 
         function renderLineTable(highlight = state.selectedBranch) {
@@ -3984,6 +4207,7 @@
             renderZoneDetail();
             renderChart();
             renderLmpChart();
+            renderUnservedPanel();
             renderLineTable();
             renderMap();
         }
@@ -4000,13 +4224,18 @@
             const zoneDetailMetric = document.getElementById('zoneDetailMetric');
             if (zoneDetailMetric) {
                 const lmp = state.lmps[state.selectedZone]?.[h] ?? 0;
-                zoneDetailMetric.style.color = lmpColor(lmp);
-                zoneDetailMetric.textContent = `$${Math.round(lmp)}/MWh`;
+                const unserved = zoneUnservedSummary(state.selectedZone);
+                zoneDetailMetric.style.color = unserved.hasUnserved ? cssVar('--red') : lmpColor(lmp);
+                zoneDetailMetric.textContent = unserved.hasUnserved ? 'Unserved Load' : `$${Math.round(lmp)}/MWh`;
             }
             const zoneDetailSub = document.getElementById('zoneDetailSub');
-            if (zoneDetailSub) zoneDetailSub.textContent = `${fmtMW(zoneLoad(zone, h))} load at HE ${state.hour}`;
-            if (dispatchChart) dispatchChart.draw();
-            if (lmpChart) lmpChart.draw();
+            if (zoneDetailSub) {
+                const unserved = zoneUnservedSummary(state.selectedZone);
+                zoneDetailSub.textContent = unserved.hasUnserved ? `${fmtMW(unserved.current)} unserved at HE ${state.hour}` : `${fmtMW(zoneLoad(zone, h))} load at HE ${state.hour}`;
+            }
+            if (dispatchChart) dispatchChart.update('none');
+            if (lmpChart) lmpChart.update('none');
+            renderUnservedPanel();
             renderLineTable();
             renderMap();
         }
@@ -4080,10 +4309,15 @@
         function init() {
             initMap();
             setSolveButtonText('Solve DC OPF');
-            document.getElementById('hourSlider').addEventListener('input', e => {
-                state.hour = Number(e.target.value);
-                renderHourChange();
-            });
+            const hourSlider = document.getElementById('hourSlider');
+            const updateHourFromSliderPointer = event => {
+                const rect = hourSlider.getBoundingClientRect();
+                const relative = clamp((event.clientX - rect.left) / Math.max(1, rect.width), 0, 1);
+                hourSlider.value = String(clamp(Math.round(1 + relative * 23), 1, 24));
+                setHour(hourSlider.value);
+            };
+            hourSlider.addEventListener('pointerdown', updateHourFromSliderPointer);
+            hourSlider.addEventListener('input', e => setHour(e.target.value));
             const solveBtn = document.getElementById('solveBtnStudio') || document.getElementById('solveBtn');
             if (solveBtn && !solveBtn.hasAttribute('onclick')) solveBtn.addEventListener('click', solveModel);
             const resetBtn = document.getElementById('resetBtn');
@@ -4097,6 +4331,7 @@
             });
             setupPeakLoadEditor();
             renderAll();
+            setTimeout(() => fitMapView(), 80);
             startFlowParticles();
         }
 
