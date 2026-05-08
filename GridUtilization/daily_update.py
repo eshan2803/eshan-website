@@ -507,8 +507,14 @@ def main():
     # Generate outputs (after CSV is updated so exports use latest data)
     steps_success.append(regenerate_charts())
 
-    # Push to GitHub
-    steps_success.append(git_commit_and_push())
+    # Push to GitHub unless the caller owns commit/push orchestration.
+    # GitHub Actions uses --no-git so the workflow can commit all generated
+    # artifacts in one place after it refreshes the archive.
+    if "--no-git" in sys.argv:
+        log("Skipping internal git commit/push (--no-git flag)")
+        steps_success.append(True)
+    else:
+        steps_success.append(git_commit_and_push())
 
     # Summary
     elapsed = time.time() - start_time
