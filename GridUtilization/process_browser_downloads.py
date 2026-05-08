@@ -26,6 +26,21 @@ COLUMN_ORDER = ['Time', 'Solar', 'Wind', 'Geothermal', 'Biomass', 'Biogas', 'Sma
                 'Coal', 'Nuclear', 'Natural Gas', 'Large Hydro', 'Batteries', 'Imports', 'Other']
 
 
+def fuelsource_file_is_complete(output_file):
+    """Return True when an existing fuelsource output has a complete 5-minute day."""
+    try:
+        with open(output_file, encoding='utf-8-sig', newline='') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+
+        if len(rows) < 288:
+            return False
+
+        return rows[-1].get('Time', '').strip() == '23:55'
+    except Exception:
+        return False
+
+
 def parse_caiso_csv(file_path):
     """
     Parse CAISO CSV format where rows are energy sources and columns are time intervals.
@@ -169,9 +184,11 @@ def main():
         # Extract date from filename
         date_str = supply_file.stem.split('_')[0]  # YYYYMMDD
 
-        # Check if output already exists
+        # Check if output already exists and is complete. Partial outputs must be
+        # regenerated because the daily workflow may have captured an in-progress
+        # CAISO day on an earlier run.
         output_file = OUTPUT_DIR / f"{date_str}_fuelsource.csv"
-        if output_file.exists():
+        if output_file.exists() and fuelsource_file_is_complete(output_file):
             skipped_count += 1
             continue
 

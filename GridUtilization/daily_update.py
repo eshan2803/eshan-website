@@ -10,6 +10,7 @@ import os
 import sys
 import json
 import subprocess
+import csv
 from datetime import datetime, timedelta, date
 from pathlib import Path
 import time
@@ -117,6 +118,42 @@ def supply_file_is_complete(supply_file):
         log_warning(f"Could not validate supply CSV {supply_file}: {e}")
         return False
 
+def demand_file_is_complete(demand_file):
+    """Return True only when a demand CSV has a full 5-minute day."""
+    if not demand_file.exists():
+        return False
+
+    try:
+        with open(demand_file, encoding="utf-8-sig", newline="") as f:
+            rows = list(csv.reader(f))
+
+        if len(rows) < 4:
+            return False
+
+        header = [cell.strip() for cell in rows[0][1:]]
+        demand_values = [cell.strip() for cell in rows[3][1:]]
+
+        if "23:55" not in header:
+            return False
+
+        end_idx = header.index("23:55")
+        if len(demand_values) <= end_idx or not demand_values[end_idx]:
+            return False
+
+        return sum(1 for value in demand_values[:end_idx + 1] if value) >= 288
+    except Exception as e:
+        log_warning(f"Could not validate demand CSV {demand_file}: {e}")
+        return False
+
+def remove_file_if_exists(path, reason):
+    """Remove a stale generated/downloaded file before re-downloading it."""
+    try:
+        if path.exists():
+            path.unlink()
+            log_warning(f"Removed {path} ({reason})")
+    except Exception as e:
+        log_error(f"Could not remove {path}: {e}")
+
 def get_missing_dates(last_date):
     """Get list of dates between last_date and yesterday that need to be downloaded
 
@@ -157,6 +194,8 @@ def source_files_need_download(data_date):
     issues = []
     if not demand_file.exists():
         issues.append("missing demand CSV")
+    elif not demand_file_is_complete(demand_file):
+        issues.append("incomplete demand CSV")
 
     if not supply_file.exists():
         issues.append("missing supply CSV")
@@ -176,14 +215,15 @@ def download_missing_demand(missing_dates):
 
     log_header(f"STEP 1: Downloading Demand Data ({len(missing_dates)} days)")
 
-    # Check which demand files are actually missing
+    # Check which demand files are missing or partial.
     demand_dir = Path("caiso_demand_downloads")
     actually_missing = []
 
     for d in missing_dates:
         demand_file = demand_dir / f"{d.strftime('%Y%m%d')}_demand.csv"
-        if not demand_file.exists():
+        if not demand_file.exists() or not demand_file_is_complete(demand_file):
             actually_missing.append(d)
+            remove_file_if_exists(demand_file, "missing/incomplete demand refresh")
 
     if not actually_missing:
         log_success("All demand files already exist")
@@ -229,6 +269,12 @@ def download_missing_supply(missing_dates):
         return True
 
     log(f"Need to download {len(missing_supply)} supply files")
+
+    raw_dir = Path("caiso_downloads")
+    for d in missing_supply:
+        date_prefix = d.strftime("%Y%m%d")
+        remove_file_if_exists(raw_dir / f"{date_prefix}_supply_raw.csv", "refreshing incomplete supply day")
+        remove_file_if_exists(raw_dir / f"{date_prefix}_renewables_raw.csv", "refreshing incomplete supply day")
 
     # Create temp file with dates
     with open("temp_supply_dates.txt", "w") as f:
@@ -409,6 +455,87 @@ def regenerate_charts():
 
     return essential_success
 
+def latest_complete_source_date():
+    """Find the newest date with complete demand and supply source files."""
+    supply_dir = Path("caiso_supply")
+    demand_dir = Path("caiso_demand_downloads")
+    complete_dates = []
+
+    for supply_file in supply_dir.glob("*_fuelsource.csv"):
+        date_str = supply_file.name.split("_", 1)[0]
+        try:
+            data_date = datetime.strptime(date_str, "%Y%m%d").date()
+        except ValueError:
+            continue
+
+        demand_file = demand_dir / f"{date_str}_demand.csv"
+        if supply_file_is_complete(supply_file) and demand_file_is_complete(demand_file):
+            complete_dates.append(data_date)
+
+    return max(complete_dates) if complete_dates else None
+
+def validate_homepage_data_freshness():
+    """Fail the update if homepage JSON outputs do not reflect fresh complete data."""
+    log_header("STEP 9: Validating Homepage Data Freshness")
+
+    latest_source_date = latest_complete_source_date()
+    if latest_source_date is None:
+        log_error("No complete source date found for homepage validation")
+        return False
+
+    expected_min_date = date.today() - timedelta(days=1)
+    if latest_source_date < expected_min_date:
+        log_error(
+            f"Latest complete source date is {latest_source_date}, expected at least {expected_min_date}"
+        )
+        return False
+
+    breakdown_file = Path("../daily_breakdown.json")
+    if not breakdown_file.exists():
+        log_error("daily_breakdown.json is missing")
+        return False
+
+    try:
+        with open(breakdown_file, encoding="utf-8") as f:
+            breakdown = json.load(f)
+        breakdown_date = datetime.strptime(breakdown["date"], "%Y-%m-%d").date()
+    except Exception as e:
+        log_error(f"Could not validate daily_breakdown.json: {e}")
+        return False
+
+    if breakdown_date != latest_source_date:
+        log_error(
+            f"daily_breakdown.json is {breakdown_date}, but latest complete source date is {latest_source_date}"
+        )
+        return False
+
+    chart_file = Path("../chart_data.json")
+    if not chart_file.exists():
+        log_error("chart_data.json is missing")
+        return False
+
+    try:
+        with open(chart_file, encoding="utf-8") as f:
+            chart_data = json.load(f)
+    except Exception as e:
+        log_error(f"Could not read chart_data.json: {e}")
+        return False
+
+    latest_chart_date = None
+    if isinstance(chart_data, dict):
+        date_keys = [key for key in chart_data.keys() if isinstance(key, str) and len(key) == 10]
+        if date_keys:
+            latest_chart_date = max(datetime.strptime(key, "%Y-%m-%d").date() for key in date_keys)
+        elif "dates" in chart_data and isinstance(chart_data["dates"], list) and chart_data["dates"]:
+            latest_chart_date = max(datetime.strptime(key, "%Y-%m-%d").date() for key in chart_data["dates"])
+
+    if latest_chart_date and latest_chart_date < latest_source_date:
+        log_error(f"chart_data.json ends at {latest_chart_date}, expected {latest_source_date}")
+        return False
+
+    log_success(f"Homepage JSON is fresh through {latest_source_date}")
+    return True
+
 def update_comprehensive_csv(use_incremental=True):
     """Update the comprehensive CSV file"""
     log_header("STEP 7: Updating Comprehensive CSV")
@@ -434,7 +561,7 @@ def update_comprehensive_csv(use_incremental=True):
 
 def git_commit_and_push():
     """Commit changes and push to GitHub"""
-    log_header("STEP 9: Pushing to GitHub")
+    log_header("STEP 10: Pushing to GitHub")
 
     # Check if there are changes
     result = subprocess.run("git status --short", shell=True, capture_output=True, text=True)
@@ -541,6 +668,7 @@ def main():
 
     # Generate outputs (after CSV is updated so exports use latest data)
     steps_success.append(regenerate_charts())
+    steps_success.append(validate_homepage_data_freshness())
 
     # Push to GitHub unless the caller owns commit/push orchestration.
     # GitHub Actions uses --no-git so the workflow can commit all generated
