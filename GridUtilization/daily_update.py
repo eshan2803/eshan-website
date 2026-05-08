@@ -98,6 +98,25 @@ def get_last_data_date():
     # Default to yesterday if no data found
     return date.today() - timedelta(days=2)
 
+def supply_file_is_complete(supply_file):
+    """Return True only when a fuelsource CSV has a complete 5-minute day."""
+    try:
+        rows = []
+        with open(supply_file, encoding="utf-8-sig") as f:
+            for line in f:
+                line = line.strip()
+                if line and line[0].isdigit():
+                    rows.append(line)
+
+        if len(rows) < 288:
+            return False
+
+        last_time = rows[-1].split(",", 1)[0].strip()
+        return last_time == "23:55"
+    except Exception as e:
+        log_warning(f"Could not validate supply CSV {supply_file}: {e}")
+        return False
+
 def get_missing_dates(last_date):
     """Get list of dates between last_date and yesterday that need to be downloaded
 
@@ -107,32 +126,48 @@ def get_missing_dates(last_date):
     yesterday = date.today() - timedelta(days=1)
     missing = []
 
-    # First, verify source files exist for the last_date
-    demand_file = Path("caiso_demand_downloads") / f"{last_date.strftime('%Y%m%d')}_demand.csv"
-    supply_file = Path("caiso_supply") / f"{last_date.strftime('%Y%m%d')}_fuelsource.csv"
-
-    files_missing = []
-    if not demand_file.exists():
-        files_missing.append("demand CSV")
-    if not supply_file.exists():
-        files_missing.append("supply CSV")
-
-    if files_missing:
-        log_warning(f"Source files missing for {last_date.strftime('%Y-%m-%d')}: {', '.join(files_missing)}")
-        log_warning("Will re-download this date to fix missing files")
-        missing.append(last_date)
+    # First, verify recent source files exist and are complete. Browser downloads
+    # can occasionally leave a partial fuelsource CSV behind; existence alone is
+    # not enough for the homepage charts.
+    verify_start = max(last_date - timedelta(days=2), date.today() - timedelta(days=7))
+    current = verify_start
+    while current <= yesterday:
+        if source_files_need_download(current):
+            missing.append(current)
+        current += timedelta(days=1)
 
     # Then check for any dates after last_date
     if last_date < yesterday:
         current = last_date + timedelta(days=1)
         while current <= yesterday:
-            missing.append(current)
+            if current not in missing:
+                missing.append(current)
             current += timedelta(days=1)
 
     if not missing:
         log_success("Data is up to date and all source files verified")
 
     return missing
+
+def source_files_need_download(data_date):
+    """Check whether a source date should be downloaded or refreshed."""
+    demand_file = Path("caiso_demand_downloads") / f"{data_date.strftime('%Y%m%d')}_demand.csv"
+    supply_file = Path("caiso_supply") / f"{data_date.strftime('%Y%m%d')}_fuelsource.csv"
+
+    issues = []
+    if not demand_file.exists():
+        issues.append("missing demand CSV")
+
+    if not supply_file.exists():
+        issues.append("missing supply CSV")
+    elif not supply_file_is_complete(supply_file):
+        issues.append("incomplete supply CSV")
+
+    if issues:
+        log_warning(f"Source files need refresh for {data_date.strftime('%Y-%m-%d')}: {', '.join(issues)}")
+        return True
+
+    return False
 
 def download_missing_demand(missing_dates):
     """Download demand CSV files for missing dates"""
@@ -182,11 +217,11 @@ def download_missing_supply(missing_dates):
 
     log_header(f"STEP 2: Downloading Supply Data ({len(missing_dates)} days)")
 
-    # Check which supply files are missing (check caiso_supply for processed files)
+    # Check which supply files are missing or partial (check caiso_supply for processed files)
     missing_supply = []
     for d in missing_dates:
-        supply_file = f"caiso_supply/{d.strftime('%Y%m%d')}_fuelsource.csv"
-        if not os.path.exists(supply_file):
+        supply_file = Path("caiso_supply") / f"{d.strftime('%Y%m%d')}_fuelsource.csv"
+        if not supply_file.exists() or not supply_file_is_complete(supply_file):
             missing_supply.append(d)
 
     if not missing_supply:

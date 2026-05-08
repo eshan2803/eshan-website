@@ -5,6 +5,7 @@ Reads from caiso_comprehensive_data.csv and outputs daily_breakdown.json to the 
 import csv
 import json
 import os
+from datetime import datetime
 from pathlib import Path
 
 script_dir = Path(__file__).parent
@@ -51,8 +52,10 @@ def main():
             complete_days.append((day, day_rows_candidate))
 
     if complete_days:
+        complete_days.sort(key=lambda item: datetime.strptime(item[0], "%Y-%m-%d").date())
         last_date, day_rows = complete_days[-1]
     else:
+        days.sort(key=lambda item: datetime.strptime(item[0], "%Y-%m-%d").date())
         last_date, day_rows = days[-1]
         print(f"WARNING: no complete 288-point day found; falling back to {last_date}")
 
