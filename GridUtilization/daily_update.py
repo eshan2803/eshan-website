@@ -441,7 +441,7 @@ def git_commit_and_push():
     # Pull latest to avoid rejected pushes, then push to simbooni branch
     log("Pulling latest and Pushing to GitHub (simbooni)...")
     success2, _ = run_command(
-        "git pull --rebase origin simbooni && git push origin simbooni",
+        "git pull --rebase --autostash origin simbooni && git push origin simbooni",
         "Git push",
         timeout=60
     )

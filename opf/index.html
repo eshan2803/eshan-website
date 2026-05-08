@@ -50,11 +50,28 @@
         .data-table th { background: var(--panel-2); color: var(--muted); font-weight: 700; text-transform: uppercase; font-size: 11px; }
         .data-table input, .data-table select { background: transparent; border: 1px solid transparent; color: var(--text); width: 100%; font-family: inherit; }
         .data-table input:focus, .data-table select:focus { border-bottom: 1px solid var(--blue); outline: none; }
-        .inner-tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+        .inner-tabs { display: flex; align-items: center; gap: 20px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+        .inner-tab-spacer { flex: 1; }
         .inner-tab { padding: 10px 0; font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer; position: relative; }
         .inner-tab.active { color: var(--text); }
         .inner-tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: var(--yellow); }
         .inner-tab .badge { background: #334155; color: #cbd7e7; font-size: 10px; padding: 2px 6px; border-radius: 99px; margin-left: 6px; }
+        .export-data-button {
+            height: 30px;
+            padding: 0 14px;
+            border: 1px solid rgba(65, 211, 154, .72);
+            border-radius: 6px;
+            background: transparent;
+            color: var(--green);
+            font: inherit;
+            font-size: 12px;
+            font-weight: 900;
+            cursor: pointer;
+        }
+        .export-data-button:hover {
+            background: rgba(65, 211, 154, .1);
+            color: #d1fae5;
+        }
         .inner-tab-content { display: none; }
         .inner-tab-content.active { display: block; }
         .result-table-container { margin-top: 40px; }
@@ -217,8 +234,123 @@
             padding: 12px;
             text-align: left;
             color: var(--text);
+            cursor: pointer;
         }
         .summary-button.active { border-color: var(--blue); background: #162842; }
+        .bus-manage {
+            display: grid;
+            gap: 16px;
+        }
+        .bus-manage-section {
+            display: grid;
+            gap: 11px;
+            padding-top: 16px;
+            border-top: 1px solid var(--line);
+        }
+        .bus-manage-section:first-child {
+            padding-top: 0;
+            border-top: 0;
+        }
+        .bus-manage-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .bus-manage-title {
+            color: #9db8dc;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: .09em;
+            text-transform: uppercase;
+        }
+        .bus-name-actions,
+        .bus-location-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 10px;
+            align-items: center;
+        }
+        .bus-location-row {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        }
+        .bus-location-actions {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            align-items: center;
+        }
+        .text-action-button,
+        .section-add-button {
+            height: 38px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: #1d2a3d;
+            color: #e5efff;
+            font: inherit;
+            font-weight: 900;
+            cursor: pointer;
+        }
+        .text-action-button {
+            padding: 0 13px;
+        }
+        .section-add-button {
+            padding: 0 14px;
+        }
+        .text-action-button:hover,
+        .section-add-button:hover {
+            border-color: var(--blue);
+            background: #243653;
+            color: #ffffff;
+        }
+        .text-action-button.danger {
+            border-color: rgba(255, 92, 122, .22);
+            color: #ffc0cb;
+        }
+        .text-action-button.danger:hover {
+            background: rgba(255, 92, 122, .12);
+            border-color: rgba(255, 92, 122, .58);
+            color: #ffffff;
+        }
+        .resource-list {
+            display: grid;
+            gap: 8px;
+            padding: 4px 0 6px;
+        }
+        .resource-row {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 12px minmax(0, 1fr) auto;
+            gap: 10px;
+            align-items: center;
+            min-height: 34px;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text);
+            text-align: left;
+            padding: 7px 8px;
+            cursor: pointer;
+        }
+        .resource-row.active {
+            border-color: rgba(96, 165, 250, .28);
+            background: rgba(96, 165, 250, .08);
+        }
+        .resource-row:hover {
+            background: rgba(148, 163, 184, .06);
+        }
+        .resource-row.active .name,
+        .resource-row:hover .name {
+            color: #ffffff;
+        }
+        .resource-row .tag {
+            color: var(--muted);
+        }
+        .empty-resource-note {
+            color: var(--muted);
+            font-size: 13px;
+            padding: 6px 0 8px 22px;
+        }
         .summary-panel {
             border: 1px solid var(--line);
             background: #0f1623;
@@ -398,14 +530,125 @@
         .map-toolbar {
             position: absolute;
             z-index: 700;
-            top: 16px;
-            left: 16px;
-            right: 16px;
+            top: 6px;
+            left: 12px;
+            right: 12px;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: space-between;
             gap: 12px;
             pointer-events: none;
+        }
+        .map-tools {
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            min-height: 48px;
+            border: 1px solid rgba(59, 130, 246, .24);
+            background: rgba(12, 22, 44, .92);
+            backdrop-filter: blur(12px);
+            border-radius: 12px;
+            box-shadow: 0 16px 40px rgba(0,0,0,.35);
+            overflow: hidden;
+        }
+        .map-tool-button {
+            height: 48px;
+            min-width: 112px;
+            padding: 0 24px;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            color: #bfdbfe;
+            font: inherit;
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: 0;
+            cursor: pointer;
+        }
+        .map-tool-button:hover {
+            background: rgba(96, 165, 250, .12);
+            color: #e0f2fe;
+        }
+        .map-tool-button:active {
+            background: rgba(96, 165, 250, .2);
+        }
+        .map-tool-button.active {
+            background: rgba(96, 165, 250, .22);
+            color: #ffffff;
+        }
+        .map-tool-separator {
+            width: 1px;
+            height: 30px;
+            background: rgba(148, 163, 184, .16);
+        }
+        .map-mode-hint {
+            position: absolute;
+            z-index: 710;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: none;
+            opacity: 0;
+            padding: 10px 16px;
+            border: 1px solid rgba(96, 165, 250, .28);
+            border-radius: 999px;
+            background: rgba(12, 22, 44, .94);
+            color: #dbeafe;
+            box-shadow: 0 12px 28px rgba(0,0,0,.32);
+            font-size: 14px;
+            font-weight: 800;
+            transition: opacity .16s ease;
+        }
+        .map-mode-hint.active { opacity: 1; }
+        .map-shell.bus-placement-mode #map,
+        .map-shell.branch-placement-mode #map,
+        .map-shell.bus-placement-mode .leaflet-container {
+            cursor: crosshair !important;
+        }
+        .map-shell.branch-placement-mode .leaflet-container {
+            cursor: pointer !important;
+        }
+        .site-notice {
+            position: absolute;
+            z-index: 720;
+            top: 68px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(560px, calc(100% - 40px));
+            display: none;
+            border: 1px solid rgba(255, 92, 122, .4);
+            border-radius: 8px;
+            background: rgba(39, 6, 17, .94);
+            color: #ffd6df;
+            box-shadow: 0 18px 42px rgba(0,0,0,.38);
+            padding: 12px 14px;
+            pointer-events: auto;
+        }
+        .site-notice.active {
+            display: block;
+        }
+        .site-notice-title {
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 900;
+            margin-bottom: 6px;
+        }
+        .site-notice ul {
+            margin: 0;
+            padding-left: 18px;
+            color: #ffc0cb;
+            font-size: 13px;
+            line-height: 1.45;
+        }
+        .site-notice-close {
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            border: 0;
+            background: transparent;
+            color: #ffc0cb;
+            font-size: 18px;
+            cursor: pointer;
         }
         .legend {
             pointer-events: auto;
@@ -625,6 +868,8 @@
             <div class="inner-tab" onclick="switchInnerTab('loads')">Loads <span class="badge" id="badgeLoads">0</span></div>
             <div class="inner-tab" onclick="switchInnerTab('branches')">Branches <span class="badge" id="badgeBranches">0</span></div>
             <div class="inner-tab" onclick="switchInnerTab('storage')">Storage <span class="badge" id="badgeStorage">0</span></div>
+            <div class="inner-tab-spacer"></div>
+            <button class="export-data-button" type="button" onclick="exportDataTablesCsv()">Export</button>
         </div>
 
         <div id="tab_buses" class="inner-tab-content active">
@@ -670,14 +915,14 @@
 
         <div id="tab_loads" class="inner-tab-content">
             <table class="data-table" id="tableLoads">
-                <thead><tr><th>Name</th><th>Bus</th><th>Peak (MW)</th><th>Min (MW)</th></tr></thead>
+                <thead><tr><th>Name</th><th>Bus</th><th>Peak (MW)</th><th>Min (MW)</th><th></th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
 
         <div id="tab_branches" class="inner-tab-content">
             <table class="data-table" id="tableLines">
-                <thead><tr><th>Name</th><th>From</th><th>To</th><th>Forward Rating</th><th>Reverse Rating</th><th>Reactance (P.U.)</th></tr></thead>
+                <thead><tr><th>Name</th><th>From</th><th>To</th><th>Forward Rating</th><th>Reverse Rating</th><th>Reactance (P.U.)</th><th></th></tr></thead>
                 <tbody></tbody>
             </table>
             <div class="result-table-container">
@@ -693,7 +938,7 @@
 
         <div id="tab_storage" class="inner-tab-content">
             <table class="data-table" id="tableStorage">
-                <thead><tr><th>Name</th><th>Bus</th><th>Power Cap (MW)</th><th>Duration (H)</th><th>Efficiency</th></tr></thead>
+                <thead><tr><th>Name</th><th>Bus</th><th>Power Cap (MW)</th><th>Duration (H)</th><th>Efficiency</th><th></th></tr></thead>
                 <tbody></tbody>
             </table>
             <div class="result-table-container">
@@ -746,8 +991,20 @@
 
         <main class="map-shell">
             <div id="map"></div>
+            <div id="mapModeHint" class="map-mode-hint">Click on canvas to place a bus. Press Esc to cancel.</div>
+            <div id="siteNotice" class="site-notice" role="status" aria-live="polite">
+                <button id="siteNoticeClose" class="site-notice-close" type="button" aria-label="Dismiss">&times;</button>
+                <div id="siteNoticeTitle" class="site-notice-title"></div>
+                <ul id="siteNoticeList"></ul>
+            </div>
             <div class="map-toolbar">
-                <div></div>
+                <div class="map-tools" aria-label="Map editing tools">
+                    <button id="addBusButton" class="map-tool-button" type="button" onclick="toggleAddBusMode()">+ Bus</button>
+                    <div class="map-tool-separator"></div>
+                    <button id="addBranchButton" class="map-tool-button" type="button" onclick="toggleAddBranchMode()">+ Branch</button>
+                    <div class="map-tool-separator"></div>
+                    <button class="map-tool-button" type="button" onclick="fitMapView()">Fit View</button>
+                </div>
                 <div class="legend">
                     <div class="section-title" style="margin:0;">Legend</div>
                     <div class="legend-row"><span class="legend-dot" style="background:#4b5a73"></span> Bus</div>
@@ -881,6 +1138,71 @@
             if (document.getElementById('dataView').classList.contains('active')) renderDataTables();
         };
 
+        const deleteButtonHtml = action => `<button onclick="${action}" style="border-color:#ff5c7a; color:#ff5c7a; height:24px; padding:0 8px; font-size:11px;">Delete</button>`;
+
+        function chooseExistingSelection() {
+            if (state.selectedZone && state.zones[state.selectedZone]) return;
+            const firstZone = Object.keys(state.zones)[0];
+            state.selectedZone = firstZone || null;
+            state.selectedResource = firstZone && !state.zones[firstZone]?.loadDeleted ? 'load' : null;
+            state.selectedPanel = null;
+            state.selectedBranch = null;
+            state.draggingZone = null;
+        }
+
+        function finishDelete() {
+            chooseExistingSelection();
+            invalidateSolution();
+            renderAll();
+            renderDataTables();
+        }
+
+        window.deleteBus = function(zoneId) {
+            if (!state.zones[zoneId] || Object.keys(state.zones).length <= 1) return;
+            delete state.zones[zoneId];
+            Object.entries(state.lines).forEach(([lineId, line]) => {
+                if (line.from === zoneId || line.to === zoneId) delete state.lines[lineId];
+            });
+            if (state.selectedZone === zoneId) state.selectedZone = null;
+            if (state.selectedBranch && !state.lines[state.selectedBranch]) state.selectedBranch = null;
+            finishDelete();
+        };
+
+        window.deleteGenerator = function(zoneId, resId) {
+            const resources = state.zones[zoneId]?.resources;
+            if (!resources?.[resId] || resources[resId].type === 'storage') return;
+            delete resources[resId];
+            if (state.selectedZone === zoneId && state.selectedResource === resId) state.selectedResource = null;
+            finishDelete();
+        };
+
+        window.deleteLoad = function(zoneId) {
+            const zone = state.zones[zoneId];
+            if (!zone || zone.loadDeleted) return;
+            zone.loadDeleted = true;
+            zone.baseLoad = 0;
+            if (state.selectedZone === zoneId && state.selectedResource === 'load') {
+                state.selectedResource = null;
+                state.selectedPanel = null;
+            }
+            finishDelete();
+        };
+
+        window.deleteBranch = function(lineId) {
+            if (!state.lines[lineId]) return;
+            delete state.lines[lineId];
+            if (state.selectedBranch === lineId) state.selectedBranch = null;
+            finishDelete();
+        };
+
+        window.deleteStorage = function(zoneId, resId) {
+            const resources = state.zones[zoneId]?.resources;
+            if (!resources?.[resId] || resources[resId].type !== 'storage') return;
+            delete resources[resId];
+            if (state.selectedZone === zoneId && state.selectedResource === resId) state.selectedResource = null;
+            finishDelete();
+        };
+
         window.switchInnerTab = function(tabId) {
             document.querySelectorAll('.inner-tab').forEach(el => {
                 if (el.getAttribute('onclick').includes(tabId)) {
@@ -891,6 +1213,178 @@
             });
             document.querySelectorAll('.inner-tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById('tab_' + tabId).classList.add('active');
+        };
+
+        function csvCell(value) {
+            const text = value === undefined || value === null ? '' : String(value);
+            return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+        }
+
+        function csvSection(title, headers, rows) {
+            return [
+                [title],
+                headers,
+                ...rows
+            ].map(row => row.map(csvCell).join(',')).join('\n');
+        }
+
+        function downloadCsv(filename, content) {
+            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        function resultResourceRows(type) {
+            return Object.entries(state.zones).flatMap(([zoneId, zone]) =>
+                Object.entries(zone.resources || {})
+                    .filter(([, res]) => type === 'storage' ? res.type === 'storage' : res.type !== 'storage')
+                    .map(([resId, res]) => ({ zoneId, zone, resId, res, label: resourceDisplayName(zone, resId, res) }))
+            );
+        }
+
+        function signedClass(value) {
+            return value > 0 ? 'good' : value < 0 ? 'bad' : '';
+        }
+
+        function signedCell(value, digits = 2) {
+            return `<td class="${signedClass(value)}">${value.toFixed(digits)}</td>`;
+        }
+
+        window.exportDataTablesCsv = function() {
+            const buses = Object.entries(state.zones).map(([zoneId, zone]) => {
+                const resources = Object.values(zone.resources || {});
+                return [
+                    zoneId,
+                    zone.name,
+                    zone.lat,
+                    zone.lng,
+                    resources.filter(res => res.type !== 'storage').length,
+                    zone.loadDeleted ? 0 : 1,
+                    resources.filter(res => res.type === 'storage').length
+                ];
+            });
+
+            const generators = Object.entries(state.zones).flatMap(([zoneId, zone]) =>
+                Object.entries(zone.resources || {})
+                    .filter(([, res]) => res.type !== 'storage')
+                    .map(([resId, res]) => [
+                        resId,
+                        resourceDisplayName(zone, resId, res),
+                        zoneId,
+                        zone.name,
+                        res.type,
+                        res.cap || 0,
+                        res.profileType || inferredGeneratorProfileType(res),
+                        res.costType || 'linear',
+                        res.cost ?? resourceCost(res),
+                        res.color || ''
+                    ])
+            );
+
+            const loads = Object.entries(state.zones)
+                .filter(([, zone]) => !zone.loadDeleted)
+                .map(([zoneId, zone]) => [
+                    zone.load?.name || `${zone.name} Load`,
+                    zoneId,
+                    zone.name,
+                    zone.baseLoad || 0,
+                    zone.loadProfileType || 'residential'
+                ]);
+
+            const branches = Object.entries(state.lines).map(([lineId, line]) => [
+                lineId,
+                line.name,
+                line.from,
+                state.zones[line.from]?.name || line.from,
+                line.to,
+                state.zones[line.to]?.name || line.to,
+                lineForwardLimit(line),
+                lineReverseLimit(line),
+                lineReactance(line)
+            ]);
+
+            const storage = Object.entries(state.zones).flatMap(([zoneId, zone]) =>
+                Object.entries(zone.resources || {})
+                    .filter(([, res]) => res.type === 'storage')
+                    .map(([resId, res]) => [
+                        resId,
+                        resourceDisplayName(zone, resId, res),
+                        zoneId,
+                        zone.name,
+                        res.powerCap || 0,
+                        res.duration || 0,
+                        storageEnergyCap(res),
+                        res.efficiency ?? '',
+                        res.initialSoc ?? '',
+                        res.terminalSoc ?? '',
+                        res.cyclingCost ?? ''
+                    ])
+            );
+
+            const zoneKeys = Object.keys(state.zones);
+            const lmpRows = HOURS.map(hour => [
+                hour,
+                ...zoneKeys.map(zoneId => state.lmps[zoneId]?.[hour - 1] ?? 0)
+            ]);
+
+            const generatorRows = resultResourceRows('generator');
+            const generatorDispatchRows = HOURS.map(hour => [
+                hour,
+                ...generatorRows.map(({ zoneId, resId }) => state.dispatch[zoneId]?.[resId]?.[hour - 1] || 0)
+            ]);
+            const generatorCostRows = HOURS.map(hour => [
+                hour,
+                ...generatorRows.map(({ zoneId, resId, res }) => resourceOperatingCost(res, state.dispatch[zoneId]?.[resId]?.[hour - 1] || 0))
+            ]);
+
+            const lineKeys = Object.keys(state.lines);
+            const branchFlowRows = HOURS.map(hour => [
+                hour,
+                ...lineKeys.map(lineId => state.flows[lineId]?.[hour - 1] ?? 0)
+            ]);
+
+            const storageRows = resultResourceRows('storage');
+            const storageOperationRows = HOURS.map(hour => [
+                hour,
+                ...storageRows.map(({ zoneId, resId }) => state.dispatch[zoneId]?.[resId]?.[hour - 1] || 0)
+            ]);
+            const storageRevenueTotals = Object.fromEntries(storageRows.map(({ zoneId, resId }) => [`${zoneId}_${resId}`, 0]));
+            const storageRevenueRows = HOURS.map(hour => [
+                hour,
+                ...storageRows.map(({ zoneId, resId }) => {
+                    const operation = state.dispatch[zoneId]?.[resId]?.[hour - 1] || 0;
+                    const lmp = state.lmps[zoneId]?.[hour - 1] || 0;
+                    const revenue = operation * lmp;
+                    storageRevenueTotals[`${zoneId}_${resId}`] += revenue;
+                    return revenue;
+                })
+            ]);
+            const storageRevenueTotalRows = [
+                storageRows.map(({ zoneId, resId }) => storageRevenueTotals[`${zoneId}_${resId}`])
+            ];
+
+            const csv = [
+                csvSection('Buses', ['id', 'name', 'latitude', 'longitude', 'generators', 'loads', 'storage'], buses),
+                csvSection('LMP Results ($/MWh)', ['hour_ending', ...zoneKeys.map(zoneId => `${state.zones[zoneId].name} ($/MWh)`) ], lmpRows),
+                csvSection('Generators', ['id', 'name', 'bus_id', 'bus_name', 'type', 'pmax_mw', 'profile', 'cost_type', 'sell_price', 'color'], generators),
+                csvSection('Generator Dispatch (MW)', ['hour_ending', ...generatorRows.map(({ label }) => `${label} (MW)`) ], generatorDispatchRows),
+                csvSection('Generator Operating Cost ($)', ['hour_ending', ...generatorRows.map(({ label }) => `${label} ($)`) ], generatorCostRows),
+                csvSection('Loads', ['name', 'bus_id', 'bus_name', 'peak_mw', 'profile'], loads),
+                csvSection('Branches', ['id', 'name', 'from_id', 'from_name', 'to_id', 'to_name', 'forward_rating_mw', 'reverse_rating_mw', 'reactance_pu'], branches),
+                csvSection('Branch Flows (MW)', ['hour_ending', ...lineKeys.map(lineId => `${state.lines[lineId].name} (MW)`) ], branchFlowRows),
+                csvSection('Storage', ['id', 'name', 'bus_id', 'bus_name', 'power_cap_mw', 'duration_h', 'energy_cap_mwh', 'efficiency', 'initial_soc', 'terminal_soc', 'cycling_cost'], storage),
+                csvSection('Storage Operation (MW)', ['hour_ending', ...storageRows.map(({ label }) => `${label} (MW)`) ], storageOperationRows),
+                csvSection('Storage Revenue ($)', ['hour_ending', ...storageRows.map(({ label }) => `${label} ($)`) ], storageRevenueRows),
+                csvSection('Daily Storage Revenue ($)', storageRows.map(({ label }) => `${label} ($)`), storageRevenueTotalRows)
+            ].join('\n\n');
+
+            downloadCsv(`opf-data-${new Date().toISOString().slice(0, 10)}.csv`, csv);
         };
 
         window.renderDataTables = function() {
@@ -906,8 +1400,8 @@
                 numBuses++;
                 const zGens = Object.values(zone.resources || {}).filter(res => res.type !== 'storage').length;
                 const zStorage = Object.values(zone.resources || {}).filter(res => res.type === 'storage').length;
-                const zLoads = 1; // Assuming 1 load per bus in this model
-                numLoads++;
+                const zLoads = zone.loadDeleted ? 0 : 1;
+                numLoads += zLoads;
                 
                 busesHtml += `<tr>
                     <td>${idCounter++}</td>
@@ -915,15 +1409,18 @@
                     <td>${zGens}</td>
                     <td>${zLoads}</td>
                     <td>${zStorage}</td>
-                    <td><button style="border-color:#ff5c7a; color:#ff5c7a; height:24px; padding:0 8px; font-size:11px;">Delete</button></td>
+                    <td>${deleteButtonHtml(`deleteBus('${zoneId}')`)}</td>
                 </tr>`;
                 
-                loadsHtml += `<tr>
-                    <td>${zone.load?.name || zone.name + ' Load'}</td>
-                    <td>${zone.name}</td>
-                    <td>${zone.load?.baseMW || 0}</td>
-                    <td>0</td>
-                </tr>`;
+                if (!zone.loadDeleted) {
+                    loadsHtml += `<tr>
+                        <td>${zone.load?.name || zone.name + ' Load'}</td>
+                        <td>${zone.name}</td>
+                        <td>${Math.round(zone.baseLoad || 0)}</td>
+                        <td>0</td>
+                        <td>${deleteButtonHtml(`deleteLoad('${zoneId}')`)}</td>
+                    </tr>`;
+                }
 
                 Object.entries(zone.resources || {}).filter(([, gen]) => gen.type !== 'storage').forEach(([genId, gen]) => {
                     numGens++;
@@ -945,7 +1442,7 @@
                             </select>
                         </td>
                         <td>${gen.costType === 'piecewise' ? 'piecewise' : `<input type="number" value="${gen.cost ?? resourceCost(gen)}" onchange="updateParam('gen', '${zoneId}', '${genId}', 'cost', this.value)">`}</td>
-                        <td><button style="border-color:#ff5c7a; color:#ff5c7a; height:24px; padding:0 8px; font-size:11px;">Delete</button></td>
+                        <td>${deleteButtonHtml(`deleteGenerator('${zoneId}', '${genId}')`)}</td>
                     </tr>`;
                 });
                 
@@ -957,6 +1454,7 @@
                         <td><input type="number" value="${st.powerCap}" onchange="updateParam('storage', '${zoneId}', '${stId}', 'powerCap', this.value)"></td>
                         <td><input type="number" value="${st.duration}" onchange="updateParam('storage', '${zoneId}', '${stId}', 'duration', this.value)"></td>
                         <td><input type="number" value="${st.efficiency}" onchange="updateParam('storage', '${zoneId}', '${stId}', 'efficiency', this.value)"></td>
+                        <td>${deleteButtonHtml(`deleteStorage('${zoneId}', '${stId}')`)}</td>
                     </tr>`;
                 });
             });
@@ -971,6 +1469,7 @@
                     <td><input type="number" value="${lineForwardLimit(line)}" onchange="updateParam('line', '${lineId}', null, 'forwardLimit', this.value)"></td>
                     <td><input type="number" value="${lineReverseLimit(line)}" onchange="updateParam('line', '${lineId}', null, 'reverseLimit', this.value)"></td>
                     <td><input type="number" step="0.0001" value="${lineReactance(line).toFixed(4)}" onchange="updateParam('line', '${lineId}', null, 'reactance', this.value)"></td>
+                    <td>${deleteButtonHtml(`deleteBranch('${lineId}')`)}</td>
                 </tr>`;
             });
             
@@ -997,11 +1496,7 @@
                 document.getElementById('lmpBody').innerHTML = lmpBody;
             }
 
-            const generatorRows = Object.entries(state.zones).flatMap(([zoneId, zone]) =>
-                Object.entries(zone.resources || {})
-                    .filter(([, res]) => res.type !== 'storage')
-                    .map(([resId, res]) => ({ zoneId, zone, resId, res, label: resourceDisplayName(zone, resId, res) }))
-            );
+            const generatorRows = resultResourceRows('generator');
             document.getElementById('genDispatchHeaders').innerHTML = '<th>HE</th>' + generatorRows.map(({ label }) => `<th>${label.toUpperCase()} (MW)</th>`).join('');
             document.getElementById('genCostHeaders').innerHTML = '<th>HE</th>' + generatorRows.map(({ label }) => `<th>${label.toUpperCase()} ($)</th>`).join('');
             let genDispatchBody = '';
@@ -1021,11 +1516,7 @@
             document.getElementById('genDispatchBody').innerHTML = genDispatchBody;
             document.getElementById('genCostBody').innerHTML = genCostBody;
 
-            const storageRows = Object.entries(state.zones).flatMap(([zoneId, zone]) =>
-                Object.entries(zone.resources || {})
-                    .filter(([, res]) => res.type === 'storage')
-                    .map(([resId, res]) => ({ zoneId, zone, resId, res, label: resourceDisplayName(zone, resId, res) }))
-            );
+            const storageRows = resultResourceRows('storage');
             document.getElementById('storageOperationHeaders').innerHTML = '<th>HE</th>' + storageRows.map(({ label }) => `<th>${label.toUpperCase()} (MW)</th>`).join('');
             document.getElementById('storageRevenueHeaders').innerHTML = '<th>HE</th>' + storageRows.map(({ label }) => `<th>${label.toUpperCase()} ($)</th>`).join('');
             document.getElementById('storageRevenueTotalHeaders').innerHTML = storageRows.map(({ label }) => `<th>${label.toUpperCase()} ($)</th>`).join('');
@@ -1036,19 +1527,19 @@
                 const h = hour - 1;
                 storageOperationBody += `<tr><td>${hour}</td>` + storageRows.map(({ zoneId, resId }) => {
                     const operation = state.dispatch[zoneId]?.[resId]?.[h] || 0;
-                    return `<td>${operation.toFixed(2)}</td>`;
+                    return signedCell(operation);
                 }).join('') + '</tr>';
                 storageRevenueBody += `<tr><td>${hour}</td>` + storageRows.map(({ zoneId, resId }) => {
                     const operation = state.dispatch[zoneId]?.[resId]?.[h] || 0;
                     const lmp = state.lmps[zoneId]?.[h] || 0;
                     const revenue = operation * lmp;
                     storageRevenueTotals[`${zoneId}_${resId}`] += revenue;
-                    return `<td>${revenue.toFixed(2)}</td>`;
+                    return signedCell(revenue);
                 }).join('') + '</tr>';
             });
             document.getElementById('storageOperationBody').innerHTML = storageOperationBody;
             document.getElementById('storageRevenueBody').innerHTML = storageRevenueBody;
-            document.getElementById('storageRevenueTotalBody').innerHTML = '<tr>' + storageRows.map(({ zoneId, resId }) => `<td>${storageRevenueTotals[`${zoneId}_${resId}`].toFixed(2)}</td>`).join('') + '</tr>';
+            document.getElementById('storageRevenueTotalBody').innerHTML = '<tr>' + storageRows.map(({ zoneId, resId }) => signedCell(storageRevenueTotals[`${zoneId}_${resId}`])).join('') + '</tr>';
 
             if (state.flows) {
                 const lineKeys = Object.keys(state.lines);
@@ -1207,6 +1698,9 @@
             selectedPanel: null,
             selectedBranch: null,
             draggingZone: null,
+            addingBus: false,
+            addingBranch: false,
+            branchSource: null,
             scenario: {
                 loadScale: 100,
                 solarScale: 100,
@@ -1225,6 +1719,9 @@
             flows: {},
             totals: {}
         };
+
+        const INITIAL_MAP_CENTER = [36.8, -119.5];
+        const INITIAL_MAP_ZOOM = 7;
 
         let map;
         let dispatchChart;
@@ -1357,6 +1854,7 @@
         }
 
         function zoneLoad(zone, hourIndex, extra = 0) {
+            if (zone.loadDeleted) return extra;
             const shape = zone.loadProfile || normalizeLoadShape(BASE_LOAD_SHAPE);
             return zone.baseLoad * shape[hourIndex] * state.scenario.loadScale / 100 + extra;
         }
@@ -1399,6 +1897,7 @@
 
         function buildModel(loadBump = null) {
             const model = { optimize: 'cost', opType: 'min', constraints: {}, variables: {}, unrestricted: {}, options: { presolve: false } };
+            const referenceZoneId = Object.keys(state.zones)[0];
 
             HOURS.forEach(hour => {
                 const h = hour - 1;
@@ -1407,7 +1906,7 @@
                     model.constraints[`bal_${zoneId}_h${hour}`] = { equal: zoneLoad(zone, h, bump) };
                     model.constraints[`thetaRef_h${hour}`] = { equal: 0 };
 
-                    addSignedCoeff(model, `theta_${zoneId}_h${hour}`, `thetaRef_h${hour}`, zoneId === 'np15' ? 1 : 0);
+                    addSignedCoeff(model, `theta_${zoneId}_h${hour}`, `thetaRef_h${hour}`, zoneId === referenceZoneId ? 1 : 0);
 
                     Object.entries(zone.resources).forEach(([resId, res]) => {
                         if (res.type === 'storage') {
@@ -1498,8 +1997,69 @@
             return model;
         }
 
+        function validateNetworkForSolve() {
+            const zoneIds = Object.keys(state.zones);
+            const issues = [];
+            const adjacency = Object.fromEntries(zoneIds.map(zoneId => [zoneId, new Set()]));
+            const invalidBranches = [];
+
+            Object.entries(state.lines).forEach(([lineId, line]) => {
+                const fromName = state.zones[line.from]?.name || line.from || 'missing';
+                const toName = state.zones[line.to]?.name || line.to || 'missing';
+                if (!state.zones[line.from] || !state.zones[line.to]) {
+                    invalidBranches.push(`${line.name || lineId}: ${fromName} -> ${toName}`);
+                    return;
+                }
+                if (line.from === line.to) {
+                    invalidBranches.push(`${line.name || lineId}: from and to are both ${fromName}`);
+                    return;
+                }
+                adjacency[line.from].add(line.to);
+                adjacency[line.to].add(line.from);
+            });
+
+            if (!zoneIds.length) issues.push('Add at least one bus.');
+            if (!Object.keys(state.lines).length) issues.push('Add at least one branch.');
+            if (invalidBranches.length) issues.push(`Fix branch endpoints: ${invalidBranches.join('; ')}.`);
+
+            const orphanBuses = zoneIds.filter(zoneId => adjacency[zoneId].size === 0);
+            if (orphanBuses.length) {
+                issues.push(`Connect every bus to at least one branch: ${orphanBuses.map(zoneId => state.zones[zoneId].name).join(', ')}.`);
+            }
+
+            const startZone = zoneIds.find(zoneId => adjacency[zoneId].size > 0);
+            if (startZone) {
+                const visited = new Set([startZone]);
+                const queue = [startZone];
+                while (queue.length) {
+                    const zoneId = queue.shift();
+                    adjacency[zoneId].forEach(nextZoneId => {
+                        if (visited.has(nextZoneId)) return;
+                        visited.add(nextZoneId);
+                        queue.push(nextZoneId);
+                    });
+                }
+                const disconnected = zoneIds.filter(zoneId => !visited.has(zoneId));
+                if (disconnected.length && !orphanBuses.length) {
+                    issues.push(`Connect the network into one component. Disconnected buses: ${disconnected.map(zoneId => state.zones[zoneId].name).join(', ')}.`);
+                }
+            }
+
+            return { valid: issues.length === 0, issues };
+        }
+
+        function showNetworkValidationPrompt(issues) {
+            setStatus('NETWORK CHECK', cssVar('--red'), '#270611');
+            showSiteNotice('Cannot solve DC OPF until the network is connected.', issues);
+        }
+
         async function solveModel() {
             if (isSolving) return;
+            const networkCheck = validateNetworkForSolve();
+            if (!networkCheck.valid) {
+                showNetworkValidationPrompt(networkCheck.issues);
+                return;
+            }
             isSolving = true;
             setStatus('SOLVING', cssVar('--yellow'), '#211900');
             setSolveButtonLoading(true);
@@ -1739,12 +2299,182 @@
             markScenarioPending();
         }
 
+        function showSiteNotice(title, issues) {
+            const notice = document.getElementById('siteNotice');
+            const titleEl = document.getElementById('siteNoticeTitle');
+            const listEl = document.getElementById('siteNoticeList');
+            if (!notice || !titleEl || !listEl) return;
+            titleEl.textContent = title;
+            listEl.innerHTML = issues.map(issue => `<li>${issue}</li>`).join('');
+            notice.classList.add('active');
+        }
+
+        function hideSiteNotice() {
+            document.getElementById('siteNotice')?.classList.remove('active');
+        }
+
+        function renderMapModeControls() {
+            const shell = document.querySelector('.map-shell');
+            const hint = document.getElementById('mapModeHint');
+            shell?.classList.toggle('bus-placement-mode', state.addingBus);
+            shell?.classList.toggle('branch-placement-mode', state.addingBranch);
+            document.getElementById('addBusButton')?.classList.toggle('active', state.addingBus);
+            document.getElementById('addBranchButton')?.classList.toggle('active', state.addingBranch);
+            if (hint) {
+                if (state.addingBus) {
+                    hint.textContent = 'Click on canvas to place a bus. Press Esc to cancel.';
+                } else if (state.addingBranch) {
+                    hint.textContent = state.branchSource
+                        ? 'Click on target bus. Click background to cancel.'
+                        : 'Click on source bus. Press Esc to cancel.';
+                }
+                hint.classList.toggle('active', state.addingBus || state.addingBranch);
+            }
+        }
+
+        function nextBusName() {
+            const used = new Set(Object.values(state.zones).map(zone => zone.name));
+            let index = 1;
+            while (used.has(`Bus ${index}`)) index++;
+            return `Bus ${index}`;
+        }
+
+        function nextBusId(name) {
+            const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'bus';
+            let id = base;
+            let suffix = 1;
+            while (state.zones[id]) id = `${base}_${suffix++}`;
+            return id;
+        }
+
+        function addBusAtLatLng(latlng) {
+            if (!latlng) return;
+            const name = nextBusName();
+            const zoneId = nextBusId(name);
+            state.zones[zoneId] = {
+                name,
+                lat: Number(latlng.lat.toFixed(4)),
+                lng: Number(latlng.lng.toFixed(4)),
+                baseLoad: 0,
+                loadDeleted: true,
+                resources: {}
+            };
+            state.selectedZone = zoneId;
+            state.selectedResource = null;
+            state.selectedPanel = null;
+            state.selectedBranch = null;
+            state.draggingZone = null;
+            invalidateSolution();
+            renderAll();
+            if (document.getElementById('dataView').classList.contains('active')) renderDataTables();
+            renderMapModeControls();
+        }
+
+        function nextBranchName() {
+            const used = new Set(Object.values(state.lines).map(line => line.name));
+            let index = 1;
+            while (used.has(`Branch ${index}`)) index++;
+            return `Branch ${index}`;
+        }
+
+        function nextBranchId(name) {
+            const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'branch';
+            let id = base;
+            let suffix = 1;
+            while (state.lines[id]) id = `${base}_${suffix++}`;
+            return id;
+        }
+
+        function addBranchBetween(sourceZoneId, targetZoneId) {
+            if (!state.zones[sourceZoneId] || !state.zones[targetZoneId] || sourceZoneId === targetZoneId) return;
+            const name = nextBranchName();
+            const lineId = nextBranchId(name);
+            state.lines[lineId] = {
+                name,
+                from: sourceZoneId,
+                to: targetZoneId,
+                forwardLimit: 0,
+                reverseLimit: 0,
+                limit: 0,
+                reactance: 0,
+                b: 0
+            };
+            state.selectedBranch = lineId;
+            state.selectedPanel = null;
+            state.selectedResource = null;
+            state.draggingZone = null;
+            state.addingBranch = false;
+            state.branchSource = null;
+            invalidateSolution();
+            renderAll();
+            if (document.getElementById('dataView').classList.contains('active')) renderDataTables();
+            renderMapModeControls();
+        }
+
+        function handleBranchBusClick(zoneId) {
+            if (!state.addingBranch) return false;
+            if (!state.branchSource) {
+                state.branchSource = zoneId;
+                state.selectedZone = zoneId;
+                state.selectedBranch = null;
+                renderMapModeControls();
+                renderMap();
+                return true;
+            }
+            if (state.branchSource === zoneId) return true;
+            addBranchBetween(state.branchSource, zoneId);
+            return true;
+        }
+
+        window.toggleAddBusMode = function() {
+            state.addingBus = !state.addingBus;
+            if (state.addingBus) {
+                state.addingBranch = false;
+                state.branchSource = null;
+            }
+            state.draggingZone = null;
+            renderMapModeControls();
+        };
+
+        window.toggleAddBranchMode = function() {
+            state.addingBranch = !state.addingBranch;
+            state.branchSource = null;
+            if (state.addingBranch) state.addingBus = false;
+            state.draggingZone = null;
+            renderMapModeControls();
+        };
+
+        function exitAddBusMode() {
+            if (!state.addingBus && !state.addingBranch) return;
+            state.addingBus = false;
+            state.addingBranch = false;
+            state.branchSource = null;
+            renderMapModeControls();
+        }
+
+        window.fitMapView = function() {
+            if (!map) return;
+            hideSiteNotice();
+            map.setView(INITIAL_MAP_CENTER, INITIAL_MAP_ZOOM);
+        };
+
         function initMap() {
-            map = L.map('map', { zoomControl: false, attributionControl: false, preferCanvas: true }).setView([36.8, -119.5], 7);
+            map = L.map('map', { zoomControl: false, attributionControl: false, preferCanvas: true }).setView(INITIAL_MAP_CENTER, INITIAL_MAP_ZOOM);
+            window.map = map;
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
                 maxZoom: 18,
                 subdomains: 'abcd'
             }).addTo(map);
+            map.on('click', event => {
+                if (state.addingBus) {
+                    addBusAtLatLng(event.latlng);
+                } else if (state.addingBranch && state.branchSource) {
+                    state.addingBranch = false;
+                    state.branchSource = null;
+                    renderMapModeControls();
+                    renderMap();
+                }
+            });
             loadCaliforniaBoundary();
         }
 
@@ -1832,13 +2562,14 @@
             Object.entries(state.lines).forEach(([lineId, line]) => {
                 const from = state.zones[line.from];
                 const to = state.zones[line.to];
+                if (!from || !to) return;
                 const flow = state.flows[lineId]?.[h] || 0;
                 const limit = lineLimitForFlow(line, flow);
                 const util = Math.abs(flow) / Math.max(1, limit);
                 const selected = lineId === state.selectedBranch;
                 const color = selected ? cssVar('--yellow') : (util > .98 ? cssVar('--red') : '#8b99ad');
                 layers.lines[lineId] = L.polyline([[from.lat, from.lng], [to.lat, to.lng]], {
-                    color, weight: branchWidth(Math.max(lineScaledForwardLimit(line), lineScaledReverseLimit(line))) + (selected ? 2 : 0), opacity: selected ? 1 : .88
+                    color, weight: branchWidth(Math.max(lineScaledForwardLimit(line), lineScaledReverseLimit(line))) + (selected ? 2 : 0), opacity: selected ? 1 : .88, dashArray: Math.max(lineForwardLimit(line), lineReverseLimit(line)) <= 0 ? '6 8' : null
                 }).addTo(map)
                     .bindTooltip(`<strong>${line.name}</strong><br><span class="muted">${state.zones[line.from].name} -> ${state.zones[line.to].name}</span><br>${solved ? `${Math.round(flow)} MW / ${Math.round(util * 100)}%` : `${Math.round(limit)} MW rating`}`, {
                         className: 'opf-tooltip',
@@ -1884,7 +2615,11 @@
                         offset: [0, -14],
                         opacity: 1
                     })
-                    .on('click', () => selectZone(zoneId))
+                    .on('click', event => {
+                        L.DomEvent.stop(event);
+                        if (handleBranchBusClick(zoneId)) return;
+                        selectZone(zoneId);
+                    })
                     .on('dragend', event => {
                         const next = event.target.getLatLng();
                         zone.lat = Number(next.lat.toFixed(4));
@@ -1901,7 +2636,7 @@
                     .filter(([, res]) => res.type === 'storage')
                     .reduce((sum, [resId]) => sum + (state.dispatch[zoneId]?.[resId]?.[h] || 0), 0);
                 const satellites = [
-                    { id: 'load', label: 'Load', value: zoneLoad(zone, h), utilization: zoneLoad(zone, h) / Math.max(1, zone.baseLoad * state.scenario.loadScale / 100), color: '#f97316', click: () => selectLoad(zoneId) },
+                    ...(!zone.loadDeleted ? [{ id: 'load', label: 'Load', value: zoneLoad(zone, h), utilization: zoneLoad(zone, h) / Math.max(1, zone.baseLoad * state.scenario.loadScale / 100), color: '#f97316', click: () => selectLoad(zoneId) }] : []),
                     ...generatorEntries.map(([resId, res]) => ({
                         id: resId,
                         label: resourceDisplayName(zone, resId, res),
@@ -1911,14 +2646,14 @@
                         priceSetting: Boolean(state.priceSetters[h]?.includes(`${zoneId}:${resId}`)),
                         click: () => selectResource(zoneId, resId)
                     })),
-                    {
+                    ...(storageEntry ? [{
                         id: 'storage',
                         label: 'Storage',
                         value: storageTotal,
-                        utilization: storageEntry ? storageFill(zoneId, storageEntry[0], storageEntry[1], h) : 0,
+                        utilization: storageFill(zoneId, storageEntry[0], storageEntry[1], h),
                         color: '#a855f7',
-                        click: () => storageEntry ? selectResource(zoneId, storageEntry[0]) : selectZone(zoneId)
-                    }
+                        click: () => selectResource(zoneId, storageEntry[0])
+                    }] : [])
                 ].map((item, index, items) => ({
                     ...item,
                     angle: (Math.PI * 2 * index / items.length) - (Math.PI / 2)
@@ -2020,6 +2755,13 @@
                     <div class="sub">${state.zones[line.from]?.name || line.from} -> ${state.zones[line.to]?.name || line.to} at HE ${state.hour}</div>
                 </div>
                 <div class="summary-panel">
+                    <div class="bus-manage-section" style="padding-top:0; border-top:0; margin-bottom:14px;">
+                        <div class="bus-manage-title">Branch Name</div>
+                        <div class="bus-name-actions">
+                            <input id="branchNameInput" class="peak-input" value="${line.name}">
+                            <button id="deleteSelectedBranch" class="text-action-button danger" type="button">Delete Branch</button>
+                        </div>
+                    </div>
                     <div class="form-grid">
                         <div class="form-field">
                             <label>From</label>
@@ -2054,6 +2796,13 @@
             `;
             document.getElementById('branchFromInput').value = line.from;
             document.getElementById('branchToInput').value = line.to;
+            document.getElementById('branchNameInput')?.addEventListener('change', event => {
+                line.name = event.target.value.trim() || line.name;
+                invalidateSolution();
+                renderAll();
+                if (document.getElementById('dataView').classList.contains('active')) renderDataTables();
+            });
+            document.getElementById('deleteSelectedBranch')?.addEventListener('click', () => deleteBranch(lineId));
             setupBranchEditor(lineId);
         }
 
@@ -2092,6 +2841,84 @@
             document.getElementById('applyBranchReactance')?.addEventListener('click', applyReactance);
         }
 
+        function uniqueResourceId(zone, base) {
+            let id = base;
+            let suffix = 1;
+            while (zone.resources[id]) id = `${base}_${suffix++}`;
+            return id;
+        }
+
+        function countResources(type) {
+            return Object.values(state.zones).reduce((sum, zone) => {
+                return sum + Object.values(zone.resources || {}).filter(res => res.type === type).length;
+            }, 0);
+        }
+
+        function addLoadToSelectedBus() {
+            const zone = state.zones[state.selectedZone];
+            if (!zone || !zone.loadDeleted) return;
+            zone.loadDeleted = false;
+            zone.baseLoad = 100;
+            zone.loadProfileType = 'residential';
+            zone.loadProfile = normalizeLoadShape(LOAD_PROFILES.residential.shape);
+            state.selectedPanel = 'load';
+            state.selectedResource = 'load';
+            state.selectedBranch = null;
+            state.draggingZone = null;
+            invalidateSolution();
+            renderAll();
+            if (document.getElementById('dataView').classList.contains('active')) renderDataTables();
+        }
+
+        function addGeneratorToSelectedBus() {
+            const zone = state.zones[state.selectedZone];
+            if (!zone) return;
+            zone.resources = zone.resources || {};
+            const id = uniqueResourceId(zone, 'generator');
+            const ordinal = countResources('gas') + 1;
+            zone.resources[id] = {
+                name: `Generator ${ordinal}`,
+                type: 'gas',
+                cap: 100,
+                cost: 50,
+                costType: 'linear',
+                profileType: 'flat',
+                profile: Array(24).fill(1),
+                color: RESOURCE_COLORS.gas
+            };
+            state.selectedPanel = 'generators';
+            state.selectedResource = id;
+            state.selectedBranch = null;
+            state.draggingZone = null;
+            invalidateSolution();
+            renderAll();
+            if (document.getElementById('dataView').classList.contains('active')) renderDataTables();
+        }
+
+        function addStorageToSelectedBus() {
+            const zone = state.zones[state.selectedZone];
+            if (!zone || Object.values(zone.resources || {}).some(res => res.type === 'storage')) return;
+            zone.resources = zone.resources || {};
+            const id = uniqueResourceId(zone, 'battery');
+            zone.resources[id] = {
+                name: 'Storage',
+                type: 'storage',
+                powerCap: 100,
+                duration: 4,
+                efficiency: 0.88,
+                initialSoc: 0.5,
+                terminalSoc: 0.5,
+                cyclingCost: 0.02
+            };
+            state.selectedPanel = 'storage';
+            state.selectedResource = id;
+            state.selectedBranch = null;
+            state.draggingZone = null;
+            invalidateSolution();
+            renderAll();
+            if (document.getElementById('dataView').classList.contains('active')) renderDataTables();
+        }
+
         function renderZoneDetail() {
             if (state.selectedBranch) {
                 renderBranchDetail();
@@ -2103,29 +2930,13 @@
             const h = state.hour - 1;
             const lmp = state.lmps[state.selectedZone]?.[h] ?? 0;
             const load = zoneLoad(zone, h);
+            const hasLoad = !zone.loadDeleted;
             const generators = Object.entries(zone.resources).filter(([, res]) => res.type !== 'storage');
             const storageEntries = Object.entries(zone.resources).filter(([, res]) => res.type === 'storage');
             const storageCapacity = Object.values(zone.resources)
                 .filter(res => res.type === 'storage')
                 .reduce((sum, res) => sum + storagePowerCap(res), 0);
-            const locationPanel = state.selectedPanel === 'location' ? `
-                <div class="summary-panel">
-                    <div class="location-grid">
-                        <div class="form-field">
-                            <label>Latitude</label>
-                            <input id="zoneLatInput" class="peak-input" type="number" step="0.0001" value="${zone.lat.toFixed(4)}">
-                        </div>
-                        <div class="form-field">
-                            <label>Longitude</label>
-                            <input id="zoneLngInput" class="peak-input" type="number" step="0.0001" value="${zone.lng.toFixed(4)}">
-                        </div>
-                    </div>
-                    <button id="applyLocation" class="mini-button" style="margin-top:10px;">Apply</button>
-                    <button id="toggleLocationDrag" class="mini-button" style="margin-top:10px;">${state.draggingZone === state.selectedZone ? 'Done Dragging' : 'Drag On Map'}</button>
-                    <div class="drag-hint ${state.draggingZone === state.selectedZone ? 'active' : ''}">${state.draggingZone === state.selectedZone ? 'Drag the selected bus on the map. Connected branches update with the node.' : 'Edit coordinates directly or enable map dragging.'}</div>
-                </div>
-            ` : '';
-            const loadPanel = state.selectedPanel === 'load' ? `
+            const loadPanel = state.selectedPanel === 'load' && hasLoad ? `
                 <div class="summary-panel">
                     <div class="form-grid">
                         <div class="form-field">
@@ -2146,27 +2957,12 @@
                 </div>
             ` : '';
             if (state.selectedPanel === 'generators' && state.selectedResource && !generators.some(([resId]) => resId === state.selectedResource)) {
-                state.selectedResource = generators[0]?.[0] || 'load';
+                state.selectedResource = null;
+                state.selectedPanel = null;
             }
-            const generatorPanel = state.selectedPanel === 'generators' ? `
-                <div class="summary-panel">
-                    <div class="generator-list">
-                        ${generators.map(([resId, res]) => {
-                            const value = state.dispatch[state.selectedZone]?.[resId]?.[h] || 0;
-                            return `<div>
-                                <button class="list-item ${resId === state.selectedResource ? 'active' : ''}" data-generator="${resId}">
-                                    <span class="dot" style="background:${res.color || '#22c55e'}"></span>
-                                    <span><span class="name">${resourceDisplayName(zone, resId, res)}</span><span class="meta">cap ${fmtMW(res.cap || 0)}</span></span>
-                                    <span class="tag">${Math.round(value)} MW</span>
-                                </button>
-                                ${resId === state.selectedResource ? renderGeneratorEditor(resId, res) : ''}
-                            </div>`;
-                        }).join('')}
-                    </div>
-                </div>
-            ` : '';
             if (state.selectedPanel === 'storage' && state.selectedResource && !storageEntries.some(([resId]) => resId === state.selectedResource)) {
-                state.selectedResource = storageEntries[0]?.[0] || null;
+                state.selectedResource = null;
+                state.selectedPanel = null;
             }
             const storagePanel = state.selectedPanel === 'storage' ? `
                 <div class="summary-panel">
@@ -2192,51 +2988,119 @@
                     <div id="zoneDetailMetric" class="value" style="color:${lmpColor(lmp)}">$${Math.round(lmp)}/MWh</div>
                     <div id="zoneDetailSub" class="sub">${fmtMW(load)} load at HE ${state.hour}</div>
                 </div>
-                <div class="detail-stack">
-                    <button class="summary-button ${state.selectedPanel === 'location' ? 'active' : ''}" data-panel="location">
-                        <span class="dot" style="background:#60a5fa"></span>
-                        <span><span class="name">Location</span><span class="meta">Bus coordinates</span></span>
-                        <span class="tag">${zone.lat.toFixed(2)}, ${zone.lng.toFixed(2)}</span>
-                    </button>
-                    ${locationPanel}
-                    <button class="summary-button ${state.selectedPanel === 'load' ? 'active' : ''}" data-panel="load">
-                        <span class="dot" style="background:#f97316"></span>
-                        <span><span class="name">Load</span><span class="meta">Current demand</span></span>
-                        <span id="selectedLoadSummary" class="tag">${fmtMW(load)}</span>
-                    </button>
-                    ${loadPanel}
-                    <button class="summary-button ${state.selectedPanel === 'generators' ? 'active' : ''}" data-panel="generators">
-                        <span class="dot" style="background:#22c55e"></span>
-                        <span><span class="name">Generators</span><span class="meta">Online resource count</span></span>
-                        <span class="tag">${generators.length}</span>
-                    </button>
-                    ${generatorPanel}
-                    <button class="summary-button ${state.selectedPanel === 'storage' ? 'active' : ''}" data-panel="storage">
-                        <span class="dot" style="background:#a855f7"></span>
-                        <span><span class="name">Storage</span><span class="meta">Total power capacity</span></span>
-                        <span class="tag">${storageEntries.length ? fmtMW(storageCapacity) : 'None'}</span>
-                    </button>
-                    ${storagePanel}
+                <div class="bus-manage">
+                    <div class="bus-manage-section">
+                        <div class="bus-manage-title">Bus Name</div>
+                        <div class="bus-name-actions">
+                            <input id="busNameInput" class="peak-input" value="${zone.name}">
+                            <button id="deleteSelectedBus" class="text-action-button danger" type="button">Delete Bus</button>
+                        </div>
+                    </div>
+                    <div class="bus-manage-section">
+                        <div class="bus-manage-title">Location</div>
+                        <div class="bus-location-row">
+                            <div class="form-field">
+                                <label>Longitude</label>
+                                <input id="zoneLngInput" class="peak-input" type="number" step="0.0001" value="${zone.lng.toFixed(4)}">
+                            </div>
+                            <div class="form-field">
+                                <label>Latitude</label>
+                                <input id="zoneLatInput" class="peak-input" type="number" step="0.0001" value="${zone.lat.toFixed(4)}">
+                            </div>
+                        </div>
+                        <div class="bus-location-actions">
+                            <button id="toggleLocationDrag" class="mini-button">${state.draggingZone === state.selectedZone ? 'Done Dragging' : 'Drag On Map'}</button>
+                            <button id="applyLocation" class="text-action-button" type="button">Apply</button>
+                        </div>
+                        <div class="drag-hint ${state.draggingZone === state.selectedZone ? 'active' : ''}">${state.draggingZone === state.selectedZone ? 'Drag the selected bus on the map. Connected branches update with the node.' : 'Edit coordinates directly or enable map dragging.'}</div>
+                    </div>
+                    <div class="bus-manage-section">
+                        <div class="bus-manage-header">
+                            <div class="bus-manage-title">Loads (${hasLoad ? 1 : 0})</div>
+                            ${hasLoad ? '' : '<button class="section-add-button" type="button" data-add-load>+ Add</button>'}
+                        </div>
+                        <div class="resource-list">
+                            ${hasLoad ? `
+                                <button class="resource-row ${state.selectedPanel === 'load' ? 'active' : ''}" type="button" data-load-row>
+                                    <span class="dot" style="background:#f97316"></span>
+                                    <span class="name">${zone.load?.name || `${zone.name} Load`}</span>
+                                    <span id="selectedLoadSummary" class="tag">${fmtMW(load)}</span>
+                                </button>
+                                ${loadPanel}
+                            ` : '<div class="empty-resource-note">No load on this bus</div>'}
+                        </div>
+                    </div>
+                    <div class="bus-manage-section">
+                        <div class="bus-manage-header">
+                            <div class="bus-manage-title">Generators (${generators.length})</div>
+                            <button class="section-add-button" type="button" data-add-generator>+ Add</button>
+                        </div>
+                        <div class="resource-list">
+                            ${generators.map(([resId, res]) => `
+                                <button class="resource-row ${resId === state.selectedResource ? 'active' : ''}" type="button" data-generator="${resId}">
+                                    <span class="dot" style="background:${res.color || '#22c55e'}"></span>
+                                    <span class="name">${resourceDisplayName(zone, resId, res)}</span>
+                                    <span class="tag">${fmtMW(res.cap || 0)}</span>
+                                </button>
+                                ${state.selectedPanel === 'generators' && resId === state.selectedResource ? renderGeneratorEditor(resId, res) : ''}
+                            `).join('') || '<div class="empty-resource-note">No generators on this bus</div>'}
+                        </div>
+                    </div>
+                    <div class="bus-manage-section">
+                        <div class="bus-manage-header">
+                            <div class="bus-manage-title">Storage (${storageEntries.length})</div>
+                            ${storageEntries.length ? '' : '<button class="section-add-button" type="button" data-add-storage>+ Add</button>'}
+                        </div>
+                        <div class="resource-list">
+                            ${storageEntries.map(([resId, res]) => `
+                                <button class="resource-row ${resId === state.selectedResource ? 'active' : ''}" type="button" data-storage="${resId}">
+                                    <span class="dot" style="background:#a855f7"></span>
+                                    <span class="name">${resourceDisplayName(zone, resId, res)}</span>
+                                    <span class="tag">${fmtMW(storagePowerCap(res))}</span>
+                                </button>
+                                ${state.selectedPanel === 'storage' && resId === state.selectedResource ? renderStorageEditor(resId, res) : ''}
+                            `).join('') || '<div class="empty-resource-note">No storage on this bus</div>'}
+                        </div>
+                    </div>
                 </div>
             `;
-            document.querySelectorAll('[data-panel]').forEach(btn => btn.addEventListener('click', () => {
-                const wasOpen = state.selectedPanel === btn.dataset.panel;
-                state.selectedPanel = wasOpen ? null : btn.dataset.panel;
-                if (!wasOpen && state.selectedPanel === 'generators' && !state.selectedResource) {
-                    state.selectedResource = generators[0]?.[0] || null;
-                }
-                if (!wasOpen && state.selectedPanel === 'storage' && !state.selectedResource) {
-                    state.selectedResource = storageEntries[0]?.[0] || null;
-                }
-                if (state.selectedPanel !== 'generators') state.draggingZone = null;
+            document.querySelector('[data-add-load]')?.addEventListener('click', event => {
+                event.stopPropagation();
+                addLoadToSelectedBus();
+            });
+            document.querySelector('[data-add-generator]')?.addEventListener('click', event => {
+                event.stopPropagation();
+                addGeneratorToSelectedBus();
+            });
+            document.querySelector('[data-add-storage]')?.addEventListener('click', event => {
+                event.stopPropagation();
+                addStorageToSelectedBus();
+            });
+            document.getElementById('busNameInput')?.addEventListener('change', event => {
+                zone.name = event.target.value.trim() || zone.name;
+                invalidateSolution();
+                renderAll();
+                if (document.getElementById('dataView').classList.contains('active')) renderDataTables();
+            });
+            document.getElementById('deleteSelectedBus')?.addEventListener('click', () => {
+                deleteBus(state.selectedZone);
+            });
+            document.querySelector('[data-load-row]')?.addEventListener('click', () => {
+                state.selectedPanel = state.selectedPanel === 'load' ? null : 'load';
+                state.selectedResource = 'load';
+                state.draggingZone = null;
                 renderZoneDetail();
-            }));
+            });
             document.querySelectorAll('[data-generator]').forEach(btn => btn.addEventListener('click', () => {
                 state.selectedResource = state.selectedResource === btn.dataset.generator ? null : btn.dataset.generator;
+                state.selectedPanel = state.selectedResource ? 'generators' : null;
+                state.draggingZone = null;
                 renderZoneDetail();
             }));
             document.querySelectorAll('[data-storage]').forEach(btn => btn.addEventListener('click', () => {
                 state.selectedResource = state.selectedResource === btn.dataset.storage ? null : btn.dataset.storage;
+                state.selectedPanel = state.selectedResource ? 'storage' : null;
+                state.draggingZone = null;
                 renderZoneDetail();
             }));
             setupLocationEditor();
@@ -3091,6 +3955,7 @@
             const lmpValues24 = Object.values(state.lmps).flat().filter(Number.isFinite);
             const peakLoad = systemPeakLoad();
             const resourceEntries = Object.values(state.zones).flatMap(zone => Object.values(zone.resources || {}));
+            const activeLoads = Object.values(state.zones).filter(zone => !zone.loadDeleted).length;
             const binding = Object.entries(state.lines).filter(([lineId, line]) => {
                 const flow = state.flows[lineId]?.[h] || 0;
                 const limit = lineLimitForFlow(line, flow);
@@ -3104,7 +3969,7 @@
             document.getElementById('metricCongestion').textContent = solved ? String(binding) : '--';
             document.getElementById('metricBuses').textContent = String(Object.keys(state.zones).length);
             document.getElementById('metricBranches').textContent = String(Object.keys(state.lines).length);
-            document.getElementById('metricLoads').textContent = String(Object.keys(state.zones).length);
+            document.getElementById('metricLoads').textContent = String(activeLoads);
             document.getElementById('metricGenerators').textContent = String(resourceEntries.filter(res => res.type !== 'storage').length);
             document.getElementById('metricStorage').textContent = String(resourceEntries.filter(res => res.type === 'storage').length);
             const domain = lmpDomain();
@@ -3131,7 +3996,7 @@
             const zone = state.zones[state.selectedZone];
             const h = state.hour - 1;
             const selectedLoadSummary = document.getElementById('selectedLoadSummary');
-            if (selectedLoadSummary) selectedLoadSummary.textContent = fmtMW(zoneLoad(zone, h));
+            if (selectedLoadSummary) selectedLoadSummary.textContent = zone.loadDeleted ? 'None' : fmtMW(zoneLoad(zone, h));
             const zoneDetailMetric = document.getElementById('zoneDetailMetric');
             if (zoneDetailMetric) {
                 const lmp = state.lmps[state.selectedZone]?.[h] ?? 0;
@@ -3148,7 +4013,7 @@
 
         function selectZone(zoneId) {
             state.selectedZone = zoneId;
-            state.selectedResource = 'load';
+            state.selectedResource = state.zones[zoneId]?.loadDeleted ? null : 'load';
             state.selectedPanel = null;
             state.selectedBranch = null;
             state.draggingZone = null;
@@ -3166,6 +4031,10 @@
         }
 
         function selectLoad(zoneId) {
+            if (state.zones[zoneId]?.loadDeleted) {
+                selectZone(zoneId);
+                return;
+            }
             state.selectedZone = zoneId;
             state.selectedResource = 'load';
             state.selectedPanel = 'load';
@@ -3219,6 +4088,13 @@
             if (solveBtn && !solveBtn.hasAttribute('onclick')) solveBtn.addEventListener('click', solveModel);
             const resetBtn = document.getElementById('resetBtn');
             if (resetBtn) resetBtn.addEventListener('click', resetScenario);
+            document.getElementById('siteNoticeClose')?.addEventListener('click', hideSiteNotice);
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape' && (state.addingBus || state.addingBranch)) {
+                    event.preventDefault();
+                    exitAddBusMode();
+                }
+            });
             setupPeakLoadEditor();
             renderAll();
             startFlowParticles();
