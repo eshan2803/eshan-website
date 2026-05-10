@@ -13,7 +13,18 @@ import subprocess
 import csv
 from datetime import datetime, timedelta, date
 from pathlib import Path
+from zoneinfo import ZoneInfo
 import time
+
+CAISO_TZ = ZoneInfo("America/Los_Angeles")
+
+def caiso_now():
+    """Return current time in California, matching CAISO data availability."""
+    return datetime.now(CAISO_TZ)
+
+def caiso_today():
+    """Return current California date, not the GitHub runner's UTC date."""
+    return caiso_now().date()
 
 # Color codes for Windows console
 class Colors:
@@ -28,7 +39,7 @@ class Colors:
 
 def log(message, color=Colors.OKBLUE):
     """Print colored log message with timestamp"""
-    timestamp = datetime.now().strftime("%H:%M:%S")
+    timestamp = caiso_now().strftime("%H:%M:%S")
     try:
         print(f"{color}[{timestamp}] {message}{Colors.ENDC}")
     except UnicodeEncodeError:
@@ -97,7 +108,7 @@ def get_last_data_date():
         log_warning(f"Could not read existing data: {e}")
 
     # Default to yesterday if no data found
-    return date.today() - timedelta(days=2)
+    return caiso_today() - timedelta(days=2)
 
 def supply_file_is_complete(supply_file):
     """Return True only when a fuelsource CSV has a complete 5-minute day."""
@@ -160,13 +171,13 @@ def get_missing_dates(last_date):
     Also verifies that source files exist for the last_date itself.
     If demand or supply files are missing for last_date, includes it in missing list.
     """
-    yesterday = date.today() - timedelta(days=1)
+    yesterday = caiso_today() - timedelta(days=1)
     missing = []
 
     # First, verify recent source files exist and are complete. Browser downloads
     # can occasionally leave a partial fuelsource CSV behind; existence alone is
     # not enough for the homepage charts.
-    verify_start = max(last_date - timedelta(days=2), date.today() - timedelta(days=7))
+    verify_start = max(last_date - timedelta(days=2), caiso_today() - timedelta(days=7))
     current = verify_start
     while current <= yesterday:
         if source_files_need_download(current):
@@ -483,7 +494,7 @@ def validate_homepage_data_freshness():
         log_error("No complete source date found for homepage validation")
         return False
 
-    expected_min_date = date.today() - timedelta(days=1)
+    expected_min_date = caiso_today() - timedelta(days=1)
     if latest_source_date < expected_min_date:
         log_error(
             f"Latest complete source date is {latest_source_date}, expected at least {expected_min_date}"
@@ -585,7 +596,7 @@ def git_commit_and_push():
     log("Only PNG charts and HTML files are pushed to website")
 
     # Create commit message
-    today = date.today()
+    today = caiso_today()
     commit_msg = f"Auto-update charts for {today.strftime('%a %m/%d/%Y')}"
 
     # Commit
@@ -619,7 +630,7 @@ def main():
     print(f"{Colors.HEADER}Automated update script for eshan-website{Colors.ENDC}")
     print("="*70 + "\n")
 
-    log(f"Starting update process at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    log(f"Starting update process at {caiso_now().strftime('%Y-%m-%d %H:%M:%S %Z')}")
 
     # Step 0: Check for missing dates
     log_header("STEP 0: Checking for Missing Dates")
