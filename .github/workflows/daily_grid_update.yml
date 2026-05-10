@@ -1,0 +1,63 @@
+name: Daily California Grid Update
+on:
+  push:
+    branches:
+      - simbooni
+  schedule:
+    # Runs at 14:00 UTC (7:00 AM PDT) every day
+    - cron: '0 14 * * *'
+  workflow_dispatch: # Allows you to run it manually from GitHub UI
+
+permissions:
+  contents: write
+
+jobs:
+  update-grid:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: simbooni
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          pip install pandas numpy matplotlib requests pytz scipy playwright selenium
+          playwright install chromium --with-deps
+
+      - name: Run Update Script
+        run: |
+          git config --global user.name "GridBot"
+          git config --global user.email "bot@eshansingh.xyz"
+          cd GridUtilization
+          # Extract historical data if present
+          if [ -f caiso_supply.tar.gz ]; then
+            tar -xzf caiso_supply.tar.gz
+          fi
+          python daily_update.py --no-git
+          # Compress updated data for storage
+          tar -czf caiso_supply.tar.gz caiso_supply caiso_demand_downloads *.json
+        env:
+          # If your script needs any API keys, add them here
+          CAISO_API_KEY: ${{ secrets.CAISO_API_KEY }}
+
+      - name: Commit and Push Changes
+        run: |
+          git pull --rebase --autostash origin simbooni
+          git add .
+          # Ensure the tarball is tracked
+          git add GridUtilization/caiso_supply.tar.gz
+          git commit -m "Auto-update: $(date +'%Y-%m-%d') Grid Data" || echo "No changes to commit"
+          for i in 1 2 3; do
+            git pull --rebase --autostash origin simbooni
+            if git push origin HEAD:simbooni; then
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1
