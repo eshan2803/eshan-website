@@ -320,7 +320,7 @@
         .resource-row {
             width: 100%;
             display: grid;
-            grid-template-columns: 12px minmax(0, 1fr) auto;
+            grid-template-columns: 12px minmax(0, 1fr) auto auto;
             gap: 10px;
             align-items: center;
             min-height: 34px;
@@ -345,6 +345,23 @@
         }
         .resource-row .tag {
             color: var(--muted);
+        }
+        .resource-delete-button {
+            height: 26px;
+            padding: 0 9px;
+            border: 1px solid rgba(255, 92, 122, .26);
+            border-radius: 5px;
+            background: rgba(255, 92, 122, .08);
+            color: #ffc0cb;
+            font: inherit;
+            font-size: 11px;
+            font-weight: 900;
+            cursor: pointer;
+        }
+        .resource-delete-button:hover {
+            border-color: rgba(255, 92, 122, .72);
+            background: rgba(255, 92, 122, .18);
+            color: #ffffff;
         }
         .empty-resource-note {
             color: var(--muted);
@@ -890,9 +907,149 @@
             box-shadow: 0 0 12px rgba(240, 246, 255, .8);
         }
 
+        .welcome-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 8000;
+            display: grid;
+            place-items: center;
+            padding: 28px;
+            background:
+                linear-gradient(90deg, rgba(10,13,18,.96), rgba(10,13,18,.76)),
+                radial-gradient(circle at 72% 28%, rgba(88, 166, 255, .18), transparent 34%),
+                #0a0d12;
+        }
+        .welcome-screen.hidden {
+            display: none;
+        }
+        .welcome-card {
+            width: min(1040px, 100%);
+            max-height: min(780px, calc(100vh - 56px));
+            overflow-y: auto;
+            border: 1px solid rgba(88, 166, 255, .28);
+            border-radius: 12px;
+            background: rgba(17, 23, 34, .96);
+            box-shadow: 0 24px 70px rgba(0, 0, 0, .42);
+        }
+        .welcome-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr);
+            gap: 28px;
+            padding: 34px;
+            border-bottom: 1px solid var(--line);
+        }
+        .welcome-eyebrow {
+            color: var(--blue);
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+        }
+        .welcome-hero h2 {
+            margin: 10px 0 12px;
+            font-size: 38px;
+            line-height: 1.04;
+            letter-spacing: 0;
+        }
+        .welcome-hero p {
+            margin: 0;
+            color: #bfd0e8;
+            font-size: 15px;
+            line-height: 1.55;
+        }
+        .welcome-summary {
+            display: grid;
+            gap: 10px;
+            align-content: start;
+        }
+        .welcome-summary-item {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #121c2a;
+            padding: 12px;
+        }
+        .welcome-summary-item strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #ffffff;
+            font-size: 13px;
+        }
+        .welcome-summary-item span {
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.45;
+        }
+        .welcome-body {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 18px;
+            padding: 24px 34px 30px;
+        }
+        .welcome-section {
+            min-height: 100%;
+        }
+        .welcome-section h3 {
+            margin: 0 0 10px;
+            color: #dbeafe;
+            font-size: 14px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+        .welcome-section p,
+        .welcome-section li {
+            color: #a9bdd8;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .welcome-section ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+        .welcome-section p {
+            margin: 0;
+        }
+        .welcome-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 18px 34px 30px;
+        }
+        .welcome-footer-note {
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.45;
+        }
+        .welcome-start {
+            min-width: 170px;
+            height: 44px;
+            border-color: #2f81f7;
+            background: #1f6feb;
+            color: #ffffff;
+            font-weight: 900;
+        }
+        .welcome-start:hover {
+            background: #2f81f7;
+            border-color: #60a5fa;
+        }
+
         @media (max-width: 1100px) {
             .app { grid-template-columns: 360px 1fr; }
             .inspector { display: none; }
+            .welcome-hero,
+            .welcome-body {
+                grid-template-columns: 1fr;
+            }
+            .welcome-hero h2 {
+                font-size: 32px;
+            }
+            .welcome-footer {
+                align-items: stretch;
+                flex-direction: column;
+            }
+            .welcome-start {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -906,6 +1063,71 @@
             return false;
         };
     </script>
+    <div id="welcomeScreen" class="welcome-screen" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+        <div class="welcome-card">
+            <div class="welcome-hero">
+                <div>
+                    <div class="welcome-eyebrow">California OPF Solver</div>
+                    <h2 id="welcomeTitle">Build a grid, solve dispatch, and see why prices separate.</h2>
+                    <p>
+                        This tool is a hands-on DC optimal power flow sandbox. You can add buses, connect them with branches,
+                        place loads, generators, and storage, then solve a simplified hourly dispatch to see flows, congestion,
+                        locational marginal prices, storage behavior, and unserved load.
+                    </p>
+                </div>
+                <div class="welcome-summary" aria-label="Quick guide">
+                    <div class="welcome-summary-item">
+                        <strong>Graph</strong>
+                        <span>Edit the network directly on the map, inspect buses and branches, and scrub across the 24-hour day.</span>
+                    </div>
+                    <div class="welcome-summary-item">
+                        <strong>Data</strong>
+                        <span>Review and edit all model tables, including resources, branches, dispatch, flows, and revenues.</span>
+                    </div>
+                    <div class="welcome-summary-item">
+                        <strong>Solve DC OPF</strong>
+                        <span>Run the simplified dispatch model after the network is connected and assumptions are ready.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="welcome-body">
+                <section class="welcome-section">
+                    <h3>How To Use</h3>
+                    <ul>
+                        <li>Use <strong>+ Bus</strong> to place a node, then add loads, generators, or storage from the left panel.</li>
+                        <li>Use <strong>+ Branch</strong> to connect two buses, then set ratings and reactance from the branch panel.</li>
+                        <li>Click buses, resources, and branches to edit assumptions. Drag profile and cost charts for custom shapes.</li>
+                        <li>Use the hour slider or charts to scrub dispatch, load, prices, storage, and branch flows.</li>
+                    </ul>
+                </section>
+                <section class="welcome-section">
+                    <h3>Model Concepts</h3>
+                    <ul>
+                        <li><strong>Buses</strong> are pricing and balance nodes. Loads consume power; generators and storage supply it.</li>
+                        <li><strong>Branches</strong> move power between buses subject to forward and reverse transmission limits.</li>
+                        <li><strong>LMP</strong> reflects the marginal cost of serving another MW at a bus under congestion and limits.</li>
+                        <li><strong>Unserved load</strong> appears when demand cannot be met locally or imported through usable capacity.</li>
+                    </ul>
+                </section>
+                <section class="welcome-section">
+                    <h3>Assumptions</h3>
+                    <p>
+                        The solver uses a linearized DC OPF: voltage magnitude, reactive power, losses, unit commitment, ramping,
+                        reserves, and AC feasibility are not represented. Generator profiles define hourly availability, cost curves
+                        approximate dispatch offers, storage follows power/energy/SOC constraints, and emergency/unserved-load variables
+                        keep the model solvable while making infeasible cases visible.
+                    </p>
+                </section>
+            </div>
+            <div class="welcome-footer">
+                <div class="welcome-footer-note">
+                    Treat results as an intuition builder, not a production market model. The most useful workflow is to change one assumption,
+                    solve, and compare prices, congestion, and unserved load.
+                </div>
+                <button id="welcomeStart" class="welcome-start" type="button">Get Started</button>
+            </div>
+        </div>
+    </div>
     <header class="app-header">
         <div style="font-weight: 800; display:flex; align-items:center; gap:10px;">
             <div style="width:20px; height:20px; border-radius:4px; background:linear-gradient(135deg, var(--blue), var(--violet));"></div>
@@ -916,7 +1138,7 @@
             <div class="header-tab" onclick="switchView('data')">Data</div>
         </div>
         <div style="display:flex; gap:10px;">
-            <button class="primary" id="solveBtnStudio" onclick="solveModel()">Solve DC OPF</button>
+            <button class="primary" id="solveBtnSolver" onclick="solveModel()">Solve DC OPF</button>
         </div>
     </header>
 
@@ -949,7 +1171,7 @@
 
         <div id="tab_gens" class="inner-tab-content">
             <table class="data-table" id="tableGens">
-                <thead><tr><th>Color</th><th>Name</th><th>Bus</th><th>PMax (MW)</th><th>Profile</th><th>Cost Type</th><th>Sell Price</th><th></th></tr></thead>
+                <thead><tr><th>Color</th><th>Name</th><th>Bus</th><th>Type</th><th>PMax (MW)</th><th>Profile</th><th>Cost Type</th><th>Sell Price</th><th></th></tr></thead>
                 <tbody></tbody>
             </table>
             <div class="result-table-container">
@@ -1169,8 +1391,14 @@
             if (type === 'gen') {
                 const gen = state.zones[id1].resources[id2];
                 if (!gen) return;
-                gen[field] = field === 'color' || field === 'costType' || field === 'profileType' ? value : Number(value);
+                if (field === 'presetType') {
+                    applyGeneratorTypePreset(gen, value);
+                } else {
+                    gen[field] = field === 'color' || field === 'costType' || field === 'profileType' ? value : Number(value);
+                    if (field === 'color' || field === 'costType' || field === 'profileType') delete gen.presetType;
+                }
                 if (field === 'costType' && value === 'piecewise') ensureCostPoints(gen);
+                if (field === 'cap' && gen.presetType && gen.costType === 'piecewise') applyGeneratorTypePreset(gen, gen.presetType);
                 if (field === 'profileType') {
                     const profile = GENERATOR_PROFILES[value];
                     if (profile?.shape) gen.profile = normalizeGeneratorShape(profile.shape);
@@ -1194,6 +1422,12 @@
                 const num = Number(value);
                 if (!storage || !Number.isFinite(num)) return;
                 storage[field] = num;
+            } else if (type === 'load') {
+                const load = state.zones[id1].resources[id2];
+                const num = Number(value);
+                if (!load || !isLoadResource(load) || !Number.isFinite(num)) return;
+                load[field] = Math.max(0, num);
+                state.zones[id1].baseLoad = totalBaseLoad(state.zones[id1]);
             }
             invalidateSolution();
             renderAll();
@@ -1206,7 +1440,7 @@
             if (state.selectedZone && state.zones[state.selectedZone]) return;
             const firstZone = Object.keys(state.zones)[0];
             state.selectedZone = firstZone || null;
-            state.selectedResource = firstZone && !state.zones[firstZone]?.loadDeleted ? 'load' : null;
+            state.selectedResource = firstZone ? firstLoadId(state.zones[firstZone]) : null;
             state.selectedPanel = null;
             state.selectedBranch = null;
             state.draggingZone = null;
@@ -1232,18 +1466,21 @@
 
         window.deleteGenerator = function(zoneId, resId) {
             const resources = state.zones[zoneId]?.resources;
-            if (!resources?.[resId] || resources[resId].type === 'storage') return;
+            if (!resources?.[resId] || !isGeneratorResource(resources[resId])) return;
             delete resources[resId];
             if (state.selectedZone === zoneId && state.selectedResource === resId) state.selectedResource = null;
             finishDelete();
         };
 
-        window.deleteLoad = function(zoneId) {
+        window.deleteLoad = function(zoneId, loadId = null) {
             const zone = state.zones[zoneId];
-            if (!zone || zone.loadDeleted) return;
-            zone.loadDeleted = true;
-            zone.baseLoad = 0;
-            if (state.selectedZone === zoneId && state.selectedResource === 'load') {
+            if (!zone) return;
+            const id = loadId || firstLoadId(zone);
+            if (!id || !zone.resources?.[id] || !isLoadResource(zone.resources[id])) return;
+            delete zone.resources[id];
+            zone.loadDeleted = loadResourceEntries(zone).length === 0;
+            zone.baseLoad = totalBaseLoad(zone);
+            if (state.selectedZone === zoneId && state.selectedResource === id) {
                 state.selectedResource = null;
                 state.selectedPanel = null;
             }
@@ -1305,7 +1542,7 @@
         function resultResourceRows(type) {
             return Object.entries(state.zones).flatMap(([zoneId, zone]) =>
                 Object.entries(zone.resources || {})
-                    .filter(([, res]) => type === 'storage' ? res.type === 'storage' : res.type !== 'storage')
+                    .filter(([, res]) => type === 'storage' ? isStorageResource(res) : isGeneratorResource(res))
                     .map(([resId, res]) => ({ zoneId, zone, resId, res, label: resourceDisplayName(zone, resId, res) }))
             );
         }
@@ -1326,21 +1563,21 @@
                     zone.name,
                     zone.lat,
                     zone.lng,
-                    resources.filter(res => res.type !== 'storage').length,
-                    zone.loadDeleted ? 0 : 1,
-                    resources.filter(res => res.type === 'storage').length
+                    resources.filter(isGeneratorResource).length,
+                    loadResourceEntries(zone).length,
+                    resources.filter(isStorageResource).length
                 ];
             });
 
             const generators = Object.entries(state.zones).flatMap(([zoneId, zone]) =>
                 Object.entries(zone.resources || {})
-                    .filter(([, res]) => res.type !== 'storage')
+                    .filter(([, res]) => isGeneratorResource(res))
                     .map(([resId, res]) => [
                         resId,
                         resourceDisplayName(zone, resId, res),
                         zoneId,
                         zone.name,
-                        res.type,
+                        GENERATOR_TYPE_PRESETS[inferGeneratorPresetKey(res)]?.label || res.type,
                         res.cap || 0,
                         res.profileType || inferredGeneratorProfileType(res),
                         res.costType || 'linear',
@@ -1350,14 +1587,14 @@
             );
 
             const loads = Object.entries(state.zones)
-                .filter(([, zone]) => !zone.loadDeleted)
-                .map(([zoneId, zone]) => [
-                    zone.load?.name || `${zone.name} Load`,
+                .flatMap(([zoneId, zone]) => loadResourceEntries(zone).map(([loadId, load]) => [
+                    loadId,
+                    resourceDisplayName(zone, loadId, load),
                     zoneId,
                     zone.name,
-                    zone.baseLoad || 0,
-                    zone.loadProfileType || 'residential'
-                ]);
+                    load.baseLoad || 0,
+                    load.profileType || 'residential'
+                ]));
 
             const branches = Object.entries(state.lines).map(([lineId, line]) => [
                 lineId,
@@ -1373,7 +1610,7 @@
 
             const storage = Object.entries(state.zones).flatMap(([zoneId, zone]) =>
                 Object.entries(zone.resources || {})
-                    .filter(([, res]) => res.type === 'storage')
+                    .filter(([, res]) => isStorageResource(res))
                     .map(([resId, res]) => [
                         resId,
                         resourceDisplayName(zone, resId, res),
@@ -1437,7 +1674,7 @@
                 csvSection('Generators', ['id', 'name', 'bus_id', 'bus_name', 'type', 'pmax_mw', 'profile', 'cost_type', 'sell_price', 'color'], generators),
                 csvSection('Generator Dispatch (MW)', ['hour_ending', ...generatorRows.map(({ label }) => `${label} (MW)`) ], generatorDispatchRows),
                 csvSection('Generator Operating Cost ($)', ['hour_ending', ...generatorRows.map(({ label }) => `${label} ($)`) ], generatorCostRows),
-                csvSection('Loads', ['name', 'bus_id', 'bus_name', 'peak_mw', 'profile'], loads),
+                csvSection('Loads', ['id', 'name', 'bus_id', 'bus_name', 'peak_mw', 'profile'], loads),
                 csvSection('Branches', ['id', 'name', 'from_id', 'from_name', 'to_id', 'to_name', 'forward_rating_mw', 'reverse_rating_mw', 'reactance_pu'], branches),
                 csvSection('Branch Flows (MW)', ['hour_ending', ...lineKeys.map(lineId => `${state.lines[lineId].name} (MW)`) ], branchFlowRows),
                 csvSection('Storage', ['id', 'name', 'bus_id', 'bus_name', 'power_cap_mw', 'duration_h', 'energy_cap_mwh', 'efficiency', 'initial_soc', 'terminal_soc', 'cycling_cost'], storage),
@@ -1460,9 +1697,9 @@
             let idCounter = 1;
             Object.entries(state.zones).forEach(([zoneId, zone]) => {
                 numBuses++;
-                const zGens = Object.values(zone.resources || {}).filter(res => res.type !== 'storage').length;
-                const zStorage = Object.values(zone.resources || {}).filter(res => res.type === 'storage').length;
-                const zLoads = zone.loadDeleted ? 0 : 1;
+                const zGens = Object.values(zone.resources || {}).filter(isGeneratorResource).length;
+                const zStorage = Object.values(zone.resources || {}).filter(isStorageResource).length;
+                const zLoads = loadResourceEntries(zone).length;
                 numLoads += zLoads;
                 
                 busesHtml += `<tr>
@@ -1474,23 +1711,30 @@
                     <td>${deleteButtonHtml(`deleteBus('${zoneId}')`)}</td>
                 </tr>`;
                 
-                if (!zone.loadDeleted) {
+                loadResourceEntries(zone).forEach(([loadId, load]) => {
+                    const minLoad = Math.min(...HOURS.map((_, i) => loadValue(load, i)));
                     loadsHtml += `<tr>
-                        <td>${zone.load?.name || zone.name + ' Load'}</td>
+                        <td>${resourceDisplayName(zone, loadId, load)}</td>
                         <td>${zone.name}</td>
-                        <td>${Math.round(zone.baseLoad || 0)}</td>
-                        <td>0</td>
-                        <td>${deleteButtonHtml(`deleteLoad('${zoneId}')`)}</td>
+                        <td><input type="number" value="${Math.round(load.baseLoad || 0)}" onchange="updateParam('load', '${zoneId}', '${loadId}', 'baseLoad', this.value)"></td>
+                        <td>${Math.round(minLoad)}</td>
+                        <td>${deleteButtonHtml(`deleteLoad('${zoneId}', '${loadId}')`)}</td>
                     </tr>`;
-                }
+                });
 
-                Object.entries(zone.resources || {}).filter(([, gen]) => gen.type !== 'storage').forEach(([genId, gen]) => {
+                Object.entries(zone.resources || {}).filter(([, gen]) => isGeneratorResource(gen)).forEach(([genId, gen]) => {
                     numGens++;
                     const profileType = gen.profileType || inferredGeneratorProfileType(gen);
+                    const presetType = inferGeneratorPresetKey(gen);
                     gensHtml += `<tr>
                         <td class="color-cell"><span class="table-color-swatch" style="background:${gen.color || '#22c55e'}"><input type="color" value="${gen.color || '#22c55e'}" onchange="updateParam('gen', '${zoneId}', '${genId}', 'color', this.value)"></span></td>
                         <td>${resourceDisplayName(zone, genId, gen)}</td>
                         <td>${zone.name}</td>
+                        <td>
+                            <select onchange="updateParam('gen', '${zoneId}', '${genId}', 'presetType', this.value)">
+                                ${generatorTypeOptions(presetType)}
+                            </select>
+                        </td>
                         <td><input type="number" value="${gen.cap}" onchange="updateParam('gen', '${zoneId}', '${genId}', 'cap', this.value)"></td>
                         <td>
                             <select onchange="updateParam('gen', '${zoneId}', '${genId}', 'profileType', this.value)">
@@ -1508,7 +1752,7 @@
                     </tr>`;
                 });
                 
-                Object.entries(zone.resources || {}).filter(([, st]) => st.type === 'storage').forEach(([stId, st]) => {
+                Object.entries(zone.resources || {}).filter(([, st]) => isStorageResource(st)).forEach(([stId, st]) => {
                     numStorage++;
                     storageHtml += `<tr>
                         <td>${resourceDisplayName(zone, stId, st)}</td>
@@ -1653,6 +1897,96 @@
             baseload: { label: 'Baseload', shape: Array(24).fill(1) }
         };
 
+        // Generator type presets are intentionally data-only for now. Cost curves use
+        // normalized marginal price points so they can later be scaled to any MW size.
+        // Benchmarked against NREL ATB 2024/2024b technology cost framing and EIA gas
+        // heat-rate context; values are simplified dispatch-price defaults for this OPF.
+        const GENERATOR_TYPE_PRESETS = {
+            gas: {
+                label: 'Gas',
+                type: 'gas',
+                profileType: 'baseload',
+                color: '#ff5c7a',
+                costCurve: {
+                    type: 'piecewise',
+                    unit: '$/MWh',
+                    points: [
+                        { fraction: 0.00, marginalCost: 42 },
+                        { fraction: 0.55, marginalCost: 48 },
+                        { fraction: 0.78, marginalCost: 58 },
+                        { fraction: 0.92, marginalCost: 86 },
+                        { fraction: 1.00, marginalCost: 145 }
+                    ]
+                }
+            },
+            solar: {
+                label: 'Solar',
+                type: 'solar',
+                profileType: 'solar',
+                color: '#ffd166',
+                costCurve: {
+                    type: 'piecewise',
+                    unit: '$/MWh',
+                    points: [
+                        { fraction: 0.00, marginalCost: 0 },
+                        { fraction: 0.70, marginalCost: 0 },
+                        { fraction: 0.88, marginalCost: -8 },
+                        { fraction: 1.00, marginalCost: -22 }
+                    ]
+                }
+            },
+            wind_onshore: {
+                label: 'Wind Onshore',
+                type: 'wind',
+                profileType: 'wind_onshore',
+                color: '#58a6ff',
+                costCurve: {
+                    type: 'linear',
+                    unit: '$/MWh',
+                    marginalCost: 3
+                }
+            },
+            wind_offshore: {
+                label: 'Wind Offshore',
+                type: 'wind',
+                profileType: 'wind_offshore',
+                color: '#7dd3fc',
+                costCurve: {
+                    type: 'linear',
+                    unit: '$/MWh',
+                    marginalCost: 8
+                }
+            },
+            peaker: {
+                label: 'Peaker',
+                type: 'gas',
+                profileType: 'peaker',
+                color: '#fb7185',
+                costCurve: {
+                    type: 'piecewise',
+                    unit: '$/MWh',
+                    points: [
+                        { fraction: 0.00, marginalCost: 95 },
+                        { fraction: 0.45, marginalCost: 115 },
+                        { fraction: 0.72, marginalCost: 165 },
+                        { fraction: 0.90, marginalCost: 260 },
+                        { fraction: 1.00, marginalCost: 420 }
+                    ]
+                }
+            },
+            other: {
+                label: 'Other',
+                type: 'other',
+                profileType: 'flat',
+                color: '#9aa7b8',
+                costCurve: {
+                    type: 'linear',
+                    unit: '$/MWh',
+                    marginalCost: 50
+                }
+            }
+        };
+
         const RESOURCE_COLORS = {
             gas: '#ff5c7a',
             solar: '#ffd166',
@@ -1660,6 +1994,7 @@
             hydro: '#41d39a',
             nuclear: '#b084f5',
             import: '#9aa7b8',
+            load: '#f97316',
             storage: '#f78acb',
             emergency: '#f97316',
             shed: '#ff5c7a'
@@ -1802,6 +2137,53 @@
         const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
         const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
+        const isLoadResource = resource => resource?.type === 'load';
+        const isStorageResource = resource => resource?.type === 'storage';
+        const isGeneratorResource = resource => resource && !isLoadResource(resource) && !isStorageResource(resource);
+
+        function loadResourceEntries(zone) {
+            return Object.entries(zone?.resources || {}).filter(([, res]) => isLoadResource(res));
+        }
+
+        function firstLoadId(zone) {
+            return loadResourceEntries(zone)[0]?.[0] || null;
+        }
+
+        function totalBaseLoad(zone) {
+            return loadResourceEntries(zone).reduce((sum, [, load]) => sum + (Number(load.baseLoad) || 0), 0);
+        }
+
+        function loadValue(load, hourIndex) {
+            const shape = load.profile || normalizeLoadShape(LOAD_PROFILES[load.profileType]?.shape || BASE_LOAD_SHAPE);
+            return (Number(load.baseLoad) || 0) * shape[hourIndex] * state.scenario.loadScale / 100;
+        }
+
+        function normalizeZoneLoads(zone) {
+            zone.resources = zone.resources || {};
+            const existingLoads = loadResourceEntries(zone);
+            if (!existingLoads.length && !zone.loadDeleted && (zone.baseLoad || 0) > 0) {
+                zone.resources.load = {
+                    name: zone.load?.name || `${zone.name} Load`,
+                    type: 'load',
+                    baseLoad: zone.baseLoad,
+                    profileType: zone.loadProfileType || 'residential',
+                    profile: zone.loadProfile || normalizeLoadShape(LOAD_PROFILES[zone.loadProfileType]?.shape || BASE_LOAD_SHAPE),
+                    color: RESOURCE_COLORS.load
+                };
+            }
+            loadResourceEntries(zone).forEach(([, load]) => {
+                load.name = load.name || `${zone.name} Load`;
+                load.baseLoad = Math.max(0, Number(load.baseLoad) || 0);
+                load.profileType = load.profileType || 'residential';
+                load.profile = load.profile || normalizeLoadShape(LOAD_PROFILES[load.profileType]?.shape || BASE_LOAD_SHAPE);
+                load.color = load.color || RESOURCE_COLORS.load;
+            });
+            zone.loadDeleted = loadResourceEntries(zone).length === 0;
+            zone.baseLoad = totalBaseLoad(zone);
+        }
+
+        Object.values(state.zones).forEach(normalizeZoneLoads);
+
         function resourceCap(resource, hourIndex) {
             const scaleByType = {
                 solar: state.scenario.solarScale / 100,
@@ -1843,11 +2225,68 @@
             return dispatch * resourceCost(resource);
         }
 
+        function inferGeneratorPresetKey(resource) {
+            if (resource.presetType && GENERATOR_TYPE_PRESETS[resource.presetType]) return resource.presetType;
+            if (resource.profileType === 'wind_offshore') return 'wind_offshore';
+            if (resource.profileType === 'wind_onshore' || resource.type === 'wind') return 'wind_onshore';
+            if (resource.profileType === 'solar' || resource.type === 'solar') return 'solar';
+            if (resource.profileType === 'peaker') return 'peaker';
+            if (resource.type === 'gas') return 'gas';
+            return 'other';
+        }
+
+        function generatorTypeOptions(selected) {
+            return Object.entries(GENERATOR_TYPE_PRESETS)
+                .map(([key, preset]) => `<option value="${key}" ${key === selected ? 'selected' : ''}>${preset.label}</option>`)
+                .join('');
+        }
+
+        function costPointsFromPresetCurve(resource, preset) {
+            const points = preset.costCurve?.points || [];
+            if (!points.length) return [];
+            const cap = Math.max(1, Number(resource.cap) || 1);
+            let cumulativeCost = 0;
+            return points.map((point, index) => {
+                const fraction = clamp(point.fraction, 0, 1);
+                if (index > 0) {
+                    const prev = points[index - 1];
+                    const prevFraction = clamp(prev.fraction, 0, 1);
+                    const segmentMWh = Math.max(0, fraction - prevFraction) * cap;
+                    const segmentCost = segmentMWh * ((prev.marginalCost + point.marginalCost) / 2);
+                    cumulativeCost += segmentCost;
+                }
+                return {
+                    power: fraction * cap,
+                    cost: cumulativeCost
+                };
+            });
+        }
+
+        function applyGeneratorTypePreset(resource, presetKey) {
+            const preset = GENERATOR_TYPE_PRESETS[presetKey];
+            if (!preset) return;
+            resource.presetType = presetKey;
+            resource.type = preset.type;
+            resource.profileType = preset.profileType;
+            resource.color = preset.color;
+            const profile = GENERATOR_PROFILES[preset.profileType];
+            if (profile?.shape) resource.profile = normalizeGeneratorShape(profile.shape);
+            if (preset.costCurve.type === 'piecewise') {
+                resource.costType = 'piecewise';
+                resource.costPoints = costPointsFromPresetCurve(resource, preset);
+                delete resource.cost;
+            } else {
+                resource.costType = 'linear';
+                resource.cost = preset.costCurve.marginalCost;
+                delete resource.costPoints;
+            }
+        }
+
         function priceSettingResources(zoneIds, hourIndex) {
             const resources = zoneIds.flatMap(zoneId => {
                 const zone = state.zones[zoneId];
                 return Object.entries(zone.resources || {})
-                    .filter(([, res]) => res.type !== 'storage')
+                    .filter(([, res]) => isGeneratorResource(res))
                     .map(([resId, res]) => {
                         const dispatch = state.dispatch[zoneId]?.[resId]?.[hourIndex] || 0;
                         const cap = Math.max(0, resourceCap(res, hourIndex));
@@ -1920,9 +2359,10 @@
         }
 
         function zoneLoad(zone, hourIndex, extra = 0) {
-            if (zone.loadDeleted) return extra;
-            const shape = zone.loadProfile || normalizeLoadShape(BASE_LOAD_SHAPE);
-            return zone.baseLoad * shape[hourIndex] * state.scenario.loadScale / 100 + extra;
+            const loadTotal = loadResourceEntries(zone).reduce((sum, [, load]) => {
+                return sum + loadValue(load, hourIndex);
+            }, 0);
+            return loadTotal + extra;
         }
 
         function systemPeakLoad() {
@@ -1934,7 +2374,10 @@
             if (!Number.isFinite(nextPeak) || nextPeak <= 0 || currentPeak <= 0) return;
             const ratio = nextPeak / currentPeak;
             Object.values(state.zones).forEach(zone => {
-                zone.baseLoad = Math.max(1, zone.baseLoad * ratio);
+                loadResourceEntries(zone).forEach(([, load]) => {
+                    load.baseLoad = Math.max(1, (load.baseLoad || 0) * ratio);
+                });
+                zone.baseLoad = totalBaseLoad(zone);
             });
             invalidateSolution();
             renderAll();
@@ -1975,7 +2418,8 @@
                     addSignedCoeff(model, `theta_${zoneId}_h${hour}`, `thetaRef_h${hour}`, zoneId === referenceZoneId ? 1 : 0);
 
                     Object.entries(zone.resources).forEach(([resId, res]) => {
-                        if (res.type === 'storage') {
+                        if (isLoadResource(res)) return;
+                        if (isStorageResource(res)) {
                             const powerCap = storagePowerCap(res);
                             const chargeCost = res.allowGridCharging === false ? 10000 : (res.cyclingCost ?? 0.02);
                             const dischargeCost = res.cyclingCost ?? 0.02;
@@ -1993,7 +2437,7 @@
                                 charge[`cycleCap_${zoneId}_${resId}`] = 1;
                                 discharge[`cycleCap_${zoneId}_${resId}`] = 1;
                             }
-                        } else {
+                        } else if (isGeneratorResource(res)) {
                             const gen = addVar(model, `gen_${zoneId}_${resId}_h${hour}`, resourceCost(res));
                             gen[`bal_${zoneId}_h${hour}`] = 1;
                             model.constraints[`cap_${zoneId}_${resId}_h${hour}`] = { max: resourceCap(res, h) };
@@ -2036,7 +2480,7 @@
 
             Object.entries(state.zones).forEach(([zoneId, zone]) => {
                 Object.entries(zone.resources).forEach(([resId, res]) => {
-                    if (res.type !== 'storage') return;
+                    if (!isStorageResource(res)) return;
                     const energyCap = storageEnergyCap(res);
                     const initialSoc = res.initialSoc ?? 0;
                     const terminalSoc = res.terminalSoc ?? initialSoc;
@@ -2156,9 +2600,10 @@
                     state.dispatch[zoneId] = state.dispatch[zoneId] || {};
                     state.totals.load += zoneLoad(zone, h);
                     Object.entries(zone.resources).forEach(([resId, res]) => {
+                        if (isLoadResource(res)) return;
                         state.dispatch[zoneId][resId] = state.dispatch[zoneId][resId] || [];
                         let value = 0;
-                        if (res.type === 'storage') {
+                        if (isStorageResource(res)) {
                             value = (sol[`discharge_${zoneId}_${resId}_h${hour}`] || 0) - (sol[`charge_${zoneId}_${resId}_h${hour}`] || 0);
                         } else {
                             value = sol[`gen_${zoneId}_${resId}_h${hour}`] || 0;
@@ -2201,7 +2646,7 @@
                     }
 
                     const marginalCosts = Object.entries(zone.resources)
-                        .filter(([, res]) => res.type !== 'storage')
+                        .filter(([, res]) => isGeneratorResource(res))
                         .map(([resId, res]) => {
                             const dispatch = state.dispatch[zoneId]?.[resId]?.[h] || 0;
                             const cap = Math.max(0, resourceCap(res, h));
@@ -2211,13 +2656,13 @@
                         .map(item => item.cost);
 
                     const dispatchedCosts = Object.entries(zone.resources)
-                        .filter(([, res]) => res.type !== 'storage')
+                        .filter(([, res]) => isGeneratorResource(res))
                         .map(([resId, res]) => ({ cost: resourceCost(res), dispatch: state.dispatch[zoneId]?.[resId]?.[h] || 0 }))
                         .filter(item => item.dispatch > 0.5)
                         .map(item => item.cost);
 
                     const storageDispatch = Object.entries(zone.resources)
-                        .filter(([, res]) => res.type === 'storage')
+                        .filter(([, res]) => isStorageResource(res))
                         .some(([resId]) => (state.dispatch[zoneId]?.[resId]?.[h] || 0) > 0.5);
 
                     const price = marginalCosts.length
@@ -2225,7 +2670,7 @@
                         : dispatchedCosts.length
                             ? Math.max(...dispatchedCosts)
                             : storageDispatch ? 70 : 25;
-                    const loadRatio = zoneLoad(zone, h) / Math.max(1, zone.baseLoad * state.scenario.loadScale / 100);
+                    const loadRatio = zoneLoad(zone, h) / Math.max(1, totalBaseLoad(zone) * state.scenario.loadScale / 100);
                     const loadPressure = clamp((loadRatio - 0.95) / 0.35, 0, 1);
                     const utilizationPressure = Object.entries(state.lines)
                         .filter(([, line]) => line.from === zoneId || line.to === zoneId)
@@ -2339,12 +2784,12 @@
         }
 
         function setSolveButtonText(text) {
-            const el = document.getElementById('solveBtnStudio') || document.getElementById('solveBtn');
+            const el = document.getElementById('solveBtnSolver') || document.getElementById('solveBtn');
             if (el) el.textContent = text;
         }
 
         function setSolveButtonLoading(isLoading) {
-            const el = document.getElementById('solveBtnStudio') || document.getElementById('solveBtn');
+            const el = document.getElementById('solveBtnSolver') || document.getElementById('solveBtn');
             if (!el) return;
             el.textContent = isLoading ? 'Loading...' : 'Solve DC OPF';
             el.disabled = isLoading;
@@ -2797,15 +3242,24 @@
                         renderAll();
                     });
 
+                const loadEntries = loadResourceEntries(zone);
                 const generatorEntries = Object.entries(zone.resources)
-                    .filter(([, res]) => res.type !== 'storage')
-                const storageEntry = Object.entries(zone.resources)
-                    .find(([, res]) => res.type === 'storage');
-                const storageTotal = Object.entries(zone.resources)
-                    .filter(([, res]) => res.type === 'storage')
-                    .reduce((sum, [resId]) => sum + (state.dispatch[zoneId]?.[resId]?.[h] || 0), 0);
+                    .filter(([, res]) => isGeneratorResource(res));
+                const storageEntries = Object.entries(zone.resources)
+                    .filter(([, res]) => isStorageResource(res));
                 const satellites = [
-                    ...(!zone.loadDeleted ? [{ id: 'load', label: 'Load', value: zoneLoad(zone, h), utilization: zoneLoad(zone, h) / Math.max(1, zone.baseLoad * state.scenario.loadScale / 100), color: '#f97316', click: () => selectLoad(zoneId) }] : []),
+                    ...loadEntries.map(([loadId, load]) => {
+                        const shape = load.profile || normalizeLoadShape(LOAD_PROFILES[load.profileType]?.shape || BASE_LOAD_SHAPE);
+                        const value = (load.baseLoad || 0) * shape[h] * state.scenario.loadScale / 100;
+                        return {
+                            id: loadId,
+                            label: resourceDisplayName(zone, loadId, load),
+                            value,
+                            utilization: value / Math.max(1, (load.baseLoad || 0) * state.scenario.loadScale / 100),
+                            color: RESOURCE_COLORS.load,
+                            click: () => selectLoad(zoneId, loadId)
+                        };
+                    }),
                     ...generatorEntries.map(([resId, res]) => ({
                         id: resId,
                         label: resourceDisplayName(zone, resId, res),
@@ -2815,14 +3269,14 @@
                         priceSetting: Boolean(state.priceSetters[h]?.includes(`${zoneId}:${resId}`)),
                         click: () => selectResource(zoneId, resId)
                     })),
-                    ...(storageEntry ? [{
-                        id: 'storage',
-                        label: 'Storage',
-                        value: storageTotal,
-                        utilization: storageFill(zoneId, storageEntry[0], storageEntry[1], h),
+                    ...storageEntries.map(([storageId, storage]) => ({
+                        id: storageId,
+                        label: resourceDisplayName(zone, storageId, storage),
+                        value: state.dispatch[zoneId]?.[storageId]?.[h] || 0,
+                        utilization: storageFill(zoneId, storageId, storage, h),
                         color: '#a855f7',
-                        click: () => selectResource(zoneId, storageEntry[0])
-                    }] : [])
+                        click: () => selectResource(zoneId, storageId)
+                    }))
                 ].map((item, index, items) => ({
                     ...item,
                     angle: (Math.PI * 2 * index / items.length) - (Math.PI / 2)
@@ -3025,13 +3479,22 @@
 
         function addLoadToSelectedBus() {
             const zone = state.zones[state.selectedZone];
-            if (!zone || !zone.loadDeleted) return;
+            if (!zone) return;
+            zone.resources = zone.resources || {};
+            const id = uniqueResourceId(zone, 'load');
+            const ordinal = countResources('load') + 1;
+            zone.resources[id] = {
+                name: `Load ${ordinal}`,
+                type: 'load',
+                baseLoad: 100,
+                profileType: 'residential',
+                profile: normalizeLoadShape(LOAD_PROFILES.residential.shape),
+                color: RESOURCE_COLORS.load
+            };
             zone.loadDeleted = false;
-            zone.baseLoad = 100;
-            zone.loadProfileType = 'residential';
-            zone.loadProfile = normalizeLoadShape(LOAD_PROFILES.residential.shape);
+            zone.baseLoad = totalBaseLoad(zone);
             state.selectedPanel = 'load';
-            state.selectedResource = 'load';
+            state.selectedResource = id;
             state.selectedBranch = null;
             state.draggingZone = null;
             invalidateSolution();
@@ -3066,11 +3529,12 @@
 
         function addStorageToSelectedBus() {
             const zone = state.zones[state.selectedZone];
-            if (!zone || Object.values(zone.resources || {}).some(res => res.type === 'storage')) return;
+            if (!zone) return;
             zone.resources = zone.resources || {};
             const id = uniqueResourceId(zone, 'battery');
+            const ordinal = countResources('storage') + 1;
             zone.resources[id] = {
-                name: 'Storage',
+                name: `Storage ${ordinal}`,
                 type: 'storage',
                 powerCap: 100,
                 duration: 4,
@@ -3100,19 +3564,28 @@
             const lmp = state.lmps[state.selectedZone]?.[h] ?? 0;
             const load = zoneLoad(zone, h);
             const unserved = zoneUnservedSummary(state.selectedZone);
-            const hasLoad = !zone.loadDeleted;
-            const generators = Object.entries(zone.resources).filter(([, res]) => res.type !== 'storage');
-            const storageEntries = Object.entries(zone.resources).filter(([, res]) => res.type === 'storage');
+            const loadEntries = loadResourceEntries(zone);
+            const hasLoad = loadEntries.length > 0;
+            const selectedLoad = loadEntries.find(([loadId]) => loadId === state.selectedResource);
+            const generators = Object.entries(zone.resources).filter(([, res]) => isGeneratorResource(res));
+            const storageEntries = Object.entries(zone.resources).filter(([, res]) => isStorageResource(res));
             const storageCapacity = Object.values(zone.resources)
-                .filter(res => res.type === 'storage')
+                .filter(isStorageResource)
                 .reduce((sum, res) => sum + storagePowerCap(res), 0);
-            const loadPanel = state.selectedPanel === 'load' && hasLoad ? `
+            const loadPanel = state.selectedPanel === 'load' && selectedLoad ? `
                 <div class="summary-panel">
                     <div class="form-grid">
                         <div class="form-field">
-                            <label>Peak Load (MW)</label>
-                            <input id="peakLoadInput" class="peak-input" type="number" min="1" step="1" value="${Math.round(zone.baseLoad)}">
+                            <label>Name</label>
+                            <input id="loadNameInput" class="peak-input" value="${resourceDisplayName(zone, selectedLoad[0], selectedLoad[1])}">
                         </div>
+                        <div class="form-field">
+                            <label>Peak Load (MW)</label>
+                            <input id="peakLoadInput" class="peak-input" type="number" min="1" step="1" value="${Math.round(selectedLoad[1].baseLoad || 0)}">
+                        </div>
+                        <button id="applyLoadBasics" class="mini-button">Apply</button>
+                    </div>
+                    <div class="form-grid" style="margin-top:10px;">
                         <div class="form-field">
                             <label>Profile</label>
                             <select id="loadProfileSelect" class="select-input">
@@ -3186,18 +3659,19 @@
                     </div>
                     <div class="bus-manage-section">
                         <div class="bus-manage-header">
-                            <div class="bus-manage-title">Loads (${hasLoad ? 1 : 0})</div>
-                            ${hasLoad ? '' : '<button class="section-add-button" type="button" data-add-load>+ Add</button>'}
+                            <div class="bus-manage-title">Loads (${loadEntries.length})</div>
+                            <button class="section-add-button" type="button" data-add-load>+ Add</button>
                         </div>
                         <div class="resource-list">
-                            ${hasLoad ? `
-                                <button class="resource-row ${state.selectedPanel === 'load' ? 'active' : ''}" type="button" data-load-row>
+                            ${loadEntries.map(([loadId, loadRes]) => `
+                                <div class="resource-row ${state.selectedPanel === 'load' && state.selectedResource === loadId ? 'active' : ''}" role="button" tabindex="0" data-load-row="${loadId}">
                                     <span class="dot" style="background:#f97316"></span>
-                                    <span class="name">${zone.load?.name || `${zone.name} Load`}</span>
-                                    <span id="selectedLoadSummary" class="tag">${fmtMW(load)}</span>
-                                </button>
-                                ${loadPanel}
-                            ` : '<div class="empty-resource-note">No load on this bus</div>'}
+                                    <span class="name">${resourceDisplayName(zone, loadId, loadRes)}</span>
+                                    <span class="tag" data-load-summary="${loadId}">${fmtMW(loadValue(loadRes, h))}</span>
+                                    <button class="resource-delete-button" type="button" data-delete-load="${loadId}">Remove</button>
+                                </div>
+                                ${state.selectedPanel === 'load' && state.selectedResource === loadId ? loadPanel : ''}
+                            `).join('') || '<div class="empty-resource-note">No load on this bus</div>'}
                         </div>
                     </div>
                     <div class="bus-manage-section">
@@ -3207,11 +3681,12 @@
                         </div>
                         <div class="resource-list">
                             ${generators.map(([resId, res]) => `
-                                <button class="resource-row ${resId === state.selectedResource ? 'active' : ''}" type="button" data-generator="${resId}">
+                                <div class="resource-row ${resId === state.selectedResource ? 'active' : ''}" role="button" tabindex="0" data-generator="${resId}">
                                     <span class="dot" style="background:${res.color || '#22c55e'}"></span>
                                     <span class="name">${resourceDisplayName(zone, resId, res)}</span>
                                     <span class="tag">${fmtMW(res.cap || 0)}</span>
-                                </button>
+                                    <button class="resource-delete-button" type="button" data-delete-generator="${resId}">Remove</button>
+                                </div>
                                 ${state.selectedPanel === 'generators' && resId === state.selectedResource ? renderGeneratorEditor(resId, res) : ''}
                             `).join('') || '<div class="empty-resource-note">No generators on this bus</div>'}
                         </div>
@@ -3219,15 +3694,16 @@
                     <div class="bus-manage-section">
                         <div class="bus-manage-header">
                             <div class="bus-manage-title">Storage (${storageEntries.length})</div>
-                            ${storageEntries.length ? '' : '<button class="section-add-button" type="button" data-add-storage>+ Add</button>'}
+                            <button class="section-add-button" type="button" data-add-storage>+ Add</button>
                         </div>
                         <div class="resource-list">
                             ${storageEntries.map(([resId, res]) => `
-                                <button class="resource-row ${resId === state.selectedResource ? 'active' : ''}" type="button" data-storage="${resId}">
+                                <div class="resource-row ${resId === state.selectedResource ? 'active' : ''}" role="button" tabindex="0" data-storage="${resId}">
                                     <span class="dot" style="background:#a855f7"></span>
                                     <span class="name">${resourceDisplayName(zone, resId, res)}</span>
                                     <span class="tag">${fmtMW(storagePowerCap(res))}</span>
-                                </button>
+                                    <button class="resource-delete-button" type="button" data-delete-storage="${resId}">Remove</button>
+                                </div>
                                 ${state.selectedPanel === 'storage' && resId === state.selectedResource ? renderStorageEditor(resId, res) : ''}
                             `).join('') || '<div class="empty-resource-note">No storage on this bus</div>'}
                         </div>
@@ -3255,12 +3731,14 @@
             document.getElementById('deleteSelectedBus')?.addEventListener('click', () => {
                 deleteBus(state.selectedZone);
             });
-            document.querySelector('[data-load-row]')?.addEventListener('click', () => {
-                state.selectedPanel = state.selectedPanel === 'load' ? null : 'load';
-                state.selectedResource = 'load';
+            document.querySelectorAll('[data-load-row]').forEach(btn => btn.addEventListener('click', () => {
+                const loadId = btn.dataset.loadRow;
+                const isSame = state.selectedPanel === 'load' && state.selectedResource === loadId;
+                state.selectedPanel = isSame ? null : 'load';
+                state.selectedResource = isSame ? null : loadId;
                 state.draggingZone = null;
                 renderZoneDetail();
-            });
+            }));
             document.querySelectorAll('[data-generator]').forEach(btn => btn.addEventListener('click', () => {
                 state.selectedResource = state.selectedResource === btn.dataset.generator ? null : btn.dataset.generator;
                 state.selectedPanel = state.selectedResource ? 'generators' : null;
@@ -3272,6 +3750,18 @@
                 state.selectedPanel = state.selectedResource ? 'storage' : null;
                 state.draggingZone = null;
                 renderZoneDetail();
+            }));
+            document.querySelectorAll('[data-delete-load]').forEach(btn => btn.addEventListener('click', event => {
+                event.stopPropagation();
+                deleteLoad(state.selectedZone, btn.dataset.deleteLoad);
+            }));
+            document.querySelectorAll('[data-delete-generator]').forEach(btn => btn.addEventListener('click', event => {
+                event.stopPropagation();
+                deleteGenerator(state.selectedZone, btn.dataset.deleteGenerator);
+            }));
+            document.querySelectorAll('[data-delete-storage]').forEach(btn => btn.addEventListener('click', event => {
+                event.stopPropagation();
+                deleteStorage(state.selectedZone, btn.dataset.deleteStorage);
             }));
             setupLocationEditor();
             setupLoadProfileEditor();
@@ -3327,6 +3817,7 @@
 
         function renderGeneratorEditor(resId, res) {
             const zone = state.zones[state.selectedZone];
+            const presetType = inferGeneratorPresetKey(res);
             const profileType = inferredGeneratorProfileType(res);
             const costType = res.costType || 'linear';
             const points = ensureCostPoints(res);
@@ -3346,6 +3837,14 @@
                             <input id="genCapInput" class="peak-input" type="number" min="0" step="1" value="${Math.round(res.cap || 0)}">
                         </div>
                         <button id="applyGenBasics" class="mini-button">Apply</button>
+                    </div>
+                    <div class="form-grid" style="margin-top:10px;">
+                        <div class="form-field" style="grid-column:1 / -1;">
+                            <label>Type</label>
+                            <select id="genTypeSelect" class="select-input">
+                                ${generatorTypeOptions(presetType)}
+                            </select>
+                        </div>
                     </div>
                     <div class="form-grid" style="margin-top:10px;">
                         <div class="form-field" style="grid-column:1 / span 2;">
@@ -3377,12 +3876,12 @@
                         <div class="cost-points">
                             <div class="cost-point-row cost-point-header">
                                 <span>MW</span>
-                                <span>Cost ($)</span>
+                                <span>Price ($/MWh)</span>
                                 <span></span>
                             </div>
                             ${points.map((point, index) => `<div class="cost-point-row" data-cost-row="${index}">
                                 <input class="peak-input cost-power" type="number" step="1" value="${Math.round(point.power * 10) / 10}">
-                                <input class="peak-input cost-cost" type="number" step="1" value="${Math.round(point.cost * 10) / 10}">
+                                <input class="peak-input cost-cost" type="number" step="1" value="${Math.round(costPointPrice(point, index, points) * 10) / 10}">
                                 <button class="mini-button remove-cost-point" data-index="${index}">x</button>
                             </div>`).join('')}
                         </div>
@@ -3422,28 +3921,37 @@
             if (!canvas) return;
             const select = document.getElementById('loadProfileSelect');
             const peakInput = document.getElementById('peakLoadInput');
+            const nameInput = document.getElementById('loadNameInput');
+            const basics = document.getElementById('applyLoadBasics');
             const apply = document.getElementById('applyLoadProfile');
             const zone = state.zones[state.selectedZone];
-            if (select) select.value = LOAD_PROFILES[zone.loadProfileType] ? zone.loadProfileType : 'residential';
+            const load = zone.resources[state.selectedResource];
+            if (!load || !isLoadResource(load)) return;
+            if (select) select.value = LOAD_PROFILES[load.profileType] ? load.profileType : 'residential';
             const updatePeakLoad = () => {
                 if (!peakInput) return;
-                const nextPeak = Math.max(1, Number(peakInput.value) || zone.baseLoad);
-                zone.baseLoad = nextPeak;
+                const nextPeak = Math.max(1, Number(peakInput.value) || load.baseLoad);
+                load.baseLoad = nextPeak;
+                zone.baseLoad = totalBaseLoad(zone);
                 peakInput.value = Math.round(nextPeak);
                 invalidateSolution();
                 renderAll();
             };
-            if (peakInput) peakInput.addEventListener('change', updatePeakLoad);
+            if (basics) basics.addEventListener('click', () => {
+                load.name = nameInput?.value.trim() || load.name;
+                updatePeakLoad();
+            });
             if (apply && select) {
                 apply.addEventListener('click', () => {
                     if (peakInput) {
-                        const nextPeak = Math.max(1, Number(peakInput.value) || state.zones[state.selectedZone].baseLoad);
-                        state.zones[state.selectedZone].baseLoad = nextPeak;
+                        const nextPeak = Math.max(1, Number(peakInput.value) || load.baseLoad);
+                        load.baseLoad = nextPeak;
+                        zone.baseLoad = totalBaseLoad(zone);
                     }
                     const profile = LOAD_PROFILES[select.value];
                     if (!profile) return;
-                    state.zones[state.selectedZone].loadProfile = normalizeLoadShape(profile.shape);
-                    state.zones[state.selectedZone].loadProfileType = select.value;
+                    load.profile = normalizeLoadShape(profile.shape);
+                    load.profileType = select.value;
                     invalidateSolution();
                     renderAll();
                 });
@@ -3459,14 +3967,13 @@
                 const bottomPad = 28;
                 const usableHeight = Math.max(1, rect.height - topPad - bottomPad);
                 const normalized = clamp((rect.height - bottomPad - y) / usableHeight, 0.02, 1);
-                const zone = state.zones[state.selectedZone];
-                zone.loadProfile = (zone.loadProfile || normalizeLoadShape(BASE_LOAD_SHAPE)).slice();
-                zone.loadProfileType = 'custom';
-                zone.loadProfile[hourIndex] = normalized;
+                load.profile = (load.profile || normalizeLoadShape(BASE_LOAD_SHAPE)).slice();
+                load.profileType = 'custom';
+                load.profile[hourIndex] = normalized;
                 invalidateSolution();
                 drawLoadProfileCanvas();
-                const selectedLoadSummary = document.getElementById('selectedLoadSummary');
-                if (selectedLoadSummary) selectedLoadSummary.textContent = fmtMW(zoneLoad(zone, state.hour - 1));
+                const selectedLoadSummary = document.querySelector(`[data-load-summary="${state.selectedResource}"]`);
+                if (selectedLoadSummary) selectedLoadSummary.textContent = fmtMW(loadValue(load, state.hour - 1));
                 renderMetrics();
                 renderZoneList();
                 renderMap();
@@ -3501,8 +4008,10 @@
             const ctx = canvas.getContext('2d');
             if (!ctx) return;
             const zone = state.zones[state.selectedZone];
-            const shape = zone.loadProfile || normalizeLoadShape(BASE_LOAD_SHAPE);
-            const peak = Math.max(zone.baseLoad * state.scenario.loadScale / 100, 1);
+            const load = zone.resources[state.selectedResource];
+            if (!load || !isLoadResource(load)) return;
+            const shape = load.profile || normalizeLoadShape(BASE_LOAD_SHAPE);
+            const peak = Math.max((load.baseLoad || 0) * state.scenario.loadScale / 100, 1);
             const topPad = 14;
             const bottomPad = 28;
             const leftPad = 54;
@@ -3534,7 +4043,7 @@
             const barGap = 2;
             const barW = plotW / 24 - barGap;
             shape.forEach((value, i) => {
-                const mw = zone.baseLoad * value * state.scenario.loadScale / 100;
+                const mw = (load.baseLoad || 0) * value * state.scenario.loadScale / 100;
                 const barH = plotH * mw / peak;
                 const x = leftPad + i * plotW / 24 + barGap / 2;
                 const y = topPad + plotH - barH;
@@ -3566,10 +4075,19 @@
             return res.costPoints;
         }
 
+        function costPointPrice(point, index, points) {
+            if (point.power > 0.001) return point.cost / point.power;
+            const next = points[index + 1];
+            if (next && next.power > point.power) {
+                return (next.cost - point.cost) / Math.max(1, next.power - point.power);
+            }
+            return 0;
+        }
+
         function selectedGeneratorResource() {
             const zone = state.zones[state.selectedZone];
             const res = zone.resources[state.selectedResource];
-            return res && res.type !== 'storage' ? res : null;
+            return isGeneratorResource(res) ? res : null;
         }
 
         function resourceDisplayName(zone, resId, res) {
@@ -3594,6 +4112,7 @@
             if (!res || state.selectedPanel !== 'generators') return;
             const colorInput = document.getElementById('genColorInput');
             const basics = document.getElementById('applyGenBasics');
+            const typeSelect = document.getElementById('genTypeSelect');
             const profileApply = document.getElementById('applyGenProfile');
             const costApply = document.getElementById('applyGenCost');
             const costType = document.getElementById('genCostType');
@@ -3601,6 +4120,7 @@
 
             if (colorInput) colorInput.addEventListener('input', event => {
                 res.color = event.target.value;
+                delete res.presetType;
                 invalidateSolution();
                 renderMap();
                 renderChart();
@@ -3608,6 +4128,12 @@
             if (basics) basics.addEventListener('click', () => {
                 res.name = document.getElementById('genNameInput')?.value || res.name;
                 res.cap = Math.max(0, Number(document.getElementById('genCapInput')?.value) || 0);
+                if (res.costType === 'piecewise' && res.presetType) applyGeneratorTypePreset(res, res.presetType);
+                invalidateSolution();
+                renderAll();
+            });
+            if (typeSelect) typeSelect.addEventListener('change', () => {
+                applyGeneratorTypePreset(res, typeSelect.value || 'other');
                 invalidateSolution();
                 renderAll();
             });
@@ -3615,6 +4141,7 @@
                 const key = document.getElementById('genProfileSelect')?.value || 'custom';
                 const profile = GENERATOR_PROFILES[key];
                 res.profileType = key;
+                delete res.presetType;
                 if (profile?.shape) res.profile = normalizeGeneratorShape(profile.shape);
                 invalidateSolution();
                 renderAll();
@@ -3622,6 +4149,7 @@
             if (costType) costType.addEventListener('change', () => {
                 if (res.costType === 'piecewise') readCostPointInputs(res);
                 res.costType = costType.value;
+                delete res.presetType;
                 if (res.costType === 'piecewise') ensureCostPoints(res);
                 invalidateSolution();
                 const linearFields = document.getElementById('linearCostFields');
@@ -3632,6 +4160,7 @@
             });
             if (costApply) costApply.addEventListener('click', () => {
                 res.costType = costType?.value || 'linear';
+                delete res.presetType;
                 if (res.costType === 'linear') {
                     res.cost = Number(document.getElementById('genLinearPrice')?.value) || 0;
                 } else {
@@ -3667,7 +4196,7 @@
         function selectedStorageResource() {
             const zone = state.zones[state.selectedZone];
             const res = zone.resources[state.selectedResource];
-            return res && res.type === 'storage' ? res : null;
+            return isStorageResource(res) ? res : null;
         }
 
         function setupStorageEditor() {
@@ -3761,7 +4290,10 @@
             if (!rows.length) return;
             res.costPoints = rows.map(row => ({
                 power: Number(row.querySelector('.cost-power')?.value) || 0,
-                cost: Number(row.querySelector('.cost-cost')?.value) || 0
+                price: Number(row.querySelector('.cost-cost')?.value) || 0
+            })).map(point => ({
+                power: point.power,
+                cost: point.power * point.price
             })).sort((a, b) => a.power - b.power);
         }
 
@@ -3873,11 +4405,20 @@
             const width = Math.max(320, Math.round(rect.width || canvas.clientWidth || 320));
             const height = Math.max(210, Math.round(rect.height || canvas.clientHeight || 210));
             const leftPad = 64, rightPad = 14, topPad = 18, bottomPad = 48;
-            const linearCost = Math.max(0, (res.cap || 1) * (res.cost || 0));
-            const points = res.costType === 'piecewise' ? ensureCostPoints(res) : [{ power: 0, cost: 0 }, { power: res.cap || 1, cost: linearCost }];
+            const points = res.costType === 'piecewise' ? ensureCostPoints(res) : [{ power: 0, cost: 0 }, { power: res.cap || 1, cost: (res.cap || 1) * (res.cost || 0) }];
+            const pricePoints = points.map((point, index) => ({ power: point.power, price: costPointPrice(point, index, points) }));
             const maxPower = Math.max(res.cap || 1, ...points.map(p => p.power), 1);
-            const maxCost = Math.max(1, ...points.map(p => p.cost));
-            return { width, height, leftPad, rightPad, topPad, bottomPad, plotW: width - leftPad - rightPad, plotH: height - topPad - bottomPad, maxPower, maxCost };
+            const rawMinPrice = Math.min(0, ...pricePoints.map(p => p.price));
+            const rawMaxPrice = Math.max(0, ...pricePoints.map(p => p.price));
+            const priceSpan = Math.max(1, rawMaxPrice - rawMinPrice);
+            const dragDownRoom = Math.max(25, Math.abs(rawMaxPrice) * 0.20, priceSpan * 0.35);
+            const dragUpRoom = Math.max(25, Math.abs(rawMinPrice) * 0.20, priceSpan * 0.35);
+            const minPrice = rawMinPrice - dragDownRoom;
+            const maxPrice = rawMaxPrice + dragUpRoom;
+            const priceRange = Math.max(1, maxPrice - minPrice);
+            const priceToY = price => topPad + (maxPrice - price) / priceRange * (height - topPad - bottomPad);
+            const yToPrice = y => maxPrice - ((y - topPad) / (height - topPad - bottomPad)) * priceRange;
+            return { width, height, leftPad, rightPad, topPad, bottomPad, plotW: width - leftPad - rightPad, plotH: height - topPad - bottomPad, maxPower, minPrice, maxPrice, priceRange, pricePoints, priceToY, yToPrice };
         }
 
         function nearestCostPoint(event) {
@@ -3894,7 +4435,7 @@
             let nearestDist = Infinity;
             points.forEach((point, index) => {
                 const px = g.leftPad + point.power / g.maxPower * g.plotW;
-                const py = g.topPad + g.plotH - point.cost / g.maxCost * g.plotH;
+                const py = g.priceToY(costPointPrice(point, index, points));
                 const dist = Math.hypot(px - x, py - y);
                 if (dist < nearestDist && dist < 18) { nearest = index; nearestDist = dist; }
             });
@@ -3911,16 +4452,18 @@
             const x = clamp(event.clientX - rect.left, g.leftPad, g.leftPad + g.plotW);
             const y = clamp(event.clientY - rect.top, g.topPad, g.topPad + g.plotH);
             const points = ensureCostPoints(res);
+            const price = g.yToPrice(y);
+            const power = (x - g.leftPad) / g.plotW * g.maxPower;
             points[index] = {
-                power: (x - g.leftPad) / g.plotW * g.maxPower,
-                cost: (g.topPad + g.plotH - y) / g.plotH * g.maxCost
+                power,
+                cost: power * price
             };
             const row = document.querySelector(`[data-cost-row="${index}"]`);
             if (row) {
                 const powerInput = row.querySelector('.cost-power');
                 const costInput = row.querySelector('.cost-cost');
                 if (powerInput) powerInput.value = Math.round(points[index].power * 10) / 10;
-                if (costInput) costInput.value = Math.round(points[index].cost * 10) / 10;
+                if (costInput) costInput.value = Math.round(price * 10) / 10;
             }
             res.costType = 'piecewise';
             invalidateSolution();
@@ -3937,7 +4480,8 @@
             if (canvas.height !== g.height) canvas.height = g.height;
             const points = res.costType === 'piecewise'
                 ? ensureCostPoints(res)
-                : [{ power: 0, cost: 0 }, { power: res.cap || 1, cost: Math.max(0, (res.cap || 1) * (res.cost || 0)) }];
+                : [{ power: 0, cost: 0 }, { power: res.cap || 1, cost: (res.cap || 1) * (res.cost || 0) }];
+            const pricePoints = points.map((point, index) => ({ power: point.power, price: costPointPrice(point, index, points) }));
             ctx.clearRect(0, 0, g.width, g.height);
             ctx.fillStyle = '#0f1623';
             ctx.fillRect(0, 0, g.width, g.height);
@@ -3947,10 +4491,23 @@
             ctx.lineWidth = 1;
             [0, .5, 1].forEach(t => {
                 const y = g.topPad + g.plotH * (1 - t);
+                const value = g.minPrice + (g.maxPrice - g.minPrice) * t;
                 ctx.beginPath(); ctx.moveTo(g.leftPad, y); ctx.lineTo(g.width - g.rightPad, y); ctx.stroke();
                 ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-                ctx.fillText(Math.round(g.maxCost * t).toLocaleString(), g.leftPad - 6, y);
+                const tickValue = Object.is(Math.round(value), -0) ? 0 : Math.round(value);
+                ctx.fillText(tickValue.toLocaleString(), g.leftPad - 6, y);
             });
+            if (g.minPrice < 0 && g.maxPrice > 0) {
+                const zeroY = g.priceToY(0);
+                ctx.beginPath();
+                ctx.moveTo(g.leftPad, zeroY);
+                ctx.lineTo(g.width - g.rightPad, zeroY);
+                ctx.strokeStyle = 'rgba(250, 204, 21, .65)';
+                ctx.setLineDash([5, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.strokeStyle = '#263348';
+            }
             [0, .5, 1].forEach(t => {
                 const x = g.leftPad + g.plotW * t;
                 ctx.beginPath(); ctx.moveTo(x, g.topPad); ctx.lineTo(x, g.topPad + g.plotH); ctx.stroke();
@@ -3962,23 +4519,23 @@
             ctx.rotate(-Math.PI / 2);
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('Cost ($)', 0, 0);
+            ctx.fillText('Price ($/MWh)', 0, 0);
             ctx.restore();
             ctx.textAlign = 'center';
             ctx.textBaseline = 'bottom';
             ctx.fillText('Power (MW)', g.leftPad + g.plotW / 2, g.height - 4);
             ctx.beginPath();
-            points.forEach((point, index) => {
+            pricePoints.forEach((point, index) => {
                 const x = g.leftPad + point.power / g.maxPower * g.plotW;
-                const y = g.topPad + g.plotH - point.cost / g.maxCost * g.plotH;
+                const y = g.priceToY(point.price);
                 if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
             });
             ctx.strokeStyle = '#f8d66d';
             ctx.lineWidth = 3;
             ctx.stroke();
-            points.forEach(point => {
+            pricePoints.forEach(point => {
                 const x = g.leftPad + point.power / g.maxPower * g.plotW;
-                const y = g.topPad + g.plotH - point.cost / g.maxCost * g.plotH;
+                const y = g.priceToY(point.price);
                 ctx.fillStyle = '#f8d66d';
                 ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
                 ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
@@ -4056,13 +4613,15 @@
             const zoneId = state.selectedZone;
             const zone = state.zones[zoneId];
             const currentHourPlugin = currentHourHighlightPlugin();
-            const datasets = Object.entries(zone.resources).map(([resId, res]) => ({
-                label: resourceDisplayName(zone, resId, res),
-                data: state.dispatch[zoneId]?.[resId] || Array(24).fill(0),
-                borderWidth: 0,
-                backgroundColor: res.color || RESOURCE_COLORS[res.type] || '#fff',
-                borderRadius: 3
-            }));
+            const datasets = Object.entries(zone.resources)
+                .filter(([, res]) => !isLoadResource(res))
+                .map(([resId, res]) => ({
+                    label: resourceDisplayName(zone, resId, res),
+                    data: state.dispatch[zoneId]?.[resId] || Array(24).fill(0),
+                    borderWidth: 0,
+                    backgroundColor: res.color || RESOURCE_COLORS[res.type] || '#fff',
+                    borderRadius: 3
+                }));
             if ((state.dispatch[zoneId]?.emergency || []).some(v => v > 0.5)) {
                 datasets.push({
                     label: 'emergency',
@@ -4101,7 +4660,16 @@
                     maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
                     plugins: {
-                        legend: { labels: { color: '#cbd7e7', boxWidth: 10, usePointStyle: true } }
+                        legend: { labels: { color: '#cbd7e7', boxWidth: 10, usePointStyle: true } },
+                        tooltip: {
+                            callbacks: {
+                                label: context => {
+                                    const label = context.dataset.label || '';
+                                    const value = Number(context.parsed?.y ?? context.raw ?? 0);
+                                    return `${label}: ${Math.round(value).toLocaleString()} MW`;
+                                }
+                            }
+                        }
                     },
                     scales: {
                         x: { stacked: true, ticks: { color: '#8ea0b8' }, grid: { display: false } },
@@ -4139,7 +4707,16 @@
                     maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
                     plugins: {
-                        legend: { labels: { color: '#cbd7e7', boxWidth: 10, usePointStyle: true } }
+                        legend: { labels: { color: '#cbd7e7', boxWidth: 10, usePointStyle: true } },
+                        tooltip: {
+                            callbacks: {
+                                label: context => {
+                                    const label = context.dataset.label || '';
+                                    const value = Number(context.parsed?.y ?? context.raw ?? 0);
+                                    return `${label}: $${value.toFixed(2)}/MWh`;
+                                }
+                            }
+                        }
                     },
                     scales: {
                         x: { ticks: { color: '#8ea0b8' }, grid: { display: false } },
@@ -4178,7 +4755,7 @@
             const lmpValues24 = Object.values(state.lmps).flat().filter(Number.isFinite);
             const peakLoad = systemPeakLoad();
             const resourceEntries = Object.values(state.zones).flatMap(zone => Object.values(zone.resources || {}));
-            const activeLoads = Object.values(state.zones).filter(zone => !zone.loadDeleted).length;
+            const activeLoads = Object.values(state.zones).reduce((sum, zone) => sum + loadResourceEntries(zone).length, 0);
             const binding = Object.entries(state.lines).filter(([lineId, line]) => {
                 const flow = state.flows[lineId]?.[h] || 0;
                 const limit = lineLimitForFlow(line, flow);
@@ -4193,8 +4770,8 @@
             document.getElementById('metricBuses').textContent = String(Object.keys(state.zones).length);
             document.getElementById('metricBranches').textContent = String(Object.keys(state.lines).length);
             document.getElementById('metricLoads').textContent = String(activeLoads);
-            document.getElementById('metricGenerators').textContent = String(resourceEntries.filter(res => res.type !== 'storage').length);
-            document.getElementById('metricStorage').textContent = String(resourceEntries.filter(res => res.type === 'storage').length);
+            document.getElementById('metricGenerators').textContent = String(resourceEntries.filter(isGeneratorResource).length);
+            document.getElementById('metricStorage').textContent = String(resourceEntries.filter(isStorageResource).length);
             const domain = lmpDomain();
             document.getElementById('lmpMin').textContent = `$${Math.round(domain.min)}`;
             document.getElementById('lmpMax').textContent = `$${Math.round(domain.max)}`;
@@ -4220,7 +4797,10 @@
             const zone = state.zones[state.selectedZone];
             const h = state.hour - 1;
             const selectedLoadSummary = document.getElementById('selectedLoadSummary');
-            if (selectedLoadSummary) selectedLoadSummary.textContent = zone.loadDeleted ? 'None' : fmtMW(zoneLoad(zone, h));
+            document.querySelectorAll('[data-load-summary]').forEach(el => {
+                const load = zone?.resources?.[el.dataset.loadSummary];
+                if (load && isLoadResource(load)) el.textContent = fmtMW(loadValue(load, h));
+            });
             const zoneDetailMetric = document.getElementById('zoneDetailMetric');
             if (zoneDetailMetric) {
                 const lmp = state.lmps[state.selectedZone]?.[h] ?? 0;
@@ -4242,7 +4822,7 @@
 
         function selectZone(zoneId) {
             state.selectedZone = zoneId;
-            state.selectedResource = state.zones[zoneId]?.loadDeleted ? null : 'load';
+            state.selectedResource = firstLoadId(state.zones[zoneId]);
             state.selectedPanel = null;
             state.selectedBranch = null;
             state.draggingZone = null;
@@ -4254,18 +4834,19 @@
             state.selectedResource = resId;
             state.selectedBranch = null;
             const res = state.zones[zoneId].resources[resId];
-            state.selectedPanel = resId === 'load' ? 'load' : (res?.type === 'storage' ? 'storage' : 'generators');
+            state.selectedPanel = isLoadResource(res) ? 'load' : (isStorageResource(res) ? 'storage' : 'generators');
             state.draggingZone = null;
             renderAll();
         }
 
-        function selectLoad(zoneId) {
-            if (state.zones[zoneId]?.loadDeleted) {
+        function selectLoad(zoneId, loadId = null) {
+            const id = loadId || firstLoadId(state.zones[zoneId]);
+            if (!id) {
                 selectZone(zoneId);
                 return;
             }
             state.selectedZone = zoneId;
-            state.selectedResource = 'load';
+            state.selectedResource = id;
             state.selectedPanel = 'load';
             state.selectedBranch = null;
             state.draggingZone = null;
@@ -4306,6 +4887,19 @@
             solveModel();
         }
 
+        function setupWelcomeScreen() {
+            const welcome = document.getElementById('welcomeScreen');
+            const start = document.getElementById('welcomeStart');
+            if (!welcome || !start) return;
+            start.addEventListener('click', () => {
+                welcome.classList.add('hidden');
+                setTimeout(() => {
+                    window.map?.invalidateSize?.();
+                    fitMapView();
+                }, 40);
+            });
+        }
+
         function init() {
             initMap();
             setSolveButtonText('Solve DC OPF');
@@ -4318,11 +4912,12 @@
             };
             hourSlider.addEventListener('pointerdown', updateHourFromSliderPointer);
             hourSlider.addEventListener('input', e => setHour(e.target.value));
-            const solveBtn = document.getElementById('solveBtnStudio') || document.getElementById('solveBtn');
+            const solveBtn = document.getElementById('solveBtnSolver') || document.getElementById('solveBtn');
             if (solveBtn && !solveBtn.hasAttribute('onclick')) solveBtn.addEventListener('click', solveModel);
             const resetBtn = document.getElementById('resetBtn');
             if (resetBtn) resetBtn.addEventListener('click', resetScenario);
             document.getElementById('siteNoticeClose')?.addEventListener('click', hideSiteNotice);
+            setupWelcomeScreen();
             document.addEventListener('keydown', event => {
                 if (event.key === 'Escape' && (state.addingBus || state.addingBranch)) {
                     event.preventDefault();
@@ -4336,6 +4931,6 @@
         }
 
         init();
-    </script>
+</script>
 </body>
 </html>
