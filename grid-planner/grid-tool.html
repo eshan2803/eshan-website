@@ -158,6 +158,53 @@
         .rainbow-glow:hover .button-content {
             background: #e5e7eb;
         }
+        .tools-dropdown {
+            position: relative;
+        }
+        .tools-dropdown > button.rainbow-glow {
+            border: 0;
+            cursor: inherit;
+            font: inherit;
+        }
+        .tools-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 0.5rem);
+            right: 0;
+            width: 14rem;
+            padding: 0.5rem;
+            border: 1px solid rgba(229, 231, 235, 0.95);
+            border-radius: 0.75rem;
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
+            backdrop-filter: blur(14px);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-0.35rem);
+            transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+            z-index: 50;
+        }
+        .tools-dropdown:hover .tools-dropdown-menu,
+        .tools-dropdown:focus-within .tools-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .tools-dropdown-menu a {
+            display: block;
+            border-radius: 0.5rem;
+            padding: 0.65rem 0.75rem;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 500;
+            line-height: 1.2;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .tools-dropdown-menu a:hover,
+        .tools-dropdown-menu a:focus {
+            background: #f3f4f6;
+            color: #111827;
+            outline: none;
+        }
         /* Style for active season preset button */
         .preset-active {
             background-color: #4b5563 !important; /* A darker gray */
@@ -242,18 +289,19 @@
                 </div>
                 <nav class="flex items-center space-x-2">
                     <a href="/energy.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Articles</a>
-                    <a href="/transport-model/index.html" class="rainbow-glow">
-                        <span class="button-content">Transport Model</span>
-                    </a>
-                    <a href="/grid-decarbonization.html" class="rainbow-glow">
-                         <span class="button-content">Grid Planner</span>
-                    </a>
-                    <a href="/grid-operator/index.html" class="rainbow-glow">
-                         <span class="button-content">Grid Operator</span>
-                    </a>
-                    <a href="https://www.eshansingh.xyz/transmission/index.html" class="rainbow-glow">
-                        <span class="button-content">CA Grid Map</span>
-                    </a>
+                    <div class="tools-dropdown">
+                        <button type="button" class="rainbow-glow" aria-haspopup="true" aria-expanded="false">
+                            <span class="button-content">Tools</span>
+                        </button>
+                        <div class="tools-dropdown-menu" role="menu" aria-label="Tools">
+                            <a href="/transport-model/index.html" role="menuitem">Transport Model</a>
+                            <a href="/grid-planner/index.html" role="menuitem">Grid Planner</a>
+                            <a href="/grid-planner/planner.html" role="menuitem">Capacity Expansion</a>
+                            <a href="/grid-operator/index.html" role="menuitem">Grid Operator</a>
+                            <a href="https://www.eshansingh.xyz/transmission/index.html" role="menuitem">CA Grid Map</a>
+                            <a href="/opf/index.html" role="menuitem">Power Flow Solver</a>
+                        </div>
+                    </div>
                     <a href="musings.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">Musings</a>
                 </nav>
             </div>
