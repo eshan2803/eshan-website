@@ -172,9 +172,42 @@
             padding: 12px;
             min-height: 74px;
         }
+        .metric.metric-link {
+            cursor: pointer;
+            transition: border-color .15s ease, background .15s ease;
+        }
+        .metric.metric-link:hover {
+            border-color: rgba(88, 166, 255, .55);
+            background: #1b2940;
+        }
+        .metric.metric-editable {
+            cursor: pointer;
+            border-color: rgba(65, 211, 154, .42);
+            background: rgba(65, 211, 154, .08);
+        }
+        .metric.metric-editable:hover {
+            border-color: rgba(65, 211, 154, .78);
+            background: rgba(65, 211, 154, .13);
+        }
+        .metric.metric-editable .label,
+        .metric.metric-editable .value {
+            color: #d1fae5;
+        }
         .metric .label { color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; }
         .metric .value { margin-top: 8px; font-size: 22px; font-weight: 800; white-space: nowrap; }
         .metric .sub { margin-top: 4px; color: var(--muted); font-size: 12px; }
+        .metric-input {
+            width: 100%;
+            height: 32px;
+            margin-top: 8px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: #0f1623;
+            color: var(--text);
+            font-size: 20px;
+            font-weight: 800;
+            padding: 0 8px;
+        }
 
         .control-row {
             display: grid;
@@ -1316,41 +1349,46 @@
                 <section class="section">
                     <div class="section-title">System Summary</div>
                     <div class="metric-grid">
-                        <div class="metric">
+                        <div class="metric metric-link" data-summary-tab="buses">
                             <div class="label">Objective</div>
                             <div id="metricCost" class="value">$0</div>
                             <div class="sub">24-hour production cost</div>
                         </div>
-                        <div class="metric" id="peakLoadMetric" style="cursor:pointer;">
+                        <div class="metric metric-editable" id="peakLoadMetric" title="Click to set target system peak load; all bus load profiles scale proportionally.">
                             <div class="label">Peak Load</div>
                             <div id="metricLoad" class="value">0 MW</div>
                             <div class="sub">click to scale all buses</div>
                         </div>
-                        <div class="metric">
-                            <div class="label">Avg LMP</div>
-                            <div id="metricLmp" class="value">$0</div>
-                            <div class="sub">average across buses, selected hour</div>
-                        </div>
-                        <div class="metric">
-                            <div class="label">Min LMP</div>
-                            <div id="metricLmpMin24" class="value">$0</div>
-                            <div class="sub">24-hour minimum</div>
-                        </div>
-                        <div class="metric">
-                            <div class="label">Max LMP</div>
-                            <div id="metricLmpMax24" class="value">$0</div>
-                            <div class="sub">24-hour maximum</div>
-                        </div>
-                        <div class="metric">
+                        <div class="metric metric-link" data-summary-tab="branches">
                             <div class="label">Congestion</div>
                             <div id="metricCongestion" class="value">0</div>
                             <div class="sub">congested branches now</div>
                         </div>
-                        <div class="metric"><div class="label">Buses</div><div id="metricBuses" class="value">0</div><div class="sub">network nodes</div></div>
-                        <div class="metric"><div class="label">Branches</div><div id="metricBranches" class="value">0</div><div class="sub">transmission paths</div></div>
-                        <div class="metric"><div class="label">Loads</div><div id="metricLoads" class="value">0</div><div class="sub">bus load profiles</div></div>
-                        <div class="metric"><div class="label">Generators</div><div id="metricGenerators" class="value">0</div><div class="sub">non-storage resources</div></div>
-                        <div class="metric"><div class="label">Storage</div><div id="metricStorage" class="value">0</div><div class="sub">storage resources</div></div>
+                        <div class="metric metric-link" data-summary-tab="buses">
+                            <div class="label">Avg LMP</div>
+                            <div id="metricLmp" class="value">$0</div>
+                            <div class="sub">average across buses, selected hour</div>
+                        </div>
+                        <div class="metric metric-link" data-summary-tab="buses">
+                            <div class="label">Min LMP</div>
+                            <div id="metricLmpMin24" class="value">$0</div>
+                            <div class="sub">24-hour minimum</div>
+                        </div>
+                        <div class="metric metric-link" data-summary-tab="buses">
+                            <div class="label">Max LMP</div>
+                            <div id="metricLmpMax24" class="value">$0</div>
+                            <div class="sub">24-hour maximum</div>
+                        </div>
+                        <div class="metric metric-editable" id="gasPriceMetric" title="Click to set gas fuel price; gas and peaker heat rates convert this into $/MWh offers.">
+                            <div class="label">Gas Price</div>
+                            <div id="metricGasPrice" class="value">$4.00</div>
+                            <div class="sub">$/MMBtu, click to edit</div>
+                        </div>
+                        <div class="metric metric-link" data-summary-tab="buses"><div class="label">Buses</div><div id="metricBuses" class="value">0</div><div class="sub">network nodes</div></div>
+                        <div class="metric metric-link" data-summary-tab="branches"><div class="label">Branches</div><div id="metricBranches" class="value">0</div><div class="sub">transmission paths</div></div>
+                        <div class="metric metric-link" data-summary-tab="loads"><div class="label">Loads</div><div id="metricLoads" class="value">0</div><div class="sub">bus load profiles</div></div>
+                        <div class="metric metric-link" data-summary-tab="gens"><div class="label">Generators</div><div id="metricGenerators" class="value">0</div><div class="sub">non-storage resources</div></div>
+                        <div class="metric metric-link" data-summary-tab="storage"><div class="label">Storage</div><div id="metricStorage" class="value">0</div><div class="sub">storage resources</div></div>
                     </div>
                 </section>
                 <section class="section">
@@ -1887,6 +1925,7 @@
         const WIND_SHAPE = [0.76,0.80,0.83,0.86,0.82,0.75,0.61,0.48,0.40,0.36,0.34,0.32,0.35,0.39,0.46,0.55,0.66,0.75,0.82,0.88,0.91,0.90,0.86,0.80];
         const HYDRO_SHAPE = [0.70,0.68,0.66,0.64,0.64,0.70,0.78,0.82,0.80,0.78,0.76,0.75,0.76,0.78,0.84,0.92,1.00,1.00,0.96,0.90,0.84,0.80,0.76,0.72];
         const IMPORT_SHAPE = Array(24).fill(1);
+        const DEFAULT_GAS_PRICE = 4;
         const GENERATOR_PROFILES = {
             custom: { label: 'Custom', shape: null },
             flat: { label: 'Flat', shape: Array(24).fill(1) },
@@ -1907,15 +1946,15 @@
                 type: 'gas',
                 profileType: 'baseload',
                 color: '#ff5c7a',
-                costCurve: {
+                heatRateCurve: {
                     type: 'piecewise',
-                    unit: '$/MWh',
+                    unit: 'MMBtu/MWh',
                     points: [
-                        { fraction: 0.00, marginalCost: 42 },
-                        { fraction: 0.55, marginalCost: 48 },
-                        { fraction: 0.78, marginalCost: 58 },
-                        { fraction: 0.92, marginalCost: 86 },
-                        { fraction: 1.00, marginalCost: 145 }
+                        { fraction: 0.00, heatRate: 10.50 },
+                        { fraction: 0.55, heatRate: 12.00 },
+                        { fraction: 0.78, heatRate: 14.50 },
+                        { fraction: 0.92, heatRate: 21.50 },
+                        { fraction: 1.00, heatRate: 36.25 }
                     ]
                 }
             },
@@ -1957,20 +1996,31 @@
                     marginalCost: 8
                 }
             },
+            nuclear: {
+                label: 'Nuclear',
+                type: 'nuclear',
+                profileType: 'baseload',
+                color: '#b084f5',
+                costCurve: {
+                    type: 'linear',
+                    unit: '$/MWh',
+                    marginalCost: 0
+                }
+            },
             peaker: {
                 label: 'Peaker',
                 type: 'gas',
                 profileType: 'peaker',
                 color: '#fb7185',
-                costCurve: {
+                heatRateCurve: {
                     type: 'piecewise',
-                    unit: '$/MWh',
+                    unit: 'MMBtu/MWh',
                     points: [
-                        { fraction: 0.00, marginalCost: 95 },
-                        { fraction: 0.45, marginalCost: 115 },
-                        { fraction: 0.72, marginalCost: 165 },
-                        { fraction: 0.90, marginalCost: 260 },
-                        { fraction: 1.00, marginalCost: 420 }
+                        { fraction: 0.00, heatRate: 23.75 },
+                        { fraction: 0.45, heatRate: 28.75 },
+                        { fraction: 0.72, heatRate: 41.25 },
+                        { fraction: 0.90, heatRate: 65.00 },
+                        { fraction: 1.00, heatRate: 105.00 }
                     ]
                 }
             },
@@ -2102,7 +2152,7 @@
                 loadScale: 100,
                 solarScale: 100,
                 windScale: 100,
-                gasPrice: 100,
+                gasPrice: DEFAULT_GAS_PRICE,
                 importPrice: 100,
                 pathScale: 100,
                 storageScale: 100
@@ -2127,6 +2177,7 @@
         let particleTimer = null;
         let editingLoadProfile = false;
         let editingGeneratorProfile = false;
+        let editingHeatRatePoint = null;
         let editingCostPoint = null;
         let editingStorageProfile = false;
         let isSolving = false;
@@ -2182,7 +2233,18 @@
             zone.baseLoad = totalBaseLoad(zone);
         }
 
+        function normalizeZoneGeneratorFuelCosts(zone) {
+            Object.values(zone.resources || {}).forEach(resource => {
+                if (resource.type !== 'gas' || isLoadResource(resource) || isStorageResource(resource)) return;
+                if (!Number.isFinite(resource.heatRate) && !Array.isArray(resource.heatRatePoints)) {
+                    resource.heatRate = Math.max(0, (Number(resource.cost) || 0) / DEFAULT_GAS_PRICE);
+                }
+                if (Number.isFinite(resource.heatRate)) resource.cost = resource.heatRate * state.scenario.gasPrice;
+            });
+        }
+
         Object.values(state.zones).forEach(normalizeZoneLoads);
+        Object.values(state.zones).forEach(normalizeZoneGeneratorFuelCosts);
 
         function resourceCap(resource, hourIndex) {
             const scaleByType = {
@@ -2202,9 +2264,46 @@
                 const last = points[points.length - 1];
                 return (last.cost - first.cost) / Math.max(1, last.power - first.power);
             }
-            if (resource.type === 'gas') return resource.cost * state.scenario.gasPrice / 100;
+            if (resource.type === 'gas' && Number.isFinite(resource.heatRate)) return resource.heatRate * state.scenario.gasPrice;
             if (resource.type === 'import') return resource.cost * state.scenario.importPrice / 100;
             return resource.cost ?? 0.01;
+        }
+
+        function isGasPriceLinkedResource(resource) {
+            return resource?.type === 'gas' && (Array.isArray(resource.heatRatePoints) || Number.isFinite(resource.heatRate));
+        }
+
+        function heatRatePointValue(point, index, points) {
+            if (Number.isFinite(point.heatRate)) return point.heatRate;
+            if (point.power > 0.001 && Number.isFinite(point.cost)) return point.cost / point.power / Math.max(0.01, state.scenario.gasPrice);
+            const next = points[index + 1];
+            if (next && next.power > point.power) {
+                return (next.cost - point.cost) / Math.max(1, next.power - point.power) / Math.max(0.01, state.scenario.gasPrice);
+            }
+            return 0;
+        }
+
+        function costPointsFromHeatRatePoints(resource) {
+            const heatRatePoints = (resource.heatRatePoints || []).slice().sort((a, b) => a.power - b.power);
+            const gasPrice = Math.max(0, state.scenario.gasPrice ?? DEFAULT_GAS_PRICE);
+            return heatRatePoints.map(point => ({
+                power: point.power,
+                cost: point.power * point.heatRate * gasPrice
+            }));
+        }
+
+        function syncGasGeneratorCosts() {
+            Object.values(state.zones).forEach(zone => {
+                Object.values(zone.resources || {}).forEach(resource => {
+                    if (Array.isArray(resource.heatRatePoints)) {
+                        resource.costType = 'piecewise';
+                        resource.costPoints = costPointsFromHeatRatePoints(resource);
+                    } else if (resource.type === 'gas' && Number.isFinite(resource.heatRate)) {
+                        resource.costType = 'linear';
+                        resource.cost = resource.heatRate * state.scenario.gasPrice;
+                    }
+                });
+            });
         }
 
         function resourceOperatingCost(resource, dispatch) {
@@ -2230,6 +2329,7 @@
             if (resource.profileType === 'wind_offshore') return 'wind_offshore';
             if (resource.profileType === 'wind_onshore' || resource.type === 'wind') return 'wind_onshore';
             if (resource.profileType === 'solar' || resource.type === 'solar') return 'solar';
+            if (resource.type === 'nuclear') return 'nuclear';
             if (resource.profileType === 'peaker') return 'peaker';
             if (resource.type === 'gas') return 'gas';
             return 'other';
@@ -2262,6 +2362,15 @@
             });
         }
 
+        function heatRatePointsFromPresetCurve(resource, preset) {
+            const points = preset.heatRateCurve?.points || [];
+            const cap = Math.max(1, Number(resource.cap) || 1);
+            return points.map(point => ({
+                power: clamp(point.fraction, 0, 1) * cap,
+                heatRate: Number(point.heatRate) || 0
+            }));
+        }
+
         function applyGeneratorTypePreset(resource, presetKey) {
             const preset = GENERATOR_TYPE_PRESETS[presetKey];
             if (!preset) return;
@@ -2271,7 +2380,19 @@
             resource.color = preset.color;
             const profile = GENERATOR_PROFILES[preset.profileType];
             if (profile?.shape) resource.profile = normalizeGeneratorShape(profile.shape);
-            if (preset.costCurve.type === 'piecewise') {
+            delete resource.heatRate;
+            delete resource.heatRatePoints;
+            if (preset.heatRateCurve?.type === 'piecewise') {
+                resource.costType = 'piecewise';
+                resource.heatRatePoints = heatRatePointsFromPresetCurve(resource, preset);
+                resource.costPoints = costPointsFromHeatRatePoints(resource);
+                delete resource.cost;
+            } else if (preset.heatRateCurve?.type === 'linear') {
+                resource.costType = 'linear';
+                resource.heatRate = preset.heatRateCurve.heatRate;
+                resource.cost = resource.heatRate * state.scenario.gasPrice;
+                delete resource.costPoints;
+            } else if (preset.costCurve.type === 'piecewise') {
                 resource.costType = 'piecewise';
                 resource.costPoints = costPointsFromPresetCurve(resource, preset);
                 delete resource.cost;
@@ -3312,7 +3433,6 @@
                 ['loadScale', 'Load', 70, 130, '%'],
                 ['solarScale', 'Solar buildout', 0, 180, '%'],
                 ['windScale', 'Wind buildout', 0, 180, '%'],
-                ['gasPrice', 'Gas price', 50, 180, '%'],
                 ['importPrice', 'Import price', 50, 180, '%'],
                 ['pathScale', 'Transmission limits', 45, 140, '%'],
                 ['storageScale', 'Storage buildout', 0, 220, '%']
@@ -3821,6 +3941,7 @@
             const profileType = inferredGeneratorProfileType(res);
             const costType = res.costType || 'linear';
             const points = ensureCostPoints(res);
+            const hasHeatRateCurve = isGasPriceLinkedResource(res);
             return `
                 <div class="summary-panel" style="margin-top:10px;">
                     <div class="editor-title">
@@ -3858,6 +3979,11 @@
                     <div class="load-editor-note">Drag bars to adjust hourly capacity</div>
                     <canvas id="genProfileCanvas" class="mini-chart-canvas"></canvas>
                     <div class="load-axis-label">Hour</div>
+                    ${hasHeatRateCurve ? `
+                        <div class="load-editor-note" style="margin-top:14px;">Heat rate drives gas cost at $${Number(state.scenario.gasPrice || 0).toFixed(2)}/MMBtu</div>
+                        <canvas id="genHeatRateCanvas" class="mini-chart-canvas"></canvas>
+                        <div class="load-axis-label">Power (MW)</div>
+                    ` : ''}
                     <div class="form-grid" style="margin-top:14px;">
                         <div class="form-field" style="grid-column:1 / span 2;">
                             <label>Cost Curve</label>
@@ -4163,6 +4289,10 @@
                 delete res.presetType;
                 if (res.costType === 'linear') {
                     res.cost = Number(document.getElementById('genLinearPrice')?.value) || 0;
+                    if (res.type === 'gas') {
+                        res.heatRate = res.cost / Math.max(0.01, state.scenario.gasPrice);
+                        delete res.heatRatePoints;
+                    }
                 } else {
                     readCostPointInputs(res);
                 }
@@ -4174,6 +4304,12 @@
                 const cap = Math.max(1, res.cap || 1);
                 points.push({ power: cap * 0.75, cost: cap * 0.75 * resourceCost({ ...res, costType: 'linear' }) });
                 res.costType = 'piecewise';
+                if (isGasPriceLinkedResource(res)) {
+                    res.heatRatePoints = points.map((point, index) => ({
+                        power: point.power,
+                        heatRate: Math.max(0, costPointPrice(point, index, points) / Math.max(0.01, state.scenario.gasPrice))
+                    }));
+                }
                 invalidateSolution();
                 renderZoneDetail();
             });
@@ -4181,6 +4317,12 @@
                 const points = ensureCostPoints(res);
                 if (points.length <= 3) return;
                 points.splice(Number(btn.dataset.index), 1);
+                if (isGasPriceLinkedResource(res)) {
+                    res.heatRatePoints = points.map((point, index) => ({
+                        power: point.power,
+                        heatRate: Math.max(0, costPointPrice(point, index, points) / Math.max(0.01, state.scenario.gasPrice))
+                    }));
+                }
                 invalidateSolution();
                 renderZoneDetail();
             }));
@@ -4190,6 +4332,7 @@
                 drawGeneratorCostCanvas();
             }));
             setupGeneratorProfileCanvas();
+            setupGeneratorHeatRateCanvas();
             setupGeneratorCostCanvas();
         }
 
@@ -4295,6 +4438,12 @@
                 power: point.power,
                 cost: point.power * point.price
             })).sort((a, b) => a.power - b.power);
+            if (isGasPriceLinkedResource(res)) {
+                res.heatRatePoints = res.costPoints.map((point, index, points) => ({
+                    power: point.power,
+                    heatRate: Math.max(0, costPointPrice(point, index, points) / Math.max(0.01, state.scenario.gasPrice))
+                }));
+            }
         }
 
         function setupGeneratorProfileCanvas() {
@@ -4342,6 +4491,166 @@
             const shape = res.profile || normalizeGeneratorShape(res.shape || Array(24).fill(1));
             const cap = Math.max(1, res.cap || 1);
             drawBarProfile(ctx, width, height, shape, cap, res.color || '#22c55e');
+        }
+
+        function ensureHeatRatePoints(res) {
+            if (!isGasPriceLinkedResource(res)) return [];
+            const cap = Math.max(1, res.cap || 1);
+            if (!Array.isArray(res.heatRatePoints) || !res.heatRatePoints.length) {
+                if (res.costPoints?.length) {
+                    const points = ensureCostPoints(res);
+                    res.heatRatePoints = points.map((point, index) => ({
+                        power: point.power,
+                        heatRate: Math.max(0, costPointPrice(point, index, points) / Math.max(0.01, state.scenario.gasPrice))
+                    }));
+                } else {
+                    const heatRate = Number.isFinite(res.heatRate) ? res.heatRate : (resourceCost(res) / Math.max(0.01, state.scenario.gasPrice));
+                    res.heatRatePoints = [
+                        { power: 0, heatRate },
+                        { power: cap, heatRate }
+                    ];
+                }
+            }
+            res.heatRatePoints = res.heatRatePoints
+                .map(point => ({
+                    power: clamp(Number(point.power) || 0, 0, cap),
+                    heatRate: Math.max(0, Number(point.heatRate) || 0)
+                }))
+                .sort((a, b) => a.power - b.power);
+            res.costType = 'piecewise';
+            res.costPoints = costPointsFromHeatRatePoints(res);
+            return res.heatRatePoints;
+        }
+
+        function heatRateCanvasGeometry(canvas, res) {
+            const rect = canvas.getBoundingClientRect();
+            const width = Math.max(320, Math.round(rect.width || canvas.clientWidth || 320));
+            const height = Math.max(190, Math.round(rect.height || canvas.clientHeight || 190));
+            const leftPad = 64, rightPad = 14, topPad = 18, bottomPad = 42;
+            const points = ensureHeatRatePoints(res);
+            const maxPower = Math.max(res.cap || 1, ...points.map(p => p.power), 1);
+            const maxHeatRate = Math.max(12, ...points.map(p => p.heatRate)) * 1.18;
+            const heatRateToY = heatRate => topPad + (maxHeatRate - heatRate) / Math.max(1, maxHeatRate) * (height - topPad - bottomPad);
+            const yToHeatRate = y => (maxHeatRate - ((y - topPad) / (height - topPad - bottomPad)) * maxHeatRate);
+            return { width, height, leftPad, rightPad, topPad, bottomPad, plotW: width - leftPad - rightPad, plotH: height - topPad - bottomPad, maxPower, maxHeatRate, heatRateToY, yToHeatRate };
+        }
+
+        function nearestHeatRatePoint(event) {
+            const canvas = document.getElementById('genHeatRateCanvas');
+            const res = selectedGeneratorResource();
+            if (!canvas || !res || !isGasPriceLinkedResource(res)) return null;
+            const rect = canvas.getBoundingClientRect();
+            const g = heatRateCanvasGeometry(canvas, res);
+            const points = ensureHeatRatePoints(res);
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            let nearest = null;
+            let nearestDist = Infinity;
+            points.forEach((point, index) => {
+                const px = g.leftPad + point.power / g.maxPower * g.plotW;
+                const py = g.heatRateToY(point.heatRate);
+                const dist = Math.hypot(px - x, py - y);
+                if (dist < nearestDist && dist < 18) { nearest = index; nearestDist = dist; }
+            });
+            return nearest;
+        }
+
+        function updateHeatRatePointFromPointer(event, index) {
+            const canvas = document.getElementById('genHeatRateCanvas');
+            const res = selectedGeneratorResource();
+            if (!canvas || !res || !isGasPriceLinkedResource(res)) return;
+            const rect = canvas.getBoundingClientRect();
+            const g = heatRateCanvasGeometry(canvas, res);
+            const x = clamp(event.clientX - rect.left, g.leftPad, g.leftPad + g.plotW);
+            const y = clamp(event.clientY - rect.top, g.topPad, g.topPad + g.plotH);
+            const points = ensureHeatRatePoints(res);
+            points[index] = {
+                power: (x - g.leftPad) / g.plotW * g.maxPower,
+                heatRate: Math.max(0, g.yToHeatRate(y))
+            };
+            res.heatRatePoints = points.sort((a, b) => a.power - b.power);
+            res.costPoints = costPointsFromHeatRatePoints(res);
+            invalidateSolution();
+            drawGeneratorHeatRateCanvas();
+            drawGeneratorCostCanvas();
+            renderMetrics();
+        }
+
+        function setupGeneratorHeatRateCanvas() {
+            const canvas = document.getElementById('genHeatRateCanvas');
+            const res = selectedGeneratorResource();
+            if (!canvas || !res || !isGasPriceLinkedResource(res)) return;
+            canvas.addEventListener('pointerdown', event => {
+                const hit = nearestHeatRatePoint(event);
+                if (hit !== null) {
+                    editingHeatRatePoint = hit;
+                    canvas.setPointerCapture?.(event.pointerId);
+                }
+            });
+            canvas.addEventListener('pointermove', event => {
+                if (editingHeatRatePoint === null) return;
+                updateHeatRatePointFromPointer(event, editingHeatRatePoint);
+            });
+            canvas.addEventListener('pointerup', () => editingHeatRatePoint = null);
+            canvas.addEventListener('pointercancel', () => editingHeatRatePoint = null);
+            drawGeneratorHeatRateCanvas();
+        }
+
+        function drawGeneratorHeatRateCanvas() {
+            const canvas = document.getElementById('genHeatRateCanvas');
+            const res = selectedGeneratorResource();
+            if (!canvas || !res || !isGasPriceLinkedResource(res)) return;
+            const ctx = canvas.getContext('2d');
+            const g = heatRateCanvasGeometry(canvas, res);
+            if (canvas.width !== g.width) canvas.width = g.width;
+            if (canvas.height !== g.height) canvas.height = g.height;
+            const points = ensureHeatRatePoints(res);
+            ctx.clearRect(0, 0, g.width, g.height);
+            ctx.fillStyle = '#0f1623';
+            ctx.fillRect(0, 0, g.width, g.height);
+            ctx.strokeStyle = '#263348';
+            ctx.fillStyle = '#9db8dc';
+            ctx.font = '11px sans-serif';
+            ctx.lineWidth = 1;
+            [0, .5, 1].forEach(t => {
+                const y = g.topPad + g.plotH * (1 - t);
+                const value = g.maxHeatRate * t;
+                ctx.beginPath(); ctx.moveTo(g.leftPad, y); ctx.lineTo(g.width - g.rightPad, y); ctx.stroke();
+                ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+                ctx.fillText(value.toFixed(1), g.leftPad - 6, y);
+            });
+            [0, .5, 1].forEach(t => {
+                const x = g.leftPad + g.plotW * t;
+                ctx.beginPath(); ctx.moveTo(x, g.topPad); ctx.lineTo(x, g.topPad + g.plotH); ctx.stroke();
+                ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+                ctx.fillText(Math.round(g.maxPower * t).toLocaleString(), x, g.topPad + g.plotH + 8);
+            });
+            ctx.save();
+            ctx.translate(14, g.topPad + g.plotH / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('MMBtu/MWh', 0, 0);
+            ctx.restore();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText('Power (MW)', g.leftPad + g.plotW / 2, g.height - 4);
+            ctx.beginPath();
+            points.forEach((point, index) => {
+                const x = g.leftPad + point.power / g.maxPower * g.plotW;
+                const y = g.heatRateToY(point.heatRate);
+                if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            });
+            ctx.strokeStyle = '#fb7185';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            points.forEach(point => {
+                const x = g.leftPad + point.power / g.maxPower * g.plotW;
+                const y = g.heatRateToY(point.heatRate);
+                ctx.fillStyle = '#fb7185';
+                ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+            });
         }
 
         function drawBarProfile(ctx, width, height, shape, peak, color) {
@@ -4458,6 +4767,12 @@
                 power,
                 cost: power * price
             };
+            if (isGasPriceLinkedResource(res)) {
+                res.heatRatePoints = points.map((point, pointIndex) => ({
+                    power: point.power,
+                    heatRate: Math.max(0, costPointPrice(point, pointIndex, points) / Math.max(0.01, state.scenario.gasPrice))
+                }));
+            }
             const row = document.querySelector(`[data-cost-row="${index}"]`);
             if (row) {
                 const powerInput = row.querySelector('.cost-power');
@@ -4467,6 +4782,7 @@
             }
             res.costType = 'piecewise';
             invalidateSolution();
+            drawGeneratorHeatRateCanvas();
             drawGeneratorCostCanvas();
         }
 
@@ -4767,6 +5083,7 @@
             document.getElementById('metricLmpMin24').textContent = solved && lmpValues24.length ? `$${Math.round(Math.min(...lmpValues24))}` : '--';
             document.getElementById('metricLmpMax24').textContent = solved && lmpValues24.length ? `$${Math.round(Math.max(...lmpValues24))}` : '--';
             document.getElementById('metricCongestion').textContent = solved ? String(binding) : '--';
+            document.getElementById('metricGasPrice').textContent = `$${Number(state.scenario.gasPrice || 0).toFixed(2)}`;
             document.getElementById('metricBuses').textContent = String(Object.keys(state.zones).length);
             document.getElementById('metricBranches').textContent = String(Object.keys(state.lines).length);
             document.getElementById('metricLoads').textContent = String(activeLoads);
@@ -4882,8 +5199,46 @@
             });
         }
 
+        function setupGasPriceEditor() {
+            const metric = document.getElementById('gasPriceMetric');
+            const value = document.getElementById('metricGasPrice');
+            if (!metric || !value) return;
+            metric.addEventListener('click', () => {
+                if (document.getElementById('systemGasPriceInput')) return;
+                value.innerHTML = `<input id="systemGasPriceInput" class="metric-input" type="number" min="0" step="0.05" value="${Number(state.scenario.gasPrice || DEFAULT_GAS_PRICE).toFixed(2)}">`;
+                const input = document.getElementById('systemGasPriceInput');
+                input?.focus();
+                input?.select();
+                const commit = () => {
+                    const next = Math.max(0, Number(input.value) || 0);
+                    state.scenario.gasPrice = next;
+                    syncGasGeneratorCosts();
+                    markScenarioPending();
+                    renderAll();
+                    if (document.getElementById('dataView').classList.contains('active')) renderDataTables();
+                };
+                input?.addEventListener('change', commit);
+                input?.addEventListener('keydown', event => {
+                    if (event.key === 'Enter') commit();
+                    if (event.key === 'Escape') renderMetrics();
+                });
+            });
+        }
+
+        function setupSummaryMetricLinks() {
+            document.querySelectorAll('[data-summary-tab]').forEach(tile => {
+                tile.addEventListener('click', () => {
+                    const tab = tile.dataset.summaryTab;
+                    if (!tab) return;
+                    switchView('data');
+                    switchInnerTab(tab);
+                });
+            });
+        }
+
         function resetScenario() {
-            Object.keys(state.scenario).forEach(key => state.scenario[key] = 100);
+            Object.keys(state.scenario).forEach(key => state.scenario[key] = key === 'gasPrice' ? DEFAULT_GAS_PRICE : 100);
+            syncGasGeneratorCosts();
             solveModel();
         }
 
@@ -4925,6 +5280,8 @@
                 }
             });
             setupPeakLoadEditor();
+            setupGasPriceEditor();
+            setupSummaryMetricLinks();
             renderAll();
             setTimeout(() => fitMapView(), 80);
             startFlowParticles();
