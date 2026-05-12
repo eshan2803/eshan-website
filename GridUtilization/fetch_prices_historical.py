@@ -10,12 +10,33 @@ import time
 import calendar
 import os
 import statistics
+from zoneinfo import ZoneInfo
 
 # Configuration
 # Major Load Aggregation Points (LAPs) that represent the system average
 NODES = ['DLAP_PGAE-APND', 'DLAP_SCE-APND', 'DLAP_SDGE-APND']
 OUTPUT_FILE = "caiso_prices.json"
 BASE_URL = "https://oasis.caiso.com/oasisapi/SingleZip"
+CAISO_TZ = ZoneInfo("America/Los_Angeles")
+UTC_TZ = ZoneInfo("UTC")
+
+def caiso_today():
+    return datetime.datetime.now(CAISO_TZ).date()
+
+def oasis_utc_bounds(start_date, end_date):
+    """Return CAISO local-day bounds formatted as UTC OASIS timestamps."""
+    start_local = datetime.datetime.combine(start_date, datetime.time.min, CAISO_TZ)
+    end_local = datetime.datetime.combine(
+        end_date + datetime.timedelta(days=1),
+        datetime.time.min,
+        CAISO_TZ,
+    ) - datetime.timedelta(minutes=1)
+    start_utc = start_local.astimezone(UTC_TZ)
+    end_utc = end_local.astimezone(UTC_TZ)
+    return (
+        start_utc.strftime('%Y%m%dT%H:%M-0000'),
+        end_utc.strftime('%Y%m%dT%H:%M-0000'),
+    )
 
 def fetch_price_range(start_date, end_date, node, max_retries=3):
     """
@@ -23,9 +44,7 @@ def fetch_price_range(start_date, end_date, node, max_retries=3):
     Using Report: PRC_INTVL_LMP (5-minute intervals, averaged to hourly).
     Note: PRC_RTM_LAPAP was deprecated by CAISO circa April 2026.
     """
-    # Format: YYYYMMDDTHH:MM-HHMM
-    start_str = start_date.strftime('%Y%m%d') + 'T00:00-0000'
-    end_str = end_date.strftime('%Y%m%d') + 'T23:59-0000'
+    start_str, end_str = oasis_utc_bounds(start_date, end_date)
 
     print(f"    Fetching {node} from {start_date} to {end_date} ...")
 
@@ -102,7 +121,7 @@ def main():
     # Pre-2023 hourly data already exists from the old PRC_RTM_LAPAP API.
     # PRC_INTVL_LMP (current API) only has data from 2023 onwards.
     # Look back 3 months to catch any gaps.
-    end_date = datetime.date.today() - datetime.timedelta(days=1)
+    end_date = caiso_today() - datetime.timedelta(days=1)
     start_date = (end_date.replace(day=1) - datetime.timedelta(days=90)).replace(day=1)
     
     existing_data = {}

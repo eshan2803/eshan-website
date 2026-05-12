@@ -15,6 +15,7 @@ import datetime
 import time
 import calendar
 import os
+from zoneinfo import ZoneInfo
 
 # Force unbuffered output
 _orig_print = builtins.print
@@ -30,6 +31,8 @@ NODES = {
 
 OUTPUT_FILE = "caiso_prices_5min.json"
 BASE_URL = "https://oasis.caiso.com/oasisapi/SingleZip"
+CAISO_TZ = ZoneInfo("America/Los_Angeles")
+UTC_TZ = ZoneInfo("UTC")
 
 COMP_MAP = {
     'LMP_PRC': 'LMP',
@@ -43,9 +46,35 @@ COMP_MAP = {
 }
 
 
+def caiso_today():
+    return datetime.datetime.now(CAISO_TZ).date()
+
+
+def oasis_utc_bounds(start_date, end_date):
+    """Return CAISO local-day bounds formatted as UTC OASIS timestamps."""
+    start_local = datetime.datetime.combine(start_date, datetime.time.min, CAISO_TZ)
+    end_local = datetime.datetime.combine(
+        end_date + datetime.timedelta(days=1),
+        datetime.time.min,
+        CAISO_TZ,
+    ) - datetime.timedelta(minutes=1)
+    start_utc = start_local.astimezone(UTC_TZ)
+    end_utc = end_local.astimezone(UTC_TZ)
+    return (
+        start_utc.strftime('%Y%m%dT%H:%M-0000'),
+        end_utc.strftime('%Y%m%dT%H:%M-0000'),
+    )
+
+
+def expected_intervals(day):
+    start_local = datetime.datetime.combine(day, datetime.time.min, CAISO_TZ)
+    end_local = datetime.datetime.combine(day + datetime.timedelta(days=1), datetime.time.min, CAISO_TZ)
+    count = int((end_local.astimezone(UTC_TZ) - start_local.astimezone(UTC_TZ)).total_seconds() // 300)
+    return min(count, 288)
+
+
 def fetch_node(start_date, end_date, node, max_retries=3):
-    start_str = start_date.strftime('%Y%m%d') + 'T00:00-0000'
-    end_str = end_date.strftime('%Y%m%d') + 'T23:59-0000'
+    start_str, end_str = oasis_utc_bounds(start_date, end_date)
 
     params = {
         "queryname": "PRC_INTVL_LMP",
@@ -168,7 +197,7 @@ def process_month_data(node_dfs):
 
 def main():
     import sys
-    end_date = datetime.date.today() - datetime.timedelta(days=1)
+    end_date = caiso_today() - datetime.timedelta(days=1)
 
     # --recent mode: only fetch last ~2 months (for daily pipeline use)
     if '--recent' in sys.argv:
@@ -201,7 +230,7 @@ def main():
     while current_check <= end_date:
         day_str = current_check.strftime('%Y-%m-%d')
         day_data = existing.get(day_str, {})
-        if len(day_data) < 280:
+        if len(day_data) < expected_intervals(current_check):
             missing_days.append(current_check)
         current_check += datetime.timedelta(days=1)
 

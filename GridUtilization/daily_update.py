@@ -428,6 +428,7 @@ def regenerate_charts():
         ("plot_negative_prices.py", "Negative price analysis chart"),
         ("plot_negative_prices_with_solar.py", "Negative prices with solar chart"),
         ("plot_5min_lmp_distribution_batt.py", "5-min LMP distribution charts (negative and all)"),
+        ("plot_peak_lmp_timeshift.py", "Peak LMP time-shift chart"),
         ("plot_battery_gw_vs_lmp.py", "Battery GW vs LMP chart"),
         ("plot_battery_vs_as.py", "Battery vs ancillary services charts"),
         ("export_chart_data.py", "Interactive website chart data (chart_data.json)"),

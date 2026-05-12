@@ -229,7 +229,8 @@ def main():
     df['batt_gw'] = df['battery_charging_mw'] / 1000.0
     df['batt_op_gw'] = df['batteries_mw'] / 1000.0
     df['year'] = df.index.year if isinstance(df.index, pd.DatetimeIndex) else df['timestamp'].dt.year
-    last_date_label = df['timestamp'].max().strftime("%B %d, %Y")
+    last_timestamp = df['timestamp'].max()
+    last_date_label = last_timestamp.strftime("%B %d, %Y")
     
     # Version 1: Only negative prices
     print("Processing Version 1: Negative LMPs...")
@@ -243,18 +244,21 @@ def main():
         last_date_label=last_date_label
     )
 
-    print("Processing Version 1b: Negative LMPs through May 3 in each year...")
-    ytd_mask = (df['timestamp'].dt.month < 5) | (
-        (df['timestamp'].dt.month == 5) & (df['timestamp'].dt.day <= 3)
+    print(f"Processing Version 1b: Negative LMPs through {last_timestamp.strftime('%B %-d') if os.name != 'nt' else last_timestamp.strftime('%B %#d')} in each year...")
+    cutoff_month = last_timestamp.month
+    cutoff_day = last_timestamp.day
+    ytd_mask = (df['timestamp'].dt.month < cutoff_month) | (
+        (df['timestamp'].dt.month == cutoff_month) & (df['timestamp'].dt.day <= cutoff_day)
     )
     df_neg_ytd = df[(df['lmp'] < 0) & (df['year'] >= 2023) & ytd_mask].copy()
+    cutoff_label = last_timestamp.strftime("%B %#d") if os.name == "nt" else last_timestamp.strftime("%B %-d")
     generate_distribution_chart(
         df_neg_ytd,
-        "Distribution of 5-Minute Negative LMP Prices by Year\nJan 1-May 3 Comparison, Colored by Battery Charging (GW)",
+        f"Distribution of 5-Minute Negative LMP Prices by Year\nJan 1-{cutoff_label} Comparison, Colored by Battery Charging (GW)",
         "negative_lmp_5min_distribution_batt_v2.png",
         show_positive=False,
         color_col='batt_gw',
-        last_date_label="May 03 in each year"
+        last_date_label=f"{cutoff_label} in each year"
     )
     
     # Version 2: All prices since 2023

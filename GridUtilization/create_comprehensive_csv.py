@@ -13,12 +13,26 @@ import os
 import csv
 import json
 import glob
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from collections import defaultdict
+from zoneinfo import ZoneInfo
 
 SUPPLY_DIR = os.path.join(os.path.dirname(__file__), "caiso_supply")
 DEMAND_DIR = os.path.join(os.path.dirname(__file__), "caiso_demand_downloads")
 OUT_FILE = os.path.join(os.path.dirname(__file__), "caiso_comprehensive_data.csv")
+CAISO_TZ = ZoneInfo("America/Los_Angeles")
+UTC_TZ = ZoneInfo("UTC")
+
+
+def expected_lmp_intervals(date_obj):
+    start_local = datetime.combine(date_obj.date(), time.min, CAISO_TZ)
+    end_local = datetime.combine(date_obj.date() + timedelta(days=1), time.min, CAISO_TZ)
+    count = int((end_local.astimezone(UTC_TZ) - start_local.astimezone(UTC_TZ)).total_seconds() // 300)
+    return min(count, 288)
+
+
+def has_complete_5min_prices(date_obj, day_data):
+    return isinstance(day_data, dict) and len(day_data) >= expected_lmp_intervals(date_obj)
 
 # Load hourly data
 print("Loading hourly data...")
@@ -125,8 +139,9 @@ with open(OUT_FILE, "w", newline="", encoding="utf-8") as out_f:
         # Get LMP prices — prefer 5-min, fall back to hourly
         lmp_5min = {}
         lmp_hourly = {}
-        if date_key in lmp_5min_data:
-            for time_str, prices in lmp_5min_data[date_key].items():
+        day_5min_prices = lmp_5min_data.get(date_key, {})
+        if has_complete_5min_prices(dt, day_5min_prices):
+            for time_str, prices in day_5min_prices.items():
                 try:
                     parts = time_str.split(":")
                     h, m = int(parts[0]), int(parts[1])
