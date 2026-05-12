@@ -4,8 +4,8 @@ on:
     branches:
       - simbooni
   schedule:
-    # Runs at 14:00 UTC (7:00 AM PDT) every day
-    - cron: '0 14 * * *'
+    # Runs at 13:17 UTC (6:17 AM PDT) every day
+    - cron: '17 13 * * *'
   workflow_dispatch: # Allows you to run it manually from GitHub UI
 
 permissions:
