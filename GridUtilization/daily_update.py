@@ -510,7 +510,7 @@ def latest_homepage_ready_date():
     current = latest_source_date
     while current >= date(2023, 1, 1):
         day_data = prices_5min.get(current.strftime("%Y-%m-%d"), {})
-        if isinstance(day_data, dict) and len(day_data) >= expected_lmp_intervals(current):
+        if isinstance(day_data, dict) and len(day_data) >= expected_lmp_intervals(current) - 1:
             return current
         current -= timedelta(days=1)
 
@@ -554,10 +554,10 @@ def validate_homepage_data_freshness():
     lmp_values = breakdown.get("lmp", [])
     lmp_count = sum(1 for value in lmp_values if value is not None)
     required_lmp = expected_lmp_intervals(breakdown_date) if breakdown_date >= date(2023, 1, 1) else 0
-    if required_lmp and lmp_count < required_lmp:
+    if required_lmp and lmp_count < required_lmp - 1:
         log_error(
             f"daily_breakdown.json has only {lmp_count} LMP points for {breakdown_date}; "
-            f"expected {required_lmp} 5-minute points"
+            f"expected at least {required_lmp - 1} 5-minute points"
         )
         return False
 

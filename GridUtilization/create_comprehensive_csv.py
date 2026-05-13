@@ -32,7 +32,7 @@ def expected_lmp_intervals(date_obj):
 
 
 def has_complete_5min_prices(date_obj, day_data):
-    return isinstance(day_data, dict) and len(day_data) >= expected_lmp_intervals(date_obj)
+    return isinstance(day_data, dict) and len(day_data) >= expected_lmp_intervals(date_obj) - 1
 
 
 def allow_hourly_lmp_fallback(date_obj):

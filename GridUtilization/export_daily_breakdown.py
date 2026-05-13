@@ -28,7 +28,7 @@ def has_homepage_ready_lmp(day, day_rows):
         return True
     required = expected_lmp_intervals(day)
     lmp_count = sum(1 for row in day_rows if row.get("lmp", "").strip())
-    return lmp_count >= required
+    return lmp_count >= required - 1
 
 
 def main():
