@@ -1,15 +1,21 @@
 name: Daily Transmission Prices Update
 on:
-  push:
-    branches:
-      - simbooni
   schedule:
-    # Runs at 15:00 UTC (8:00 AM PDT) every day
-    - cron: '0 15 * * *'
+    # GitHub scheduled workflows can be delayed or occasionally skipped.
+    # Use several off-peak morning slots; the price update is idempotent and
+    # concurrency below prevents overlapping runs.
+    - cron: '52 12 * * *'  # 5:52 AM PDT
+    - cron: '47 13 * * *'
+    - cron: '47 14 * * *'
+    - cron: '47 15 * * *'
   workflow_dispatch: # Allows you to run it manually from GitHub UI
 
 permissions:
   contents: write
+
+concurrency:
+  group: daily-transmission-prices-update
+  cancel-in-progress: false
 
 jobs:
   update-prices:

@@ -34,6 +34,12 @@ def expected_lmp_intervals(date_obj):
 def has_complete_5min_prices(date_obj, day_data):
     return isinstance(day_data, dict) and len(day_data) >= expected_lmp_intervals(date_obj)
 
+
+def allow_hourly_lmp_fallback(date_obj):
+    """Only pre-2023 dates lack 5-minute RTM LMP history."""
+    return date_obj.date() < datetime(2023, 1, 1).date()
+
+
 # Load hourly data
 print("Loading hourly data...")
 
@@ -148,7 +154,7 @@ with open(OUT_FILE, "w", newline="", encoding="utf-8") as out_f:
                     lmp_5min[(h, m)] = prices
                 except:
                     pass
-        if not lmp_5min and date_key in lmp_data:
+        if not lmp_5min and allow_hourly_lmp_fallback(dt) and date_key in lmp_data:
             for hour_str, prices in lmp_data[date_key].items():
                 try:
                     hour = int(hour_str) - 1  # Convert 1-24 to 0-23
