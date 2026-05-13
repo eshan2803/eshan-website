@@ -1,15 +1,21 @@
 name: Daily California Grid Update
 on:
-  push:
-    branches:
-      - simbooni
   schedule:
-    # Runs at 13:17 UTC (6:17 AM PDT) every day
+    # GitHub scheduled workflows can be delayed or occasionally skipped.
+    # Use several off-peak morning slots; the update is idempotent and
+    # concurrency below prevents overlapping runs.
+    - cron: '37 12 * * *'  # 5:37 AM PDT
     - cron: '17 13 * * *'
+    - cron: '17 14 * * *'
+    - cron: '17 15 * * *'
   workflow_dispatch: # Allows you to run it manually from GitHub UI
 
 permissions:
   contents: write
+
+concurrency:
+  group: daily-california-grid-update
+  cancel-in-progress: false
 
 jobs:
   update-grid:
