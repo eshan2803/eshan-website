@@ -16,28 +16,37 @@ with open(os.path.join(script_dir, "renewable_penetration_daily_corrected_full.j
 with open(os.path.join(script_dir, "natural_gas_daily.json")) as f:
     gas = json.load(f)
 
-# Read LMP from comprehensive CSV (single source of truth)
-# CSV has a mix of 5-min and hourly LMP. For 5-min dates, average to hourly.
+# Read LMP from price JSONs. The daily homepage chart must avoid hourly fallback
+# for recent 5-minute days, but this historical daily peak panel can use hourly
+# prices when a full 5-minute cache is not retained in the repo archive.
 # Structure: lmp_by_date[date_iso] = {hour: [list of LMP values]}
 lmp_by_date = defaultdict(lambda: defaultdict(list))
-csv_path = os.path.join(script_dir, "caiso_comprehensive_data.csv")
-with open(csv_path, 'r', encoding='utf-8') as f:
-    reader = csv.DictReader(f)
-    for row in reader:
-        lmp_str = row.get('lmp', '')
-        if not lmp_str:
+
+prices_5min_path = os.path.join(script_dir, "caiso_prices_5min.json")
+if os.path.exists(prices_5min_path):
+    with open(prices_5min_path) as f:
+        prices_5min = json.load(f)
+    for date_iso, day_data in prices_5min.items():
+        if not isinstance(day_data, dict):
             continue
-        ts = row['timestamp']
-        space_idx = ts.index(' ')
-        date_part = ts[:space_idx]
-        time_part = ts[space_idx + 1:]
-        # Normalize date to YYYY-MM-DD
-        if '/' in date_part:
-            date_iso = datetime.strptime(date_part, '%m/%d/%Y').strftime('%Y-%m-%d')
-        else:
-            date_iso = date_part
-        hour = int(time_part.split(':')[0])
-        lmp_by_date[date_iso][hour].append(float(lmp_str))
+        for time_part, values in day_data.items():
+            if not isinstance(values, dict) or values.get("LMP") is None:
+                continue
+            hour = int(time_part.split(":")[0])
+            lmp_by_date[date_iso][hour].append(float(values["LMP"]))
+
+prices_hourly_path = os.path.join(script_dir, "caiso_prices.json")
+if os.path.exists(prices_hourly_path):
+    with open(prices_hourly_path) as f:
+        prices_hourly = json.load(f)
+    for date_iso, day_data in prices_hourly.items():
+        if date_iso in lmp_by_date or not isinstance(day_data, dict):
+            continue
+        for hour_str, values in day_data.items():
+            if not isinstance(values, dict) or values.get("LMP") is None:
+                continue
+            hour = int(hour_str) - 1
+            lmp_by_date[date_iso][hour].append(float(values["LMP"]))
 
 # Compute hourly averages and find daily peak
 lmp_dates = set(lmp_by_date.keys())
