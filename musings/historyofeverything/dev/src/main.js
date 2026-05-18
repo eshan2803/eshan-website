@@ -21,7 +21,9 @@ const timelineData = [
   { id: 'hadean', date: '4.5 Billion Years Ago', title: 'The Hadean Earth', description: 'Our planet was a hellish, endless ocean of sloshing molten rock.', blocks: 4 },
   { id: 'rain', date: '4.0 Billion Years Ago', title: 'The Great Rain', description: 'As the surface cooled, centuries of relentless, torrential rain fell.', blocks: 4 },
   { id: 'life', date: '3.8 Billion Years Ago', title: 'First Life', description: 'In the primordial oceans, the first microscopic life emerged.', blocks: 4 },
-  { id: 'oxygen', date: '2.4 Billion Years Ago', title: 'The Great Oxidation', description: 'Early life breathed sunlight, flooding the atmosphere with oxygen.', blocks: 1 },
+  { id: 'oxygen', date: '2.4 Billion Years Ago', title: 'The Great Oxidation', description: 'Early life breathed sunlight, flooding the atmosphere with oxygen.', blocks: 4 },
+  { id: 'complex', date: '1.5 Billion Years Ago', title: 'The Complex Life', description: 'Cells joined forces, paving the way for multi-cellular organisms.', blocks: 4 },
+  { id: 'cambrian', date: '541 Million Years Ago', title: 'The Cambrian Explosion', description: 'An unprecedented burst of evolutionary creativity filled the oceans.', blocks: 4 },
   { id: 'land', date: '400 Million Years Ago', title: 'Conquering the Land', description: 'Life crawled out of the oceans, and vast, realistic forests took root.', blocks: 1 },
   { id: 'dinosaurs', date: '240 Million Years Ago', title: 'Age of Reptiles', description: 'Giant creatures roamed the lush, detailed continents.', blocks: 1 },
   { id: 'asteroid', date: '66 Million Years Ago', title: 'The Extinction', description: 'A massive asteroid struck, sending a shockwave across the globe.', blocks: 1 },
@@ -170,7 +172,7 @@ scene.add(sceneObjects.bigBangParticles);
 const createBgVideo = (id, src) => {
   const v = document.createElement('video');
   v.id = id; v.src = src; v.crossOrigin = 'anonymous';
-  v.loop = true; v.muted = true; v.playsInline = true;
+  v.loop = true; v.muted = true; v.volume = 0; v.playsInline = true;
   Object.assign(v.style, {
     position: 'fixed', top: '0', left: '0', width: '100vw', height: '100vh',
     objectFit: 'cover', zIndex: '-2', opacity: '0'
@@ -187,8 +189,12 @@ const solarVideo = createBgVideo('solar-video', 'https://pub-170eae4c8bc147fc842
 const hadeanVideo = createBgVideo('hadean-video', 'https://pub-170eae4c8bc147fc842e785bd09533e3.r2.dev/hadean.mp4');
 const rainVideo = createBgVideo('rain-video', 'https://pub-170eae4c8bc147fc842e785bd09533e3.r2.dev/great_rain.mp4');
 const lifeVideo = createBgVideo('life-video', 'https://pub-170eae4c8bc147fc842e785bd09533e3.r2.dev/first_life.mp4');
+const oxygenVideo = createBgVideo('oxygen-video', 'https://pub-170eae4c8bc147fc842e785bd09533e3.r2.dev/greatoxidation.mp4');
+const complexVideo = createBgVideo('complex-video', 'https://pub-170eae4c8bc147fc842e785bd09533e3.r2.dev/complexlife.mp4');
+const cambrianVideo = createBgVideo('cambrian-video', 'https://pub-170eae4c8bc147fc842e785bd09533e3.r2.dev/cambrianexplosion.mp4');
 
-const videoTargets = { cmb: 0, galaxy: 0, solar: 0, hadean: 0, rain: 0, life: 0 };
+const allVideos = [cmbVideo, galaxyVideo, solarVideo, hadeanVideo, rainVideo, lifeVideo, oxygenVideo, complexVideo, cambrianVideo];
+const videoTargets = { cmb: 0, galaxy: 0, solar: 0, hadean: 0, rain: 0, life: 0, oxygen: 0, complex: 0, cambrian: 0 };
 
 
 
@@ -395,30 +401,21 @@ ScrollTrigger.create({
     const totalProg = currentBlock;
 
     // Scroll-bound video scrubbing targets (applied in animate loop)
-    if (cmbVideo.readyState >= 1 && cmbVideo.duration) {
-      videoTargets.cmb = Math.max(0, Math.min(1, (totalProg - 2.0) / 4.0)) * cmbVideo.duration;
-    }
-    if (galaxyVideo.readyState >= 1 && galaxyVideo.duration) {
-      videoTargets.galaxy = Math.max(0, Math.min(1, (totalProg - 6.0) / 4.0)) * galaxyVideo.duration;
-    }
-    if (solarVideo.readyState >= 1 && solarVideo.duration) {
-      videoTargets.solar = Math.max(0, Math.min(1, (totalProg - 10.0) / 4.0)) * solarVideo.duration;
-    }
-    if (hadeanVideo.readyState >= 1 && hadeanVideo.duration) {
-      videoTargets.hadean = Math.max(0, Math.min(1, (totalProg - 14.0) / 4.0)) * hadeanVideo.duration;
-    }
-    if (rainVideo.readyState >= 1 && rainVideo.duration) {
-      videoTargets.rain = Math.max(0, Math.min(1, (totalProg - 18.0) / 4.0)) * rainVideo.duration;
-    }
-    if (lifeVideo.readyState >= 1 && lifeVideo.duration) {
-      videoTargets.life = Math.max(0, Math.min(1, (totalProg - 22.0) / 4.0)) * lifeVideo.duration;
-    }
+    if (cmbVideo.readyState >= 1 && cmbVideo.duration) { videoTargets.cmb = Math.max(0, Math.min(1, (totalProg - 2.0) / 4.0)) * cmbVideo.duration; }
+    if (galaxyVideo.readyState >= 1 && galaxyVideo.duration) { videoTargets.galaxy = Math.max(0, Math.min(1, (totalProg - 6.0) / 4.0)) * galaxyVideo.duration; }
+    if (solarVideo.readyState >= 1 && solarVideo.duration) { videoTargets.solar = Math.max(0, Math.min(1, (totalProg - 10.0) / 4.0)) * solarVideo.duration; }
+    if (hadeanVideo.readyState >= 1 && hadeanVideo.duration) { videoTargets.hadean = Math.max(0, Math.min(1, (totalProg - 14.0) / 4.0)) * hadeanVideo.duration; }
+    if (rainVideo.readyState >= 1 && rainVideo.duration) { videoTargets.rain = Math.max(0, Math.min(1, (totalProg - 18.0) / 4.0)) * rainVideo.duration; }
+    if (lifeVideo.readyState >= 1 && lifeVideo.duration) { videoTargets.life = Math.max(0, Math.min(1, (totalProg - 22.0) / 4.0)) * lifeVideo.duration; }
+    if (oxygenVideo.readyState >= 1 && oxygenVideo.duration) { videoTargets.oxygen = Math.max(0, Math.min(1, (totalProg - 26.0) / 4.0)) * oxygenVideo.duration; }
+    if (complexVideo.readyState >= 1 && complexVideo.duration) { videoTargets.complex = Math.max(0, Math.min(1, (totalProg - 30.0) / 4.0)) * complexVideo.duration; }
+    if (cambrianVideo.readyState >= 1 && cambrianVideo.duration) { videoTargets.cambrian = Math.max(0, Math.min(1, (totalProg - 34.0) / 4.0)) * cambrianVideo.duration; }
 
-    sceneObjects.earthGroup.visible = newSection >= 8;
+    sceneObjects.earthGroup.visible = newSection >= 11;
     sceneObjects.bigBangParticles.visible = newSection === 1 || newSection === 2;
     sceneObjects.bigBangFlash.visible = newSection === 1;
 
-    if (newSection < 8) {
+    if (newSection < 11) {
       camera.position.set(0, 0, 100);
       camera.lookAt(0, 0, 0);
     } else {
@@ -428,7 +425,7 @@ ScrollTrigger.create({
 
     if (newSection === 0) {
       bigBangTriggered = false; bbMat.opacity = 0; sceneObjects.bigBangFlash.material.opacity = 0;
-      cmbVideo.style.opacity = '0'; galaxyVideo.style.opacity = '0'; solarVideo.style.opacity = '0'; hadeanVideo.style.opacity = '0'; rainVideo.style.opacity = '0'; lifeVideo.style.opacity = '0';
+      allVideos.forEach(v => v.style.opacity = '0');
       document.body.style.backgroundColor = '#000000';
       scene.fog.color.setHex(0x000000);
     }
@@ -446,78 +443,39 @@ ScrollTrigger.create({
         sceneObjects.bigBangFlash.material.opacity = Math.max(0, 1.0 - ((sectProg - 0.15) / 0.5));
       }
       bbMat.opacity = sectProg > 0.05 ? 1.0 - sectProg : 0;
-      cmbVideo.style.opacity = '0'; galaxyVideo.style.opacity = '0'; solarVideo.style.opacity = '0'; hadeanVideo.style.opacity = '0'; rainVideo.style.opacity = '0'; lifeVideo.style.opacity = '0';
+      allVideos.forEach(v => v.style.opacity = '0');
     }
-    else if (newSection === 2) { 
-      cmbVideo.style.opacity = Math.min(1, sectProg * 4).toString(); 
-      galaxyVideo.style.opacity = '0'; 
-      solarVideo.style.opacity = '0';
-      hadeanVideo.style.opacity = '0';
-      rainVideo.style.opacity = '0';
-      lifeVideo.style.opacity = '0';
+    else if (newSection >= 2 && newSection < 11) {
+      allVideos.forEach((vid, idx) => {
+        if (idx === newSection - 2) {
+           vid.style.opacity = Math.min(1, sectProg * 4).toString();
+        } else if (idx === newSection - 3) {
+           vid.style.opacity = Math.max(0, 1.0 - sectProg * 4).toString();
+        } else {
+           vid.style.opacity = '0';
+        }
+      });
     }
-    else if (newSection === 3) { 
-      cmbVideo.style.opacity = Math.max(0, 1.0 - sectProg * 4).toString();
-      galaxyVideo.style.opacity = Math.min(1, sectProg * 4).toString();
-      solarVideo.style.opacity = '0';
-      hadeanVideo.style.opacity = '0';
-      rainVideo.style.opacity = '0';
-      lifeVideo.style.opacity = '0';
-    }
-    else if (newSection === 4) { 
-      cmbVideo.style.opacity = '0';
-      galaxyVideo.style.opacity = Math.max(0, 1.0 - sectProg * 4).toString();
-      solarVideo.style.opacity = Math.min(1, sectProg * 4).toString();
-      hadeanVideo.style.opacity = '0';
-      rainVideo.style.opacity = '0';
-      lifeVideo.style.opacity = '0';
-    }
-    else if (newSection === 5) { 
-      cmbVideo.style.opacity = '0';
-      galaxyVideo.style.opacity = '0';
-      solarVideo.style.opacity = Math.max(0, 1.0 - sectProg * 4).toString();
-      hadeanVideo.style.opacity = Math.min(1, sectProg * 4).toString();
-      rainVideo.style.opacity = '0';
-      lifeVideo.style.opacity = '0';
-    }
-    else if (newSection === 6) { 
-      cmbVideo.style.opacity = '0';
-      galaxyVideo.style.opacity = '0';
-      solarVideo.style.opacity = '0';
-      hadeanVideo.style.opacity = Math.max(0, 1.0 - sectProg * 4).toString();
-      rainVideo.style.opacity = Math.min(1, sectProg * 4).toString();
-      lifeVideo.style.opacity = '0';
-    }
-    else if (newSection === 7) { 
-      cmbVideo.style.opacity = '0';
-      galaxyVideo.style.opacity = '0';
-      solarVideo.style.opacity = '0';
-      hadeanVideo.style.opacity = '0';
-      rainVideo.style.opacity = Math.max(0, 1.0 - sectProg * 4).toString();
-      lifeVideo.style.opacity = Math.min(1, sectProg * 4).toString();
-    }
-    else if (newSection >= 8) { 
+    else if (newSection >= 11) { 
       let state = 0;
       let skyColor = new THREE.Color(0x000000);
       earthHorizonMat.uniforms.uAsteroidImpact.value = 0.0;
       impactFlash.material.opacity = 0;
       
-      cmbVideo.style.opacity = '0';
-      galaxyVideo.style.opacity = '0';
-      solarVideo.style.opacity = '0';
-      hadeanVideo.style.opacity = '0';
-      rainVideo.style.opacity = '0';
-      lifeVideo.style.opacity = newSection === 8 ? Math.max(0, 1.0 - sectProg * 4).toString() : '0';
+      allVideos.forEach((vid, idx) => {
+        if (newSection === 11 && idx === 8) {
+           vid.style.opacity = Math.max(0, 1.0 - sectProg * 4).toString();
+        } else {
+           vid.style.opacity = '0';
+        }
+      });
       
-      if (newSection === 8) { 
-        state = 2.0 + sectProg; 
-        skyColor.lerpColors(new THREE.Color(0x1a2b3c), new THREE.Color(0x4488ff), sectProg);
-      } else if (newSection === 9) { 
-        state = 3.0 + sectProg; skyColor.setHex(0x4488ff);
-      } else if (newSection === 10) { 
+      if (newSection === 11) { 
+        state = 3.0 + sectProg; 
+        skyColor.lerpColors(new THREE.Color(0x1a2b3c), new THREE.Color(0x4488ff), Math.min(1.0, sectProg * 2.0));
+      } else if (newSection === 12) { 
         state = 4.0 + sectProg; skyColor.setHex(0x4488ff);
-        asteroidMat.uniforms.uOpacity.value = 0; tailMat.uniforms.uOpacity.value = 0;
-      } else if (newSection === 11) { 
+      } else if (newSection === 13) { 
         state = 5.0 + sectProg; 
         
         if (sectProg > 0.3 && sectProg < 0.6) {
@@ -544,7 +502,7 @@ ScrollTrigger.create({
            asteroidMat.uniforms.uOpacity.value = 0; tailMat.uniforms.uOpacity.value = 0;
            skyColor.setHex(0x4488ff);
         }
-      } else if (newSection === 12) { 
+      } else if (newSection === 14) { 
         state = 6.0 + sectProg; 
         skyColor.lerpColors(new THREE.Color(0x110500), new THREE.Color(0x020205), sectProg);
       }
@@ -573,24 +531,15 @@ function animate() {
   }
 
   // Smooth video scrubbing logic
-  if (!cmbVideo.seeking && Math.abs(cmbVideo.currentTime - videoTargets.cmb) > 0.05) {
-     cmbVideo.currentTime = videoTargets.cmb;
-  }
-  if (!galaxyVideo.seeking && Math.abs(galaxyVideo.currentTime - videoTargets.galaxy) > 0.05) {
-     galaxyVideo.currentTime = videoTargets.galaxy;
-  }
-  if (!solarVideo.seeking && Math.abs(solarVideo.currentTime - videoTargets.solar) > 0.05) {
-     solarVideo.currentTime = videoTargets.solar;
-  }
-  if (!hadeanVideo.seeking && Math.abs(hadeanVideo.currentTime - videoTargets.hadean) > 0.05) {
-     hadeanVideo.currentTime = videoTargets.hadean;
-  }
-  if (!rainVideo.seeking && Math.abs(rainVideo.currentTime - videoTargets.rain) > 0.05) {
-     rainVideo.currentTime = videoTargets.rain;
-  }
-  if (!lifeVideo.seeking && Math.abs(lifeVideo.currentTime - videoTargets.life) > 0.05) {
-     lifeVideo.currentTime = videoTargets.life;
-  }
+  if (!cmbVideo.seeking && Math.abs(cmbVideo.currentTime - videoTargets.cmb) > 0.05) { cmbVideo.currentTime = videoTargets.cmb; }
+  if (!galaxyVideo.seeking && Math.abs(galaxyVideo.currentTime - videoTargets.galaxy) > 0.05) { galaxyVideo.currentTime = videoTargets.galaxy; }
+  if (!solarVideo.seeking && Math.abs(solarVideo.currentTime - videoTargets.solar) > 0.05) { solarVideo.currentTime = videoTargets.solar; }
+  if (!hadeanVideo.seeking && Math.abs(hadeanVideo.currentTime - videoTargets.hadean) > 0.05) { hadeanVideo.currentTime = videoTargets.hadean; }
+  if (!rainVideo.seeking && Math.abs(rainVideo.currentTime - videoTargets.rain) > 0.05) { rainVideo.currentTime = videoTargets.rain; }
+  if (!lifeVideo.seeking && Math.abs(lifeVideo.currentTime - videoTargets.life) > 0.05) { lifeVideo.currentTime = videoTargets.life; }
+  if (!oxygenVideo.seeking && Math.abs(oxygenVideo.currentTime - videoTargets.oxygen) > 0.05) { oxygenVideo.currentTime = videoTargets.oxygen; }
+  if (!complexVideo.seeking && Math.abs(complexVideo.currentTime - videoTargets.complex) > 0.05) { complexVideo.currentTime = videoTargets.complex; }
+  if (!cambrianVideo.seeking && Math.abs(cambrianVideo.currentTime - videoTargets.cambrian) > 0.05) { cambrianVideo.currentTime = videoTargets.cambrian; }
 
   if (sceneObjects.earthGroup.visible) {
     earthMesh.rotation.z = time * 0.02; 
