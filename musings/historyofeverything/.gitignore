@@ -25,4 +25,6 @@ dist-ssr
 
 # Video assets (hosted on Cloudflare CDN)
 public/videos/
-
+dev/public/videos/
+dev/node_modules/
+dev/dist/

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>A Brief History of Everything</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Outfit:wght@200;300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/style.css">
+  </head>
+  <body>
+    <!-- Three.js Canvas -->
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- UI Overlay (Fixed) -->
+    <div id="ui-layer">
+      <!-- Section Texts -->
+      <div id="text-container">
+        <!-- Texts injected here via JS -->
+      </div>
+      
+      <!-- Timeline Navigation Dots -->
+      <div id="timeline-nav">
+        <!-- Dots injected via JS -->
+      </div>
+    </div>
+
+    <!-- Scrollable container to drive GSAP ScrollTrigger -->
+    <div id="scroll-proxy"></div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

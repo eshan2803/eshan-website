@@ -1,0 +1,182 @@
+:root {
+  --text-primary: #f0f0f0;
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --accent: #d4af37; /* Subtle gold */
+  --font-heading: 'Cormorant Garamond', serif;
+  --font-body: 'Outfit', sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  background-color: #030303;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  overscroll-behavior: none; /* Prevent bounce */
+}
+
+/* Hide scrollbar for cleaner look */
+::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+#webgl-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  outline: none;
+}
+
+#ui-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 10;
+  pointer-events: none; /* Let clicks pass through to canvas if needed */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 10vw;
+}
+
+/* Scroll proxy height determines scroll duration. JS will set this dynamically based on sections * 100vh */
+#scroll-proxy {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 0;
+}
+
+/* Text Container */
+#text-container {
+  max-width: 600px;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.timeline-section {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
+}
+
+.timeline-section h2 {
+  font-family: var(--font-heading);
+  font-size: 4rem;
+  font-weight: 300;
+  margin-bottom: 1rem;
+  letter-spacing: 2px;
+  line-height: 1.1;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.8);
+}
+
+.timeline-section p {
+  font-size: 1.1rem;
+  font-weight: 300;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+}
+
+.timeline-section .date-label {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+/* Timeline Navigation */
+#timeline-nav {
+  position: absolute;
+  right: 3rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  pointer-events: auto; /* Make clickable */
+}
+
+.nav-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  position: relative;
+}
+
+.nav-dot::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
+  border-radius: 50%;
+  border: 1px solid rgba(212, 175, 55, 0);
+  transition: all 0.4s ease;
+}
+
+.nav-dot:hover, .nav-dot.active {
+  background-color: var(--accent);
+  transform: scale(1.2);
+}
+
+.nav-dot.active::before {
+  border-color: rgba(212, 175, 55, 0.5);
+  transform: scale(1.2);
+}
+
+.nav-dot-label {
+  position: absolute;
+  right: 25px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  opacity: 0;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.nav-dot:hover .nav-dot-label {
+  opacity: 1;
+  transform: translateY(-50%) translateX(-5px);
+}
+
+@media (max-width: 768px) {
+  #ui-layer {
+    padding: 2rem;
+  }
+  .timeline-section h2 {
+    font-size: 2.5rem;
+  }
+  #timeline-nav {
+    right: 1.5rem;
+  }
+}
