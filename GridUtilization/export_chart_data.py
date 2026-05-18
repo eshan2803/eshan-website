@@ -54,11 +54,10 @@ if os.path.exists(prices_hourly_path):
 # Compute hourly averages and find daily peak
 lmp_dates = set(lmp_by_date.keys())
 
-# Build compact arrays. The clean-energy series can be switched back to the
-# legacy/simple methodology without reverting code:
-#   CLEAN_ENERGY_METHOD=simple
-# Defaults to the refined import-classified method for the homepage.
-clean_energy_method = os.environ.get("CLEAN_ENERGY_METHOD", "classified_imports").strip().lower()
+# Build compact arrays. Keep the refined import-classified method available
+# while defaulting the homepage to the original simple methodology:
+#   CLEAN_ENERGY_METHOD=classified_imports
+clean_energy_method = os.environ.get("CLEAN_ENERGY_METHOD", "simple").strip().lower()
 if clean_energy_method not in {"classified_imports", "simple"}:
     raise ValueError(
         "CLEAN_ENERGY_METHOD must be 'classified_imports' or 'simple' "
