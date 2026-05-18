@@ -5,12 +5,30 @@ Reads from caiso_comprehensive_data.csv and outputs daily_breakdown.json to the 
 import csv
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta, time
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 script_dir = Path(__file__).parent
 CSV_FILE = script_dir / "caiso_comprehensive_data.csv"
 OUT_FILE = script_dir.parent / "daily_breakdown.json"
+CAISO_TZ = ZoneInfo("America/Los_Angeles")
+UTC_TZ = ZoneInfo("UTC")
+
+
+def expected_lmp_intervals(day):
+    start_local = datetime.combine(day, time.min, CAISO_TZ)
+    end_local = datetime.combine(day + timedelta(days=1), time.min, CAISO_TZ)
+    count = int((end_local.astimezone(UTC_TZ) - start_local.astimezone(UTC_TZ)).total_seconds() // 300)
+    return min(count, 288)
+
+
+def has_homepage_ready_lmp(day, day_rows):
+    if day < datetime(2023, 1, 1).date():
+        return True
+    required = expected_lmp_intervals(day)
+    lmp_count = sum(1 for row in day_rows if row.get("lmp", "").strip())
+    return lmp_count >= required - 1
 
 
 def main():
@@ -47,8 +65,13 @@ def main():
 
     complete_days = []
     for day, day_rows_candidate in days:
+        day_date = datetime.strptime(day, "%Y-%m-%d").date()
         last_time = day_rows_candidate[-1]["timestamp"].split(" ")[1] if " " in day_rows_candidate[-1]["timestamp"] else ""
-        if len(day_rows_candidate) >= 288 and last_time == "23:55":
+        if (
+            len(day_rows_candidate) >= expected_lmp_intervals(day_date)
+            and last_time == "23:55"
+            and has_homepage_ready_lmp(day_date, day_rows_candidate)
+        ):
             complete_days.append((day, day_rows_candidate))
 
     if complete_days:

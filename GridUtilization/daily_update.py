@@ -11,7 +11,7 @@ import sys
 import json
 import subprocess
 import csv
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, time as datetime_time
 from pathlib import Path
 from zoneinfo import ZoneInfo
 import time
@@ -428,6 +428,7 @@ def regenerate_charts():
         ("plot_negative_prices.py", "Negative price analysis chart"),
         ("plot_negative_prices_with_solar.py", "Negative prices with solar chart"),
         ("plot_5min_lmp_distribution_batt.py", "5-min LMP distribution charts (negative and all)"),
+        ("plot_peak_lmp_timeshift.py", "Peak LMP time-shift chart"),
         ("plot_battery_gw_vs_lmp.py", "Battery GW vs LMP chart"),
         ("plot_battery_vs_as.py", "Battery vs ancillary services charts"),
         ("export_chart_data.py", "Interactive website chart data (chart_data.json)"),
@@ -485,21 +486,51 @@ def latest_complete_source_date():
 
     return max(complete_dates) if complete_dates else None
 
-def validate_homepage_data_freshness():
-    """Fail the update if homepage JSON outputs do not reflect fresh complete data."""
-    log_header("STEP 9: Validating Homepage Data Freshness")
+def expected_lmp_intervals(data_date):
+    start_local = datetime.combine(data_date, datetime_time.min, CAISO_TZ)
+    end_local = datetime.combine(data_date + timedelta(days=1), datetime_time.min, CAISO_TZ)
+    count = int((end_local.astimezone(ZoneInfo("UTC")) - start_local.astimezone(ZoneInfo("UTC"))).total_seconds() // 300)
+    return min(count, 288)
 
+def latest_homepage_ready_date():
+    """Find the newest complete source date with complete 5-minute LMP."""
     latest_source_date = latest_complete_source_date()
     if latest_source_date is None:
-        log_error("No complete source date found for homepage validation")
+        return None
+
+    prices_file = Path("caiso_prices_5min.json")
+    prices_5min = {}
+    if prices_file.exists():
+        try:
+            with open(prices_file, encoding="utf-8") as f:
+                prices_5min = json.load(f)
+        except Exception as e:
+            log_warning(f"Could not read caiso_prices_5min.json: {e}")
+
+    current = latest_source_date
+    while current >= date(2023, 1, 1):
+        day_data = prices_5min.get(current.strftime("%Y-%m-%d"), {})
+        if isinstance(day_data, dict) and len(day_data) >= expected_lmp_intervals(current) - 1:
+            return current
+        current -= timedelta(days=1)
+
+    return latest_source_date
+
+def validate_homepage_data_freshness():
+    """Validate homepage JSON outputs use the latest complete 5-minute LMP day."""
+    log_header("STEP 9: Validating Homepage Data Freshness")
+
+    homepage_ready_date = latest_homepage_ready_date()
+    if homepage_ready_date is None:
+        log_error("No homepage-ready source date found for validation")
         return False
 
     expected_min_date = caiso_today() - timedelta(days=1)
-    if latest_source_date < expected_min_date:
-        log_error(
-            f"Latest complete source date is {latest_source_date}, expected at least {expected_min_date}"
+    if homepage_ready_date < expected_min_date:
+        log_warning(
+            f"Latest homepage-ready 5-minute LMP date is {homepage_ready_date}; "
+            f"{expected_min_date} is not published/complete yet"
         )
-        return False
 
     breakdown_file = Path("../daily_breakdown.json")
     if not breakdown_file.exists():
@@ -514,9 +545,19 @@ def validate_homepage_data_freshness():
         log_error(f"Could not validate daily_breakdown.json: {e}")
         return False
 
-    if breakdown_date != latest_source_date:
+    if breakdown_date != homepage_ready_date:
         log_error(
-            f"daily_breakdown.json is {breakdown_date}, but latest complete source date is {latest_source_date}"
+            f"daily_breakdown.json is {breakdown_date}, but latest homepage-ready date is {homepage_ready_date}"
+        )
+        return False
+
+    lmp_values = breakdown.get("lmp", [])
+    lmp_count = sum(1 for value in lmp_values if value is not None)
+    required_lmp = expected_lmp_intervals(breakdown_date) if breakdown_date >= date(2023, 1, 1) else 0
+    if required_lmp and lmp_count < required_lmp - 1:
+        log_error(
+            f"daily_breakdown.json has only {lmp_count} LMP points for {breakdown_date}; "
+            f"expected at least {required_lmp - 1} 5-minute points"
         )
         return False
 
@@ -540,11 +581,11 @@ def validate_homepage_data_freshness():
         elif "dates" in chart_data and isinstance(chart_data["dates"], list) and chart_data["dates"]:
             latest_chart_date = max(datetime.strptime(key, "%Y-%m-%d").date() for key in chart_data["dates"])
 
-    if latest_chart_date and latest_chart_date < latest_source_date:
-        log_error(f"chart_data.json ends at {latest_chart_date}, expected {latest_source_date}")
+    if latest_chart_date and latest_chart_date < homepage_ready_date:
+        log_error(f"chart_data.json ends at {latest_chart_date}, expected at least {homepage_ready_date}")
         return False
 
-    log_success(f"Homepage JSON is fresh through {latest_source_date}")
+    log_success(f"Homepage JSON is fresh through {homepage_ready_date}")
     return True
 
 def update_comprehensive_csv(use_incremental=True):

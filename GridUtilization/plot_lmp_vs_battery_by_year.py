@@ -79,6 +79,40 @@ SPINE_COLOR = "#334155"
 pct_cmap = plt.cm.plasma
 pct_norm = mcolors.Normalize(vmin=0, vmax=100)
 
+
+def add_lmp_distribution(ax, lmp_values, y_max):
+    """Add a compact right-side distribution curve for that year's LMPs."""
+    lmp_values = np.asarray(lmp_values)
+    lmp_values = lmp_values[np.isfinite(lmp_values)]
+    lmp_values = lmp_values[(lmp_values >= 0) & (lmp_values <= y_max)]
+    if len(lmp_values) < 8:
+        return
+
+    bins = np.linspace(0, y_max, 70)
+    density, edges = np.histogram(lmp_values, bins=bins, density=True)
+    if density.max() <= 0:
+        return
+
+    kernel = np.array([1, 2, 3, 2, 1], dtype=float)
+    kernel = kernel / kernel.sum()
+    density = np.convolve(density, kernel, mode="same")
+    centres = (edges[:-1] + edges[1:]) / 2
+
+    dist_ax = ax.inset_axes([0.78, 0.0, 0.22, 1.0], sharey=ax)
+    dist_ax.patch.set_alpha(0)
+    dist_ax.fill_betweenx(centres, 0, density, color="#fbbf24", alpha=0.12, linewidth=0)
+    dist_ax.plot(density, centres, color="#fbbf24", linewidth=1.6, alpha=0.95)
+    dist_ax.set_xlim(0, density.max() * 1.1)
+    dist_ax.set_ylim(ax.get_ylim())
+    dist_ax.set_xticks([])
+    dist_ax.yaxis.tick_right()
+    dist_ax.tick_params(axis="y", colors="#fbbf24", labelsize=8, length=2)
+    dist_ax.spines["right"].set_color("#fbbf24")
+    dist_ax.spines["right"].set_alpha(0.55)
+    for side in ["left", "top", "bottom"]:
+        dist_ax.spines[side].set_visible(False)
+    dist_ax.grid(False)
+
 # ══════════════════════════════════════════════════════════════════════════
 # Create 2x4 grid of subplots
 # ══════════════════════════════════════════════════════════════════════════
@@ -105,10 +139,10 @@ for idx, year in enumerate(range(2020, 2027)):
                            s=20, alpha=0.6, edgecolors="none", rasterized=True)
 
     # Axis labels
-    if idx >= 3:  # Bottom row
+    if idx >= 4:  # Bottom row
         ax.set_xlabel("Daily Peak Battery Discharge (GW)",
                      fontsize=11, color=TEXT_COLOR, fontweight="bold")
-    if idx % 3 == 0:  # Left column
+    if idx % 4 == 0:  # Left column
         ax.set_ylabel("Daily Peak LMP ($/MWh)",
                      fontsize=11, color=TEXT_COLOR, fontweight="bold")
 
@@ -118,6 +152,7 @@ for idx, year in enumerate(range(2020, 2027)):
     # Set consistent ranges
     ax.set_xlim(-0.2, max_gw * 1.05)
     ax.set_ylim(0, lmp_p99 * 1.1)
+    add_lmp_distribution(ax, lmp, lmp_p99 * 1.1)
 
     # Grid and styling
     ax.grid(True, color=GRID_COLOR, linewidth=0.5, alpha=0.4)

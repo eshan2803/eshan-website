@@ -13,12 +13,32 @@ import os
 import csv
 import json
 import glob
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from collections import defaultdict
+from zoneinfo import ZoneInfo
 
 SUPPLY_DIR = os.path.join(os.path.dirname(__file__), "caiso_supply")
 DEMAND_DIR = os.path.join(os.path.dirname(__file__), "caiso_demand_downloads")
 OUT_FILE = os.path.join(os.path.dirname(__file__), "caiso_comprehensive_data.csv")
+CAISO_TZ = ZoneInfo("America/Los_Angeles")
+UTC_TZ = ZoneInfo("UTC")
+
+
+def expected_lmp_intervals(date_obj):
+    start_local = datetime.combine(date_obj.date(), time.min, CAISO_TZ)
+    end_local = datetime.combine(date_obj.date() + timedelta(days=1), time.min, CAISO_TZ)
+    count = int((end_local.astimezone(UTC_TZ) - start_local.astimezone(UTC_TZ)).total_seconds() // 300)
+    return min(count, 288)
+
+
+def has_complete_5min_prices(date_obj, day_data):
+    return isinstance(day_data, dict) and len(day_data) >= expected_lmp_intervals(date_obj) - 1
+
+
+def allow_hourly_lmp_fallback(date_obj):
+    """Only pre-2023 dates lack 5-minute RTM LMP history."""
+    return date_obj.date() < datetime(2023, 1, 1).date()
+
 
 # Load hourly data
 print("Loading hourly data...")
@@ -125,15 +145,16 @@ with open(OUT_FILE, "w", newline="", encoding="utf-8") as out_f:
         # Get LMP prices — prefer 5-min, fall back to hourly
         lmp_5min = {}
         lmp_hourly = {}
-        if date_key in lmp_5min_data:
-            for time_str, prices in lmp_5min_data[date_key].items():
+        day_5min_prices = lmp_5min_data.get(date_key, {})
+        if has_complete_5min_prices(dt, day_5min_prices):
+            for time_str, prices in day_5min_prices.items():
                 try:
                     parts = time_str.split(":")
                     h, m = int(parts[0]), int(parts[1])
                     lmp_5min[(h, m)] = prices
                 except:
                     pass
-        if not lmp_5min and date_key in lmp_data:
+        if not lmp_5min and allow_hourly_lmp_fallback(dt) and date_key in lmp_data:
             for hour_str, prices in lmp_data[date_key].items():
                 try:
                     hour = int(hour_str) - 1  # Convert 1-24 to 0-23

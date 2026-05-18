@@ -6,13 +6,16 @@ import os
 import csv
 import json
 import glob
-from datetime import datetime
+from datetime import datetime, timedelta, time
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 script_dir = Path(__file__).parent
 SUPPLY_DIR = script_dir / "caiso_supply"
 DEMAND_DIR = script_dir / "caiso_demand_downloads"
 CSV_FILE = script_dir / "caiso_comprehensive_data.csv"
+CAISO_TZ = ZoneInfo("America/Los_Angeles")
+UTC_TZ = ZoneInfo("UTC")
 
 FUEL_COLS = [
     ("Solar", "solar_mw"),
@@ -40,6 +43,22 @@ HEADER = [
     "lmp", "mcc", "mec", "ghg", "loss",
     "nr", "rd", "rmd", "rmu", "ru", "sr"
 ]
+
+
+def expected_lmp_intervals(date_obj):
+    start_local = datetime.combine(date_obj, time.min, CAISO_TZ)
+    end_local = datetime.combine(date_obj + timedelta(days=1), time.min, CAISO_TZ)
+    count = int((end_local.astimezone(UTC_TZ) - start_local.astimezone(UTC_TZ)).total_seconds() // 300)
+    return min(count, 288)
+
+
+def has_complete_5min_prices(date_obj, day_data):
+    return isinstance(day_data, dict) and len(day_data) >= expected_lmp_intervals(date_obj) - 1
+
+
+def allow_hourly_lmp_fallback(date_obj):
+    """Only pre-2023 dates lack 5-minute RTM LMP history."""
+    return date_obj < datetime(2023, 1, 1).date()
 
 
 def get_last_csv_date():
@@ -119,10 +138,24 @@ def find_dates_missing_prices():
     as_path = script_dir / "ancillary_services.json"
     if prices_5min_path.exists():
         with open(prices_5min_path) as f:
-            lmp_dates = set(json.load(f).keys())
+            prices_5min = json.load(f)
+            for date_key, day_data in prices_5min.items():
+                try:
+                    date_obj = datetime.strptime(date_key, "%Y-%m-%d").date()
+                except ValueError:
+                    continue
+                if has_complete_5min_prices(date_obj, day_data):
+                    lmp_dates.add(date_key)
     if prices_path.exists():
         with open(prices_path) as f:
-            lmp_dates |= set(json.load(f).keys())
+            hourly_dates = json.load(f).keys()
+            for date_key in hourly_dates:
+                try:
+                    date_obj = datetime.strptime(date_key, "%Y-%m-%d").date()
+                except ValueError:
+                    continue
+                if allow_hourly_lmp_fallback(date_obj):
+                    lmp_dates.add(date_key)
     if as_path.exists():
         with open(as_path) as f:
             as_dates = set(json.load(f).keys())
@@ -217,16 +250,17 @@ def append_date_data(date_obj, csv_writer):
     if prices_5min_path.exists():
         with open(prices_5min_path) as f:
             lmp_5min_data = json.load(f)
-            if date_key in lmp_5min_data:
+            day_5min_prices = lmp_5min_data.get(date_key, {})
+            if has_complete_5min_prices(date_obj, day_5min_prices):
                 # Keys like "0:00", "0:05", ... "23:55"
-                for time_str, prices in lmp_5min_data[date_key].items():
+                for time_str, prices in day_5min_prices.items():
                     try:
                         parts = time_str.split(":")
                         h, m = int(parts[0]), int(parts[1])
                         lmp_5min[(h, m)] = prices
                     except:
                         pass
-    if not lmp_5min and prices_path.exists():
+    if not lmp_5min and allow_hourly_lmp_fallback(date_obj) and prices_path.exists():
         # Fallback to hourly simple-average data (pre-2023 dates)
         with open(prices_path) as f:
             lmp_data = json.load(f)
