@@ -19,6 +19,7 @@ from datetime import datetime
 from collections import defaultdict
 
 SUPPLY_DIR = os.path.join(os.path.dirname(__file__), "caiso_supply")
+DEMAND_DIR = os.path.join(os.path.dirname(__file__), "caiso_demand_downloads")
 # Fallback to local path or relative path
 IMPORT_DISPATCH_FILE = os.environ.get("EIA_IMPORT_FILE", r"c:\Users\eshan\OneDrive\Desktop\eshan-website\curtailmentdata\EIA_Import_Dispatch_and_CI_2019_2024.csv")
 if not os.path.exists(IMPORT_DISPATCH_FILE):
@@ -36,15 +37,65 @@ IMPORT_CLEAN_SOURCES = ["Nuclear", "Geothermal", "Large Hydro", "Small Hydro", "
 IMPORT_FOSSIL_SOURCES = ["Coal", "Natural Gas", "Oil"]
 # "Unspecified" and "Other" will be kept separate as unknown
 
+def load_import_dispatch_data():
+    """Load historical and refreshed EIA import-dispatch classifications when available."""
+    candidates = [
+        os.path.join(os.path.dirname(__file__), "EIA_Import_Dispatch_and_CI_2019_2024.csv"),
+        IMPORT_DISPATCH_FILE,
+        os.path.join(os.path.dirname(__file__), "EIA_Import_Dispatch_and_CI_2025_latest.csv"),
+        r"C:\tmp\EIA_Import_Dispatch_and_CI_2025_latest.csv",
+    ]
+    frames = []
+    for path in candidates:
+        if os.path.exists(path):
+            df = pd.read_csv(path)
+            df["Date_dt"] = pd.to_datetime(df["Date"])
+            df["Date_key"] = df["Date_dt"].dt.strftime("%Y-%m-%d")
+            df["Hour_key"] = df["Hour"].astype(int)
+            frames.append(df)
+            print(f"  Loaded {len(df):,} rows from {path}")
+
+    if not frames:
+        print(f"Warning: Import dispatch file not found at {IMPORT_DISPATCH_FILE}. Using fallback ratios.")
+        return pd.DataFrame(columns=["Date", "Hour", "Date_dt", "Date_key", "Hour_key"])
+
+    combined = pd.concat(frames, ignore_index=True)
+    for col in combined.columns:
+        if col not in {"Date", "Date_dt", "Date_key"}:
+            combined[col] = pd.to_numeric(combined[col], errors="coerce").fillna(0.0)
+    combined = combined.sort_values(["Date_dt", "Hour_key"]).drop_duplicates(["Date_key", "Hour_key"], keep="last")
+    return combined
+
+
+def load_demand_5min(date_str_raw):
+    """Read CAISO demand CSV values keyed by (hour, minute)."""
+    demand_file = os.path.join(DEMAND_DIR, f"{date_str_raw}_demand.csv")
+    if not os.path.exists(demand_file):
+        return {}
+
+    try:
+        with open(demand_file, "r", encoding="utf-8-sig") as f:
+            lines = f.readlines()
+        if len(lines) < 4:
+            return {}
+        time_labels = lines[0].strip().split(",")[1:]
+        demand_values = lines[3].strip().split(",")[1:]
+        demand_by_time = {}
+        for time_label, demand_val in zip(time_labels, demand_values):
+            if not demand_val.strip():
+                continue
+            try:
+                hour, minute = map(int, time_label.strip().split(":"))
+                demand_by_time[(hour, minute)] = float(demand_val)
+            except (ValueError, TypeError):
+                continue
+        return demand_by_time
+    except Exception:
+        return {}
+
+
 print("Loading import dispatch data...")
-if os.path.exists(IMPORT_DISPATCH_FILE):
-    import_df = pd.read_csv(IMPORT_DISPATCH_FILE)
-    import_df['Date_dt'] = pd.to_datetime(import_df['Date'])
-    import_df['Date_key'] = import_df['Date_dt'].dt.strftime('%Y-%m-%d')
-    import_df['Hour_key'] = import_df['Hour'].astype(int)
-else:
-    print(f"Warning: Import dispatch file not found at {IMPORT_DISPATCH_FILE}. Using fallback ratios.")
-    import_df = pd.DataFrame(columns=['Date', 'Hour', 'Date_dt', 'Date_key', 'Hour_key'])
+import_df = load_import_dispatch_data()
 
 # Create lookup dictionary: (date, hour) -> import breakdown
 import_lookup = {}
@@ -163,7 +214,9 @@ for i, fpath in enumerate(files):
     import_clean_mwh = 0.0   # Clean imports
     import_fossil_mwh = 0.0  # Fossil imports
     import_unknown_mwh = 0.0 # Unknown imports
-    gross_demand_mwh = 0.0
+    export_mwh_total = 0.0   # Exports are included in load; clean exports are already in CAISO clean generation.
+    total_load_mwh = 0.0
+    demand_5min = load_demand_5min(date_str_raw)
 
     try:
         with open(fpath, "r", newline="", encoding="utf-8-sig") as f:
@@ -177,7 +230,9 @@ for i, fpath in enumerate(files):
 
                 try:
                     time_parts = time_str.split(":")
-                    hour = int(time_parts[0])
+                    clock_hour = int(time_parts[0])
+                    minute = int(time_parts[1])
+                    hour = clock_hour
                     if hour == 0:  # Handle midnight as hour 24
                         hour = 24
                 except (ValueError, IndexError):
@@ -213,14 +268,15 @@ for i, fpath in enumerate(files):
                     total_import_mw = 0.0
 
                 interval_hours = 1.0 / 12.0
-                total_import_mwh = total_import_mw * interval_hours
+                positive_import_mwh = max(total_import_mw, 0.0) * interval_hours
+                export_mwh = abs(min(total_import_mw, 0.0)) * interval_hours
 
                 # Get classification ratios from dispatch model
                 # Hour mapping: CAISO fuelsource uses 0-23, dispatch uses 1-24
                 dispatch_hour = hour if hour > 0 else 24
                 import_key = (date_key, dispatch_hour)
 
-                if import_key in import_lookup and total_import_mwh > 0:
+                if import_key in import_lookup and positive_import_mwh > 0:
                     # Full dispatch data available for this date+hour
                     import_data = import_lookup[import_key]
                     dispatch_total = import_data['clean'] + import_data['fossil'] + import_data['unknown']
@@ -230,22 +286,22 @@ for i, fpath in enumerate(files):
                         ratio_fossil = import_data['fossil'] / dispatch_total
                         ratio_unknown = import_data['unknown'] / dispatch_total
 
-                        import_clean_interval = total_import_mwh * ratio_clean
-                        import_fossil_interval = total_import_mwh * ratio_fossil
-                        import_unknown_interval = total_import_mwh * ratio_unknown
+                        import_clean_interval = positive_import_mwh * ratio_clean
+                        import_fossil_interval = positive_import_mwh * ratio_fossil
+                        import_unknown_interval = positive_import_mwh * ratio_unknown
                     else:
                         # Dispatch total is zero — use hourly 2024 ratios
                         r = hourly_2024_ratios.get(dispatch_hour, hourly_2024_ratios[12])
-                        import_clean_interval = total_import_mwh * r['clean']
-                        import_fossil_interval = total_import_mwh * r['fossil']
-                        import_unknown_interval = total_import_mwh * r['unknown']
+                        import_clean_interval = positive_import_mwh * r['clean']
+                        import_fossil_interval = positive_import_mwh * r['fossil']
+                        import_unknown_interval = positive_import_mwh * r['unknown']
                 else:
                     # No dispatch data for this date — use hourly 2024 ratios
                     # This preserves the hour-of-day merit order pattern
                     r = hourly_2024_ratios.get(dispatch_hour, hourly_2024_ratios[12])
-                    import_clean_interval = total_import_mwh * r['clean']
-                    import_fossil_interval = total_import_mwh * r['fossil']
-                    import_unknown_interval = total_import_mwh * r['unknown']
+                    import_clean_interval = positive_import_mwh * r['clean']
+                    import_fossil_interval = positive_import_mwh * r['fossil']
+                    import_unknown_interval = positive_import_mwh * r['unknown']
 
                 # Calculate gross demand (same as V1 - all CAISO sources)
                 net_demand_mw = 0.0
@@ -267,12 +323,20 @@ for i, fpath in enumerate(files):
 
                 # Accumulate MWh (5-min interval = 1/12 hour)
                 interval_hours = 1.0 / 12.0
+                battery_charging_mw = abs(min(battery_mw_all, 0))
+                export_mw = abs(min(total_import_mw, 0.0))
+                if demand_5min and (clock_hour, minute) in demand_5min:
+                    load_mw_interval = demand_5min[(clock_hour, minute)] + battery_charging_mw + export_mw
+                else:
+                    load_mw_interval = gross_demand_mw_interval + export_mw
+
                 caiso_fossil_mwh += gas_mw * interval_hours
                 caiso_clean_mwh += clean_mw * interval_hours
                 import_clean_mwh += import_clean_interval
                 import_fossil_mwh += import_fossil_interval
                 import_unknown_mwh += import_unknown_interval
-                gross_demand_mwh += gross_demand_mw_interval * interval_hours
+                export_mwh_total += export_mwh
+                total_load_mwh += load_mw_interval * interval_hours
 
     except Exception as e:
         print(f"  ERROR reading {basename}: {e}")
@@ -282,17 +346,17 @@ for i, fpath in enumerate(files):
     total_fossil_mwh = caiso_fossil_mwh + import_fossil_mwh + import_unknown_mwh
     total_clean_mwh = caiso_clean_mwh + import_clean_mwh
 
-    # Calculate clean % (using total supply, not gross demand which may have rounding differences)
-    total_supply = total_fossil_mwh + total_clean_mwh
-    if total_supply > 0:
-        clean_pct = (total_clean_mwh / total_supply) * 100.0
+    # Calculate clean % against load = demand + battery charging + exports.
+    if total_load_mwh > 0:
+        clean_pct = (total_clean_mwh / total_load_mwh) * 100.0
     else:
         clean_pct = 0.0
 
     daily_data[date_key] = {
         "fossil_mwh": round(total_fossil_mwh, 2),
         "clean_mwh": round(total_clean_mwh, 2),
-        "gross_demand_mwh": round(gross_demand_mwh, 2),
+        "gross_demand_mwh": round(total_load_mwh, 2),
+        "export_mwh": round(export_mwh_total, 2),
         "clean_pct": round(clean_pct, 2)
     }
 

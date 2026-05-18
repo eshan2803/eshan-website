@@ -5,6 +5,7 @@ Run this after daily_update.py to refresh the web data.
 import csv
 import json
 import os
+import tempfile
 from collections import defaultdict
 from datetime import datetime
 
@@ -13,6 +14,8 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 # Load sources
 with open(os.path.join(script_dir, "renewable_penetration_daily_corrected_full.json")) as f:
     renewable = json.load(f)
+with open(os.path.join(script_dir, "daily_energy_with_import_breakdown.json")) as f:
+    import_classified = json.load(f)
 with open(os.path.join(script_dir, "natural_gas_daily.json")) as f:
     gas = json.load(f)
 
@@ -51,8 +54,18 @@ if os.path.exists(prices_hourly_path):
 # Compute hourly averages and find daily peak
 lmp_dates = set(lmp_by_date.keys())
 
-# Build compact arrays
-all_dates = sorted(set(renewable.keys()) | set(gas.keys()) | lmp_dates)
+# Build compact arrays. The clean-energy series can be switched back to the
+# legacy/simple methodology without reverting code:
+#   CLEAN_ENERGY_METHOD=simple
+# Defaults to the refined import-classified method for the homepage.
+clean_energy_method = os.environ.get("CLEAN_ENERGY_METHOD", "classified_imports").strip().lower()
+if clean_energy_method not in {"classified_imports", "simple"}:
+    raise ValueError(
+        "CLEAN_ENERGY_METHOD must be 'classified_imports' or 'simple' "
+        f"(got {clean_energy_method!r})"
+    )
+
+all_dates = sorted(set(renewable.keys()) | set(import_classified.keys()) | set(gas.keys()) | lmp_dates)
 
 dates = []
 clean_hours = []    # Panel 1: hours >= 100% clean
@@ -63,12 +76,16 @@ peak_lmp_hour = []  # Panel 4: hour when peak LMP occurred (0-23)
 
 for d in all_dates:
     r = renewable.get(d)
+    ic = import_classified.get(d)
     g = gas.get(d)
 
     dates.append(d)
     clean_hours.append(round(r["hours_over_100"] / 12.0, 2) if r else None)
     gas_mw.append(round(g["avg_gas_mw"], 0) if g else None)
-    clean_pct.append(round(r["avg_penetration"], 2) if r else None)
+    if clean_energy_method == "classified_imports":
+        clean_pct.append(round(ic["clean_pct"], 2) if ic else (round(r["avg_penetration"], 2) if r else None))
+    else:
+        clean_pct.append(round(r["avg_penetration"], 2) if r else None)
 
     if d in lmp_by_date:
         hourly_avgs = []
@@ -96,8 +113,12 @@ output = {
 }
 
 out_path = os.path.join(script_dir, "..", "chart_data.json")
-with open(out_path, "w") as f:
+out_dir = os.path.dirname(out_path)
+with tempfile.NamedTemporaryFile("w", dir=out_dir, delete=False, encoding="utf-8") as f:
     json.dump(output, f, separators=(",", ":"))
+    temp_path = f.name
+os.replace(temp_path, out_path)
 
 size_kb = os.path.getsize(out_path) / 1024
 print(f"Exported {len(dates)} data points to {out_path} ({size_kb:.0f} KB)")
+print(f"Clean energy method: {clean_energy_method}")

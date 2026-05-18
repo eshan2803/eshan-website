@@ -387,6 +387,7 @@ def update_supporting_data():
         ("process_caiso_battery.py", "Battery peak/charging & solar generation JSONs"),
         ("create_natural_gas_daily.py", "Natural gas daily JSON"),
         ("process_daily_energy.py", "Daily energy breakdown JSON"),
+        ("fetch_eia_import_classification.py", "EIA NW/SW hourly import classification", 600),
         ("process_daily_energy_with_import_breakdown.py", "Energy breakdown with import classification JSON", 600),
     ]
 

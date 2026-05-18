@@ -1,6 +1,10 @@
 # Data files (generated locally, not needed for website)
 *.json
 *.csv
+!EIA_Import_Dispatch_and_CI_2019_2024.csv
+!EIA_Import_Dispatch_and_CI_2025_latest.csv
+!EIA_Interchange_2025_latest.csv
+!import_mix_all_years.csv
 
 # Exceptions: JSON files needed by the website
 !demand_forecast.json

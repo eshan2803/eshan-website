@@ -47,10 +47,13 @@ jobs:
           fi
           python daily_update.py --no-git
           # Compress updated data for storage
-          tar -czf caiso_supply.tar.gz caiso_supply caiso_demand_downloads *.json
+          tar -czf caiso_supply.tar.gz caiso_supply caiso_demand_downloads *.json EIA_*.csv import_mix_all_years.csv
         env:
           # If your script needs any API keys, add them here
           CAISO_API_KEY: ${{ secrets.CAISO_API_KEY }}
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+          # Set to "simple" to fall back to the previous homepage clean % method.
+          CLEAN_ENERGY_METHOD: classified_imports
 
       - name: Commit and Push Changes
         run: |
