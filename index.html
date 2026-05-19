@@ -277,7 +277,7 @@
                 <div class="glass-card p-3">
                     <div class="flex items-baseline gap-2 mb-1">
                         <h3 class="text-sm font-semibold text-gray-700">Clean Energy Penetration</h3>
-                        <span class="text-xs text-gray-400">Daily clean energy as % of total load</span>
+                        <span class="text-xs text-gray-400">Daily clean energy as % of load, excluding battery discharge</span>
                     </div>
                     <div style="position:relative; height:140px;"><canvas id="chart-clean-pct"></canvas></div>
                 </div>
@@ -1208,9 +1208,13 @@
 
         // Panel 3: Clean energy % (fill + yearly avg)
         const cleanPctPoints = buildPoints(data.clean_pct);
+        function cleanPctYMax(points) {
+            const maxVal = Math.max(100, ...points.map(p => p.y).filter(Number.isFinite));
+            return Math.ceil((maxVal * 1.05) / 10) * 10;
+        }
         makeLineChart('chart-clean-pct', cleanPctPoints, '% of Load', {
-            yMax: 100, yMin: 0, tooltipSuffix: '%',
-            valueFill: { enabled: true, yMin: 0, yMax: 100, invert: true, opacity: 0.14 },
+            yMax: cleanPctYMax(cleanPctPoints), yMin: 0, tooltipSuffix: '%',
+            valueFill: { enabled: true, yMin: 0, yMax: cleanPctYMax(cleanPctPoints), invert: true, opacity: 0.14 },
             yearlyStats: { labels: computeYearlyAvg(cleanPctPoints, '%', 1) }
         });
 

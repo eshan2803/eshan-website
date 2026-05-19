@@ -52,8 +52,8 @@ jobs:
           # If your script needs any API keys, add them here
           CAISO_API_KEY: ${{ secrets.CAISO_API_KEY }}
           EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
-          # Set to "classified_imports" to test the EIA import-classified method.
-          CLEAN_ENERGY_METHOD: simple
+          # Set to "simple" or "classified_imports" to test alternate methods.
+          CLEAN_ENERGY_METHOD: simple_star
 
       - name: Commit and Push Changes
         run: |

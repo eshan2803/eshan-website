@@ -54,13 +54,15 @@ if os.path.exists(prices_hourly_path):
 # Compute hourly averages and find daily peak
 lmp_dates = set(lmp_by_date.keys())
 
-# Build compact arrays. Keep the refined import-classified method available
-# while defaulting the homepage to the original simple methodology:
+# Build compact arrays. Keep alternative methods available while defaulting
+# the homepage to Simple*: CAISO clean generation excluding battery discharge
+# divided by demand + battery charging.
 #   CLEAN_ENERGY_METHOD=classified_imports
-clean_energy_method = os.environ.get("CLEAN_ENERGY_METHOD", "simple").strip().lower()
-if clean_energy_method not in {"classified_imports", "simple"}:
+#   CLEAN_ENERGY_METHOD=simple
+clean_energy_method = os.environ.get("CLEAN_ENERGY_METHOD", "simple_star").strip().lower()
+if clean_energy_method not in {"classified_imports", "simple", "simple_star"}:
     raise ValueError(
-        "CLEAN_ENERGY_METHOD must be 'classified_imports' or 'simple' "
+        "CLEAN_ENERGY_METHOD must be 'classified_imports', 'simple', or 'simple_star' "
         f"(got {clean_energy_method!r})"
     )
 
@@ -70,6 +72,9 @@ dates = []
 clean_hours = []    # Panel 1: hours >= 100% clean
 gas_mw = []         # Panel 2: avg natural gas MW
 clean_pct = []      # Panel 3: avg clean energy %
+clean_pct_simple_star = []
+clean_pct_demand_side = []
+clean_pct_generation_side = []
 peak_lmp = []       # Panel 4: daily peak hourly-avg LMP
 peak_lmp_hour = []  # Panel 4: hour when peak LMP occurred (0-23)
 
@@ -81,8 +86,17 @@ for d in all_dates:
     dates.append(d)
     clean_hours.append(round(r["hours_over_100"] / 12.0, 2) if r else None)
     gas_mw.append(round(g["avg_gas_mw"], 0) if g else None)
-    if clean_energy_method == "classified_imports":
-        clean_pct.append(round(ic["clean_pct"], 2) if ic else (round(r["avg_penetration"], 2) if r else None))
+    simple_star = round(ic["clean_pct_simple_star"], 2) if ic and "clean_pct_simple_star" in ic else None
+    demand_side = round(ic["clean_pct_demand_side"], 2) if ic and "clean_pct_demand_side" in ic else None
+    generation_side = round(ic["clean_pct_generation_side"], 2) if ic and "clean_pct_generation_side" in ic else None
+    clean_pct_simple_star.append(simple_star)
+    clean_pct_demand_side.append(demand_side)
+    clean_pct_generation_side.append(generation_side)
+
+    if clean_energy_method == "simple_star":
+        clean_pct.append(simple_star if simple_star is not None else (round(r["avg_penetration"], 2) if r else None))
+    elif clean_energy_method == "classified_imports":
+        clean_pct.append(demand_side if demand_side is not None else (round(r["avg_penetration"], 2) if r else None))
     else:
         clean_pct.append(round(r["avg_penetration"], 2) if r else None)
 
@@ -107,6 +121,9 @@ output = {
     "clean_hours": clean_hours,
     "gas_mw": gas_mw,
     "clean_pct": clean_pct,
+    "clean_pct_simple_star": clean_pct_simple_star,
+    "clean_pct_demand_side": clean_pct_demand_side,
+    "clean_pct_generation_side": clean_pct_generation_side,
     "peak_lmp": peak_lmp,
     "peak_lmp_hour": peak_lmp_hour,
 }

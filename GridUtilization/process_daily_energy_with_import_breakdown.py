@@ -210,12 +210,15 @@ for i, fpath in enumerate(files):
 
     # Accumulate MWh for each category (5-min intervals = 1/12 hour)
     caiso_fossil_mwh = 0.0  # Natural gas from CAISO
-    caiso_clean_mwh = 0.0   # Clean sources from CAISO
+    caiso_clean_mwh = 0.0   # Clean sources from CAISO, excluding battery discharge
+    battery_discharge_mwh = 0.0
     import_clean_mwh = 0.0   # Clean imports
     import_fossil_mwh = 0.0  # Fossil imports
     import_unknown_mwh = 0.0 # Unknown imports
     export_mwh_total = 0.0   # Exports are included in load; clean exports are already in CAISO clean generation.
-    total_load_mwh = 0.0
+    demand_side_load_mwh = 0.0
+    simple_star_load_mwh = 0.0
+    generation_side_load_mwh = 0.0
     demand_5min = load_demand_5min(date_str_raw)
 
     try:
@@ -253,13 +256,13 @@ for i, fpath in enumerate(files):
                     except (ValueError, TypeError):
                         pass
 
-                # Get battery discharge (positive battery = discharge = supply)
+                # Track battery separately. The demand-side and generation-side
+                # import-classified methods both exclude battery discharge from
+                # the clean numerator to avoid storage round-trip double counts.
                 try:
                     battery_mw = float(row.get("Batteries") or 0)
-                    if battery_mw > 0:  # Only count discharge as clean supply
-                        clean_mw += battery_mw
                 except (ValueError, TypeError):
-                    pass
+                    battery_mw = 0.0
 
                 # Get CAISO total imports
                 try:
@@ -326,17 +329,22 @@ for i, fpath in enumerate(files):
                 battery_charging_mw = abs(min(battery_mw_all, 0))
                 export_mw = abs(min(total_import_mw, 0.0))
                 if demand_5min and (clock_hour, minute) in demand_5min:
-                    load_mw_interval = demand_5min[(clock_hour, minute)] + battery_charging_mw + export_mw
+                    demand_mw_interval = demand_5min[(clock_hour, minute)]
                 else:
-                    load_mw_interval = gross_demand_mw_interval + export_mw
+                    demand_mw_interval = gross_demand_mw_interval
+                generation_load_mw_interval = demand_mw_interval + battery_charging_mw + export_mw
+                simple_star_load_mw_interval = demand_mw_interval + battery_charging_mw
 
                 caiso_fossil_mwh += gas_mw * interval_hours
                 caiso_clean_mwh += clean_mw * interval_hours
+                battery_discharge_mwh += max(battery_mw, 0.0) * interval_hours
                 import_clean_mwh += import_clean_interval
                 import_fossil_mwh += import_fossil_interval
                 import_unknown_mwh += import_unknown_interval
                 export_mwh_total += export_mwh
-                total_load_mwh += load_mw_interval * interval_hours
+                demand_side_load_mwh += demand_mw_interval * interval_hours
+                simple_star_load_mwh += simple_star_load_mw_interval * interval_hours
+                generation_side_load_mwh += generation_load_mw_interval * interval_hours
 
     except Exception as e:
         print(f"  ERROR reading {basename}: {e}")
@@ -346,18 +354,35 @@ for i, fpath in enumerate(files):
     total_fossil_mwh = caiso_fossil_mwh + import_fossil_mwh + import_unknown_mwh
     total_clean_mwh = caiso_clean_mwh + import_clean_mwh
 
-    # Calculate clean % against load = demand + battery charging + exports.
-    if total_load_mwh > 0:
-        clean_pct = (total_clean_mwh / total_load_mwh) * 100.0
+    if demand_side_load_mwh > 0:
+        clean_pct_demand_side = (total_clean_mwh / demand_side_load_mwh) * 100.0
     else:
-        clean_pct = 0.0
+        clean_pct_demand_side = 0.0
+
+    if generation_side_load_mwh > 0:
+        clean_pct_generation_side = (total_clean_mwh / generation_side_load_mwh) * 100.0
+    else:
+        clean_pct_generation_side = 0.0
+
+    if simple_star_load_mwh > 0:
+        clean_pct_simple_star = (caiso_clean_mwh / simple_star_load_mwh) * 100.0
+    else:
+        clean_pct_simple_star = 0.0
 
     daily_data[date_key] = {
         "fossil_mwh": round(total_fossil_mwh, 2),
         "clean_mwh": round(total_clean_mwh, 2),
-        "gross_demand_mwh": round(total_load_mwh, 2),
+        "caiso_clean_mwh_ex_battery": round(caiso_clean_mwh, 2),
+        "battery_discharge_mwh": round(battery_discharge_mwh, 2),
+        "gross_demand_mwh": round(generation_side_load_mwh, 2),
+        "demand_side_load_mwh": round(demand_side_load_mwh, 2),
+        "simple_star_load_mwh": round(simple_star_load_mwh, 2),
+        "generation_side_load_mwh": round(generation_side_load_mwh, 2),
         "export_mwh": round(export_mwh_total, 2),
-        "clean_pct": round(clean_pct, 2)
+        "clean_pct": round(clean_pct_generation_side, 2),
+        "clean_pct_simple_star": round(clean_pct_simple_star, 2),
+        "clean_pct_demand_side": round(clean_pct_demand_side, 2),
+        "clean_pct_generation_side": round(clean_pct_generation_side, 2)
     }
 
     if (i + 1) % 500 == 0 or (i + 1) == len(files):
