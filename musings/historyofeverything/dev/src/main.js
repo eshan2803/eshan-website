@@ -24,7 +24,8 @@ const timelineData = [
   { id: 'oxygen', date: '2.4 Billion Years Ago', title: 'The Great Oxidation', description: 'Early life breathed sunlight, flooding the atmosphere with oxygen.', blocks: 4 },
   { id: 'complex', date: '1.5 Billion Years Ago', title: 'The Complex Life', description: 'Cells joined forces, paving the way for multi-cellular organisms.', blocks: 4 },
   { id: 'cambrian', date: '541 Million Years Ago', title: 'The Cambrian Explosion', description: 'An unprecedented burst of evolutionary creativity filled the oceans.', blocks: 4 },
-  { id: 'land', date: '400 Million Years Ago', title: 'Conquering the Land', description: 'Life crawled out of the oceans, and vast, realistic forests took root.', blocks: 1 },
+  { id: 'land', date: '400 Million Years Ago', title: 'Conquering the Land', description: 'Life crawled out of the oceans to conquer the land.', blocks: 4 },
+  { id: 'forests', date: '350 Million Years Ago', title: 'Rise of Forests', description: 'Towering trees and dense vegetation blanketed the continents.', blocks: 4 },
   { id: 'dinosaurs', date: '240 Million Years Ago', title: 'Age of Reptiles', description: 'Giant creatures roamed the lush, detailed continents.', blocks: 1 },
   { id: 'asteroid', date: '66 Million Years Ago', title: 'The Extinction', description: 'A massive asteroid struck, sending a shockwave across the globe.', blocks: 1 },
   { id: 'humans', date: '300,000 Years Ago', title: 'The Human Era', description: 'We emerged from the ashes, eventually lighting up the darkness.', blocks: 1 }
@@ -192,9 +193,11 @@ const lifeVideo = createBgVideo('life-video', 'https://pub-170eae4c8bc147fc842e7
 const oxygenVideo = createBgVideo('oxygen-video', 'https://pub-170eae4c8bc147fc842e785bd09533e3.r2.dev/greatoxidation.mp4');
 const complexVideo = createBgVideo('complex-video', 'https://pub-170eae4c8bc147fc842e785bd09533e3.r2.dev/complexlife.mp4');
 const cambrianVideo = createBgVideo('cambrian-video', 'https://pub-170eae4c8bc147fc842e785bd09533e3.r2.dev/cambrianexplosion.mp4');
+const landVideo = createBgVideo('land-video', 'https://pub-170eae4c8bc147fc842e785bd09533e3.r2.dev/conqueringland.mp4');
+const forestsVideo = createBgVideo('forests-video', 'https://pub-170eae4c8bc147fc842e785bd09533e3.r2.dev/riseofforests.mp4');
 
-const allVideos = [cmbVideo, galaxyVideo, solarVideo, hadeanVideo, rainVideo, lifeVideo, oxygenVideo, complexVideo, cambrianVideo];
-const videoTargets = { cmb: 0, galaxy: 0, solar: 0, hadean: 0, rain: 0, life: 0, oxygen: 0, complex: 0, cambrian: 0 };
+const allVideos = [cmbVideo, galaxyVideo, solarVideo, hadeanVideo, rainVideo, lifeVideo, oxygenVideo, complexVideo, cambrianVideo, landVideo, forestsVideo];
+const videoTargets = { cmb: 0, galaxy: 0, solar: 0, hadean: 0, rain: 0, life: 0, oxygen: 0, complex: 0, cambrian: 0, land: 0, forests: 0 };
 
 
 
@@ -410,12 +413,14 @@ ScrollTrigger.create({
     if (oxygenVideo.readyState >= 1 && oxygenVideo.duration) { videoTargets.oxygen = Math.max(0, Math.min(1, (totalProg - 26.0) / 4.0)) * oxygenVideo.duration; }
     if (complexVideo.readyState >= 1 && complexVideo.duration) { videoTargets.complex = Math.max(0, Math.min(1, (totalProg - 30.0) / 4.0)) * complexVideo.duration; }
     if (cambrianVideo.readyState >= 1 && cambrianVideo.duration) { videoTargets.cambrian = Math.max(0, Math.min(1, (totalProg - 34.0) / 4.0)) * cambrianVideo.duration; }
+    if (landVideo.readyState >= 1 && landVideo.duration) { videoTargets.land = Math.max(0, Math.min(1, (totalProg - 38.0) / 4.0)) * landVideo.duration; }
+    if (forestsVideo.readyState >= 1 && forestsVideo.duration) { videoTargets.forests = Math.max(0, Math.min(1, (totalProg - 42.0) / 4.0)) * forestsVideo.duration; }
 
-    sceneObjects.earthGroup.visible = newSection >= 11;
+    sceneObjects.earthGroup.visible = newSection >= 13;
     sceneObjects.bigBangParticles.visible = newSection === 1 || newSection === 2;
     sceneObjects.bigBangFlash.visible = newSection === 1;
 
-    if (newSection < 11) {
+    if (newSection < 13) {
       camera.position.set(0, 0, 100);
       camera.lookAt(0, 0, 0);
     } else {
@@ -445,7 +450,7 @@ ScrollTrigger.create({
       bbMat.opacity = sectProg > 0.05 ? 1.0 - sectProg : 0;
       allVideos.forEach(v => v.style.opacity = '0');
     }
-    else if (newSection >= 2 && newSection < 11) {
+    else if (newSection >= 2 && newSection < 13) {
       allVideos.forEach((vid, idx) => {
         if (idx === newSection - 2) {
            vid.style.opacity = Math.min(1, sectProg * 4).toString();
@@ -456,26 +461,24 @@ ScrollTrigger.create({
         }
       });
     }
-    else if (newSection >= 11) { 
+    else if (newSection >= 13) { 
       let state = 0;
       let skyColor = new THREE.Color(0x000000);
       earthHorizonMat.uniforms.uAsteroidImpact.value = 0.0;
       impactFlash.material.opacity = 0;
       
       allVideos.forEach((vid, idx) => {
-        if (newSection === 11 && idx === 8) {
+        if (newSection === 13 && idx === 10) {
            vid.style.opacity = Math.max(0, 1.0 - sectProg * 4).toString();
         } else {
            vid.style.opacity = '0';
         }
       });
       
-      if (newSection === 11) { 
-        state = 3.0 + sectProg; 
+      if (newSection === 13) { 
+        state = 4.0 + sectProg; 
         skyColor.lerpColors(new THREE.Color(0x1a2b3c), new THREE.Color(0x4488ff), Math.min(1.0, sectProg * 2.0));
-      } else if (newSection === 12) { 
-        state = 4.0 + sectProg; skyColor.setHex(0x4488ff);
-      } else if (newSection === 13) { 
+      } else if (newSection === 14) { 
         state = 5.0 + sectProg; 
         
         if (sectProg > 0.3 && sectProg < 0.6) {
@@ -502,7 +505,7 @@ ScrollTrigger.create({
            asteroidMat.uniforms.uOpacity.value = 0; tailMat.uniforms.uOpacity.value = 0;
            skyColor.setHex(0x4488ff);
         }
-      } else if (newSection === 14) { 
+      } else if (newSection === 15) { 
         state = 6.0 + sectProg; 
         skyColor.lerpColors(new THREE.Color(0x110500), new THREE.Color(0x020205), sectProg);
       }
@@ -540,6 +543,8 @@ function animate() {
   if (!oxygenVideo.seeking && Math.abs(oxygenVideo.currentTime - videoTargets.oxygen) > 0.05) { oxygenVideo.currentTime = videoTargets.oxygen; }
   if (!complexVideo.seeking && Math.abs(complexVideo.currentTime - videoTargets.complex) > 0.05) { complexVideo.currentTime = videoTargets.complex; }
   if (!cambrianVideo.seeking && Math.abs(cambrianVideo.currentTime - videoTargets.cambrian) > 0.05) { cambrianVideo.currentTime = videoTargets.cambrian; }
+  if (!landVideo.seeking && Math.abs(landVideo.currentTime - videoTargets.land) > 0.05) { landVideo.currentTime = videoTargets.land; }
+  if (!forestsVideo.seeking && Math.abs(forestsVideo.currentTime - videoTargets.forests) > 0.05) { forestsVideo.currentTime = videoTargets.forests; }
 
   if (sceneObjects.earthGroup.visible) {
     earthMesh.rotation.z = time * 0.02; 
